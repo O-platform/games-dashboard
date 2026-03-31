@@ -1,0 +1,1161 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Games Waitlist — Audience Intelligence Dashboard</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js"></script>
+<style>
+  :root {
+    --bg: #0d1117;
+    --card: #161b22;
+    --card-2: #1c2128;
+    --card-border: #30363d;
+    --text: #e6edf3;
+    --text-muted: #8b949e;
+    --text-dim: #484f58;
+    --accent: #58a6ff;
+    --green: #3fb950;
+    --teal: #39d353;
+    --red: #f85149;
+    --orange: #d29922;
+    --purple: #bc8cff;
+    --pink: #f778ba;
+    --cyan: #39c5cf;
+    --gold: #e3b341;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Helvetica Neue', Arial, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    font-size: 14px;
+  }
+  .header {
+    background: linear-gradient(160deg, #0d1b2e 0%, #0d1117 60%);
+    border-bottom: 1px solid var(--card-border);
+    padding: 16px 32px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    position: sticky;
+    top: 0;
+    z-index: 100;
+  }
+  .header-left { display: flex; align-items: center; gap: 14px; }
+  .header-badge {
+    background: linear-gradient(135deg, #1f4e79, #1a6cad);
+    border: 1px solid #2a7fc5;
+    color: #7ec8f0;
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    padding: 4px 10px;
+    border-radius: 20px;
+    white-space: nowrap;
+  }
+  .header h1 { font-size: 17px; font-weight: 600; color: var(--text); }
+  .header h1 span { color: var(--accent); }
+  .header-right { display: flex; align-items: center; gap: 24px; }
+  .header-meta { font-size: 12px; color: var(--text-muted); line-height: 1.6; text-align: right; }
+  .header-meta strong { color: var(--text); }
+  .header-meta .updated { font-size: 11px; color: var(--text-dim); }
+
+  .tabs {
+    display: flex;
+    gap: 2px;
+    padding: 0 32px;
+    background: var(--bg);
+    border-bottom: 1px solid var(--card-border);
+    overflow-x: auto;
+    scrollbar-width: none;
+  }
+  .tabs::-webkit-scrollbar { display: none; }
+  .tab {
+    padding: 11px 16px;
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--text-muted);
+    border: none;
+    background: none;
+    cursor: pointer;
+    border-bottom: 2px solid transparent;
+    transition: all 0.2s;
+    white-space: nowrap;
+  }
+  .tab:hover { color: var(--text); }
+  .tab.active { color: var(--accent); border-bottom-color: var(--accent); }
+
+  .page { display: none; padding: 26px 32px; max-width: 1400px; }
+  .page.active { display: block; }
+
+  .kpi-row {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(155px, 1fr));
+    gap: 12px;
+    margin-bottom: 24px;
+  }
+  .kpi-card {
+    background: var(--card);
+    border: 1px solid var(--card-border);
+    border-radius: 10px;
+    padding: 16px 18px;
+  }
+  .kpi-card .label { font-size: 11px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.6px; margin-bottom: 8px; }
+  .kpi-card .value { font-size: 28px; font-weight: 700; line-height: 1; }
+  .kpi-card .sub { font-size: 11px; color: var(--text-muted); margin-top: 6px; }
+  .kpi-card.accent .value { color: var(--accent); }
+  .kpi-card.green .value { color: var(--green); }
+  .kpi-card.orange .value { color: var(--orange); }
+  .kpi-card.purple .value { color: var(--purple); }
+  .kpi-card.pink .value { color: var(--pink); }
+  .kpi-card.cyan .value { color: var(--cyan); }
+  .kpi-card.gold .value { color: var(--gold); }
+  .kpi-card.red .value { color: var(--red); }
+
+  .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; margin-bottom: 18px; }
+  .grid-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 18px; margin-bottom: 18px; }
+  .grid-13 { display: grid; grid-template-columns: 1fr 2fr; gap: 18px; margin-bottom: 18px; }
+  .grid-31 { display: grid; grid-template-columns: 2fr 1fr; gap: 18px; margin-bottom: 18px; }
+
+  .card {
+    background: var(--card);
+    border: 1px solid var(--card-border);
+    border-radius: 10px;
+    padding: 18px 20px;
+  }
+  .card h3 {
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.6px;
+    margin-bottom: 14px;
+  }
+  .card h3 span { color: var(--accent); font-weight: 400; text-transform: none; letter-spacing: 0; font-size: 11px; }
+  .insight {
+    margin-top: 10px;
+    font-size: 12px;
+    color: var(--text-muted);
+    line-height: 1.6;
+    padding: 9px 11px;
+    background: var(--card-2);
+    border-radius: 6px;
+    border-left: 3px solid var(--accent);
+  }
+  .insight strong { color: var(--text); }
+
+  .section-header {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 18px;
+    padding-bottom: 12px;
+    border-bottom: 1px solid var(--card-border);
+  }
+  .section-header h2 { font-size: 15px; font-weight: 600; }
+  .section-header .dot { width: 7px; height: 7px; border-radius: 50%; background: var(--accent); flex-shrink: 0; }
+  .section-header .dot.green { background: var(--green); }
+  .section-header .dot.orange { background: var(--orange); }
+  .section-header .dot.purple { background: var(--purple); }
+  .section-header .dot.gold { background: var(--gold); }
+
+  .chart-wrap { position: relative; height: 220px; }
+  .chart-wrap.tall { height: 280px; }
+  .chart-wrap.short { height: 165px; }
+  .chart-wrap.xs { height: 140px; }
+
+  .bar-list { display: flex; flex-direction: column; gap: 9px; }
+  .bar-item {}
+  .bar-meta { display: flex; justify-content: space-between; margin-bottom: 4px; }
+  .bar-label { font-size: 12px; color: var(--text); }
+  .bar-pct { font-size: 12px; color: var(--text-muted); }
+  .bar-track { background: var(--card-2); border-radius: 3px; height: 5px; overflow: hidden; }
+  .bar-fill { height: 100%; border-radius: 3px; }
+  .bar-fill.accent { background: var(--accent); }
+  .bar-fill.green { background: var(--green); }
+  .bar-fill.orange { background: var(--orange); }
+  .bar-fill.purple { background: var(--purple); }
+  .bar-fill.pink { background: var(--pink); }
+  .bar-fill.cyan { background: var(--cyan); }
+  .bar-fill.gold { background: var(--gold); }
+  .bar-fill.red { background: var(--red); }
+  .bar-fill.teal { background: var(--teal); }
+
+  table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  th { text-align: left; font-size: 11px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px; padding: 7px 10px; border-bottom: 1px solid var(--card-border); }
+  td { padding: 8px 10px; border-bottom: 1px solid #21262d; color: var(--text); vertical-align: middle; }
+  tr:last-child td { border-bottom: none; }
+  tr:hover td { background: var(--card-2); }
+
+  .badge { display: inline-block; padding: 2px 8px; border-radius: 10px; font-size: 11px; font-weight: 500; }
+  .badge.green { background: rgba(63,185,80,0.15); color: var(--green); }
+  .badge.orange { background: rgba(210,153,34,0.15); color: var(--orange); }
+  .badge.purple { background: rgba(188,140,255,0.15); color: var(--purple); }
+  .badge.accent { background: rgba(88,166,255,0.15); color: var(--accent); }
+  .badge.pink { background: rgba(247,120,186,0.15); color: var(--pink); }
+  .badge.red { background: rgba(248,81,73,0.15); color: var(--red); }
+  .badge.cyan { background: rgba(57,197,207,0.15); color: var(--cyan); }
+  .badge.gold { background: rgba(227,179,65,0.15); color: var(--gold); }
+
+  .coverage-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); gap: 9px; }
+  .coverage-item { background: var(--card-2); border-radius: 8px; padding: 11px 13px; }
+  .coverage-item .cf { font-size: 12px; color: var(--text); margin-bottom: 5px; }
+  .coverage-item .cp { font-size: 11px; color: var(--text-muted); margin-bottom: 5px; }
+  .coverage-track { background: #21262d; border-radius: 3px; height: 4px; }
+  .coverage-bar { height: 100%; border-radius: 3px; }
+
+  .segment-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(275px, 1fr)); gap: 14px; margin-bottom: 18px; }
+  .segment-card {
+    background: var(--card);
+    border: 1px solid var(--card-border);
+    border-radius: 10px;
+    padding: 18px 20px;
+    position: relative;
+    overflow: hidden;
+  }
+  .segment-card::before { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 3px; }
+  .segment-card.seg-1::before { background: linear-gradient(90deg, var(--accent), var(--cyan)); }
+  .segment-card.seg-2::before { background: linear-gradient(90deg, var(--green), var(--teal)); }
+  .segment-card.seg-3::before { background: linear-gradient(90deg, var(--purple), var(--pink)); }
+  .segment-card.seg-4::before { background: linear-gradient(90deg, var(--gold), var(--orange)); }
+  .segment-card.seg-5::before { background: linear-gradient(90deg, var(--pink), var(--red)); }
+  .segment-card.seg-6::before { background: linear-gradient(90deg, var(--cyan), var(--accent)); }
+  .segment-card h4 { font-size: 13px; font-weight: 600; margin-bottom: 8px; }
+  .segment-card .seg-size { font-size: 22px; font-weight: 700; margin-bottom: 3px; }
+  .segment-card .seg-pct { font-size: 11px; color: var(--text-muted); margin-bottom: 10px; }
+  .segment-card .seg-logic { font-size: 12px; color: var(--text-muted); margin-bottom: 8px; line-height: 1.5; }
+  .segment-card .seg-why { font-size: 11px; color: var(--accent); font-weight: 500; }
+
+  .geo-list { display: flex; flex-direction: column; gap: 7px; }
+  .geo-item { display: flex; align-items: center; gap: 8px; }
+  .geo-rank { font-size: 11px; color: var(--text-dim); width: 18px; text-align: right; }
+  .geo-name { font-size: 13px; flex: 1; }
+  .geo-count { font-size: 12px; color: var(--text-muted); width: 46px; text-align: right; }
+  .geo-track { flex: 0 0 75px; background: var(--card-2); border-radius: 3px; height: 5px; }
+  .geo-fill { height: 100%; border-radius: 3px; background: var(--accent); }
+
+  .trait-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 9px; }
+  .trait-card { background: var(--card-2); border-radius: 8px; padding: 12px; text-align: center; }
+  .trait-icon { font-size: 20px; margin-bottom: 7px; }
+  .trait-label { font-size: 11px; color: var(--text-muted); margin-bottom: 3px; }
+  .trait-val { font-size: 13px; font-weight: 600; color: var(--text); }
+
+  /* TOPIC PILL */
+  .topic-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 4px 10px;
+    border-radius: 20px;
+    font-size: 11px;
+    font-weight: 600;
+    margin: 2px;
+  }
+
+  ::-webkit-scrollbar { width: 6px; height: 6px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: #30363d; border-radius: 3px; }
+
+  @media (max-width: 900px) {
+    .grid-2, .grid-3, .grid-13, .grid-31 { grid-template-columns: 1fr; }
+    .page { padding: 14px 16px; }
+    .header { padding: 12px 16px; flex-wrap: wrap; gap: 8px; }
+    .tabs { padding: 0 16px; }
+  }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div class="header-left">
+    <div class="header-badge">Audience Intel</div>
+    <h1>Games Waitlist — <span>Subscriber Intelligence</span></h1>
+  </div>
+  <div class="header-right">
+    <div class="header-meta">
+      <strong>889</strong> total subscribers &nbsp;·&nbsp; All Active (Ongage)
+      <div class="updated" id="last-updated"></div>
+    </div>
+  </div>
+</div>
+
+<div class="tabs">
+  <button class="tab active" onclick="showTab('summary',this)">Executive Summary</button>
+  <button class="tab" onclick="showTab('sources',this)">Source Analysis</button>
+  <button class="tab" onclick="showTab('demographics',this)">Demographics</button>
+  <button class="tab" onclick="showTab('geo',this)">Geo Analysis</button>
+  <button class="tab" onclick="showTab('psychographic',this)">Psychographic Profile</button>
+  <button class="tab" onclick="showTab('coverage',this)">Data Coverage</button>
+  <button class="tab" onclick="showTab('segments',this)">Audience Segments</button>
+  <button class="tab" onclick="showTab('editorial',this)">Editorial Engagement</button>
+</div>
+
+<!-- ══════════════════════════ EXECUTIVE SUMMARY ══════════════════════════ -->
+<div class="page active" id="tab-summary">
+
+  <div class="kpi-row">
+    <div class="kpi-card accent">
+      <div class="label">Total Waitlist</div>
+      <div class="value">889</div>
+      <div class="sub">All Active · Ongage</div>
+    </div>
+    <div class="kpi-card green">
+      <div class="label">SuperAge</div>
+      <div class="value">699</div>
+      <div class="sub">78.6% of total</div>
+    </div>
+    <div class="kpi-card purple">
+      <div class="label">Ageist</div>
+      <div class="value">187</div>
+      <div class="sub">21.0% of total</div>
+    </div>
+    <div class="kpi-card orange">
+      <div class="label">With Profile Data</div>
+      <div class="value">425</div>
+      <div class="sub">47.8% have quiz/demo data</div>
+    </div>
+    <div class="kpi-card red">
+      <div class="label">Email-Only</div>
+      <div class="value">464</div>
+      <div class="sub">52.2% — no profile data</div>
+    </div>
+    <div class="kpi-card gold">
+      <div class="label">Avg Longevity Score</div>
+      <div class="value">88.3</div>
+      <div class="sub">out of 100 · n=425</div>
+    </div>
+  </div>
+
+  <div class="grid-2">
+    <div class="card">
+      <h3>Source Mix</h3>
+      <div style="height:190px; position:relative;">
+        <canvas id="chart-source-donut"></canvas>
+      </div>
+    </div>
+    <div class="card">
+      <h3>Data Completeness</h3>
+      <div style="height:190px; position:relative;">
+        <canvas id="chart-coverage-donut"></canvas>
+      </div>
+    </div>
+  </div>
+
+  <div class="grid-3">
+    <div class="card">
+      <h3>Gender Split <span>— profiled only · n=425</span></h3>
+      <div style="height:160px; position:relative;"><canvas id="chart-gender-donut"></canvas></div>
+    </div>
+    <div class="card">
+      <h3>Age Distribution <span>— profiled only · n=424</span></h3>
+      <div class="bar-list" style="padding-top:4px;">
+        <div class="bar-item"><div class="bar-meta"><span class="bar-label">65–74</span><span class="bar-pct">162 · 38.2%</span></div><div class="bar-track"><div class="bar-fill accent" style="width:100%"></div></div></div>
+        <div class="bar-item"><div class="bar-meta"><span class="bar-label">55–64</span><span class="bar-pct">118 · 27.8%</span></div><div class="bar-track"><div class="bar-fill accent" style="width:72.8%"></div></div></div>
+        <div class="bar-item"><div class="bar-meta"><span class="bar-label">75+</span><span class="bar-pct">76 · 17.9%</span></div><div class="bar-track"><div class="bar-fill accent" style="width:46.9%"></div></div></div>
+        <div class="bar-item"><div class="bar-meta"><span class="bar-label">45–54</span><span class="bar-pct">42 · 9.9%</span></div><div class="bar-track"><div class="bar-fill cyan" style="width:25.9%"></div></div></div>
+        <div class="bar-item"><div class="bar-meta"><span class="bar-label">35–44</span><span class="bar-pct">18 · 4.2%</span></div><div class="bar-track"><div class="bar-fill cyan" style="width:11.1%"></div></div></div>
+        <div class="bar-item"><div class="bar-meta"><span class="bar-label">&lt;35</span><span class="bar-pct">8 · 1.9%</span></div><div class="bar-track"><div class="bar-fill cyan" style="width:4.9%"></div></div></div>
+      </div>
+    </div>
+    <div class="card">
+      <h3>Longevity Score Buckets <span>n=425</span></h3>
+      <div class="bar-list" style="padding-top:4px;">
+        <div class="bar-item"><div class="bar-meta"><span class="bar-label">90+ Elite</span><span class="bar-pct">166 · 39.1%</span></div><div class="bar-track"><div class="bar-fill green" style="width:100%"></div></div></div>
+        <div class="bar-item"><div class="bar-meta"><span class="bar-label">80–89 Strong</span><span class="bar-pct">242 · 56.9%</span></div><div class="bar-track"><div class="bar-fill accent" style="width:100%"></div></div></div>
+        <div class="bar-item"><div class="bar-meta"><span class="bar-label">70–79 Average</span><span class="bar-pct">15 · 3.5%</span></div><div class="bar-track"><div class="bar-fill orange" style="width:9.0%"></div></div></div>
+        <div class="bar-item"><div class="bar-meta"><span class="bar-label">&lt;70 Below avg</span><span class="bar-pct">2 · 0.5%</span></div><div class="bar-track"><div class="bar-fill red" style="width:1.2%"></div></div></div>
+      </div>
+      <div class="insight"><strong>96% score 80+.</strong> Mean: 88.3 / 100 — well above population norms.</div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════ SOURCE ANALYSIS ══════════════════════════ -->
+<div class="page" id="tab-sources">
+  <div class="section-header">
+    <div class="dot"></div>
+    <h2>Source Analysis</h2>
+  </div>
+
+  <div class="kpi-row">
+    <div class="kpi-card green"><div class="label">SuperAge</div><div class="value">699</div><div class="sub">78.6% of waitlist</div></div>
+    <div class="kpi-card purple"><div class="label">Ageist</div><div class="value">187</div><div class="sub">21.0% of waitlist</div></div>
+    <div class="kpi-card accent"><div class="label">Instagram</div><div class="value">2</div><div class="sub">0.2% organic</div></div>
+    <div class="kpi-card orange"><div class="label">SuperAge w/ Profile</div><div class="value">~384</div><div class="sub">~55% of SA have quiz data</div></div>
+    <div class="kpi-card pink"><div class="label">Ageist w/ Profile</div><div class="value">~66</div><div class="sub">~35% of Ageist have quiz data</div></div>
+  </div>
+
+  <div class="grid-2">
+    <div class="card">
+      <h3>Subscribers by UTM Source</h3>
+      <div class="chart-wrap"><canvas id="chart-source-bar"></canvas></div>
+    </div>
+    <div class="card">
+      <h3>Gender Composition by Source <span>profiled subs only</span></h3>
+      <div class="chart-wrap"><canvas id="chart-source-gender"></canvas></div>
+      <div class="insight"><strong>Both sources skew female.</strong> Ageist is relatively more male (38% vs 34%). SuperAge has higher quiz completion (~55% vs ~35%).</div>
+    </div>
+  </div>
+
+  <div class="grid-2">
+    <div class="card">
+      <h3>UTM Campaign Breakdown — SuperAge <span>699 subs · 2 campaigns</span></h3>
+      <div class="chart-wrap short"><canvas id="chart-camp-sa"></canvas></div>
+      <table style="margin-top:14px;">
+        <thead>
+          <tr><th>Campaign</th><th>Subscribers</th><th>% of Source</th><th>Status</th></tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><strong>SA_PF_20260329</strong></td>
+            <td>610</td>
+            <td>87.3%</td>
+            <td><span class="badge green">Primary · Mar 29</span></td>
+          </tr>
+          <tr>
+            <td><strong>SA_PF_20260330</strong></td>
+            <td>89</td>
+            <td>12.7%</td>
+            <td><span class="badge accent">Secondary · Mar 30</span></td>
+          </tr>
+        </tbody>
+      </table>
+      <div class="insight"><strong>SA_PF_20260329</strong> is the dominant acquisition campaign, bringing in 87% of all SuperAge subscribers in a single day. The Mar 30 follow-up added 89 more — likely a re-send or second wave to non-openers.</div>
+    </div>
+    <div class="card">
+      <h3>UTM Campaign Breakdown — Ageist <span>187 subs · 1 campaign</span></h3>
+      <div class="chart-wrap short"><canvas id="chart-camp-ageist"></canvas></div>
+      <table style="margin-top:14px;">
+        <thead>
+          <tr><th>Campaign</th><th>Subscribers</th><th>% of Source</th><th>Status</th></tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><strong>Sunday March 29 Super Age Games Promo</strong></td>
+            <td>187</td>
+            <td>100%</td>
+            <td><span class="badge purple">Single send · Mar 29</span></td>
+          </tr>
+        </tbody>
+      </table>
+      <div class="insight">All 187 Ageist subscribers came from a <strong>single Sunday promotional send on March 29</strong>. This is a Sunday Spotlight-style promo — a high-performing send type for this audience. There is no secondary Ageist campaign yet.</div>
+    </div>
+  </div>
+
+  <div class="card" style="margin-bottom:18px;">
+    <h3>Source × Campaign Quality Matrix</h3>
+    <table>
+      <thead>
+        <tr><th>Source</th><th>Campaign</th><th>Subs</th><th>% of Total</th><th>Profile Rate</th><th>Send Date</th><th>Signal</th></tr>
+      </thead>
+      <tbody>
+        <tr><td>SuperAge</td><td>SA_PF_20260329</td><td>610</td><td>68.6%</td><td>~55%</td><td>Mar 29, 2026</td><td><span class="badge green">Highest volume</span></td></tr>
+        <tr><td>Ageist</td><td>Sunday Mar 29 Games Promo</td><td>187</td><td>21.0%</td><td>~35%</td><td>Mar 29, 2026</td><td><span class="badge purple">Single blast</span></td></tr>
+        <tr><td>SuperAge</td><td>SA_PF_20260330</td><td>89</td><td>10.0%</td><td>~55%</td><td>Mar 30, 2026</td><td><span class="badge accent">Second wave</span></td></tr>
+        <tr><td>Instagram</td><td>—</td><td>2</td><td>0.2%</td><td>0%</td><td>—</td><td><span class="badge orange">Micro</span></td></tr>
+        <tr><td>Ismail</td><td>—</td><td>1</td><td>0.1%</td><td>0%</td><td>—</td><td><span class="badge red">Anomaly</span></td></tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<!-- ══════════════════════════ DEMOGRAPHICS ══════════════════════════ -->
+<div class="page" id="tab-demographics">
+  <div class="section-header">
+    <div class="dot green"></div>
+    <h2>Demographic Analysis <small style="font-size:12px; color:var(--text-muted); font-weight:400; margin-left:8px;">Profiled subscribers only · n≈425</small></h2>
+  </div>
+
+  <div class="grid-3">
+    <div class="card">
+      <h3>Gender <span>n=425</span></h3>
+      <div style="height:175px; position:relative;"><canvas id="chart-gender-pie"></canvas></div>
+      <div class="insight"><strong>65% female, 35% male</strong> among known gender.</div>
+    </div>
+    <div class="card">
+      <h3>Marital Status <span>n=403</span></h3>
+      <div style="height:175px; position:relative;"><canvas id="chart-marital"></canvas></div>
+    </div>
+    <div class="card">
+      <h3>Education Level <span>n=388</span></h3>
+      <div class="bar-list" style="padding-top:4px;">
+        <div class="bar-item"><div class="bar-meta"><span class="bar-label">College degree+</span><span class="bar-pct">325 · 83.8%</span></div><div class="bar-track"><div class="bar-fill green" style="width:100%"></div></div></div>
+        <div class="bar-item"><div class="bar-meta"><span class="bar-label">Some college / trade</span><span class="bar-pct">57 · 14.7%</span></div><div class="bar-track"><div class="bar-fill accent" style="width:17.5%"></div></div></div>
+        <div class="bar-item"><div class="bar-meta"><span class="bar-label">High school</span><span class="bar-pct">5 · 1.3%</span></div><div class="bar-track"><div class="bar-fill orange" style="width:1.5%"></div></div></div>
+        <div class="bar-item"><div class="bar-meta"><span class="bar-label">Less than HS</span><span class="bar-pct">1 · 0.3%</span></div><div class="bar-track"><div class="bar-fill red" style="width:0.3%"></div></div></div>
+      </div>
+      <div class="insight"><strong>83.8% hold a college degree or higher.</strong></div>
+    </div>
+  </div>
+
+  <div class="grid-2">
+    <div class="card">
+      <h3>Age Distribution <span>n=424</span></h3>
+      <div class="chart-wrap"><canvas id="chart-age-bar"></canvas></div>
+      <div class="insight"><strong>Core: 55–74 (66%).</strong> Range: 25–91. Median age ~65.</div>
+    </div>
+    <div class="card">
+      <h3>Financial Situation <span>n=410</span></h3>
+      <div class="chart-wrap"><canvas id="chart-financial"></canvas></div>
+      <div class="insight"><strong>67% Comfortable or Very Comfortable.</strong> Under 2.4% Unstable.</div>
+    </div>
+  </div>
+
+  <div class="grid-3">
+    <div class="card">
+      <h3>Smoking Status <span>n=423</span></h3>
+      <div class="bar-list">
+        <div class="bar-item"><div class="bar-meta"><span class="bar-label">Never smoked</span><span class="bar-pct">296 · 70.0%</span></div><div class="bar-track"><div class="bar-fill green" style="width:100%"></div></div></div>
+        <div class="bar-item"><div class="bar-meta"><span class="bar-label">Quit – minimal effects</span><span class="bar-pct">119 · 28.1%</span></div><div class="bar-track"><div class="bar-fill accent" style="width:40.2%"></div></div></div>
+        <div class="bar-item"><div class="bar-meta"><span class="bar-label">Quit – chronic disease</span><span class="bar-pct">4 · 0.9%</span></div><div class="bar-track"><div class="bar-fill orange" style="width:1.4%"></div></div></div>
+        <div class="bar-item"><div class="bar-meta"><span class="bar-label">Still smokes</span><span class="bar-pct">4 · 0.9%</span></div><div class="bar-track"><div class="bar-fill red" style="width:1.4%"></div></div></div>
+      </div>
+      <div class="insight"><strong>98%+ non-smokers</strong> or ex-smokers.</div>
+    </div>
+    <div class="card">
+      <h3>Blood Pressure (Diastolic) <span>n=414</span></h3>
+      <div class="bar-list">
+        <div class="bar-item"><div class="bar-meta"><span class="bar-label">Below 80 (healthy)</span><span class="bar-pct">264 · 63.8%</span></div><div class="bar-track"><div class="bar-fill green" style="width:100%"></div></div></div>
+        <div class="bar-item"><div class="bar-meta"><span class="bar-label">80–89 (elevated)</span><span class="bar-pct">107 · 25.8%</span></div><div class="bar-track"><div class="bar-fill accent" style="width:40.5%"></div></div></div>
+        <div class="bar-item"><div class="bar-meta"><span class="bar-label">90–105 (Stage 1)</span><span class="bar-pct">20 · 4.8%</span></div><div class="bar-track"><div class="bar-fill orange" style="width:7.6%"></div></div></div>
+        <div class="bar-item"><div class="bar-meta"><span class="bar-label">106+ (Stage 2+)</span><span class="bar-pct">20 · 4.8%</span></div><div class="bar-track"><div class="bar-fill red" style="width:7.6%"></div></div></div>
+      </div>
+      <div class="insight"><strong>90%</strong> healthy or mildly elevated BP.</div>
+    </div>
+    <div class="card">
+      <h3>Obesity <span>n=425</span></h3>
+      <div class="bar-list" style="padding-top:4px;">
+        <div class="bar-item"><div class="bar-meta"><span class="bar-label">No</span><span class="bar-pct">387 · 91.1%</span></div><div class="bar-track"><div class="bar-fill green" style="width:100%"></div></div></div>
+        <div class="bar-item"><div class="bar-meta"><span class="bar-label">Yes</span><span class="bar-pct">26 · 6.1%</span></div><div class="bar-track"><div class="bar-fill red" style="width:6.7%"></div></div></div>
+        <div class="bar-item"><div class="bar-meta"><span class="bar-label">Don't know</span><span class="bar-pct">12 · 2.8%</span></div><div class="bar-track"><div class="bar-fill orange" style="width:3.1%"></div></div></div>
+      </div>
+      <div class="insight"><strong>91% non-obese</strong> vs ~38% US population average.</div>
+    </div>
+  </div>
+
+  <div class="grid-2">
+    <div class="card">
+      <h3>Family Cancer History <span>n=251</span></h3>
+      <div class="bar-list">
+        <div class="bar-item"><div class="bar-meta"><span class="bar-label">One family member</span><span class="bar-pct">136 · 54.2%</span></div><div class="bar-track"><div class="bar-fill orange" style="width:100%"></div></div></div>
+        <div class="bar-item"><div class="bar-meta"><span class="bar-label">Two family members</span><span class="bar-pct">74 · 29.5%</span></div><div class="bar-track"><div class="bar-fill orange" style="width:54.4%"></div></div></div>
+        <div class="bar-item"><div class="bar-meta"><span class="bar-label">Three or more</span><span class="bar-pct">41 · 16.3%</span></div><div class="bar-track"><div class="bar-fill red" style="width:30.1%"></div></div></div>
+      </div>
+      <div class="insight"><strong>100% of respondents</strong> report at least one family cancer history case.</div>
+    </div>
+    <div class="card">
+      <h3>Known Health Conditions <span>n=364</span></h3>
+      <div class="bar-list">
+        <div class="bar-item"><div class="bar-meta"><span class="bar-label">None</span><span class="bar-pct">246 · 67.6%</span></div><div class="bar-track"><div class="bar-fill green" style="width:100%"></div></div></div>
+        <div class="bar-item"><div class="bar-meta"><span class="bar-label">Other</span><span class="bar-pct">75 · 20.6%</span></div><div class="bar-track"><div class="bar-fill orange" style="width:30.5%"></div></div></div>
+        <div class="bar-item"><div class="bar-meta"><span class="bar-label">Heart Disease</span><span class="bar-pct">30 · 8.2%</span></div><div class="bar-track"><div class="bar-fill red" style="width:12.2%"></div></div></div>
+        <div class="bar-item"><div class="bar-meta"><span class="bar-label">Diabetes</span><span class="bar-pct">11 · 3.0%</span></div><div class="bar-track"><div class="bar-fill orange" style="width:4.5%"></div></div></div>
+        <div class="bar-item"><div class="bar-meta"><span class="bar-label">Cancer</span><span class="bar-pct">10 · 2.7%</span></div><div class="bar-track"><div class="bar-fill red" style="width:4.1%"></div></div></div>
+      </div>
+      <div class="insight"><strong>68% report no known conditions.</strong> Proactive, preventative audience — not a sick cohort.</div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════ GEO ══════════════════════════ -->
+<div class="page" id="tab-geo">
+  <div class="section-header">
+    <div class="dot orange"></div>
+    <h2>Geographic Analysis <small style="font-size:12px; color:var(--text-muted); font-weight:400; margin-left:8px;">Click-level IP data · 34,722 clicks · 711 unique clickers</small></h2>
+  </div>
+
+  <div class="kpi-row">
+    <div class="kpi-card accent"><div class="label">Unique Clickers w/ Geo</div><div class="value">711</div><div class="sub">80% of waitlist</div></div>
+    <div class="kpi-card green"><div class="label">US-Based</div><div class="value">92.4%</div><div class="sub">32,088 of 34,722 clicks</div></div>
+    <div class="kpi-card purple"><div class="label">Canada</div><div class="value">2.8%</div><div class="sub">976 clicks</div></div>
+    <div class="kpi-card orange"><div class="label">Australia</div><div class="value">1.0%</div><div class="sub">335 clicks</div></div>
+    <div class="kpi-card cyan"><div class="label">Top State</div><div class="value">CA</div><div class="sub">California · 4,691 clicks</div></div>
+    <div class="kpi-card gold"><div class="label">Top City</div><div class="value">NYC</div><div class="sub">New York · 1,297 clicks</div></div>
+  </div>
+
+  <div class="grid-2">
+    <div class="card">
+      <h3>Top 15 US States</h3>
+      <div class="geo-list">
+        <div class="geo-item"><span class="geo-rank">1</span><span class="geo-name">California</span><span class="geo-count">4,691</span><div class="geo-track"><div class="geo-fill" style="width:100%"></div></div></div>
+        <div class="geo-item"><span class="geo-rank">2</span><span class="geo-name">New York</span><span class="geo-count">2,974</span><div class="geo-track"><div class="geo-fill" style="width:63.4%"></div></div></div>
+        <div class="geo-item"><span class="geo-rank">3</span><span class="geo-name">Florida</span><span class="geo-count">2,527</span><div class="geo-track"><div class="geo-fill" style="width:53.9%"></div></div></div>
+        <div class="geo-item"><span class="geo-rank">4</span><span class="geo-name">Texas</span><span class="geo-count">1,659</span><div class="geo-track"><div class="geo-fill" style="width:35.4%"></div></div></div>
+        <div class="geo-item"><span class="geo-rank">5</span><span class="geo-name">New Jersey</span><span class="geo-count">1,488</span><div class="geo-track"><div class="geo-fill" style="width:31.7%"></div></div></div>
+        <div class="geo-item"><span class="geo-rank">6</span><span class="geo-name">North Carolina</span><span class="geo-count">1,369</span><div class="geo-track"><div class="geo-fill" style="width:29.2%"></div></div></div>
+        <div class="geo-item"><span class="geo-rank">7</span><span class="geo-name">Colorado</span><span class="geo-count">1,275</span><div class="geo-track"><div class="geo-fill" style="width:27.2%"></div></div></div>
+        <div class="geo-item"><span class="geo-rank">8</span><span class="geo-name">Virginia</span><span class="geo-count">1,068</span><div class="geo-track"><div class="geo-fill" style="width:22.8%"></div></div></div>
+        <div class="geo-item"><span class="geo-rank">9</span><span class="geo-name">Georgia</span><span class="geo-count">1,052</span><div class="geo-track"><div class="geo-fill" style="width:22.4%"></div></div></div>
+        <div class="geo-item"><span class="geo-rank">10</span><span class="geo-name">Arizona</span><span class="geo-count">998</span><div class="geo-track"><div class="geo-fill" style="width:21.3%"></div></div></div>
+        <div class="geo-item"><span class="geo-rank">11</span><span class="geo-name">Pennsylvania</span><span class="geo-count">988</span><div class="geo-track"><div class="geo-fill" style="width:21.1%"></div></div></div>
+        <div class="geo-item"><span class="geo-rank">12</span><span class="geo-name">Massachusetts</span><span class="geo-count">959</span><div class="geo-track"><div class="geo-fill" style="width:20.4%"></div></div></div>
+        <div class="geo-item"><span class="geo-rank">13</span><span class="geo-name">Oregon</span><span class="geo-count">715</span><div class="geo-track"><div class="geo-fill" style="width:15.2%"></div></div></div>
+        <div class="geo-item"><span class="geo-rank">14</span><span class="geo-name">Illinois</span><span class="geo-count">677</span><div class="geo-track"><div class="geo-fill" style="width:14.4%"></div></div></div>
+        <div class="geo-item"><span class="geo-rank">15</span><span class="geo-name">Michigan</span><span class="geo-count">606</span><div class="geo-track"><div class="geo-fill" style="width:12.9%"></div></div></div>
+      </div>
+    </div>
+    <div class="card">
+      <h3>Top 15 Cities</h3>
+      <div class="geo-list">
+        <div class="geo-item"><span class="geo-rank">1</span><span class="geo-name">New York, NY</span><span class="geo-count">1,297</span><div class="geo-track"><div class="geo-fill" style="width:100%"></div></div></div>
+        <div class="geo-item"><span class="geo-rank">2</span><span class="geo-name">Denver, CO</span><span class="geo-count">579</span><div class="geo-track"><div class="geo-fill" style="width:44.6%"></div></div></div>
+        <div class="geo-item"><span class="geo-rank">3</span><span class="geo-name">Phoenix, AZ</span><span class="geo-count">521</span><div class="geo-track"><div class="geo-fill" style="width:40.2%"></div></div></div>
+        <div class="geo-item"><span class="geo-rank">4</span><span class="geo-name">Portland, OR</span><span class="geo-count">496</span><div class="geo-track"><div class="geo-fill" style="width:38.2%"></div></div></div>
+        <div class="geo-item"><span class="geo-rank">5</span><span class="geo-name">San Diego, CA</span><span class="geo-count">470</span><div class="geo-track"><div class="geo-fill" style="width:36.2%"></div></div></div>
+        <div class="geo-item"><span class="geo-rank">6</span><span class="geo-name">Los Angeles, CA</span><span class="geo-count">425</span><div class="geo-track"><div class="geo-fill" style="width:32.8%"></div></div></div>
+        <div class="geo-item"><span class="geo-rank">7</span><span class="geo-name">Atlanta, GA</span><span class="geo-count">374</span><div class="geo-track"><div class="geo-fill" style="width:28.8%"></div></div></div>
+        <div class="geo-item"><span class="geo-rank">8</span><span class="geo-name">Chicago, IL</span><span class="geo-count">369</span><div class="geo-track"><div class="geo-fill" style="width:28.5%"></div></div></div>
+        <div class="geo-item"><span class="geo-rank">9</span><span class="geo-name">Boston, MA</span><span class="geo-count">325</span><div class="geo-track"><div class="geo-fill" style="width:25.1%"></div></div></div>
+        <div class="geo-item"><span class="geo-rank">10</span><span class="geo-name">Miami, FL</span><span class="geo-count">319</span><div class="geo-track"><div class="geo-fill" style="width:24.6%"></div></div></div>
+        <div class="geo-item"><span class="geo-rank">11</span><span class="geo-name">Seattle, WA</span><span class="geo-count">264</span><div class="geo-track"><div class="geo-fill" style="width:20.4%"></div></div></div>
+        <div class="geo-item"><span class="geo-rank">12</span><span class="geo-name">Houston, TX</span><span class="geo-count">263</span><div class="geo-track"><div class="geo-fill" style="width:20.3%"></div></div></div>
+        <div class="geo-item"><span class="geo-rank">13</span><span class="geo-name">Minneapolis, MN</span><span class="geo-count">260</span><div class="geo-track"><div class="geo-fill" style="width:20.0%"></div></div></div>
+        <div class="geo-item"><span class="geo-rank">14</span><span class="geo-name">Dallas, TX</span><span class="geo-count">259</span><div class="geo-track"><div class="geo-fill" style="width:20.0%"></div></div></div>
+        <div class="geo-item"><span class="geo-rank">15</span><span class="geo-name">Chapel Hill, NC</span><span class="geo-count">257</span><div class="geo-track"><div class="geo-fill" style="width:19.8%"></div></div></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="grid-2">
+    <div class="card">
+      <h3>International Distribution <span>click share by country</span></h3>
+      <div class="chart-wrap"><canvas id="chart-countries"></canvas></div>
+    </div>
+    <div class="card">
+      <h3>Geographic Signals</h3>
+      <div class="trait-grid" style="margin-top:6px;">
+        <div class="trait-card"><div class="trait-icon">🌊</div><div class="trait-label">Coastal Dominance</div><div class="trait-val">CA · NY · FL = Top 3</div></div>
+        <div class="trait-card"><div class="trait-icon">🏔️</div><div class="trait-label">Active-Lifestyle Markets</div><div class="trait-val">CO · OR · AZ strong</div></div>
+        <div class="trait-card"><div class="trait-icon">🏙️</div><div class="trait-label">Urban Concentration</div><div class="trait-val">NYC · Denver · Phoenix</div></div>
+        <div class="trait-card"><div class="trait-icon">🎓</div><div class="trait-label">University Town Signal</div><div class="trait-val">Chapel Hill #15</div></div>
+        <div class="trait-card"><div class="trait-icon">🌏</div><div class="trait-label">Intl English Markets</div><div class="trait-val">Canada · Australia · UK</div></div>
+        <div class="trait-card"><div class="trait-icon">🇺🇸</div><div class="trait-label">Primarily US</div><div class="trait-val">92.4% click share</div></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════ PSYCHOGRAPHIC ══════════════════════════ -->
+<div class="page" id="tab-psychographic">
+  <div class="section-header">
+    <div class="dot purple"></div>
+    <h2>Psychographic Profile</h2>
+  </div>
+
+  <div class="grid-3">
+    <div class="card">
+      <h3>Exercise Frequency <span>combined M+F · n=421</span></h3>
+      <div class="bar-list">
+        <div class="bar-item"><div class="bar-meta"><span class="bar-label">Almost every day+</span><span class="bar-pct">276 · 65.5%</span></div><div class="bar-track"><div class="bar-fill green" style="width:100%"></div></div></div>
+        <div class="bar-item"><div class="bar-meta"><span class="bar-label">A few times / week</span><span class="bar-pct">144 · 34.2%</span></div><div class="bar-track"><div class="bar-fill accent" style="width:52.2%"></div></div></div>
+        <div class="bar-item"><div class="bar-meta"><span class="bar-label">Rarely</span><span class="bar-pct">21 · 5.0%</span></div><div class="bar-track"><div class="bar-fill orange" style="width:7.6%"></div></div></div>
+        <div class="bar-item"><div class="bar-meta"><span class="bar-label">Never</span><span class="bar-pct">7 · 1.7%</span></div><div class="bar-track"><div class="bar-fill red" style="width:2.5%"></div></div></div>
+      </div>
+      <div class="insight"><strong>96%+ exercise regularly.</strong> Far above general population norms.</div>
+    </div>
+    <div class="card">
+      <h3>Diet Quality <span>n=424</span></h3>
+      <div class="bar-list">
+        <div class="bar-item"><div class="bar-meta"><span class="bar-label">Mix (moderately healthy)</span><span class="bar-pct">261 · 61.6%</span></div><div class="bar-track"><div class="bar-fill accent" style="width:100%"></div></div></div>
+        <div class="bar-item"><div class="bar-meta"><span class="bar-label">Balanced / plant-based</span><span class="bar-pct">152 · 35.8%</span></div><div class="bar-track"><div class="bar-fill green" style="width:58.2%"></div></div></div>
+        <div class="bar-item"><div class="bar-meta"><span class="bar-label">High processed</span><span class="bar-pct">10 · 2.4%</span></div><div class="bar-track"><div class="bar-fill red" style="width:3.8%"></div></div></div>
+        <div class="bar-item"><div class="bar-meta"><span class="bar-label">Don't pay attention</span><span class="bar-pct">1 · 0.2%</span></div><div class="bar-track"><div class="bar-fill orange" style="width:0.4%"></div></div></div>
+      </div>
+      <div class="insight"><strong>97% eat moderately-to-very healthy.</strong> 35%+ plant-based.</div>
+    </div>
+    <div class="card">
+      <h3>Stress Impact <span>n=422</span></h3>
+      <div class="bar-list">
+        <div class="bar-item"><div class="bar-meta"><span class="bar-label">Not at all / little</span><span class="bar-pct">109 · 25.8%</span></div><div class="bar-track"><div class="bar-fill green" style="width:100%"></div></div></div>
+        <div class="bar-item"><div class="bar-meta"><span class="bar-label">Somewhat</span><span class="bar-pct">204 · 48.3%</span></div><div class="bar-track"><div class="bar-fill accent" style="width:100%"></div></div></div>
+        <div class="bar-item"><div class="bar-meta"><span class="bar-label">Moderately</span><span class="bar-pct">85 · 20.1%</span></div><div class="bar-track"><div class="bar-fill orange" style="width:41.7%"></div></div></div>
+        <div class="bar-item"><div class="bar-meta"><span class="bar-label">Extremely</span><span class="bar-pct">24 · 5.7%</span></div><div class="bar-track"><div class="bar-fill red" style="width:11.8%"></div></div></div>
+      </div>
+      <div class="insight"><strong>74% somewhat-to-moderately affected by stress.</strong></div>
+    </div>
+  </div>
+
+  <div class="grid-2">
+    <div class="card">
+      <h3>Alcohol Consumption <span>n=400</span></h3>
+      <div class="chart-wrap short"><canvas id="chart-alcohol"></canvas></div>
+      <div class="insight"><strong>39% never drink.</strong> 24.5% drink 4+ times/week — audience spans health-strict and socially active.</div>
+    </div>
+    <div class="card">
+      <h3>Social Frequency <span>n=402</span></h3>
+      <div class="chart-wrap short"><canvas id="chart-social"></canvas></div>
+      <div class="insight"><strong>74% socialize several times/week or daily.</strong> Highly community-engaged.</div>
+    </div>
+  </div>
+
+  <div class="card" style="margin-bottom:18px;">
+    <h3>Audience Trait Summary</h3>
+    <div class="trait-grid" style="margin-top:8px;">
+      <div class="trait-card"><div class="trait-icon">🏃</div><div class="trait-label">Exercise</div><div class="trait-val">96% train regularly</div></div>
+      <div class="trait-card"><div class="trait-icon">🥗</div><div class="trait-label">Diet</div><div class="trait-val">97% eat healthy+</div></div>
+      <div class="trait-card"><div class="trait-icon">🎯</div><div class="trait-label">Longevity Score</div><div class="trait-val">Avg 88.3 / 100</div></div>
+      <div class="trait-card"><div class="trait-icon">🎓</div><div class="trait-label">Education</div><div class="trait-val">84% college degree+</div></div>
+      <div class="trait-card"><div class="trait-icon">💰</div><div class="trait-label">Financial</div><div class="trait-val">67% comfortable+</div></div>
+      <div class="trait-card"><div class="trait-icon">🚭</div><div class="trait-label">Smoking</div><div class="trait-val">98% non-smoking</div></div>
+      <div class="trait-card"><div class="trait-icon">💪</div><div class="trait-label">Obesity</div><div class="trait-val">91% non-obese</div></div>
+      <div class="trait-card"><div class="trait-icon">👥</div><div class="trait-label">Social</div><div class="trait-val">74% socialize 3×+/wk</div></div>
+      <div class="trait-card"><div class="trait-icon">❤️</div><div class="trait-label">Heart Health</div><div class="trait-val">90% healthy BP</div></div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════ COVERAGE ══════════════════════════ -->
+<div class="page" id="tab-coverage">
+  <div class="section-header">
+    <div class="dot gold"></div>
+    <h2>Data Coverage</h2>
+  </div>
+
+  <div class="kpi-row">
+    <div class="kpi-card green"><div class="label">Email (ID)</div><div class="value">100%</div><div class="sub">889/889</div></div>
+    <div class="kpi-card green"><div class="label">Source / Campaign</div><div class="value">100%</div><div class="sub">889/889</div></div>
+    <div class="kpi-card orange"><div class="label">Core Quiz Fields</div><div class="value">~48%</div><div class="sub">~425/889 avg</div></div>
+    <div class="kpi-card red"><div class="label">Exercise (direct)</div><div class="value">14%</div><div class="sub">123/889</div></div>
+    <div class="kpi-card red"><div class="label">MC Status</div><div class="value">22%</div><div class="sub">198/889</div></div>
+    <div class="kpi-card purple"><div class="label">Geo (click-based)</div><div class="value">~80%</div><div class="sub">711 unique clickers</div></div>
+  </div>
+
+  <div class="card" style="margin-bottom:18px;">
+    <h3>Field-Level Coverage</h3>
+    <div class="coverage-grid">
+      <div class="coverage-item"><div class="cf">Email</div><div class="cp">889/889 · 100%</div><div class="coverage-track"><div class="coverage-bar" style="width:100%;background:var(--green)"></div></div></div>
+      <div class="coverage-item"><div class="cf">UTM Source</div><div class="cp">889/889 · 100%</div><div class="coverage-track"><div class="coverage-bar" style="width:100%;background:var(--green)"></div></div></div>
+      <div class="coverage-item"><div class="cf">UTM Campaign</div><div class="cp">886/889 · 100%</div><div class="coverage-track"><div class="coverage-bar" style="width:99.7%;background:var(--green)"></div></div></div>
+      <div class="coverage-item"><div class="cf">Ongage Status</div><div class="cp">889/889 · 100%</div><div class="coverage-track"><div class="coverage-bar" style="width:100%;background:var(--green)"></div></div></div>
+      <div class="coverage-item"><div class="cf">Longevity Score</div><div class="cp">425/889 · 48%</div><div class="coverage-track"><div class="coverage-bar" style="width:48%;background:var(--accent)"></div></div></div>
+      <div class="coverage-item"><div class="cf">Gender</div><div class="cp">425/889 · 48%</div><div class="coverage-track"><div class="coverage-bar" style="width:48%;background:var(--accent)"></div></div></div>
+      <div class="coverage-item"><div class="cf">Age</div><div class="cp">424/889 · 48%</div><div class="coverage-track"><div class="coverage-bar" style="width:48%;background:var(--accent)"></div></div></div>
+      <div class="coverage-item"><div class="cf">Diet</div><div class="cp">424/889 · 48%</div><div class="coverage-track"><div class="coverage-bar" style="width:48%;background:var(--accent)"></div></div></div>
+      <div class="coverage-item"><div class="cf">Obesity</div><div class="cp">425/889 · 48%</div><div class="coverage-track"><div class="coverage-bar" style="width:48%;background:var(--accent)"></div></div></div>
+      <div class="coverage-item"><div class="cf">Smoking</div><div class="cp">423/889 · 48%</div><div class="coverage-track"><div class="coverage-bar" style="width:48%;background:var(--accent)"></div></div></div>
+      <div class="coverage-item"><div class="cf">Stress Impact</div><div class="cp">422/889 · 47%</div><div class="coverage-track"><div class="coverage-bar" style="width:47%;background:var(--accent)"></div></div></div>
+      <div class="coverage-item"><div class="cf">Diastolic BP</div><div class="cp">414/889 · 47%</div><div class="coverage-track"><div class="coverage-bar" style="width:47%;background:var(--accent)"></div></div></div>
+      <div class="coverage-item"><div class="cf">Financial Situation</div><div class="cp">410/889 · 46%</div><div class="coverage-track"><div class="coverage-bar" style="width:46%;background:var(--accent)"></div></div></div>
+      <div class="coverage-item"><div class="cf">Marital Status</div><div class="cp">403/889 · 45%</div><div class="coverage-track"><div class="coverage-bar" style="width:45%;background:var(--accent)"></div></div></div>
+      <div class="coverage-item"><div class="cf">Grandparents Death Age</div><div class="cp">400/889 · 45%</div><div class="coverage-track"><div class="coverage-bar" style="width:45%;background:var(--accent)"></div></div></div>
+      <div class="coverage-item"><div class="cf">Alcohol</div><div class="cp">400/889 · 45%</div><div class="coverage-track"><div class="coverage-bar" style="width:45%;background:var(--accent)"></div></div></div>
+      <div class="coverage-item"><div class="cf">Socialize Frequency</div><div class="cp">402/889 · 45%</div><div class="coverage-track"><div class="coverage-bar" style="width:45%;background:var(--accent)"></div></div></div>
+      <div class="coverage-item"><div class="cf">Traffic Accidents</div><div class="cp">401/889 · 45%</div><div class="coverage-track"><div class="coverage-bar" style="width:45%;background:var(--accent)"></div></div></div>
+      <div class="coverage-item"><div class="cf">Health Conditions</div><div class="cp">364/889 · 41%</div><div class="coverage-track"><div class="coverage-bar" style="width:41%;background:var(--orange)"></div></div></div>
+      <div class="coverage-item"><div class="cf">Mother Independent Age</div><div class="cp">319/889 · 36%</div><div class="coverage-track"><div class="coverage-bar" style="width:36%;background:var(--orange)"></div></div></div>
+      <div class="coverage-item"><div class="cf">Family Cancer History</div><div class="cp">251/889 · 28%</div><div class="coverage-track"><div class="coverage-bar" style="width:28%;background:var(--orange)"></div></div></div>
+      <div class="coverage-item"><div class="cf">Date of Birth (raw)</div><div class="cp">178/889 · 20%</div><div class="coverage-track"><div class="coverage-bar" style="width:20%;background:var(--red)"></div></div></div>
+      <div class="coverage-item"><div class="cf">MC Status (Mailchimp)</div><div class="cp">198/889 · 22%</div><div class="coverage-track"><div class="coverage-bar" style="width:22%;background:var(--red)"></div></div></div>
+      <div class="coverage-item"><div class="cf">Exercise Frequency (direct)</div><div class="cp">123/889 · 14%</div><div class="coverage-track"><div class="coverage-bar" style="width:14%;background:var(--red)"></div></div></div>
+    </div>
+  </div>
+
+  <div class="grid-2">
+    <div class="card">
+      <h3>Trust Levels by Field</h3>
+      <table>
+        <thead><tr><th>Field Group</th><th>Coverage</th><th>Trust</th></tr></thead>
+        <tbody>
+          <tr><td>Email / Source / Campaign</td><td>100%</td><td><span class="badge green">High</span></td></tr>
+          <tr><td>Longevity Score · Gender · Age</td><td>~48%</td><td><span class="badge accent">Good</span></td></tr>
+          <tr><td>Diet · BP · Obesity · Smoking</td><td>~47–48%</td><td><span class="badge accent">Good</span></td></tr>
+          <tr><td>Financial · Marital · Alcohol · Social</td><td>~45–46%</td><td><span class="badge accent">Good</span></td></tr>
+          <tr><td>Health conditions · Grandparents</td><td>41–45%</td><td><span class="badge orange">Use with care</span></td></tr>
+          <tr><td>Family Cancer · Mother Age</td><td>28–36%</td><td><span class="badge orange">Indicative</span></td></tr>
+          <tr><td>DOB raw · MC Status · Exercise direct</td><td>14–22%</td><td><span class="badge red">Low trust</span></td></tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="card">
+      <h3>Data Gap Priorities</h3>
+      <div class="bar-list" style="margin-top:4px;">
+        <div class="bar-item"><div class="bar-meta"><span class="bar-label">Re-engage 464 email-only subs with quiz</span><span class="bar-pct">P1</span></div><div class="bar-track"><div class="bar-fill red" style="width:100%"></div></div></div>
+        <div class="bar-item"><div class="bar-meta"><span class="bar-label">Collect zipcode for geo targeting</span><span class="bar-pct">P2</span></div><div class="bar-track"><div class="bar-fill orange" style="width:80%"></div></div></div>
+        <div class="bar-item"><div class="bar-meta"><span class="bar-label">Match Mailchimp status for all subs</span><span class="bar-pct">P3</span></div><div class="bar-track"><div class="bar-fill accent" style="width:60%"></div></div></div>
+        <div class="bar-item"><div class="bar-meta"><span class="bar-label">Tag content interests from click history</span><span class="bar-pct">P4</span></div><div class="bar-track"><div class="bar-fill cyan" style="width:50%"></div></div></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════ SEGMENTS ══════════════════════════ -->
+<div class="page" id="tab-segments">
+  <div class="section-header">
+    <div class="dot"></div>
+    <h2>Audience Segments</h2>
+  </div>
+
+  <div class="segment-grid">
+    <div class="segment-card seg-1">
+      <h4>🏃 Elite Active Women 55–74</h4>
+      <div class="seg-size" style="color:var(--accent)">~178</div>
+      <div class="seg-pct">~20% of total waitlist</div>
+      <div class="seg-logic">Female · Age 55–74 · Exercise almost every day+ · Longevity score 85+</div>
+      <div class="seg-why">→ Highest-value seed. Ideal for Meta lookalike.</div>
+    </div>
+    <div class="segment-card seg-2">
+      <h4>💰 High-Income Wellness</h4>
+      <div class="seg-size" style="color:var(--green)">~274</div>
+      <div class="seg-pct">~31% of total waitlist</div>
+      <div class="seg-logic">Financial: Comfortable or Very Comfortable · Correlated with college degree</div>
+      <div class="seg-why">→ Premium purchase intent. High-ticket supplements, longevity programs, health tech.</div>
+    </div>
+    <div class="segment-card seg-3">
+      <h4>🌱 Plant-Based / Clean Living</h4>
+      <div class="seg-size" style="color:var(--purple)">~152</div>
+      <div class="seg-pct">~17% of total · 36% of profiled</div>
+      <div class="seg-logic">Balanced / plant-based diet · Non-smoker · Non-obese · Healthy BP</div>
+      <div class="seg-why">→ Plant-based food brands, clean supplements, organic, functional nutrition.</div>
+    </div>
+    <div class="segment-card seg-4">
+      <h4>🧠 Longevity Elite (Score 90+)</h4>
+      <div class="seg-size" style="color:var(--gold)">166</div>
+      <div class="seg-pct">18.7% of total · 39% of profiled</div>
+      <div class="seg-logic">Longevity score ≥ 90 · Exercise daily · Non-smoker · Healthy diet</div>
+      <div class="seg-why">→ Most engaged, most optimized. Longevity brands, biohacking, competitive wellness.</div>
+    </div>
+    <div class="segment-card seg-5">
+      <h4>😰 Stress & Mindset Seekers</h4>
+      <div class="seg-size" style="color:var(--pink)">~309</div>
+      <div class="seg-pct">~35% of total waitlist</div>
+      <div class="seg-logic">Stress: Somewhat + Moderately + Extremely affected · 313 known profiles</div>
+      <div class="seg-why">→ Adaptogens, mindfulness apps, sleep optimization, mental performance products.</div>
+    </div>
+    <div class="segment-card seg-6">
+      <h4>💼 Educated Active Professionals</h4>
+      <div class="seg-size" style="color:var(--cyan)">~325</div>
+      <div class="seg-pct">~37% of total waitlist</div>
+      <div class="seg-logic">College degree+ · Exercises regularly · Age 45–74 · Financially stable+</div>
+      <div class="seg-why">→ LinkedIn and premium display. Employer wellness programs and B2C health.</div>
+    </div>
+  </div>
+
+  <div class="card">
+    <h3>Segment Overview</h3>
+    <table>
+      <thead>
+        <tr><th>Segment</th><th>Est. Size</th><th>% of 889</th><th>Primary Trait</th><th>Best Platform</th><th>Lookalike</th></tr>
+      </thead>
+      <tbody>
+        <tr><td>Elite Active Women 55–74</td><td>~178</td><td>20%</td><td>Daily exercise · female · age</td><td>Meta · Pinterest</td><td><span class="badge green">Excellent</span></td></tr>
+        <tr><td>High-Income Wellness</td><td>~274</td><td>31%</td><td>Financial comfort · health</td><td>Meta · LinkedIn · Google</td><td><span class="badge green">Excellent</span></td></tr>
+        <tr><td>Plant-Based / Clean Living</td><td>~152</td><td>17%</td><td>Plant-based diet · clean metrics</td><td>Meta · Pinterest</td><td><span class="badge accent">Strong</span></td></tr>
+        <tr><td>Longevity Elite (90+ score)</td><td>166</td><td>18.7%</td><td>Maximum longevity behaviors</td><td>Meta · Google · Direct</td><td><span class="badge green">Excellent</span></td></tr>
+        <tr><td>Stress / Mindset Seekers</td><td>~309</td><td>35%</td><td>Stress impact acknowledged</td><td>Meta · YouTube</td><td><span class="badge accent">Strong</span></td></tr>
+        <tr><td>Educated Active Professionals</td><td>~325</td><td>37%</td><td>Education · exercise · stability</td><td>LinkedIn · Google</td><td><span class="badge accent">Strong</span></td></tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<!-- ══════════════════════════ EDITORIAL ENGAGEMENT ══════════════════════════ -->
+<div class="page" id="tab-editorial">
+  <div class="section-header">
+    <div class="dot purple"></div>
+    <h2>Editorial Engagement</h2>
+  </div>
+
+  <div class="kpi-row">
+    <div class="kpi-card accent"><div class="label">Total Clicks</div><div class="value">34,722</div><div class="sub">All matched click events</div></div>
+    <div class="kpi-card green"><div class="label">Unique Clickers</div><div class="value">711</div><div class="sub">80% of 889 waitlist</div></div>
+    <div class="kpi-card purple"><div class="label">Avg Clicks / Clicker</div><div class="value">48.8</div><div class="sub">Highly engaged</div></div>
+    <div class="kpi-card gold"><div class="label">Top Domain</div><div class="value">superage.com</div><div class="sub">30,287 of 34,722 clicks</div></div>
+    <div class="kpi-card orange"><div class="label">Top Topic</div><div class="value">Longevity</div><div class="sub">32,571 attributed clicks</div></div>
+    <div class="kpi-card cyan"><div class="label">Newsletter Series</div><div class="value">The Mindset</div><div class="sub">Primary click driver</div></div>
+  </div>
+
+  <!-- TOPIC BREAKDOWN -->
+  <div class="grid-2" style="margin-bottom:18px;">
+    <div class="card">
+      <h3>Content Topic Clicks — All 34,722 Events <span>URL keyword categorization · multi-tag possible</span></h3>
+      <div class="chart-wrap tall"><canvas id="chart-topics-bar"></canvas></div>
+    </div>
+    <div class="card">
+      <h3>Topic Share of Total Clicks</h3>
+      <div style="height:280px; position:relative;"><canvas id="chart-topics-donut"></canvas></div>
+    </div>
+  </div>
+
+  <div class="card" style="margin-bottom:18px;">
+    <h3>Topic Breakdown — Ranked</h3>
+    <table>
+      <thead>
+        <tr><th>#</th><th>Topic</th><th>Clicks</th><th>% of Total</th><th>Signal</th><th>Top Example URLs</th></tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>1</td>
+          <td><strong>🔬 Longevity & Aging</strong></td>
+          <td>32,571</td>
+          <td>93.8%</td>
+          <td><span class="badge green">Dominant</span></td>
+          <td style="font-size:11px; color:var(--text-muted);">reverse-heart-aging, 5-microhabits-longevity, longevity-pantry, top-11-longevity-insights</td>
+        </tr>
+        <tr>
+          <td>2</td>
+          <td><strong>🧠 Mental Health & Mindset</strong></td>
+          <td>25,241</td>
+          <td>72.7%</td>
+          <td><span class="badge accent">Very High</span></td>
+          <td style="font-size:11px; color:var(--text-muted);">5-microhabits-rewire-brain, unsung-molecule-powers-brain, scientists-brains-younger</td>
+        </tr>
+        <tr>
+          <td>3</td>
+          <td><strong>🥗 Nutrition & Diet</strong></td>
+          <td>13,583</td>
+          <td>39.1%</td>
+          <td><span class="badge accent">High</span></td>
+          <td style="font-size:11px; color:var(--text-muted);">longevity-pantry, 6-foods-live-longer, truth-about-carbs, microbiome-longer-life</td>
+        </tr>
+        <tr>
+          <td>4</td>
+          <td><strong>🏋️ Fitness & Exercise</strong></td>
+          <td>7,158</td>
+          <td>20.6%</td>
+          <td><span class="badge accent">Significant</span></td>
+          <td style="font-size:11px; color:var(--text-muted);">strength-training-rules-rewritten, ideal-longevity-workout, best-workout-personality, jump-workout</td>
+        </tr>
+        <tr>
+          <td>5</td>
+          <td><strong>🔭 Science & Research</strong></td>
+          <td>4,007</td>
+          <td>11.5%</td>
+          <td><span class="badge purple">Notable</span></td>
+          <td style="font-size:11px; color:var(--text-muted);">nature.com longevity study, pubmed, sciencedirect, health.harvard.edu</td>
+        </tr>
+        <tr>
+          <td>6</td>
+          <td><strong>❤️ Heart & Cardiovascular</strong></td>
+          <td>3,113</td>
+          <td>9.0%</td>
+          <td><span class="badge orange">Moderate</span></td>
+          <td style="font-size:11px; color:var(--text-muted);">reverse-heart-aging-2yr-plan, stop-schedule-heart-test, berkleylife.com</td>
+        </tr>
+        <tr>
+          <td>7</td>
+          <td><strong>🌿 Lifestyle & Wellness</strong></td>
+          <td>2,916</td>
+          <td>8.4%</td>
+          <td><span class="badge orange">Moderate</span></td>
+          <td style="font-size:11px; color:var(--text-muted);">6-ways-add-10-healthy-years, what-super-ager-means, holiday gift guide</td>
+        </tr>
+        <tr>
+          <td>8</td>
+          <td><strong>📱 Technology & Tracking</strong></td>
+          <td>2,532</td>
+          <td>7.3%</td>
+          <td><span class="badge orange">Moderate</span></td>
+          <td style="font-size:11px; color:var(--text-muted);">best-wearables-longevity, insidetracker.com, longevity-tests-worth-your-time</td>
+        </tr>
+        <tr>
+          <td>9</td>
+          <td><strong>😴 Sleep & Recovery</strong></td>
+          <td>2,086</td>
+          <td>6.0%</td>
+          <td><span class="badge cyan">Present</span></td>
+          <td style="font-size:11px; color:var(--text-muted);">longevity-sleep-routine-deeper-rest, spectrum-sleep, spring-sleep</td>
+        </tr>
+        <tr>
+          <td>10</td>
+          <td><strong>👥 Social & Community</strong></td>
+          <td>759</td>
+          <td>2.2%</td>
+          <td><span class="badge red">Low</span></td>
+          <td style="font-size:11px; color:var(--text-muted);">pollanfamilytable.com, community recipes</td>
+        </tr>
+      </tbody>
+    </table>
+    <div class="insight"><strong>Longevity and Mindset co-dominate.</strong> Nearly every URL that scores "Longevity" also scores "Mindset" — these two themes are deeply intertwined in the content this audience clicks. Nutrition (#3) and Fitness (#4) are strong secondary interests. Science/research engagement confirms a data-literate, evidence-driven audience.</div>
+  </div>
+
+  <div class="grid-2">
+    <div class="card">
+      <h3>Top 10 Most-Clicked Articles</h3>
+      <div class="bar-list">
+        <div class="bar-item"><div class="bar-meta"><span class="bar-label">Reverse Heart Aging with 2-Year Workout Plan</span><span class="bar-pct">522</span></div><div class="bar-track"><div class="bar-fill green" style="width:100%"></div></div></div>
+        <div class="bar-item"><div class="bar-meta"><span class="bar-label">Longevity Quiz (typeform)</span><span class="bar-pct">436</span></div><div class="bar-track"><div class="bar-fill accent" style="width:83.5%"></div></div></div>
+        <div class="bar-item"><div class="bar-meta"><span class="bar-label">5 Microhabits That Rewire Your Brain for Longevity</span><span class="bar-pct">415</span></div><div class="bar-track"><div class="bar-fill accent" style="width:79.5%"></div></div></div>
+        <div class="bar-item"><div class="bar-meta"><span class="bar-label">superage.com/games (waitlist page)</span><span class="bar-pct">362+271</span></div><div class="bar-track"><div class="bar-fill gold" style="width:100%"></div></div></div>
+        <div class="bar-item"><div class="bar-meta"><span class="bar-label">The New Longevity Pantry</span><span class="bar-pct">352</span></div><div class="bar-track"><div class="bar-fill orange" style="width:67.4%"></div></div></div>
+        <div class="bar-item"><div class="bar-meta"><span class="bar-label">Holiday Gift Guide 2025</span><span class="bar-pct">312</span></div><div class="bar-track"><div class="bar-fill purple" style="width:59.8%"></div></div></div>
+        <div class="bar-item"><div class="bar-meta"><span class="bar-label">7 Foods with Most Microplastics</span><span class="bar-pct">304</span></div><div class="bar-track"><div class="bar-fill cyan" style="width:58.2%"></div></div></div>
+        <div class="bar-item"><div class="bar-meta"><span class="bar-label">Your Body Is a Regenerative System</span><span class="bar-pct">301</span></div><div class="bar-track"><div class="bar-fill accent" style="width:57.7%"></div></div></div>
+        <div class="bar-item"><div class="bar-meta"><span class="bar-label">Foods That Counteract Alzheimer's Genes</span><span class="bar-pct">292</span></div><div class="bar-track"><div class="bar-fill orange" style="width:55.9%"></div></div></div>
+        <div class="bar-item"><div class="bar-meta"><span class="bar-label">6 Foods That Help You Live Longer</span><span class="bar-pct">289</span></div><div class="bar-track"><div class="bar-fill green" style="width:55.4%"></div></div></div>
+      </div>
+      <div class="insight">
+        The <strong>Games waitlist page itself</strong> (362 + 271 = 633 combined clicks) is among the top-clicked destinations — confirming strong intentional engagement with the Games concept. The top editorial article is a <strong>heart health × exercise science piece</strong>, aligning with this audience's primary content affinity.
+      </div>
+    </div>
+    <div class="card">
+      <h3>Top Newsletter Issues by Clicks</h3>
+      <div class="bar-list">
+        <div class="bar-item"><div class="bar-meta"><span class="bar-label">Issue 44: The Mindset – 4/21/25</span><span class="bar-pct">346</span></div><div class="bar-track"><div class="bar-fill accent" style="width:100%"></div></div></div>
+        <div class="bar-item"><div class="bar-meta"><span class="bar-label">Issue 36: The Mindset – 3/24/25</span><span class="bar-pct">287</span></div><div class="bar-track"><div class="bar-fill accent" style="width:82.9%"></div></div></div>
+        <div class="bar-item"><div class="bar-meta"><span class="bar-label">Issue 46: The Mindset – 4/28/25 (Timeline)</span><span class="bar-pct">227</span></div><div class="bar-track"><div class="bar-fill accent" style="width:65.6%"></div></div></div>
+        <div class="bar-item"><div class="bar-meta"><span class="bar-label">Issue 43: The Mindset – 4/17/25</span><span class="bar-pct">225</span></div><div class="bar-track"><div class="bar-fill accent" style="width:65.0%"></div></div></div>
+        <div class="bar-item"><div class="bar-meta"><span class="bar-label">Sunday Spotlight – 4/27/25</span><span class="bar-pct">221</span></div><div class="bar-track"><div class="bar-fill purple" style="width:63.9%"></div></div></div>
+        <div class="bar-item"><div class="bar-meta"><span class="bar-label">The Mindset #118 (fatty15, Noon)</span><span class="bar-pct">218</span></div><div class="bar-track"><div class="bar-fill accent" style="width:63.0%"></div></div></div>
+        <div class="bar-item"><div class="bar-meta"><span class="bar-label">Issue 42: The Mindset – 4/14/25</span><span class="bar-pct">217</span></div><div class="bar-track"><div class="bar-fill accent" style="width:62.7%"></div></div></div>
+        <div class="bar-item"><div class="bar-meta"><span class="bar-label">Sunday Spotlight – 4/20/25</span><span class="bar-pct">206</span></div><div class="bar-track"><div class="bar-fill purple" style="width:59.5%"></div></div></div>
+      </div>
+      <div class="insight"><strong>"The Mindset" newsletter</strong> is the primary engagement vehicle. Sunday Spotlight sends also perform consistently — this audience opens and clicks on weekends.</div>
+    </div>
+  </div>
+
+  <div class="card">
+    <h3>Top Sponsor / Product Domains Clicked</h3>
+    <table>
+      <thead><tr><th>Domain</th><th>Clicks</th><th>Category</th></tr></thead>
+      <tbody>
+        <tr><td>superage.com</td><td>30,287</td><td><span class="badge green">Editorial · Primary</span></td></tr>
+        <tr><td>amzn.to</td><td>473</td><td><span class="badge orange">Commerce · Product links</span></td></tr>
+        <tr><td>ageist.typeform.com</td><td>443</td><td><span class="badge accent">Longevity Quiz</span></td></tr>
+        <tr><td>pardonventures.zoom.us</td><td>304</td><td><span class="badge purple">Webinar / Events</span></td></tr>
+        <tr><td>pendulumlife.com</td><td>281</td><td><span class="badge cyan">Gut Health · Sponsor</span></td></tr>
+        <tr><td>fatty15.com</td><td>153</td><td><span class="badge gold">Lipid Health · Sponsor</span></td></tr>
+        <tr><td>timeline.com</td><td>99</td><td><span class="badge green">NAD+ / Longevity · Sponsor</span></td></tr>
+        <tr><td>berkleylife.com</td><td>78</td><td><span class="badge red">Cardiovascular · Sponsor</span></td></tr>
+        <tr><td>davidprotein.com</td><td>64</td><td><span class="badge orange">Protein / Nutrition · Sponsor</span></td></tr>
+        <tr><td>kinsyn.com</td><td>63</td><td><span class="badge pink">Highest recent clicks · Sponsor</span></td></tr>
+        <tr><td>insidetracker.com</td><td>53</td><td><span class="badge accent">Biomarker tracking · Sponsor</span></td></tr>
+        <tr><td>youtube.com</td><td>56</td><td><span class="badge purple">Video content</span></td></tr>
+        <tr><td>health.harvard.edu</td><td>77</td><td><span class="badge accent">Science / Research</span></td></tr>
+        <tr><td>drinkag1.com</td><td>58</td><td><span class="badge green">AG1 / Greens · Sponsor</span></td></tr>
+        <tr><td>mauinuivenison.com</td><td>42</td><td><span class="badge orange">Clean meat / Protein · Sponsor</span></td></tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<script>
+// ── HEADER TIMESTAMP ──
+(function() {
+  // 10:00 AM Cairo time (EET = UTC+2) on March 31, 2026 → 08:00 AM UTC → 03:00 AM EST (UTC-5)
+  const cairoDate = new Date('2026-03-31T10:00:00+02:00');
+  const opts = { timeZone: 'America/New_York', year:'numeric', month:'short', day:'numeric', hour:'2-digit', minute:'2-digit', timeZoneName:'short' };
+  document.getElementById('last-updated').textContent = 'Updated: ' + cairoDate.toLocaleString('en-US', opts);
+})();
+
+// ── CHART DEFAULTS ──
+Chart.defaults.color = '#8b949e';
+Chart.defaults.borderColor = '#30363d';
+Chart.defaults.font.family = "-apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif";
+Chart.defaults.font.size = 12;
+
+const C = {
+  accent:'#58a6ff', green:'#3fb950', orange:'#d29922', purple:'#bc8cff',
+  pink:'#f778ba', cyan:'#39c5cf', gold:'#e3b341', red:'#f85149', teal:'#39d353'
+};
+
+function donut(id, labels, data, colors) {
+  const el = document.getElementById(id); if(!el) return;
+  new Chart(el, {
+    type:'doughnut',
+    data:{ labels, datasets:[{ data, backgroundColor:colors, borderWidth:2, borderColor:'#161b22', hoverOffset:4 }] },
+    options:{ responsive:true, maintainAspectRatio:false, cutout:'62%',
+      plugins:{ legend:{ position:'right', labels:{ boxWidth:10, padding:10, font:{size:11} } },
+        tooltip:{ callbacks:{ label:c=>`  ${c.label}: ${c.raw.toLocaleString()} (${Math.round(c.parsed/c.dataset.data.reduce((a,b)=>a+b,0)*100)}%)` } } } }
+  });
+}
+
+function hbar(id, labels, data, color) {
+  const el = document.getElementById(id); if(!el) return;
+  new Chart(el, {
+    type:'bar',
+    data:{ labels, datasets:[{ data, backgroundColor: Array.isArray(color)?color:color, borderRadius:4, borderWidth:0 }] },
+    options:{ responsive:true, maintainAspectRatio:false, indexAxis:'y',
+      scales:{ x:{ grid:{color:'#21262d'}, beginAtZero:true }, y:{ grid:{display:false} } },
+      plugins:{ legend:{display:false} } }
+  });
+}
+
+function vbar(id, labels, datasets) {
+  const el = document.getElementById(id); if(!el) return;
+  new Chart(el, {
+    type:'bar', data:{ labels, datasets },
+    options:{ responsive:true, maintainAspectRatio:false,
+      scales:{ x:{ grid:{color:'#21262d'} }, y:{ grid:{color:'#21262d'}, beginAtZero:true } },
+      plugins:{ legend:{display:datasets.length>1} } }
+  });
+}
+
+// ── SUMMARY ──
+donut('chart-source-donut',
+  ['SuperAge','Ageist','Instagram','Other'],[699,187,2,1],
+  [C.green,C.purple,C.accent,C.orange]);
+donut('chart-coverage-donut',
+  ['With Profile Data','Email-Only'],[425,464],[C.accent,'#30363d']);
+donut('chart-gender-donut',['Female','Male'],[276,149],[C.pink,C.accent]);
+
+// ── SOURCE ──
+vbar('chart-source-bar',
+  ['SuperAge','Ageist','Instagram','Other'],
+  [{ label:'Subscribers', data:[699,187,2,1],
+     backgroundColor:[C.green,C.purple,C.cyan,C.orange], borderRadius:6, borderWidth:0 }]);
+
+new Chart(document.getElementById('chart-source-gender'), {
+  type:'bar',
+  data:{ labels:['SuperAge','Ageist','Instagram'],
+    datasets:[
+      { label:'Female', data:[235,41,0], backgroundColor:C.pink, borderRadius:4, borderWidth:0 },
+      { label:'Male', data:[123,25,0], backgroundColor:C.accent, borderRadius:4, borderWidth:0 },
+      { label:'Unknown', data:[341,121,2], backgroundColor:'#30363d', borderRadius:4, borderWidth:0 }
+    ]},
+  options:{ responsive:true, maintainAspectRatio:false,
+    scales:{ x:{stacked:true,grid:{color:'#21262d'}}, y:{stacked:true,grid:{color:'#21262d'},beginAtZero:true} },
+    plugins:{ legend:{display:true} } }
+});
+
+// Campaign charts
+donut('chart-camp-sa',
+  ['SA_PF_20260329','SA_PF_20260330'],[610,89],[C.green,C.accent]);
+donut('chart-camp-ageist',
+  ['Sunday Mar 29 Games Promo'],[187],[C.purple]);
+
+// ── DEMOGRAPHICS ──
+donut('chart-gender-pie',['Female','Male'],[276,149],[C.pink,C.accent]);
+donut('chart-marital',
+  ['Married/Partnered','Widowed/Divorced','Single'],[297,61,45],[C.accent,C.orange,C.purple]);
+vbar('chart-age-bar',
+  ['<35','35–44','45–54','55–64','65–74','75+'],
+  [{ label:'Subscribers', data:[8,18,42,118,162,76],
+     backgroundColor:[C.cyan,C.cyan,C.accent,C.accent,C.green,C.orange], borderRadius:6, borderWidth:0 }]);
+hbar('chart-financial',
+  ['Very Comfortable','Comfortable','Stable','Somewhat Stable','Unstable'],
+  [146,128,77,49,10],[C.green,C.accent,C.gold,C.orange,C.red]);
+
+// ── PSYCHOGRAPHIC ──
+donut('chart-alcohol',
+  ['Never','1–3/week','4–5/week','6+/week'],[155,135,53,57],
+  [C.green,C.accent,C.orange,C.red]);
+donut('chart-social',
+  ['Several/week','Almost daily','Once/week','Rarely'],[170,129,85,18],
+  [C.green,C.teal,C.accent,C.orange]);
+
+// ── GEO ──
+hbar('chart-countries',
+  ['United States','Canada','Australia','Mexico','Portugal','Philippines','Spain','United Kingdom','Italy'],
+  [32088,976,335,248,135,131,105,78,71],C.accent);
+
+// ── EDITORIAL — TOPICS ──
+const topicLabels = ['Longevity & Aging','Mental Health & Mindset','Nutrition & Diet','Fitness & Exercise','Science & Research','Heart & Cardiovascular','Lifestyle & Wellness','Technology & Tracking','Sleep & Recovery','Social & Community'];
+const topicData = [32571,25241,13583,7158,4007,3113,2916,2532,2086,759];
+const topicColors = [C.green,C.accent,C.orange,C.pink,C.purple,C.red,C.teal,C.cyan,C.gold,C.text];
+
+hbar('chart-topics-bar', topicLabels, topicData, topicColors);
+donut('chart-topics-donut', topicLabels, topicData, topicColors);
+
+// ── TAB SWITCH ──
+function showTab(id, btn) {
+  document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
+  document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
+  document.getElementById('tab-'+id).classList.add('active');
+  btn.classList.add('active');
+}
+</script>
+</body>
+</html>

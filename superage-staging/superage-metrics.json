@@ -1,23 +1,23 @@
 {
   "data_as_of": "May 14, 2026",
-  "total_subscribers": 1111265,
+  "total_subscribers": 1111136,
   "total_all_states": 1807700,
-  "active_subscribers": 1111265,
-  "send_to_active": 712660,
-  "unsubscribed_count": 651236,
-  "bounced_count": 44315,
+  "active_subscribers": 1111136,
+  "send_to_active": 711464,
+  "unsubscribed_count": 651363,
+  "bounced_count": 44317,
   "deleted_count": 884,
-  "quiz_takers": 881264,
+  "quiz_takers": 881266,
   "quiz_takers_pct": 79.3,
   "high_engagement_60d": 417912,
-  "us_based_count": 65237,
+  "us_based_count": 65238,
   "active_rate": "61.5%",
-  "send_to_rate": "64.1%",
+  "send_to_rate": "64.0%",
   "total_campaigns": 241,
   "total_recipients": 149533887,
-  "total_unique_opens": 77693735,
-  "total_camp_clicks": 4111355,
-  "total_unsubs_camp": 581481,
+  "total_unique_opens": 77694092,
+  "total_camp_clicks": 4111377,
+  "total_unsubs_camp": 581487,
   "total_bounced_camp": 371276,
   "avg_open_rate": "53.55%",
   "avg_click_rate": "3.09%",
@@ -36,11 +36,11 @@
   "avg_deal_size_fmt": "$6,976",
   "total_sponsor_deals": 197,
   "avg_ecpm": "$8.13",
-  "quiz_count": 644945,
+  "quiz_count": 645016,
   "avg_longevity_score": 86.3,
   "avg_age_quiz": 67.3,
   "quiz_kpis": {
-    "total_takers": 644945,
+    "total_takers": 645016,
     "avg_score": 86.3,
     "avg_age": 67.3,
     "max_score": 1981.0,
@@ -55,9 +55,9 @@
       "Deleted"
     ],
     "data": [
-      1111265,
-      651236,
-      44315,
+      1111136,
+      651363,
+      44317,
       884
     ],
     "colors": [
@@ -172,9 +172,9 @@
       "Unknown"
     ],
     "data": [
-      852095,
+      852097,
       681605,
-      274000
+      273998
     ],
     "colors": [
       "#4f8cff",
@@ -194,8 +194,8 @@
       "refind"
     ],
     "data": [
-      1636745,
-      170861,
+      1636742,
+      170864,
       77,
       8,
       4,
@@ -238,36 +238,36 @@
       "SA_PF_20260511 (Spon"
     ],
     "open_rates": [
-      62.71732263566871,
+      62.71748057363068,
       60.560623256331176,
       44.431770923535645,
       61.84103283273631,
-      61.89021782751429,
-      41.86677105301932,
+      61.89038230011645,
+      41.866990968088125,
       65.54597516247345,
-      62.54700132718935,
-      60.16780698715005,
-      41.695415169159176,
+      62.54747588833892,
+      60.168304340401825,
+      41.69574289116352,
       75.0,
-      59.52784457177939,
-      54.93860186754155,
-      38.604980612815005,
-      53.927801095954294,
-      54.93302763364306,
-      39.46269073021065,
+      59.528164330297756,
+      54.93903450264989,
+      38.60529449060773,
+      53.92823831176402,
+      54.93393266562085,
+      39.463641607870734,
       69.24792861695347,
-      36.47319968917329,
+      36.47394278580558,
       61.877209900353584,
-      56.43872783771215,
-      37.806231998461605,
+      56.43995971752996,
+      37.80686945611051,
       61.33853151397011,
-      50.08287416565874,
-      66.23462069873018,
-      56.820345762996055,
-      43.97323432892467,
-      55.67690178311401,
-      53.67524788830316,
-      32.37758419877706
+      50.08406874822679,
+      66.24120007895256,
+      56.8219925386094,
+      43.97503020057492,
+      55.68050464017966,
+      53.688791641397536,
+      32.39396292342036
     ],
     "click_rates": [
       4.73956030071388,
@@ -275,7 +275,7 @@
       3.191300424587464,
       3.9921604716280368,
       1.5717001861829856,
-      2.3434149731373743,
+      2.3435249306717747,
       0.6981532719902194,
       2.1140117343153584,
       0.6507038377434752,
@@ -286,20 +286,20 @@
       2.554546729079522,
       1.6146379853095487,
       3.426752745263666,
-      3.429710066836134,
+      3.4298157199094765,
       18.22817080943276,
       0.9072148313595272,
       4.950176792028286,
-      2.5589223515353843,
+      2.55907633651261,
       3.7096847878169092,
       3.248862897985705,
       1.2360943122937478,
       1.5198368313704849,
-      2.594719539142359,
-      1.1052991383407822,
-      2.1358937637546576,
-      1.2809380704365452,
-      2.318378142288654
+      2.5948692460163,
+      1.1054188631174655,
+      2.136194001843462,
+      1.2813895288730244,
+      2.3198340289236143
     ],
     "recipients": [
       633160,
@@ -340,11 +340,11 @@
       "subject": "The Blood Pressure Number Your Doctor Isn't Checking",
       "sent_date": "2026-05-11",
       "recipients": "824,240",
-      "unique_opens": "266,869",
-      "open_rate": "32.38%",
-      "clicks": "19,109",
+      "unique_opens": "267,004",
+      "open_rate": "32.39%",
+      "clicks": "19,121",
       "click_rate": "2.32%",
-      "unsubs": 1120,
+      "unsubs": 1122,
       "bounced": 3353,
       "url": "http://createsend.com/t/y-10C1604E3BC6F9462540EF23F30FEDED"
     },
@@ -353,11 +353,11 @@
       "subject": "Sharpen Your Mind With This Art Practice",
       "sent_date": "2026-05-10",
       "recipients": "664,513",
-      "unique_opens": "356,679",
-      "open_rate": "53.68%",
-      "clicks": "8,512",
+      "unique_opens": "356,769",
+      "open_rate": "53.69%",
+      "clicks": "8,515",
       "click_rate": "1.28%",
-      "unsubs": 1319,
+      "unsubs": 1321,
       "bounced": 1202,
       "url": "http://createsend.com/t/y-7FCEB73617D12A752540EF23F30FEDED"
     },
@@ -366,9 +366,9 @@
       "subject": "How Aggressive Are You, Naturally? Take The Test",
       "sent_date": "2026-05-07",
       "recipients": "666,138",
-      "unique_opens": "370,885",
+      "unique_opens": "370,909",
       "open_rate": "55.68%",
-      "clicks": "14,228",
+      "clicks": "14,230",
       "click_rate": "2.14%",
       "unsubs": 1540,
       "bounced": 1193,
@@ -379,9 +379,9 @@
       "subject": "Try the 'Endurance Under Load' Test (And Train To Move Your Numbers)",
       "sent_date": "2026-05-04",
       "recipients": "835,249",
-      "unique_opens": "367,286",
-      "open_rate": "43.97%",
-      "clicks": "9,232",
+      "unique_opens": "367,301",
+      "open_rate": "43.98%",
+      "clicks": "9,233",
       "click_rate": "1.11%",
       "unsubs": 1916,
       "bounced": 3390,
@@ -392,9 +392,9 @@
       "subject": "The 5 Blood Tests Most Doctors Don't Run Preview",
       "sent_date": "2026-05-03",
       "recipients": "667,972",
-      "unique_opens": "379,544",
+      "unique_opens": "379,555",
       "open_rate": "56.82%",
-      "clicks": "17,332",
+      "clicks": "17,333",
       "click_rate": "2.59%",
       "unsubs": 1173,
       "bounced": 1132,
@@ -405,8 +405,8 @@
       "subject": "The First Fitness Event For Healthspan: The Super Age Games",
       "sent_date": "2026-05-01",
       "recipients": "15,199",
-      "unique_opens": "10,067",
-      "open_rate": "66.23%",
+      "unique_opens": "10,068",
+      "open_rate": "66.24%",
       "clicks": "231",
       "click_rate": "1.52%",
       "unsubs": 56,
@@ -418,7 +418,7 @@
       "subject": "Stuck in a Thought Loop? Here's What Actually Helps",
       "sent_date": "2026-04-30",
       "recipients": "669,690",
-      "unique_opens": "335,400",
+      "unique_opens": "335,408",
       "open_rate": "50.08%",
       "clicks": "8,278",
       "click_rate": "1.24%",
@@ -431,7 +431,7 @@
       "subject": "AHA Just Updated Cholesterol Guidelines. Here's What Changed",
       "sent_date": "2026-04-27",
       "recipients": "941,239",
-      "unique_opens": "355,847",
+      "unique_opens": "355,853",
       "open_rate": "37.81%",
       "clicks": "34,917",
       "click_rate": "3.71%",
@@ -457,9 +457,9 @@
       "subject": "A Single-Leg Stand Predicts How Long You'll Live. Test Yours",
       "sent_date": "2026-04-26",
       "recipients": "649,414",
-      "unique_opens": "366,521",
+      "unique_opens": "366,529",
       "open_rate": "56.44%",
-      "clicks": "16,618",
+      "clicks": "16,619",
       "click_rate": "2.56%",
       "unsubs": 1311,
       "bounced": 732,
@@ -483,7 +483,7 @@
       "subject": "8 Longevity Trials for You: The Super Age Games Are Open!",
       "sent_date": "2026-04-23",
       "recipients": "942,004",
-      "unique_opens": "343,579",
+      "unique_opens": "343,586",
       "open_rate": "36.47%",
       "clicks": "8,546",
       "click_rate": "0.91%",
@@ -509,9 +509,9 @@
       "subject": "The Way you Draw A Clock Reveals How Your Brain is Aging",
       "sent_date": "2026-04-20",
       "recipients": "946,494",
-      "unique_opens": "373,512",
+      "unique_opens": "373,521",
       "open_rate": "39.46%",
-      "clicks": "32,462",
+      "clicks": "32,463",
       "click_rate": "3.43%",
       "unsubs": 1511,
       "bounced": 4707,
@@ -522,7 +522,7 @@
       "subject": "Don\u2019t Believe This Longevity Hype",
       "sent_date": "2026-04-19",
       "recipients": "662,960",
-      "unique_opens": "364,184",
+      "unique_opens": "364,190",
       "open_rate": "54.93%",
       "clicks": "22,718",
       "click_rate": "3.43%",
@@ -535,7 +535,7 @@
       "subject": "Gardeners Are Healthier Than the Rest of Us. Here's Why",
       "sent_date": "2026-04-16",
       "recipients": "686,160",
-      "unique_opens": "370,031",
+      "unique_opens": "370,034",
       "open_rate": "53.93%",
       "clicks": "11,079",
       "click_rate": "1.61%",
@@ -548,11 +548,11 @@
       "subject": "9 Longevity Myths the Science Doesn't Support",
       "sent_date": "2026-04-13",
       "recipients": "955,786",
-      "unique_opens": "368,981",
-      "open_rate": "38.60%",
+      "unique_opens": "368,984",
+      "open_rate": "38.61%",
       "clicks": "24,416",
       "click_rate": "2.55%",
-      "unsubs": 1580,
+      "unsubs": 1581,
       "bounced": 4908,
       "url": "http://createsend.com/t/y-907181D47319C5892540EF23F30FEDED"
     },
@@ -561,7 +561,7 @@
       "subject": "A Real Finnish Sauna Routine (And the Science of Why it Works)",
       "sent_date": "2026-04-12",
       "recipients": "693,425",
-      "unique_opens": "380,958",
+      "unique_opens": "380,961",
       "open_rate": "54.94%",
       "clicks": "5,293",
       "click_rate": "0.76%",
@@ -574,7 +574,7 @@
       "subject": "Sauna Might Be Worth Your Time (and Good For Your Heart)",
       "sent_date": "2026-04-09",
       "recipients": "625,472",
-      "unique_opens": "372,330",
+      "unique_opens": "372,332",
       "open_rate": "59.53%",
       "clicks": "14,186",
       "click_rate": "2.27%",
@@ -600,7 +600,7 @@
       "subject": "Do Pets Actually Help You Live Longer?",
       "sent_date": "2026-04-06",
       "recipients": "915,410",
-      "unique_opens": "381,684",
+      "unique_opens": "381,687",
       "open_rate": "41.70%",
       "clicks": "12,196",
       "click_rate": "1.33%",
@@ -613,7 +613,7 @@
       "subject": "What Shared Memories Actually Do to Your Brain (and Your Relationship)",
       "sent_date": "2026-04-05",
       "recipients": "603,193",
-      "unique_opens": "362,928",
+      "unique_opens": "362,931",
       "open_rate": "60.17%",
       "clicks": "3,925",
       "click_rate": "0.65%",
@@ -626,7 +626,7 @@
       "subject": "8 Longevity Markers Reveal How Long You\u2019ll Live Well",
       "sent_date": "2026-04-02",
       "recipients": "632,163",
-      "unique_opens": "395,399",
+      "unique_opens": "395,402",
       "open_rate": "62.55%",
       "clicks": "13,364",
       "click_rate": "2.11%",
@@ -652,9 +652,9 @@
       "subject": "The MIND Diet Slows Brain Aging, According to Harvard Study",
       "sent_date": "2026-03-30",
       "recipients": "909,442",
-      "unique_opens": "380,754",
+      "unique_opens": "380,756",
       "open_rate": "41.87%",
-      "clicks": "21,312",
+      "clicks": "21,313",
       "click_rate": "2.34%",
       "unsubs": 1624,
       "bounced": 3821,
@@ -665,7 +665,7 @@
       "subject": "17 Years of Research Just Rewrote the Strength Rules",
       "sent_date": "2026-03-29",
       "recipients": "608,004",
-      "unique_opens": "376,295",
+      "unique_opens": "376,296",
       "open_rate": "61.89%",
       "clicks": "9,556",
       "click_rate": "1.57%",
@@ -717,7 +717,7 @@
       "subject": "Microplastics Are in Your Brain. Here's What to Do.",
       "sent_date": "2026-03-19",
       "recipients": "633,160",
-      "unique_opens": "397,101",
+      "unique_opens": "397,102",
       "open_rate": "62.72%",
       "clicks": "30,009",
       "click_rate": "4.74%",
@@ -769,7 +769,7 @@
       "subject": "This Hip Stretch Changes How Your Whole Body Moves",
       "sent_date": "2026-03-09",
       "recipients": "905,797",
-      "unique_opens": "399,341",
+      "unique_opens": "399,343",
       "open_rate": "44.09%",
       "clicks": "43,870",
       "click_rate": "4.84%",
@@ -782,7 +782,7 @@
       "subject": "NYU Found That Fear Ages Your DNA. But the Effect Is Reversible",
       "sent_date": "2026-03-08",
       "recipients": "620,183",
-      "unique_opens": "392,853",
+      "unique_opens": "392,854",
       "open_rate": "63.34%",
       "clicks": "6,407",
       "click_rate": "1.03%",
@@ -825,7 +825,7 @@
       "open_rate": "43.31%",
       "clicks": "12,317",
       "click_rate": "1.37%",
-      "unsubs": 1753,
+      "unsubs": 1754,
       "bounced": 3256,
       "url": "http://createsend.com/t/y-93998E5B59FFA5DD2540EF23F30FEDED"
     },
@@ -847,7 +847,7 @@
       "subject": "These 3 Moves Build Bone Density Fastest",
       "sent_date": "2026-02-26",
       "recipients": "641,644",
-      "unique_opens": "397,649",
+      "unique_opens": "397,650",
       "open_rate": "61.97%",
       "clicks": "30,998",
       "click_rate": "4.83%",
@@ -886,7 +886,7 @@
       "subject": "1 Minute of Exercise = 156 Minutes of Walking",
       "sent_date": "2026-02-19",
       "recipients": "638,696",
-      "unique_opens": "424,941",
+      "unique_opens": "424,942",
       "open_rate": "66.53%",
       "clicks": "25,009",
       "click_rate": "3.92%",
@@ -938,7 +938,7 @@
       "subject": "One Set. Twice A Week. The New Science Of Building Muscle",
       "sent_date": "2026-02-09",
       "recipients": "877,720",
-      "unique_opens": "400,001",
+      "unique_opens": "400,002",
       "open_rate": "45.57%",
       "clicks": "21,741",
       "click_rate": "2.48%",
@@ -1016,7 +1016,7 @@
       "subject": "The Vaccine Linked to 20% Lower Alzheimer's risk",
       "sent_date": "2026-01-26",
       "recipients": "875,782",
-      "unique_opens": "416,814",
+      "unique_opens": "416,815",
       "open_rate": "47.59%",
       "clicks": "24,348",
       "click_rate": "2.78%",
@@ -1289,7 +1289,7 @@
       "subject": "The Longevity Sleep Routine That Boosts Immunity, Memory, and Metabolism",
       "sent_date": "2025-12-07",
       "recipients": "717,462",
-      "unique_opens": "432,919",
+      "unique_opens": "432,920",
       "open_rate": "60.34%",
       "clicks": "21,076",
       "click_rate": "2.94%",
@@ -1497,7 +1497,7 @@
       "subject": "Take the Year-End Challenge: Tiny Habits to Live Healthy to 100",
       "sent_date": "2025-11-03",
       "recipients": "759,179",
-      "unique_opens": "341,921",
+      "unique_opens": "341,922",
       "open_rate": "45.04%",
       "clicks": "5,604",
       "click_rate": "0.74%",
@@ -1549,7 +1549,7 @@
       "subject": "Reverse 10 Years of Brain Aging: Here\u2019s the Science",
       "sent_date": "2025-10-27",
       "recipients": "958,981",
-      "unique_opens": "445,140",
+      "unique_opens": "445,141",
       "open_rate": "46.42%",
       "clicks": "22,861",
       "click_rate": "2.38%",
@@ -1588,7 +1588,7 @@
       "subject": "Help Shape the Future of Super Age (and Win $100)",
       "sent_date": "2025-10-21",
       "recipients": "213,838",
-      "unique_opens": "88,270",
+      "unique_opens": "88,271",
       "open_rate": "41.28%",
       "clicks": "2,435",
       "click_rate": "1.14%",
@@ -1835,7 +1835,7 @@
       "subject": "This Gentle Exercise Grows New Brain Cells",
       "sent_date": "2025-09-18",
       "recipients": "731,297",
-      "unique_opens": "488,072",
+      "unique_opens": "488,073",
       "open_rate": "66.74%",
       "clicks": "27,258",
       "click_rate": "3.73%",
@@ -2251,7 +2251,7 @@
       "subject": "A Simple Scan That Could Save Your Life",
       "sent_date": "2025-07-13",
       "recipients": "786,700",
-      "unique_opens": "443,889",
+      "unique_opens": "443,890",
       "open_rate": "56.42%",
       "clicks": "26,093",
       "click_rate": "3.32%",
@@ -9504,7 +9504,7 @@
         "TheAgeist"
       ],
       "subscribers": [
-        497772,
+        497771,
         280874,
         181077,
         165313,
@@ -9513,8 +9513,8 @@
         60743,
         7939,
         45974,
-        17857,
-        60474,
+        17856,
+        60473,
         5377
       ],
       "clickers": [
@@ -9590,7 +9590,7 @@
       "rows": [
         {
           "label": "superagequiz",
-          "subscribers": 497772,
+          "subscribers": 497771,
           "clickers": 66337,
           "unique_clicks": 376640,
           "non_unique_clicks": 445393,
@@ -9671,7 +9671,7 @@
         },
         {
           "label": "LS_CPL2",
-          "subscribers": 17857,
+          "subscribers": 17856,
           "clickers": 5050,
           "unique_clicks": 32610,
           "non_unique_clicks": 38566,
@@ -9680,7 +9680,7 @@
         },
         {
           "label": "IF",
-          "subscribers": 60474,
+          "subscribers": 60473,
           "clickers": 6869,
           "unique_clicks": 27465,
           "non_unique_clicks": 32240,
@@ -9781,12 +9781,12 @@
       "75+"
     ],
     "data": [
-      14230,
-      21680,
-      45363,
-      121500,
-      221369,
-      175695
+      14231,
+      21685,
+      45370,
+      121513,
+      221403,
+      175706
     ],
     "colors": [
       "#4f8cff",
@@ -9805,8 +9805,8 @@
       "Unknown"
     ],
     "data": [
-      376163,
-      266654,
+      376207,
+      266681,
       1140,
       988
     ],
@@ -9827,10 +9827,10 @@
     ],
     "data": [
       769,
-      6599,
-      54507,
-      451363,
-      131707
+      6600,
+      54514,
+      451420,
+      131713
     ],
     "colors": [
       "#f87171",
@@ -9849,10 +9849,10 @@
       "Unknown"
     ],
     "data": [
-      235944,
-      184236,
-      165117,
-      41123,
+      235964,
+      184261,
+      165135,
+      41131,
       18525
     ]
   },
@@ -9865,10 +9865,10 @@
       "Unknown"
     ],
     "data": [
-      366287,
-      131530,
-      131046,
-      13838,
+      366326,
+      131547,
+      131059,
+      13840,
       2244
     ]
   },
@@ -9881,11 +9881,11 @@
       "Less than High school"
     ],
     "data": [
-      329239,
-      169472,
-      95732,
-      40107,
-      10395
+      329247,
+      169485,
+      95751,
+      40136,
+      10397
     ],
     "colors": [
       "#4f8cff",
@@ -9903,9 +9903,9 @@
       "Unknown"
     ],
     "data": [
-      411255,
-      148229,
-      85030,
+      411310,
+      148243,
+      85032,
       431
     ],
     "colors": [
@@ -9923,9 +9923,9 @@
       "Unknown"
     ],
     "data": [
-      447646,
-      161841,
-      35413,
+      447695,
+      161859,
+      35417,
       45
     ],
     "colors": [
@@ -10103,9 +10103,9 @@
   },
   "retention_overall": {
     "total": 1807700,
-    "active": 1111265,
-    "churned": 651236,
-    "active_rate": "61.5%",
+    "active": 711464,
+    "churned": 651363,
+    "active_rate": "39.4%",
     "churn_rate": "36.0%",
     "avg_lifespan_days": 118,
     "median_lifespan_days": 81
@@ -10119,11 +10119,11 @@
       "365d+"
     ],
     "data": [
-      249741,
-      183508,
-      200168,
-      374723,
-      791216
+      249651,
+      183511,
+      200181,
+      374596,
+      791256
     ]
   },
   "survival_curve": {
@@ -10194,8 +10194,8 @@
     {
       "source": "AH CPL",
       "subscribers": 282380,
-      "active_now": 147629,
-      "churned": 133581,
+      "active_now": 102345,
+      "churned": 133608,
       "unsub_15d": 18562,
       "unsub_30d": 29826,
       "unsub_15d_rate": 6.6,
@@ -10209,14 +10209,14 @@
     },
     {
       "source": "Meta",
-      "subscribers": 192528,
-      "active_now": 147309,
-      "churned": 40490,
-      "unsub_15d": 17017,
-      "unsub_30d": 20487,
+      "subscribers": 192530,
+      "active_now": 90653,
+      "churned": 40528,
+      "unsub_15d": 17023,
+      "unsub_30d": 20495,
       "unsub_15d_rate": 8.8,
       "unsub_30d_rate": 10.6,
-      "avg_lifespan_days": 82.8,
+      "avg_lifespan_days": 82.9,
       "median_lifespan_days": 30.0,
       "total_unique_clicks": 48110,
       "clickers": 14117,
@@ -10226,8 +10226,8 @@
     {
       "source": "Direct",
       "subscribers": 75239,
-      "active_now": 49208,
-      "churned": 18680,
+      "active_now": 30124,
+      "churned": 18681,
       "unsub_15d": 6284,
       "unsub_30d": 8250,
       "unsub_15d_rate": 8.4,
@@ -10242,7 +10242,7 @@
     {
       "source": "Ageist CPL",
       "subscribers": 5382,
-      "active_now": 3273,
+      "active_now": 2787,
       "churned": 1793,
       "unsub_15d": 378,
       "unsub_30d": 501,
@@ -10518,9 +10518,9 @@
     {
       "cohort": "Oct 2024",
       "size": 6459,
-      "active_now": 4125,
+      "active_now": 2419,
       "churned": 2054,
-      "retention_pct": "63.9%",
+      "retention_pct": "37.5%",
       "churn_rate_pct": "31.8%",
       "early_churn_pct": "11.2%",
       "campaigns_sent": 0
@@ -10528,9 +10528,9 @@
     {
       "cohort": "Nov 2024",
       "size": 24985,
-      "active_now": 15539,
-      "churned": 8689,
-      "retention_pct": "62.2%",
+      "active_now": 11179,
+      "churned": 8690,
+      "retention_pct": "44.7%",
       "churn_rate_pct": "34.8%",
       "early_churn_pct": "11.7%",
       "campaigns_sent": 5
@@ -10538,9 +10538,9 @@
     {
       "cohort": "Dec 2024",
       "size": 25499,
-      "active_now": 16733,
-      "churned": 7797,
-      "retention_pct": "65.6%",
+      "active_now": 10271,
+      "churned": 7798,
+      "retention_pct": "40.3%",
       "churn_rate_pct": "30.6%",
       "early_churn_pct": "10.7%",
       "campaigns_sent": 8
@@ -10548,9 +10548,9 @@
     {
       "cohort": "Jan 2025",
       "size": 255009,
-      "active_now": 142786,
-      "churned": 103701,
-      "retention_pct": "56.0%",
+      "active_now": 95044,
+      "churned": 103714,
+      "retention_pct": "37.3%",
       "churn_rate_pct": "40.7%",
       "early_churn_pct": "20.2%",
       "campaigns_sent": 10
@@ -10558,9 +10558,9 @@
     {
       "cohort": "Feb 2025",
       "size": 384372,
-      "active_now": 229938,
-      "churned": 138885,
-      "retention_pct": "59.8%",
+      "active_now": 143802,
+      "churned": 138911,
+      "retention_pct": "37.4%",
       "churn_rate_pct": "36.1%",
       "early_churn_pct": "17.6%",
       "campaigns_sent": 8
@@ -10568,9 +10568,9 @@
     {
       "cohort": "Mar 2025",
       "size": 193866,
-      "active_now": 115944,
-      "churned": 73073,
-      "retention_pct": "59.8%",
+      "active_now": 73802,
+      "churned": 73083,
+      "retention_pct": "38.1%",
       "churn_rate_pct": "37.7%",
       "early_churn_pct": "19.7%",
       "campaigns_sent": 12
@@ -10578,9 +10578,9 @@
     {
       "cohort": "Apr 2025",
       "size": 224904,
-      "active_now": 136707,
-      "churned": 85065,
-      "retention_pct": "60.8%",
+      "active_now": 83971,
+      "churned": 85074,
+      "retention_pct": "37.3%",
       "churn_rate_pct": "37.8%",
       "early_churn_pct": "20.3%",
       "campaigns_sent": 14
@@ -10588,9 +10588,9 @@
     {
       "cohort": "May 2025",
       "size": 292806,
-      "active_now": 170594,
-      "churned": 119154,
-      "retention_pct": "58.3%",
+      "active_now": 114721,
+      "churned": 119171,
+      "retention_pct": "39.2%",
       "churn_rate_pct": "40.7%",
       "early_churn_pct": "20.6%",
       "campaigns_sent": 17
@@ -10598,9 +10598,9 @@
     {
       "cohort": "Jun 2025",
       "size": 136637,
-      "active_now": 77315,
-      "churned": 58428,
-      "retention_pct": "56.6%",
+      "active_now": 52728,
+      "churned": 58440,
+      "retention_pct": "38.6%",
       "churn_rate_pct": "42.8%",
       "early_churn_pct": "21.3%",
       "campaigns_sent": 14
@@ -10608,9 +10608,9 @@
     {
       "cohort": "Jul 2025",
       "size": 39341,
-      "active_now": 22904,
-      "churned": 16055,
-      "retention_pct": "58.2%",
+      "active_now": 14704,
+      "churned": 16057,
+      "retention_pct": "37.4%",
       "churn_rate_pct": "40.8%",
       "early_churn_pct": "23.3%",
       "campaigns_sent": 14
@@ -10618,9 +10618,9 @@
     {
       "cohort": "Aug 2025",
       "size": 12237,
-      "active_now": 9463,
-      "churned": 2255,
-      "retention_pct": "77.3%",
+      "active_now": 4046,
+      "churned": 2256,
+      "retention_pct": "33.1%",
       "churn_rate_pct": "18.4%",
       "early_churn_pct": "11.2%",
       "campaigns_sent": 15
@@ -10628,9 +10628,9 @@
     {
       "cohort": "Sep 2025",
       "size": 8538,
-      "active_now": 6654,
+      "active_now": 2859,
       "churned": 1547,
-      "retention_pct": "77.9%",
+      "retention_pct": "33.5%",
       "churn_rate_pct": "18.1%",
       "early_churn_pct": "12.1%",
       "campaigns_sent": 16
@@ -10638,9 +10638,9 @@
     {
       "cohort": "Oct 2025",
       "size": 990,
-      "active_now": 690,
+      "active_now": 537,
       "churned": 217,
-      "retention_pct": "69.7%",
+      "retention_pct": "54.2%",
       "churn_rate_pct": "21.9%",
       "early_churn_pct": "15.5%",
       "campaigns_sent": 17
@@ -10648,9 +10648,9 @@
     {
       "cohort": "Nov 2025",
       "size": 14476,
-      "active_now": 10786,
-      "churned": 2709,
-      "retention_pct": "74.5%",
+      "active_now": 7440,
+      "churned": 2713,
+      "retention_pct": "51.4%",
       "churn_rate_pct": "18.7%",
       "early_churn_pct": "14.3%",
       "campaigns_sent": 15
@@ -10658,9 +10658,9 @@
     {
       "cohort": "Dec 2025",
       "size": 27700,
-      "active_now": 20521,
-      "churned": 5902,
-      "retention_pct": "74.1%",
+      "active_now": 13430,
+      "churned": 5906,
+      "retention_pct": "48.5%",
       "churn_rate_pct": "21.3%",
       "early_churn_pct": "18.1%",
       "campaigns_sent": 12
@@ -10668,9 +10668,9 @@
     {
       "cohort": "Jan 2026",
       "size": 35530,
-      "active_now": 27281,
-      "churned": 7252,
-      "retention_pct": "76.8%",
+      "active_now": 17810,
+      "churned": 7256,
+      "retention_pct": "50.1%",
       "churn_rate_pct": "20.4%",
       "early_churn_pct": "18.8%",
       "campaigns_sent": 13
@@ -10678,9 +10678,9 @@
     {
       "cohort": "Feb 2026",
       "size": 36562,
-      "active_now": 29462,
-      "churned": 6179,
-      "retention_pct": "80.6%",
+      "active_now": 18631,
+      "churned": 6185,
+      "retention_pct": "51.0%",
       "churn_rate_pct": "16.9%",
       "early_churn_pct": "16.8%",
       "campaigns_sent": 12
@@ -10688,19 +10688,19 @@
     {
       "cohort": "Mar 2026",
       "size": 31541,
-      "active_now": 26102,
-      "churned": 4809,
-      "retention_pct": "82.8%",
-      "churn_rate_pct": "15.2%",
-      "early_churn_pct": "15.2%",
+      "active_now": 16821,
+      "churned": 4815,
+      "retention_pct": "53.3%",
+      "churn_rate_pct": "15.3%",
+      "early_churn_pct": "15.3%",
       "campaigns_sent": 16
     },
     {
       "cohort": "Apr 2026",
       "size": 42817,
-      "active_now": 35670,
-      "churned": 6258,
-      "retention_pct": "83.3%",
+      "active_now": 21221,
+      "churned": 6269,
+      "retention_pct": "49.6%",
       "churn_rate_pct": "14.6%",
       "early_churn_pct": "14.6%",
       "campaigns_sent": 17
@@ -10708,11 +10708,11 @@
     {
       "cohort": "May 2026",
       "size": 13431,
-      "active_now": 12051,
-      "churned": 1207,
-      "retention_pct": "89.7%",
-      "churn_rate_pct": "9.0%",
-      "early_churn_pct": "9.0%",
+      "active_now": 6019,
+      "churned": 1217,
+      "retention_pct": "44.8%",
+      "churn_rate_pct": "9.1%",
+      "early_churn_pct": "9.1%",
       "campaigns_sent": 6
     }
   ],
@@ -10728,86 +10728,86 @@
     {
       "source": "campaign_monitor",
       "total": 993,
-      "active_now": 877,
-      "retention_90d": "99.6%",
-      "retention_90d_v": 99.6
+      "active_now": 849,
+      "retention_90d": "96.9%",
+      "retention_90d_v": 96.9
     },
     {
       "source": "superage",
       "total": 2332,
-      "active_now": 2132,
-      "retention_90d": "95.6%",
-      "retention_90d_v": 95.6
+      "active_now": 2013,
+      "retention_90d": "90.5%",
+      "retention_90d_v": 90.5
     },
     {
       "source": "healthbrief",
       "total": 7939,
-      "active_now": 7114,
-      "retention_90d": "92.6%",
-      "retention_90d_v": 92.6
+      "active_now": 6316,
+      "retention_90d": "82.5%",
+      "retention_90d_v": 82.5
     },
     {
-      "source": "allhealthy",
-      "total": 1506,
-      "active_now": 1275,
-      "retention_90d": "90.6%",
-      "retention_90d_v": 90.6
+      "source": "TD_CPL2_20241029",
+      "total": 217,
+      "active_now": 136,
+      "retention_90d": "82.0%",
+      "retention_90d_v": 82.0
+    },
+    {
+      "source": "TD_CPL2_20241115",
+      "total": 138,
+      "active_now": 79,
+      "retention_90d": "79.7%",
+      "retention_90d_v": 79.7
     },
     {
       "source": "TD_CPL2_20241112",
       "total": 181,
-      "active_now": 121,
-      "retention_90d": "89.0%",
-      "retention_90d_v": 89.0
-    },
-    {
-      "source": "TD_CPL2_20241203",
-      "total": 194,
-      "active_now": 135,
-      "retention_90d": "88.7%",
-      "retention_90d_v": 88.7
+      "active_now": 104,
+      "retention_90d": "79.6%",
+      "retention_90d_v": 79.6
     },
     {
       "source": "TD_CPL2_20241116",
       "total": 159,
-      "active_now": 110,
-      "retention_90d": "88.1%",
-      "retention_90d_v": 88.1
-    },
-    {
-      "source": "website",
-      "total": 8981,
-      "active_now": 7789,
-      "retention_90d": "88.1%",
-      "retention_90d_v": 88.1
-    },
-    {
-      "source": "TD_CPL2_20241127",
-      "total": 213,
-      "active_now": 147,
-      "retention_90d": "87.8%",
-      "retention_90d_v": 87.8
+      "active_now": 95,
+      "retention_90d": "78.6%",
+      "retention_90d_v": 78.6
     },
     {
       "source": "TD_CPL2_20241102",
       "total": 335,
-      "active_now": 237,
-      "retention_90d": "87.2%",
-      "retention_90d_v": 87.2
-    },
-    {
-      "source": "allhealthy.com",
-      "total": 347,
       "active_now": 207,
-      "retention_90d": "87.0%",
-      "retention_90d_v": 87.0
+      "retention_90d": "78.2%",
+      "retention_90d_v": 78.2
     },
     {
       "source": "TD_CPL2_20241214",
       "total": 182,
-      "active_now": 123,
-      "retention_90d": "86.8%",
-      "retention_90d_v": 86.8
+      "active_now": 107,
+      "retention_90d": "78.0%",
+      "retention_90d_v": 78.0
+    },
+    {
+      "source": "allhealthy",
+      "total": 1506,
+      "active_now": 1079,
+      "retention_90d": "77.6%",
+      "retention_90d_v": 77.6
+    },
+    {
+      "source": "TD_CPL2_20241203",
+      "total": 194,
+      "active_now": 109,
+      "retention_90d": "75.3%",
+      "retention_90d_v": 75.3
+    },
+    {
+      "source": "TD_CPL2_20241118",
+      "total": 141,
+      "active_now": 82,
+      "retention_90d": "75.2%",
+      "retention_90d_v": 75.2
     }
   ]
 }

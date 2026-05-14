@@ -402,7 +402,8 @@ def lambda_handler(event, context):
             """)
             campaign_same_dom_rows = cur.fetchall()
 
-            # (B.1) Raw clicks — same weekday across last 5 occurrences
+            # (B.1) Raw clicks — same weekday across last 5 occurrences (today's weekday).
+            # Kept for backwards compatibility; the dashboard now prefers raw_clicks_by_weekday below.
             cur.execute(f"""
                 WITH clicks AS (
                     SELECT "Date"::date AS d
@@ -430,18 +431,61 @@ def lambda_handler(event, context):
             """)
             raw_clicks_same_weekday_rows = cur.fetchall()
 
-            # (B.2) Raw clicks — last 4 ISO weeks
+            # (B.1b) Raw clicks — last 5 occurrences of EACH weekday (Mon–Sun).
+            # The dashboard's "Same Weekday" chart lets the user pick which
+            # weekday to view, so we materialise 7×5 = 35 day buckets at once.
+            cur.execute(f"""
+                WITH d AS (
+                    SELECT day::date AS day
+                    FROM generate_series(
+                        CURRENT_DATE - INTERVAL '6 weeks',
+                        CURRENT_DATE,
+                        INTERVAL '1 day'
+                    ) AS day
+                ),
+                ranked AS (
+                    SELECT
+                        d.day,
+                        TO_CHAR(d.day, 'Dy')                     AS dow,
+                        ROW_NUMBER() OVER (
+                            PARTITION BY EXTRACT(DOW FROM d.day)
+                            ORDER BY d.day DESC
+                        ) AS rn
+                    FROM d
+                ),
+                clicks AS (
+                    SELECT "Date"::date AS d
+                    FROM {S}."Campaigns_Clicks"
+                    WHERE "Date" IS NOT NULL
+                      AND "Date" >= (CURRENT_DATE - INTERVAL '6 weeks')
+                      AND "Date" <= CURRENT_DATE
+                )
+                SELECT
+                    r.day,
+                    r.dow,
+                    TO_CHAR(r.day, 'Dy Mon DD')        AS label,
+                    COUNT(c.d)                         AS clicks,
+                    (r.day = CURRENT_DATE)             AS is_current
+                FROM ranked r
+                LEFT JOIN clicks c ON c.d = r.day
+                WHERE r.rn <= 5
+                GROUP BY r.day, r.dow
+                ORDER BY r.dow, r.day
+            """)
+            raw_clicks_by_weekday_rows = cur.fetchall()
+
+            # (B.2) Raw clicks — last 12 ISO weeks (HTML defaults to 8w view; user can switch 4w/8w/12w).
             cur.execute(f"""
                 WITH clicks AS (
                     SELECT DATE_TRUNC('week', "Date"::date)::date AS w
                     FROM {S}."Campaigns_Clicks"
                     WHERE "Date" IS NOT NULL
-                      AND "Date" >= (DATE_TRUNC('week', CURRENT_DATE) - INTERVAL '3 weeks')
+                      AND "Date" >= (DATE_TRUNC('week', CURRENT_DATE) - INTERVAL '11 weeks')
                       AND "Date" <= CURRENT_DATE
                 ),
                 weeks AS (
                     SELECT generate_series(
-                        DATE_TRUNC('week', CURRENT_DATE)::date - INTERVAL '3 weeks',
+                        DATE_TRUNC('week', CURRENT_DATE)::date - INTERVAL '11 weeks',
                         DATE_TRUNC('week', CURRENT_DATE)::date,
                         INTERVAL '1 week'
                     )::date AS week_start
@@ -458,18 +502,18 @@ def lambda_handler(event, context):
             """)
             raw_clicks_weekly_rows = cur.fetchall()
 
-            # (B.3) Raw clicks — last 3 calendar months
+            # (B.3) Raw clicks — last 6 calendar months
             cur.execute(f"""
                 WITH clicks AS (
                     SELECT DATE_TRUNC('month', "Date"::date)::date AS m
                     FROM {S}."Campaigns_Clicks"
                     WHERE "Date" IS NOT NULL
-                      AND "Date" >= (DATE_TRUNC('month', CURRENT_DATE) - INTERVAL '2 months')
+                      AND "Date" >= (DATE_TRUNC('month', CURRENT_DATE) - INTERVAL '5 months')
                       AND "Date" <= CURRENT_DATE
                 ),
                 months AS (
                     SELECT generate_series(
-                        DATE_TRUNC('month', CURRENT_DATE)::date - INTERVAL '2 months',
+                        DATE_TRUNC('month', CURRENT_DATE)::date - INTERVAL '5 months',
                         DATE_TRUNC('month', CURRENT_DATE)::date,
                         INTERVAL '1 month'
                     )::date AS month_start
@@ -586,6 +630,16 @@ def lambda_handler(event, context):
             "clicks":     [safe_int(r["clicks"])     for r in raw_clicks_same_weekday_rows],
             "is_current": [bool(r["is_current"])     for r in raw_clicks_same_weekday_rows],
         },
+        # Per-weekday raw click history (last 5 of each weekday).
+        "raw_clicks_by_weekday": (lambda rows: {
+            dow: {
+                "labels":     [str(r["label"]) for r in rows if str(r["dow"]).strip() == dow],
+                "days":       [str(r["day"])   for r in rows if str(r["dow"]).strip() == dow],
+                "clicks":     [safe_int(r["clicks"])     for r in rows if str(r["dow"]).strip() == dow],
+                "is_current": [bool(r["is_current"])     for r in rows if str(r["dow"]).strip() == dow],
+            }
+            for dow in ("Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun")
+        })(raw_clicks_by_weekday_rows),
         "raw_clicks_weekly": {
             "labels":      [str(r["label"])      for r in raw_clicks_weekly_rows],
             "week_starts": [str(r["week_start"]) for r in raw_clicks_weekly_rows],

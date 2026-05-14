@@ -13,6 +13,11 @@ Changes in this version:
   - Revenue table uses issue_date (not invoice_month).
   - GITHUB_FILE_PATH defaults to superage-staging/superage-metrics.json.
 
+"Active" definition (used wherever the dashboard reports an "Active" count
+— send-to KPI, retention KPI, retention-by-source, cohort table, 90-day
+retention by source):
+    state = 'Active' AND engagement_segment NOT IN ('Ghosts', 'Zombies', 'Dormant')
+
 Required env vars:
   DB_SECRET_ARN   — Secrets Manager ARN (JSON: host/port/dbname/username/password)
   GITHUB_TOKEN    — Fine-grained PAT (Contents read+write on the repo)
@@ -231,11 +236,12 @@ def lambda_handler(event, context):
         deleted_count        = safe_int(sub.get("deleted"))
         quiz_takers          = safe_int(sub.get("quiz_takers"))
 
-        # Active (send-to): engagement_segment NOT IN ('Ghosts','Zombies','Dormant').
+        # Active (send-to): state='Active' AND engagement_segment NOT IN ('Ghosts','Zombies','Dormant').
         cur.execute(f"""
             SELECT
                 COUNT(*) FILTER (
-                    WHERE engagement_segment NOT IN ('Ghosts', 'Zombies', 'Dormant')
+                    WHERE state = 'Active'
+                      AND engagement_segment NOT IN ('Ghosts', 'Zombies', 'Dormant')
                 ) AS send_to_active
             FROM {S}.subscribers
             WHERE date_joined::date < CURRENT_DATE
@@ -891,11 +897,14 @@ def lambda_handler(event, context):
         # ─────────────────────────────────────────────────────
         # 8. Retention
         # ─────────────────────────────────────────────────────
-        # Retention is aggregated across ALL subscribers (no sub_level split).
+        # "Active" = state='Active' AND engagement_segment NOT IN (Ghosts/Zombies/Dormant).
         cur.execute(f"""
             SELECT
                 COUNT(*) AS total,
-                COUNT(*) FILTER (WHERE state = 'Active')       AS active,
+                COUNT(*) FILTER (
+                    WHERE state = 'Active'
+                      AND engagement_segment NOT IN ('Ghosts', 'Zombies', 'Dormant')
+                )                                              AS active,
                 COUNT(*) FILTER (WHERE state = 'Unsubscribed') AS churned,
                 ROUND(AVG(
                     EXTRACT(EPOCH FROM (date_unsubscribed - date_joined)) / 86400
@@ -968,6 +977,7 @@ def lambda_handler(event, context):
         # Bucket each subscriber's COALESCE(utm_source, source, 'Organic') into
         # the six product-relevant buckets, then compute LTV and early-unsub
         # rates, plus total unique article clicks via subscriber_clicks.
+        # "Active Now" uses the same two-condition Active rule as Q1b / Q35.
         cur.execute(f"""
             WITH s AS (
                 SELECT
@@ -975,6 +985,7 @@ def lambda_handler(event, context):
                     date_joined::date                                                  AS joined,
                     date_unsubscribed::date                                            AS unsubbed,
                     state,
+                    engagement_segment,
                     COALESCE(NULLIF(TRIM(utm_source), ''), NULLIF(TRIM(source), ''), 'Organic') AS source_raw
                 FROM {S}.subscribers
                 WHERE date_joined IS NOT NULL AND date_joined::date < CURRENT_DATE
@@ -1004,7 +1015,10 @@ def lambda_handler(event, context):
             SELECT
                 m.bucket,
                 COUNT(*)                                              AS subscribers,
-                COUNT(*) FILTER (WHERE m.state = 'Active')            AS active_now,
+                COUNT(*) FILTER (
+                    WHERE m.state = 'Active'
+                      AND m.engagement_segment NOT IN ('Ghosts', 'Zombies', 'Dormant')
+                )                                                     AS active_now,
                 COUNT(*) FILTER (WHERE m.state = 'Unsubscribed')      AS churned,
                 COUNT(*) FILTER (
                     WHERE m.state = 'Unsubscribed' AND m.lifespan_days IS NOT NULL AND m.lifespan_days <= 15
@@ -1066,13 +1080,17 @@ def lambda_handler(event, context):
                     TO_CHAR(DATE_TRUNC('month', date_joined::date), 'Mon YYYY') AS cohort_label,
                     DATE_TRUNC('month', date_joined::date)::date AS cohort_month,
                     COUNT(*) AS total,
-                    COUNT(*) FILTER (WHERE state = 'Active') AS active_now,
+                    COUNT(*) FILTER (
+                        WHERE state = 'Active'
+                          AND engagement_segment NOT IN ('Ghosts', 'Zombies', 'Dormant')
+                    ) AS active_now,
                     COUNT(*) FILTER (WHERE state = 'Unsubscribed') AS churned,
                     COUNT(*) FILTER (WHERE unsubbed_within_90) AS churned_90d
                 FROM (
                     SELECT
                         date_joined,
                         state,
+                        engagement_segment,
                         (
                             state = 'Unsubscribed'
                             AND date_unsubscribed IS NOT NULL
@@ -1107,15 +1125,20 @@ def lambda_handler(event, context):
         """)
         cohort_table_rows = cur.fetchall()
 
-        # UTM source retention: avg 90-day retention rate per acquisition source
+        # UTM source retention: avg 90-day retention rate per acquisition source.
+        # "Active" = state='Active' AND engagement_segment NOT IN (Ghosts/Zombies/Dormant).
         cur.execute(f"""
             SELECT
                 COALESCE(NULLIF(TRIM(utm_source),''), NULLIF(TRIM(source),''), 'Organic') AS source,
                 COUNT(*) AS total,
-                COUNT(*) FILTER (WHERE state = 'Active') AS active_now,
+                COUNT(*) FILTER (
+                    WHERE state = 'Active'
+                      AND engagement_segment NOT IN ('Ghosts', 'Zombies', 'Dormant')
+                ) AS active_now,
                 ROUND(
                     COUNT(*) FILTER (WHERE
-                        state = 'Active'
+                        (state = 'Active'
+                         AND engagement_segment NOT IN ('Ghosts', 'Zombies', 'Dormant'))
                         OR (state = 'Unsubscribed'
                             AND date_unsubscribed IS NOT NULL
                             AND date_unsubscribed::date > date_joined::date + 90)
@@ -1148,7 +1171,7 @@ def lambda_handler(event, context):
     M["total_subscribers"]   = total_subscribers          # = active state count
     M["total_all_states"]    = total_all_states           # every row in subscribers
     M["active_subscribers"]  = active_subscribers         # legacy alias
-    M["send_to_active"]      = send_to_active             # engagement_segment NOT IN (Ghost/Zombie/Dormant)
+    M["send_to_active"]      = send_to_active             # state='Active' AND engagement_segment NOT IN (Ghost/Zombie/Dormant)
     M["unsubscribed_count"]  = unsubscribed_count
     M["bounced_count"]       = bounced_count
     M["deleted_count"]       = deleted_count

@@ -1490,6 +1490,7 @@ function renderRevenue(M) {
   };
   const revColors = (rm.labels||[]).map(l => isFuture(l) ? 'rgba(125,78,0,0.30)' : '#7d4e00');
   const futureMask = (rm.labels||[]).map(isFuture);
+  const firstFutureIdx = futureMask.indexOf(true);
   // For the deals line: split into past (solid) + future (dashed) series so the future segment is visually distinct
   const dealsPast   = (rm.deals||[]).map((v,i) => futureMask[i] ? null : v);
   const dealsFuture = (rm.deals||[]).map((v,i) => futureMask[i] ? v : null);
@@ -1497,6 +1498,35 @@ function renderRevenue(M) {
   for (let i=1; i<futureMask.length; i++) {
     if (futureMask[i] && !futureMask[i-1]) dealsFuture[i-1] = rm.deals[i-1];
   }
+  // Inline plugin: vertical dashed separator between past/current and future months
+  const futureSeparator = {
+    id: 'futureSeparator',
+    afterDatasetsDraw(chart) {
+      if (firstFutureIdx <= 0) return;
+      const xScale = chart.scales.x;
+      const yArea  = chart.chartArea;
+      if (!xScale || !yArea) return;
+      const xPrev = xScale.getPixelForValue(firstFutureIdx - 1);
+      const xCurr = xScale.getPixelForValue(firstFutureIdx);
+      const x = (xPrev + xCurr) / 2;
+      const ctx = chart.ctx;
+      ctx.save();
+      ctx.strokeStyle = '#9a6700';
+      ctx.lineWidth = 1.5;
+      ctx.setLineDash([6,4]);
+      ctx.beginPath();
+      ctx.moveTo(x, yArea.top);
+      ctx.lineTo(x, yArea.bottom);
+      ctx.stroke();
+      ctx.setLineDash([]);
+      ctx.fillStyle = '#9a6700';
+      ctx.font = '10px system-ui, sans-serif';
+      ctx.textAlign = 'left';
+      ctx.textBaseline = 'top';
+      ctx.fillText(' Future →', x + 2, yArea.top + 2);
+      ctx.restore();
+    }
+  };
   new Chart(document.getElementById('rev-monthly'), {
     data: {
       labels: rm.labels||[],
@@ -1511,7 +1541,8 @@ function renderRevenue(M) {
       scales:{
         y:  { position:'left',  beginAtZero:true, ticks:{ callback:v=>'$'+v.toLocaleString() } },
         y1: { position:'right', beginAtZero:true, grid:{ drawOnChartArea:false }, ticks:{ stepSize:1 } }
-      } }
+      } },
+    plugins: [futureSeparator]
   });
 
   // Sponsor type distribution donut

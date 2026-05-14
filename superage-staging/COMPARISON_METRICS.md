@@ -477,7 +477,10 @@ ORDER BY d.day;
 
 Exposed as `M.campaign_clicks_same_dom`.
 
-### B.1 — Raw Clicks Same Weekday (last 5 occurrences)
+### B.1 — Raw Clicks Same Weekday (last 5 occurrences of today's weekday)
+
+Kept for backwards compatibility; the dashboard now prefers the
+per-weekday payload below (B.1b).
 
 ```sql
 WITH clicks AS (
@@ -507,19 +510,69 @@ ORDER BY d.day;
 
 Exposed as `M.raw_clicks_same_weekday`.
 
-### B.2 — Raw Clicks Weekly (last 4 ISO weeks)
+### B.1b — Raw Clicks by Weekday (last 5 occurrences of EACH weekday)
+
+Powers the "Same Weekday" grouped-bar chart in the Click Analysis tab.
+The dashboard renders 7 weekday groups with N bars (2, 3 or 5) per
+group, ordered oldest → most recent. Each bar's tooltip shows the
+exact calendar date.
+
+```sql
+WITH d AS (
+    SELECT day::date AS day
+    FROM generate_series(
+        CURRENT_DATE - INTERVAL '6 weeks',
+        CURRENT_DATE,
+        INTERVAL '1 day'
+    ) AS day
+),
+ranked AS (
+    SELECT
+        d.day,
+        TO_CHAR(d.day, 'Dy')                     AS dow,
+        ROW_NUMBER() OVER (
+            PARTITION BY EXTRACT(DOW FROM d.day)
+            ORDER BY d.day DESC
+        ) AS rn
+    FROM d
+),
+clicks AS (
+    SELECT "Date"::date AS d
+    FROM superage."Campaigns_Clicks"
+    WHERE "Date" IS NOT NULL
+      AND "Date" >= (CURRENT_DATE - INTERVAL '6 weeks')
+      AND "Date" <= CURRENT_DATE
+)
+SELECT
+    r.day,
+    r.dow,
+    TO_CHAR(r.day, 'Dy Mon DD')        AS label,
+    COUNT(c.d)                         AS clicks,
+    (r.day = CURRENT_DATE)             AS is_current
+FROM ranked r
+LEFT JOIN clicks c ON c.d = r.day
+WHERE r.rn <= 5
+GROUP BY r.day, r.dow
+ORDER BY r.dow, r.day;
+```
+
+Exposed as `M.raw_clicks_by_weekday`, a dict keyed by `Mon`…`Sun`
+where each value has `labels[]`, `days[]`, `clicks[]`, `is_current[]`
+in chronological order.
+
+### B.2 — Raw Clicks Weekly (last 12 ISO weeks)
 
 ```sql
 WITH clicks AS (
     SELECT DATE_TRUNC('week', "Date"::date)::date AS w
     FROM superage."Campaigns_Clicks"
     WHERE "Date" IS NOT NULL
-      AND "Date" >= (DATE_TRUNC('week', CURRENT_DATE) - INTERVAL '3 weeks')
+      AND "Date" >= (DATE_TRUNC('week', CURRENT_DATE) - INTERVAL '11 weeks')
       AND "Date" <= CURRENT_DATE
 ),
 weeks AS (
     SELECT generate_series(
-        DATE_TRUNC('week', CURRENT_DATE)::date - INTERVAL '3 weeks',
+        DATE_TRUNC('week', CURRENT_DATE)::date - INTERVAL '11 weeks',
         DATE_TRUNC('week', CURRENT_DATE)::date,
         INTERVAL '1 week'
     )::date AS week_start
@@ -535,21 +588,23 @@ GROUP BY w.week_start
 ORDER BY w.week_start;
 ```
 
-Exposed as `M.raw_clicks_weekly`.
+Exposed as `M.raw_clicks_weekly`. The dashboard exposes a 4w / 8w /
+12w toggle that slices the tail of this series client-side; default
+view is 8 weeks.
 
-### B.3 — Raw Clicks Monthly (last 3 months)
+### B.3 — Raw Clicks Monthly (last 6 months)
 
 ```sql
 WITH clicks AS (
     SELECT DATE_TRUNC('month', "Date"::date)::date AS m
     FROM superage."Campaigns_Clicks"
     WHERE "Date" IS NOT NULL
-      AND "Date" >= (DATE_TRUNC('month', CURRENT_DATE) - INTERVAL '2 months')
+      AND "Date" >= (DATE_TRUNC('month', CURRENT_DATE) - INTERVAL '5 months')
       AND "Date" <= CURRENT_DATE
 ),
 months AS (
     SELECT generate_series(
-        DATE_TRUNC('month', CURRENT_DATE)::date - INTERVAL '2 months',
+        DATE_TRUNC('month', CURRENT_DATE)::date - INTERVAL '5 months',
         DATE_TRUNC('month', CURRENT_DATE)::date,
         INTERVAL '1 month'
     )::date AS month_start

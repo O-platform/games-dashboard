@@ -12,6 +12,10 @@ including the exact SQL queries run by the Lambda so anomalies can be reproduced
 > **Note on schema placeholder:** In every query below, replace `superage` with the value of the `SA_SCHEMA`
 > env var if it differs in your environment (default: `superage`).
 
+> **Canonical "Active" rule** (used wherever the dashboard reports an "Active" count — send-to KPI,
+> retention KPI, retention-by-source, cohort table, 90-day source retention):
+> `state = 'Active' AND engagement_segment NOT IN ('Ghosts', 'Zombies', 'Dormant')`. Both halves are required.
+
 ---
 
 ## How the Dashboard Works
@@ -205,7 +209,7 @@ Source: `superage.sa_airtable_sales`.
 
 ## 7. Subscriber Retention
 
-Aggregates retention across **all subscribers** (no L1/L2 split). KPIs: total, active, churned, avg + median lifespan, active rate.
+Aggregates retention across **all subscribers** (no L1/L2 split). KPIs: total, active, churned, avg + median lifespan, active rate. **"Active"** uses the canonical two-condition rule (state='Active' AND engagement_segment NOT IN Ghosts/Zombies/Dormant).
 
 Charts: Survival Curve (% still active at day 30 / 60 / 90 / 180 / 365), Lifespan Distribution, Monthly Churn Volume.
 
@@ -216,7 +220,7 @@ A second table on the same tab buckets subscribers by `COALESCE(utm_source, sour
 | Column | Meaning |
 |---|---|
 | Subscribers | Total subscribers in the bucket |
-| Active Now / Churned | State split |
+| Active Now / Churned | State split — **Active Now** uses the canonical Active rule |
 | Unsub ≤ 15 d / ≤ 30 d | Count + % of subscribers who unsubscribed within 15 / 30 days of join |
 | Avg LTV / Median LTV | Mean / median lifespan in days (across churned subscribers only) |
 | Clickers, Clicker Rate | Subscribers in the bucket who clicked ≥ 1 article (from `subscriber_clicks`) |
@@ -238,7 +242,7 @@ Groups subscribers by join month and tracks % still active at M+1 through M+12.
 
 Charts: Retention Heatmap, 90-Day Churn Rate by Acquisition Source, 90-Day Retention by UTM Source.
 
-Cohort Performance Table columns: Cohort, Size, Still Active, Retention Rate, Churn Rate, Early Churn (90d), Campaigns That Month.
+Cohort Performance Table columns: Cohort, Size, Still Active, Retention Rate, Churn Rate, Early Churn (90d), Campaigns That Month. **"Active Now" / "Retention %"** use the canonical Active rule.
 
 ---
 
@@ -255,7 +259,7 @@ All queries use `superage` as the schema. Replace with your `SA_SCHEMA` value as
 **Definitions** (per product):
 - **Total Subscribers** = `COUNT(*) WHERE state = 'Active'`. This is the active base, not the row count across all states.
 - **Total (all states)** = raw `COUNT(*)` — exposed as `total_all_states` and used as the denominator for state-mix ratios (unsub %, bounced %, deleted %).
-- **Active (Send-to)** = subscribers whose `engagement_segment` is NOT in (`Ghost`, `Zombie`, `Dormant`) and is not NULL. See Q1b.
+- **Active (Send-to)** = subscribers whose `state = 'Active'` AND `engagement_segment NOT IN (Ghosts, Zombies, Dormant)`. See Q1b.
 
 ```sql
 SELECT
@@ -278,18 +282,24 @@ The lambda assigns `total_subscribers = active` from this row.
 
 ## Q1b — Audience: Active (Send-to) Count
 
-Anyone whose `engagement_segment` is NOT one of the inactive buckets.
+**Definition of "Active" across the whole dashboard:**
+`state = 'Active'` **AND** `engagement_segment NOT IN ('Ghosts', 'Zombies', 'Dormant')`.
+Both halves are required — `state='Active'` alone is too broad (it includes Dormant /
+Zombie / Ghost subscribers we don't send to), and the engagement filter alone is too
+broad (it includes Unsubscribed / Bounced / Deleted state rows that happen to lack a
+Ghost-style engagement label).
 
 ```sql
 SELECT
     COUNT(*) FILTER (
-        WHERE engagement_segment NOT IN ('Ghosts', 'Zombies', 'Dormant')
+        WHERE state = 'Active'
+          AND engagement_segment NOT IN ('Ghosts', 'Zombies', 'Dormant')
     ) AS send_to_active
 FROM superage.subscribers
 WHERE date_joined::date < CURRENT_DATE;
 ```
 
-Exposed as `M.send_to_active`; `send_to_rate = send_to_active / total_subscribers` (active base).
+Exposed as `M.send_to_active`; `send_to_rate = send_to_active / total_subscribers` (active base). **Every other "Active" count in this doc — retention KPI (Q35), cohort table (Q40), per-source retention (Q35b), 90-day source retention (Q41) — uses the same two-condition rule.**
 
 ## Q2 — Overview: Subscriber Status Mix (Donut Chart)
 
@@ -320,7 +330,7 @@ JSON exposed as `M.subscriber_monthly` with keys:
 - `labels` — `YYYY-MM` strings
 - `new_subs` ← `gained` (green bars, left Y axis)
 - `unsubs` ← `lost` (red bars, left Y axis)
-- `active_count` ← `total_active` (purple line, right Y axis — the "Total Subscribers (Active)" line)
+- `active_count` ← `total_active` (purple line, right Y axis — the "Total Subscribers" line)
 
 The dashboard derives `net change` client-side as `new_subs[i] - unsubs[i]` and renders it as a blue line on the left axis. `MAX(total_active)` captures the end-of-month snapshot when the table has daily rows.
 
@@ -908,7 +918,10 @@ Retention is now aggregated across **all subscribers** (no L1/L2 split). The who
 ```sql
 SELECT
     COUNT(*)                                       AS total,
-    COUNT(*) FILTER (WHERE state = 'Active')       AS active,
+    COUNT(*) FILTER (
+        WHERE state = 'Active'
+          AND engagement_segment NOT IN ('Ghosts', 'Zombies', 'Dormant')
+    )                                              AS active,
     COUNT(*) FILTER (WHERE state = 'Unsubscribed') AS churned,
     ROUND(AVG(
         EXTRACT(EPOCH FROM (date_unsubscribed - date_joined)) / 86400
@@ -928,13 +941,16 @@ FROM superage.subscribers
 WHERE date_joined::date < CURRENT_DATE;
 ```
 
-Exposed as `M.retention_overall` (object with `total`, `active`, `churned`, `active_rate`, `churn_rate`, `avg_lifespan_days`, `median_lifespan_days`).
+`active` uses the two-condition Active definition from Q1b. Exposed as
+`M.retention_overall` (object with `total`, `active`, `churned`, `active_rate`,
+`churn_rate`, `avg_lifespan_days`, `median_lifespan_days`).
 
 ## Q35b — Subscriber Retention: Retention by Acquisition Source
 
 Buckets every subscriber's source into the six product-relevant labels, then
 computes LTV (avg + median lifespan), early-unsub counts at 15 / 30 days, and
-click activity from `subscriber_clicks`.
+click activity from `subscriber_clicks`. `active_now` uses the canonical
+Active rule.
 
 ```sql
 WITH s AS (
@@ -943,6 +959,7 @@ WITH s AS (
         date_joined::date                                                  AS joined,
         date_unsubscribed::date                                            AS unsubbed,
         state,
+        engagement_segment,
         COALESCE(NULLIF(TRIM(utm_source), ''), NULLIF(TRIM(source), ''), 'Organic') AS source_raw
     FROM superage.subscribers
     WHERE date_joined IS NOT NULL AND date_joined::date < CURRENT_DATE
@@ -972,7 +989,10 @@ clicks AS (
 SELECT
     m.bucket,
     COUNT(*)                                              AS subscribers,
-    COUNT(*) FILTER (WHERE m.state = 'Active')            AS active_now,
+    COUNT(*) FILTER (
+        WHERE m.state = 'Active'
+          AND m.engagement_segment NOT IN ('Ghosts', 'Zombies', 'Dormant')
+    )                                                     AS active_now,
     COUNT(*) FILTER (WHERE m.state = 'Unsubscribed')      AS churned,
     COUNT(*) FILTER (
         WHERE m.state = 'Unsubscribed' AND m.lifespan_days IS NOT NULL AND m.lifespan_days <= 15
@@ -1082,6 +1102,9 @@ GROUP BY 1 ORDER BY 1;
 
 > **Reading the heatmap:** `alive_m3 / cohort_size * 100` = % still active 90 days after joining.
 > Cells where `cohort_month + offset_days > CURRENT_DATE` are marked null — the cohort hasn't aged enough yet.
+> Note: "alive" here means *not yet unsubscribed* — i.e. lifespan-style survival. The
+> per-cohort `active_now` figure in the cohort *table* (Q40) is stricter — it uses the
+> canonical Active rule (state='Active' AND engagement_segment NOT IN Ghosts/Zombies/Dormant).
 
 ## Q40 — Cohort Analysis: Cohort Performance Table (with campaigns sent that month)
 
@@ -1091,13 +1114,17 @@ WITH cohorts AS (
         TO_CHAR(DATE_TRUNC('month', date_joined::date), 'Mon YYYY') AS cohort_label,
         DATE_TRUNC('month', date_joined::date)::date                AS cohort_month,
         COUNT(*) AS total,
-        COUNT(*) FILTER (WHERE state = 'Active')       AS active_now,
+        COUNT(*) FILTER (
+            WHERE state = 'Active'
+              AND engagement_segment NOT IN ('Ghosts', 'Zombies', 'Dormant')
+        ) AS active_now,
         COUNT(*) FILTER (WHERE state = 'Unsubscribed') AS churned,
         COUNT(*) FILTER (WHERE unsubbed_within_90)     AS churned_90d
     FROM (
         SELECT
             date_joined,
             state,
+            engagement_segment,
             (
                 state = 'Unsubscribed'
                 AND date_unsubscribed IS NOT NULL
@@ -1140,10 +1167,14 @@ ORDER BY c.cohort_month;
 SELECT
     COALESCE(NULLIF(TRIM(utm_source),''), NULLIF(TRIM(source),''), 'Organic') AS source,
     COUNT(*) AS total,
-    COUNT(*) FILTER (WHERE state = 'Active') AS active_now,
+    COUNT(*) FILTER (
+        WHERE state = 'Active'
+          AND engagement_segment NOT IN ('Ghosts', 'Zombies', 'Dormant')
+    ) AS active_now,
     ROUND(
         COUNT(*) FILTER (WHERE
-            state = 'Active'
+            (state = 'Active'
+             AND engagement_segment NOT IN ('Ghosts', 'Zombies', 'Dormant'))
             OR (state = 'Unsubscribed'
                 AND date_unsubscribed IS NOT NULL
                 AND date_unsubscribed::date > date_joined::date + 90)
@@ -1214,3 +1245,4 @@ LIMIT 12;
 20. **Overview sponsor revenue removed**: Sponsor Revenue KPI card removed from Overview tab (still available in Revenue & Sponsors tab).
 21. **Logo background**: `.sa-logo` badge background changed to `#000` (black).
 22. **Dashboard title**: `SuperAge — Brand Pulse Dashboard`.
+23. **Canonical "Active" rule**: Every "Active" count in the dashboard uses `state = 'Active' AND engagement_segment NOT IN ('Ghosts','Zombies','Dormant')`. Applies to Q1b (send_to_active), Q35 (retention KPI), Q35b (retention_by_source), Q40 (cohort table) and Q41 (90-day retention by source).

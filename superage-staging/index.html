@@ -1001,7 +1001,6 @@ function renderContentRef(M) {
       <div class="kpi-card green"><div class="label">Unique Clicks</div><div class="value" id="cr-kpi-uniq">—</div><div class="sub">Sum across articles</div></div>
       <div class="kpi-card blue"><div class="label">Total Clicks</div><div class="value" id="cr-kpi-total">—</div><div class="sub">Including repeats</div></div>
       <div class="kpi-card orange"><div class="label">Avg Unique Clicks / Article</div><div class="value" id="cr-kpi-avg">—</div><div class="sub">Mean engagement</div></div>
-      <div class="kpi-card purple"><div class="label">Top Position Cat</div><div class="value" id="cr-kpi-poscat" style="font-size:16px;">—</div><div class="sub" id="cr-kpi-poscat-sub">By unique clicks</div></div>
     </div>
 
     <div class="grid-2">
@@ -1019,6 +1018,19 @@ function renderContentRef(M) {
           </table>
         </div>
         <div class="insight">Articles with <code>position_category = low</code> that still pull strong unique clicks — content worth re-surfacing higher up.</div>
+      </div>
+    </div>
+
+    <div class="grid-2">
+      <div class="chart-card">
+        <h3>Top Categories <span class="badge-inline">— unique vs total clicks, in scope</span></h3>
+        <div class="chart-container h340"><canvas id="cr-cat-bar"></canvas></div>
+        <div class="insight" id="cr-cat-insight"></div>
+      </div>
+      <div class="chart-card">
+        <h3>Top Tags <span class="badge-inline">— unique vs total clicks, in scope</span></h3>
+        <div class="chart-container h340"><canvas id="cr-tag-bar"></canvas></div>
+        <div class="insight" id="cr-tag-insight"></div>
       </div>
     </div>
 
@@ -1080,6 +1092,8 @@ function _crFilter() {
   _crRenderKpis(rows);
   _crRenderPosCatChart(rows);
   _crRenderSleepers(rows);
+  _crRenderTopBar('cr-cat-bar', 'cr-cat-insight', '_crCatBarChart', rows, _crCategory, 'category');
+  _crRenderTopBar('cr-tag-bar', 'cr-tag-insight', '_crTagBarChart', rows, _crTags,     'tag');
   _crRenderPage();
 
   const filtered = posCat || pos !== '' || author || cat || tag || q;
@@ -1094,22 +1108,59 @@ function _crRenderKpis(rows) {
   const uniq = rows.reduce((a,r) => a + (Number(r.unique_clicks)||0), 0);
   const tot  = rows.reduce((a,r) => a + (Number(r.total_clicks)||0), 0);
   const avg  = n ? (uniq / n) : 0;
-  const byCat = {};
-  rows.forEach(r => {
-    const k = _crPosCat(r) || 'unknown';
-    byCat[k] = (byCat[k]||0) + (Number(r.unique_clicks)||0);
-  });
-  let top = null;
-  Object.entries(byCat).forEach(([k,v]) => { if (!top || v > top[1]) top = [k,v]; });
   const set = (id, v) => { const el=document.getElementById(id); if (el) el.textContent = v; };
   set('cr-kpi-articles', fmt(n));
   set('cr-kpi-uniq',     fmt(uniq));
   set('cr-kpi-total',    fmt(tot));
   set('cr-kpi-avg',      avg ? avg.toFixed(1) : '—');
-  if (top) {
-    set('cr-kpi-poscat', top[0].charAt(0).toUpperCase() + top[0].slice(1));
-    set('cr-kpi-poscat-sub', `${fmt(top[1])} unique clicks`);
-  } else { set('cr-kpi-poscat','—'); set('cr-kpi-poscat-sub','—'); }
+}
+
+function _crAggregateBySplit(rows, accessor) {
+  // Accumulate unique/total clicks + article count per split label
+  // (categories/tags are comma-separated in WordPress).
+  const acc = {};
+  rows.forEach(r => {
+    _crSplit(accessor(r)).forEach(label => {
+      if (!acc[label]) acc[label] = { unique: 0, total: 0, count: 0 };
+      acc[label].unique += Number(r.unique_clicks) || 0;
+      acc[label].total  += Number(r.total_clicks)  || 0;
+      acc[label].count  += 1;
+    });
+  });
+  return Object.entries(acc)
+    .map(([label, v]) => ({ label, ...v }))
+    .sort((a,b) => b.unique - a.unique)
+    .slice(0, 10);
+}
+
+function _crRenderTopBar(canvasId, insightId, chartKey, rows, accessor, noun) {
+  const data = _crAggregateBySplit(rows, accessor);
+  const ctx = document.getElementById(canvasId);
+  if (!ctx) return;
+  if (window[chartKey]) window[chartKey].destroy();
+  window[chartKey] = new Chart(ctx, {
+    type: 'bar',
+    data: {
+      labels: data.map(d => d.label),
+      datasets: [
+        { label:'Unique Clicks', data: data.map(d => d.unique), backgroundColor:'#1a7f37', borderRadius:4 },
+        { label:'Total Clicks',  data: data.map(d => d.total),  backgroundColor:'#0969da', borderRadius:4 },
+      ],
+    },
+    options: { responsive:true, maintainAspectRatio:false, indexAxis:'y',
+      plugins:{ legend:{ position:'bottom', labels:{ font:{ size:11 } } },
+                tooltip:{ callbacks:{ afterLabel: ctx => `Articles: ${data[ctx.dataIndex].count}` } } },
+      scales:{ x:{ beginAtZero:true, ticks:{ callback: v => v.toLocaleString() } } } }
+  });
+  const ins = document.getElementById(insightId);
+  if (ins) {
+    if (!data.length) {
+      ins.textContent = `No ${noun} in scope.`;
+    } else {
+      const top = data[0];
+      ins.innerHTML = `Top ${noun}: <strong>${esc(top.label)}</strong> — ${fmt(top.unique)} unique / ${fmt(top.total)} total clicks across ${top.count} article${top.count===1?'':'s'}.`;
+    }
+  }
 }
 
 function _crRenderPosCatChart(rows) {

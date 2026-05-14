@@ -963,6 +963,69 @@ def lambda_handler(event, context):
         churn_monthly_rows = cur.fetchall()
 
         # ─────────────────────────────────────────────────────
+        # 8b. Retention by Acquisition Source
+        # ─────────────────────────────────────────────────────
+        # Bucket each subscriber's COALESCE(utm_source, source, 'Organic') into
+        # the six product-relevant buckets, then compute LTV and early-unsub
+        # rates, plus total unique article clicks via subscriber_clicks.
+        cur.execute(f"""
+            WITH s AS (
+                SELECT
+                    LOWER(TRIM(email))                                                 AS email,
+                    date_joined::date                                                  AS joined,
+                    date_unsubscribed::date                                            AS unsubbed,
+                    state,
+                    COALESCE(NULLIF(TRIM(utm_source), ''), NULLIF(TRIM(source), ''), 'Organic') AS source_raw
+                FROM {S}.subscribers
+                WHERE date_joined IS NOT NULL AND date_joined::date < CURRENT_DATE
+            ),
+            mapped AS (
+                SELECT
+                    s.*,
+                    CASE
+                        WHEN LOWER(source_raw) IN ('ahcpl1', 'allhealthy')         THEN 'AH CPL'
+                        WHEN LOWER(source_raw) IN ('theageist', 'ageist')          THEN 'Ageist CPL'
+                        WHEN LOWER(source_raw) IN ('share', 'referral')            THEN 'Share'
+                        WHEN LOWER(source_raw) IN ('meta', 'facebook', 'fb', 'if') THEN 'Meta'
+                        WHEN LOWER(source_raw) = 'google'                          THEN 'Google'
+                        WHEN LOWER(source_raw) IN ('organic', 'direct', '')        THEN 'Direct'
+                        ELSE source_raw
+                    END                                                                AS bucket,
+                    CASE WHEN unsubbed IS NOT NULL THEN (unsubbed - joined) END        AS lifespan_days
+                FROM s
+            ),
+            clicks AS (
+                SELECT LOWER(TRIM(email_address)) AS email,
+                       SUM(unique_clicks)         AS unique_clicks
+                FROM {S}.subscriber_clicks
+                WHERE email_address IS NOT NULL AND TRIM(email_address) != ''
+                GROUP BY 1
+            )
+            SELECT
+                m.bucket,
+                COUNT(*)                                              AS subscribers,
+                COUNT(*) FILTER (WHERE m.state = 'Active')            AS active_now,
+                COUNT(*) FILTER (WHERE m.state = 'Unsubscribed')      AS churned,
+                COUNT(*) FILTER (
+                    WHERE m.state = 'Unsubscribed' AND m.lifespan_days IS NOT NULL AND m.lifespan_days <= 15
+                )                                                     AS unsub_15d,
+                COUNT(*) FILTER (
+                    WHERE m.state = 'Unsubscribed' AND m.lifespan_days IS NOT NULL AND m.lifespan_days <= 30
+                )                                                     AS unsub_30d,
+                ROUND(AVG(m.lifespan_days) FILTER (WHERE m.lifespan_days IS NOT NULL)::numeric, 1) AS avg_lifespan_days,
+                ROUND(PERCENTILE_CONT(0.5) WITHIN GROUP (ORDER BY m.lifespan_days)
+                      FILTER (WHERE m.lifespan_days IS NOT NULL)::numeric, 1)                       AS median_lifespan_days,
+                COALESCE(SUM(c.unique_clicks), 0)                     AS total_unique_clicks,
+                COUNT(c.email)                                        AS clickers
+            FROM mapped m
+            LEFT JOIN clicks c ON c.email = m.email
+            WHERE m.bucket IN ('AH CPL', 'Ageist CPL', 'Share', 'Meta', 'Google', 'Direct')
+            GROUP BY m.bucket
+            ORDER BY subscribers DESC
+        """)
+        retention_by_source_rows = cur.fetchall()
+
+        # ─────────────────────────────────────────────────────
         # 9. Cohort Analysis
         # ─────────────────────────────────────────────────────
 
@@ -1487,6 +1550,27 @@ def lambda_handler(event, context):
         "labels": [str(r["month"]) for r in churn_monthly_rows],
         "data":   [safe_int(r["churned"]) for r in churn_monthly_rows],
     }
+
+    # ── Retention by Acquisition Source ──
+    M["retention_by_source"] = [
+        {
+            "source":               str(r["bucket"]),
+            "subscribers":          safe_int(r["subscribers"]),
+            "active_now":           safe_int(r["active_now"]),
+            "churned":              safe_int(r["churned"]),
+            "unsub_15d":            safe_int(r["unsub_15d"]),
+            "unsub_30d":            safe_int(r["unsub_30d"]),
+            "unsub_15d_rate":       round(safe_int(r["unsub_15d"]) / safe_int(r["subscribers"]) * 100, 1) if safe_int(r["subscribers"]) else 0.0,
+            "unsub_30d_rate":       round(safe_int(r["unsub_30d"]) / safe_int(r["subscribers"]) * 100, 1) if safe_int(r["subscribers"]) else 0.0,
+            "avg_lifespan_days":    safe_float(r["avg_lifespan_days"]),
+            "median_lifespan_days": safe_float(r["median_lifespan_days"]),
+            "total_unique_clicks":  safe_int(r["total_unique_clicks"]),
+            "clickers":             safe_int(r["clickers"]),
+            "clicker_rate":         round(safe_int(r["clickers"]) / safe_int(r["subscribers"]) * 100, 1) if safe_int(r["subscribers"]) else 0.0,
+            "avg_clicks_per_clicker": round(safe_int(r["total_unique_clicks"]) / safe_int(r["clickers"]), 1) if safe_int(r["clickers"]) else 0.0,
+        }
+        for r in retention_by_source_rows
+    ]
 
     # ── Cohort heatmap ──
     today = date.today()

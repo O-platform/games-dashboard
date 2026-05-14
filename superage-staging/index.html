@@ -1,0 +1,1473 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SuperAge — Brand Pulse Dashboard</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js"></script>
+<style>
+  :root {
+    --bg: #f6f8fa;
+    --card: #ffffff;
+    --card-2: #f0f2f5;
+    --card-border: #d0d7de;
+    --text: #1f2328;
+    --text-muted: #57606a;
+    --text-dim: #8c959f;
+    --accent: #0969da;
+    --green: #1a7f37;
+    --red: #cf222e;
+    --orange: #9a6700;
+    --purple: #8250df;
+    --pink: #bf3989;
+    --cyan: #1b7c83;
+    --gold: #7d4e00;
+    --blue: #0969da;
+    --header-bg: linear-gradient(160deg, #dce8f5 0%, #f6f8fa 60%);
+    --row-hover: #f0f2f5;
+    --row-border: #e8eaed;
+  }
+  body.dark {
+    --bg: #0d1117;
+    --card: #161b22;
+    --card-2: #1c2128;
+    --card-border: #30363d;
+    --text: #e6edf3;
+    --text-muted: #8b949e;
+    --text-dim: #484f58;
+    --accent: #58a6ff;
+    --green: #3fb950;
+    --red: #f85149;
+    --orange: #d29922;
+    --purple: #bc8cff;
+    --pink: #f778ba;
+    --cyan: #39c5cf;
+    --gold: #e3b341;
+    --blue: #58a6ff;
+    --header-bg: linear-gradient(160deg, #0d1b2e 0%, #0d1117 60%);
+    --row-hover: #1c2128;
+    --row-border: #30363d;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; }
+  a { color: var(--accent); text-decoration: none; }
+  a:hover { text-decoration: underline; }
+  /* Header */
+  .header { background: var(--header-bg); border-bottom: 1px solid var(--card-border); padding: 14px 24px; display: flex; align-items: center; justify-content: space-between; }
+  .header-left { display: flex; align-items: center; gap: 12px; }
+  .sa-logo {
+    flex-shrink: 0;
+    width: 40px; height: 40px;
+    background: transparent;
+    border-radius: 10px;
+    display: flex; align-items: center; justify-content: center;
+    box-shadow: 0 1px 4px rgba(0,0,0,.2);
+    padding: 5px;
+  }
+  .sa-logo img, .sa-logo svg { width: 100%; height: 100%; filter: brightness(0) invert(1); }
+  .header h1 { font-size: 19px; font-weight: 700; color: var(--text); }
+  .header .sub { font-size: 11px; color: var(--text-muted); margin-top: 1px; }
+  .header-right { display: flex; align-items: center; gap: 10px; }
+  .as-of { font-size: 11px; color: var(--text-muted); }
+  .dark-toggle { background: none; border: 1px solid var(--card-border); border-radius: 6px; padding: 5px 10px; font-size: 12px; color: var(--text-muted); cursor: pointer; transition: background .2s; }
+  .dark-toggle:hover { background: var(--card-2); }
+  /* Tabs */
+  .tab-bar { background: var(--card); border-bottom: 1px solid var(--card-border); display: flex; overflow-x: auto; padding: 0 16px; gap: 0; }
+  .tab { background: none; border: none; border-bottom: 2px solid transparent; padding: 10px 16px; font-size: 13px; font-weight: 500; color: var(--text-muted); cursor: pointer; white-space: nowrap; transition: color .15s, border-color .15s; }
+  .tab:hover { color: var(--text); }
+  .tab.active { color: var(--accent); border-bottom-color: var(--accent); }
+  /* Pages */
+  .page { display: none; padding: 20px 24px; max-width: 1280px; margin: 0 auto; }
+  .page.active { display: block; }
+  /* Cards */
+  .kpi-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(155px,1fr)); gap: 12px; margin-bottom: 18px; }
+  .kpi-card { background: var(--card); border: 1px solid var(--card-border); border-radius: 10px; padding: 14px 16px; }
+  .kpi-card .label { font-size: 11px; color: var(--text-muted); font-weight: 600; text-transform: uppercase; letter-spacing: .5px; margin-bottom: 4px; }
+  .kpi-card .value { font-size: 24px; font-weight: 700; line-height: 1; margin-bottom: 4px; }
+  .kpi-card .sub { font-size: 11px; color: var(--text-muted); }
+  .kpi-card.accent .value { color: var(--accent); }
+  .kpi-card.green .value { color: var(--green); }
+  .kpi-card.red .value { color: var(--red); }
+  .kpi-card.orange .value { color: var(--orange); }
+  .kpi-card.purple .value { color: var(--purple); }
+  .kpi-card.pink .value { color: var(--pink); }
+  .kpi-card.cyan .value { color: var(--cyan); }
+  .kpi-card.gold .value { color: var(--gold); }
+  .kpi-card.blue .value { color: var(--blue); }
+  /* Charts */
+  .chart-card { background: var(--card); border: 1px solid var(--card-border); border-radius: 10px; padding: 18px 20px; margin-bottom: 18px; }
+  .chart-card h3 { font-size: 14px; font-weight: 600; color: var(--text); margin-bottom: 12px; }
+  .chart-container { position: relative; }
+  .chart-container.h220 { height: 220px; }
+  .chart-container.h260 { height: 260px; }
+  .chart-container.h300 { height: 300px; }
+  .chart-container.h340 { height: 340px; }
+  .chart-container.h380 { height: 380px; }
+  .chart-container.h420 { height: 420px; }
+  /* Grid layouts */
+  .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; margin-bottom: 18px; }
+  .grid-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 18px; margin-bottom: 18px; }
+  @media (max-width: 860px) { .grid-2, .grid-3 { grid-template-columns: 1fr; } }
+  /* Tables */
+  .tbl-wrap { overflow-x: auto; }
+  table.dash-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  table.dash-table th { background: var(--card-2); font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: .4px; color: var(--text-muted); padding: 8px 10px; text-align: left; border-bottom: 1px solid var(--card-border); white-space: nowrap; }
+  table.dash-table td { padding: 7px 10px; border-bottom: 1px solid var(--row-border); vertical-align: top; }
+  table.dash-table tr:hover td { background: var(--row-hover); }
+  /* Misc */
+  .badge-inline { font-size: 11px; font-weight: 500; color: var(--text-muted); }
+  .insight { font-size: 12px; color: var(--text-muted); margin-top: 10px; line-height: 1.5; }
+  .section-context-banner { background: var(--card-2); border: 1px solid var(--card-border); border-radius: 8px; padding: 10px 14px; font-size: 12px; color: var(--text-muted); margin-bottom: 16px; line-height: 1.5; }
+  .loading-overlay { position: fixed; inset: 0; background: var(--bg); display: flex; flex-direction: column; align-items: center; justify-content: center; z-index: 999; gap: 12px; }
+  .spinner { width: 40px; height: 40px; border: 3px solid var(--card-border); border-top-color: var(--accent); border-radius: 50%; animation: spin 0.8s linear infinite; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  /* Article table */
+  .art-row-expand { cursor: pointer; }
+  .art-detail-row { display: none; }
+  .art-detail-row.open { display: table-row; }
+  .art-detail-cell { padding: 8px 10px 12px 30px !important; background: var(--card-2); font-size: 12px; color: var(--text-muted); }
+  /* Filter row */
+  .filter-row { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin-bottom: 12px; }
+  .filter-row label { font-size: 12px; color: var(--text-muted); }
+  .filter-row select, .filter-row input[type=text] { font-size: 12px; padding: 4px 8px; border: 1px solid var(--card-border); border-radius: 6px; background: var(--card); color: var(--text); }
+  /* Campaign toolbar */
+  .camp-toolbar { display:flex; align-items:center; justify-content:space-between; gap:14px; padding:12px 16px; background: var(--card); border:1px solid var(--card-border); border-radius:10px; margin-bottom:16px; }
+  .camp-toolbar-left { display:flex; align-items:center; gap:12px; }
+  /* iOS-style toggle */
+  .switch { position: relative; display: inline-block; width: 38px; height: 22px; flex-shrink:0; }
+  .switch input { opacity: 0; width: 0; height: 0; }
+  .slider-round { position: absolute; cursor: pointer; inset: 0; background: var(--card-border); transition: .2s; border-radius: 22px; }
+  .slider-round:before { position: absolute; content: ""; height: 16px; width: 16px; left: 3px; top: 3px; background: #fff; transition: .2s; border-radius: 50%; box-shadow: 0 1px 2px rgba(0,0,0,.2); }
+  .switch input:checked + .slider-round { background: var(--accent); }
+  .switch input:checked + .slider-round:before { transform: translateX(16px); }
+  /* Pager */
+  .camp-pager-btn { padding:4px 9px; border-radius:5px; border:1px solid var(--card-border); background:var(--card); color:var(--text-muted); cursor:pointer; font-size:12px; transition: background .15s, color .15s; }
+  .camp-pager-btn:hover:not([disabled]) { background: var(--card-2); color: var(--text); }
+  .camp-pager-btn[disabled] { opacity:.4; cursor:not-allowed; }
+  .camp-pager-btn.active { background: var(--accent); color:#fff; border-color: var(--accent); }
+  /* Cohort */
+  .cohort-cell-null { background: var(--card-2) !important; color: var(--text-dim) !important; }
+  .cohort-th-sticky { position: sticky; left: 0; background: var(--card); z-index: 2; }
+  .cohort-td-sticky { position: sticky; left: 0; background: var(--card); z-index: 1; white-space: nowrap; }
+  .coh-nav { display: flex; gap: 6px; align-items: center; }
+  .coh-nav button { font-size: 12px; padding: 3px 10px; border: 1px solid var(--card-border); border-radius: 5px; background: var(--card); color: var(--text-muted); cursor: pointer; }
+  .coh-nav button:hover { background: var(--card-2); }
+  /* Comparison table */
+  .cmp-win { color: var(--green); font-weight: 600; }
+  .cmp-lose { color: var(--red); }
+  .cmp-neutral { color: var(--text-muted); }
+  /* Tooltip override */
+  canvas { max-width: 100%; }
+</style>
+</head>
+<body>
+<div id="loading-overlay" class="loading-overlay">
+  <div class="spinner"></div>
+  <div style="font-size:13px;color:var(--text-muted);">Loading dashboard data…</div>
+</div>
+<div id="dashboard-content" style="display:none;">
+
+<header class="header">
+  <div class="header-left">
+    <div class="sa-logo"><img src="./svg-sa.svg" alt="SuperAge"></div>
+    <div>
+      <h1>SuperAge — Brand Pulse</h1>
+      <div class="sub">Campaign &amp; Audience Intelligence</div>
+    </div>
+  </div>
+  <div class="header-right">
+    <span class="as-of" id="as-of-label"></span>
+    <button class="dark-toggle" onclick="toggleDark()">Dark mode</button>
+  </div>
+</header>
+
+<nav class="tab-bar" id="tab-bar">
+  <button class="tab active" onclick="showPage('overview',this)">Overview</button>
+  <button class="tab" onclick="showPage('campaigns',this)">Campaigns</button>
+  <button class="tab" onclick="showPage('content',this)">Click Analysis</button>
+  <button class="tab" onclick="showPage('content-ref',this)">Content Reference</button>
+  <button class="tab" onclick="showPage('audience',this)">Audience</button>
+  <button class="tab" onclick="showPage('quiz',this)">Longevity Quiz</button>
+  <button class="tab" onclick="showPage('revenue',this)">Revenue &amp; Sponsors</button>
+  <button class="tab" onclick="showPage('retention',this)">Subscriber Retention</button>
+  <button class="tab" onclick="showPage('cohort',this)">Cohort Analysis</button>
+</nav>
+
+<div id="overview" class="page active"></div>
+<div id="campaigns" class="page"></div>
+<div id="content" class="page"></div>
+<div id="content-ref" class="page"></div>
+<div id="audience" class="page"></div>
+<div id="quiz" class="page"></div>
+<div id="revenue" class="page"></div>
+<div id="retention" class="page"></div>
+<div id="cohort" class="page"></div>
+
+</div>
+
+<script>
+/* ═══════════════════════════════════════
+   DARK MODE
+═══════════════════════════════════════ */
+const _dk = localStorage.getItem('sa-dark');
+if (_dk === '1') document.body.classList.add('dark');
+function toggleDark() {
+  document.body.classList.toggle('dark');
+  localStorage.setItem('sa-dark', document.body.classList.contains('dark') ? '1' : '0');
+}
+
+/* ═══════════════════════════════════════
+   TABS
+═══════════════════════════════════════ */
+function showPage(id, btn) {
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+  if (btn) btn.classList.add('active');
+}
+
+/* ═══════════════════════════════════════
+   UTILITIES
+═══════════════════════════════════════ */
+function fmt(n) {
+  if (n === null || n === undefined) return '—';
+  return Number(n).toLocaleString();
+}
+function esc(s) {
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+function utmLabel(raw) {
+  if (!raw) return '—';
+  const s = String(raw).trim().toLowerCase();
+  if (s === 'ahcpl1' || s === 'allhealthy') return 'AllHealthy';
+  if (s === 'tdcpl1') return 'TrueDemocracy';
+  if (s === 'lscpl1' || s === 'livingsimply') return 'LivingSimply';
+  if (s === 'dpcpl1') return 'DailyPuzzle';
+  if (s === 'hfcpl1') return 'HealthFirst';
+  if (s === 'fccpl1') return 'FitConnect';
+  if (['facebook','meta','fb','ig','if'].includes(s)) return 'Meta';
+  if (s === 'taboola') return 'Taboola';
+  if (s === 'healthbrief') return 'HealthBrief';
+  if (s === 'superagequiz' || s === 'longevity_quiz') return 'SuperAge Quiz';
+  return raw;
+}
+
+/* ═══════════════════════════════════════
+   DATA LOAD
+═══════════════════════════════════════ */
+Promise.all([
+  fetch('./superage-metrics.json').then(r => r.json()),
+  fetch('./superage-comparison.json').then(r => r.ok ? r.json() : {}).catch(() => ({}))
+])
+  .then(([metrics, comparison]) => {
+    const M = Object.assign({}, metrics, comparison);
+    const asOf = M.data_as_of || '—';
+    document.getElementById('as-of-label').textContent = 'Data as of ' + asOf;
+    renderOverview(M);
+    renderCampaigns(M);
+    renderContent(M);
+    renderContentRef(M);
+    renderAudience(M);
+    renderQuiz(M);
+    renderRevenue(M);
+    renderRetention(M);
+    renderCohort(M);
+    document.getElementById('loading-overlay').style.display = 'none';
+    document.getElementById('dashboard-content').style.display = 'block';
+  })
+  .catch(err => {
+    document.getElementById('loading-overlay').innerHTML =
+      '<div style="color:var(--red);font-size:16px;">Failed to load dashboard data</div>' +
+      '<div style="color:var(--text-muted);font-size:12px;margin-top:8px;">' + esc(String(err.message||err)) + '</div>';
+  });
+
+/* ═══════════════════════════════════════
+   OVERVIEW
+═══════════════════════════════════════ */
+function renderOverview(M) {
+  document.getElementById('overview').innerHTML = `
+    <div class="section-context-banner">
+      <strong>Executive Overview</strong> — Top-line health of the SuperAge newsletter: subscriber base, campaign performance, content engagement, and revenue at a glance.
+      Data refreshes daily. All figures exclude today and future-dated records.
+    </div>
+
+
+    <div class="kpi-row">
+      <div class="kpi-card accent"><div class="label">Total Subscribers</div><div class="value">${fmt(M.total_subscribers)}</div><div class="sub">All-time subscriber base</div></div>
+      <div class="kpi-card green"><div class="label">Active (Send-to)</div><div class="value">${fmt(M.send_to_active)}</div><div class="sub">${M.send_to_rate} of total — Active, Engaged, Unengaged</div></div>
+      <div class="kpi-card red"><div class="label">Unsubscribed</div><div class="value">${fmt(M.unsubscribed_count)}</div><div class="sub">${M.total_subscribers ? (M.unsubscribed_count/M.total_subscribers*100).toFixed(1)+'%' : '—'} of total</div></div>
+      <div class="kpi-card orange"><div class="label">Bounced</div><div class="value">${fmt(M.bounced_count)}</div><div class="sub">${M.total_subscribers ? (M.bounced_count/M.total_subscribers*100).toFixed(1)+'%' : '—'} of total</div></div>
+      <div class="kpi-card cyan"><div class="label">Avg Open Rate</div><div class="value">${M.avg_open_rate}</div><div class="sub">Best: ${M.best_open_rate}</div></div>
+      <div class="kpi-card blue"><div class="label">Avg Click Rate</div><div class="value">${M.avg_click_rate}</div><div class="sub">Best: ${M.best_click_rate}</div></div>
+      <div class="kpi-card orange"><div class="label">Campaigns Sent</div><div class="value">${fmt(M.total_campaigns)}</div><div class="sub">${fmt(M.total_recipients)} total recipients</div></div>
+      <div class="kpi-card purple"><div class="label">Quiz Takers</div><div class="value">${fmt(M.quiz_takers)}</div><div class="sub">${M.quiz_takers_pct}% of total subscribers</div></div>
+    </div>
+
+    <div class="grid-2">
+      <div class="chart-card">
+        <h3>Subscriber Status Mix</h3>
+        <div class="chart-container h260"><canvas id="ov-state-donut"></canvas></div>
+        <div id="ov-state-pct-table" style="margin-top:8px;font-size:12px;"></div>
+        <div class="insight">
+          <strong>${M.send_to_rate}</strong> of all subscribers are active (send-to).
+          Unsubscribed: <strong>${M.total_subscribers ? (M.unsubscribed_count/M.total_subscribers*100).toFixed(1)+'%' : '—'}</strong> &middot;
+          Bounced: <strong>${M.total_subscribers ? (M.bounced_count/M.total_subscribers*100).toFixed(1)+'%' : '—'}</strong>
+        </div>
+      </div>
+      <div class="chart-card">
+        <h3>Campaign Performance Trend <span class="badge-inline">— Open &amp; Click Rate</span></h3>
+        <div class="chart-container h260"><canvas id="ov-camp-trend"></canvas></div>
+        <div class="insight">
+          Average open rate <strong>${M.avg_open_rate}</strong> &middot; Best campaign <strong>${M.best_open_rate}</strong>.
+          Average click rate <strong>${M.avg_click_rate}</strong>.
+        </div>
+      </div>
+    </div>
+
+    <div class="chart-card" style="margin-bottom:18px;">
+      <h3>Subscriber Growth Over Time</h3>
+      <p style="font-size:12px;color:var(--text-muted);margin-top:4px;margin-bottom:10px;">Monthly new subscribers vs. unsubscribes. Net = new minus churned. Last 12 months.</p>
+      <div class="chart-container h300"><canvas id="ov-growth"></canvas></div>
+    </div>
+
+    <div class="chart-card">
+      <h3>Top Campaign Open Rates</h3>
+      <div class="tbl-wrap"><table class="dash-table"><thead><tr><th>#</th><th>Campaign</th><th>Sent</th><th>Recipients</th><th>Open Rate</th><th>Click Rate</th></tr></thead>
+      <tbody>${(M.top_campaigns||[]).slice(0,10).map((c,i)=>{
+        const nameCell = c.url ? `<a href="${esc(c.url)}" target="_blank" rel="noopener">${esc(c.name||'')}</a>` : esc(c.name||'');
+        const recip = (c.recipients == null) ? '—' : (typeof c.recipients === 'string' ? esc(c.recipients) : fmt(c.recipients));
+        return `<tr><td>${i+1}</td><td>${nameCell}</td><td>${c.sent_date||''}</td><td>${recip}</td><td>${c.open_rate||'—'}</td><td>${c.click_rate||'—'}</td></tr>`;
+      }).join('')}</tbody></table></div>
+    </div>
+  `;
+  // Subscriber status donut
+  const ss = M.subscriber_states || {labels:[], data:[]};
+  const donutColors = ['#1a7f37','#58a6ff','#cf222e','#9a6700','#8250df','#bf3989','#1b7c83'];
+  new Chart(document.getElementById('ov-state-donut'), {
+    type: 'doughnut',
+    data: { labels: ss.labels, datasets: [{ data: ss.data, backgroundColor: donutColors, borderWidth: 1 }] },
+    options: { responsive:true, maintainAspectRatio:false, plugins:{ legend:{position:'bottom',labels:{font:{size:11},padding:8}} } }
+  });
+  // Status mix % table
+  const pctTbl = document.getElementById('ov-state-pct-table');
+  if (pctTbl && ss.labels && ss.labels.length) {
+    const total = ss.data.reduce((a,b)=>a+b,0);
+    const rows = ss.labels.map((lbl,i)=>{
+      const cnt = ss.data[i]||0;
+      const pct = total ? (cnt/total*100).toFixed(1) : '0.0';
+      return `<span style="display:inline-block;margin-right:14px;"><span style="color:${donutColors[i]||'var(--text-muted)'};font-weight:600;">${esc(lbl)}</span> ${pct}% (${fmt(cnt)})</span>`;
+    }).join('');
+    pctTbl.innerHTML = rows;
+  }
+  // Campaign trend
+  const ct = M.campaign_trend || {labels:[],open_rates:[],click_rates:[]};
+  new Chart(document.getElementById('ov-camp-trend'), {
+    type: 'line',
+    data: { labels: ct.labels, datasets: [
+      { label: 'Open Rate %', data: ct.open_rates, borderColor: '#0969da', backgroundColor: 'transparent', tension:.3, pointRadius:3 },
+      { label: 'Click Rate %', data: ct.click_rates, borderColor: '#1a7f37', backgroundColor: 'transparent', tension:.3, pointRadius:3 }
+    ]},
+    options: { responsive:true, maintainAspectRatio:false, plugins:{legend:{position:'bottom',labels:{font:{size:11}}}}, scales:{y:{beginAtZero:true}} }
+  });
+  // Growth chart — sourced from superage.growth_history via M.subscriber_monthly
+  const gd = M.subscriber_monthly || {labels:[],new_subs:[],unsubs:[],active_count:[]};
+  _ovGrowthChart(gd, 12);
+}
+function _ovGrowthChart(gd, n) {
+  const labels = (gd.labels||[]).slice(-n);
+  const newS   = (gd.new_subs||[]).slice(-n);
+  const unsub  = (gd.unsubs||[]).slice(-n);
+  const active = (gd.active_count||[]).slice(-n);
+  const net    = newS.map((v,i) => (v||0) - (unsub[i]||0));
+  const ctx = document.getElementById('ov-growth');
+  if (!ctx) return;
+  if (ctx._chart) ctx._chart.destroy();
+  ctx._chart = new Chart(ctx, {
+    type: 'bar',
+    data: { labels, datasets: [
+      { label: 'Gained (new)',     data: newS,   backgroundColor: '#1a7f37', yAxisID: 'y' },
+      { label: 'Lost (unsubs)',    data: unsub,  backgroundColor: '#cf222e', yAxisID: 'y' },
+      { label: 'Net change',       data: net,    type: 'line', borderColor: '#0969da', backgroundColor: 'transparent', tension: .3, pointRadius: 3, yAxisID: 'y' },
+      { label: 'Total Subscribers (Active)', data: active, type: 'line', borderColor: '#8250df', backgroundColor: 'transparent', tension: .25, pointRadius: 2, borderWidth: 2, yAxisID: 'y1' }
+    ]},
+    options: { responsive:true, maintainAspectRatio:false,
+      plugins:{ legend:{ position:'bottom', labels:{ font:{ size:11 } } } },
+      scales:{
+        y:  { position:'left',  beginAtZero:false, title:{ display:true, text:'Monthly Δ' } },
+        y1: { position:'right', beginAtZero:false, grid:{ drawOnChartArea:false }, title:{ display:true, text:'Active Subscribers' } }
+      } }
+  });
+}
+/* ═══════════════════════════════════════
+   CAMPAIGNS
+═══════════════════════════════════════ */
+/* Campaign field parsers — campaign_table values are stored as formatted strings. */
+function _campNum(v) {
+  if (v == null) return 0;
+  if (typeof v === 'number') return v;
+  const n = parseFloat(String(v).replace(/[,%$\s]/g,''));
+  return isFinite(n) ? n : 0;
+}
+function _campPct(v) {
+  if (v == null) return null;
+  if (typeof v === 'number') return v;
+  const n = parseFloat(String(v).replace(/[%\s]/g,''));
+  return isFinite(n) ? n : null;
+}
+
+function renderCampaigns(M) {
+  document.getElementById('campaigns').innerHTML = `
+    <div class="section-context-banner">
+      <strong>Campaign Performance</strong> — All sent campaigns ordered by date. Open &amp; click rates are unique rates. Toggle Sunday Spotlight to include or exclude branded digest sends — the toggle reflects across KPIs, charts and table.
+    </div>
+
+    <div class="camp-toolbar">
+      <div class="camp-toolbar-left">
+        <label class="switch" for="hideSundaySpotlight" title="Include Sunday Spotlight campaigns">
+          <input type="checkbox" id="hideSundaySpotlight" onchange="_filterCampaigns()" checked>
+          <span class="slider-round"></span>
+        </label>
+        <div>
+          <div style="font-size:13px;font-weight:600;color:var(--text);">Include Sunday Spotlight</div>
+          <div style="font-size:11px;color:var(--text-muted);" id="camp-filter-state">Including branded digest sends</div>
+        </div>
+      </div>
+      <div class="camp-toolbar-right" id="camp-scope-label" style="font-size:12px;color:var(--text-muted);"></div>
+    </div>
+
+    <div class="kpi-row" style="grid-template-columns:repeat(5,1fr);">
+      <div class="kpi-card accent"><div class="label">Campaigns</div><div class="value" id="kpi-camp-count">—</div><div class="sub">Campaigns sent</div></div>
+      <div class="kpi-card cyan"><div class="label">Avg Open Rate</div><div class="value" id="kpi-avg-open">—</div><div class="sub">Unique opens / recipients</div></div>
+      <div class="kpi-card blue"><div class="label">Avg Click Rate</div><div class="value" id="kpi-avg-click">—</div><div class="sub">Clicks / recipients</div></div>
+      <div class="kpi-card green"><div class="label">Best Open Rate</div><div class="value" id="kpi-best-open">—</div><div class="sub">Single campaign peak</div></div>
+      <div class="kpi-card orange"><div class="label">Total Recipients</div><div class="value" id="kpi-recipients">—</div><div class="sub"><span id="kpi-unique-opens">—</span> unique opens</div></div>
+    </div>
+
+    <div class="kpi-row" style="grid-template-columns:repeat(3,1fr);">
+      <div class="kpi-card purple"><div class="label">Total Clicks</div><div class="value" id="kpi-clicks">—</div><div class="sub">All campaign clicks</div></div>
+      <div class="kpi-card red"><div class="label">Unsubscribes</div><div class="value" id="kpi-unsubs">—</div><div class="sub">Campaign-driven churn</div></div>
+      <div class="kpi-card gold"><div class="label">Best Click Rate</div><div class="value" id="kpi-best-click">—</div><div class="sub">Single campaign peak</div></div>
+    </div>
+
+    <div class="grid-2">
+      <div class="chart-card">
+        <h3>Top 15 Campaigns by Open Rate</h3>
+        <div class="chart-container h380"><canvas id="camp-top-bar"></canvas></div>
+      </div>
+      <div class="chart-card">
+        <h3>Open Rate vs Click Rate <span class="badge-inline">— all campaigns in scope</span></h3>
+        <div class="chart-container h380"><canvas id="camp-scatter"></canvas></div>
+        <div class="insight">Each dot is one campaign. Upper-right = strong opens <em>and</em> clicks.</div>
+      </div>
+    </div>
+
+    <div class="chart-card" style="padding:14px 18px;">
+      <h3 style="margin-bottom:10px;">All Campaigns</h3>
+      <div id="camp-table-wrap"></div>
+      <div id="camp-pager" style="display:flex;align-items:center;justify-content:space-between;gap:6px;margin-top:12px;font-size:12px;color:var(--text-muted);flex-wrap:wrap;"></div>
+    </div>
+  `;
+
+  window._campData = M.campaign_table || [];
+  window._campTopBarChart = null;
+  window._campScatterChart = null;
+  window._campPage = 1;
+  _filterCampaigns();
+}
+
+const CAMP_PAGE_SIZE = 20;
+
+function _filterCampaigns() {
+  const showSS = document.getElementById('hideSundaySpotlight').checked;
+  let rows = window._campData || [];
+  if (!showSS) rows = rows.filter(r => !(r.name||'').toLowerCase().includes('sunday spotlight'));
+  window._campFiltered = rows;
+  window._campFilteredCount = rows.length;
+  window._campPage = 1;
+
+  const stateEl = document.getElementById('camp-filter-state');
+  if (stateEl) stateEl.textContent = showSS ? 'Including branded digest sends' : 'Excluding branded digest sends';
+  const scopeEl = document.getElementById('camp-scope-label');
+  if (scopeEl) scopeEl.innerHTML = `<strong style="color:var(--text);">${rows.length}</strong> campaign${rows.length===1?'':'s'} in scope`;
+
+  _renderCampKpis(rows);
+  _renderCampCharts(rows);
+  _renderCampPage();
+}
+
+function _renderCampKpis(rows) {
+  const n = rows.length;
+  const sum = (k, num) => rows.reduce((a,r) => a + num(r[k]), 0);
+  const totRecip   = sum('recipients',   _campNum);
+  const totOpens   = sum('unique_opens', _campNum);
+  const totClicks  = sum('clicks',       _campNum);
+  const totUnsubs  = sum('unsubs',       _campNum);
+  const openRates  = rows.map(r => _campPct(r.open_rate)).filter(v => v != null);
+  const clickRates = rows.map(r => _campPct(r.click_rate)).filter(v => v != null);
+  const avg = arr => arr.length ? arr.reduce((a,b)=>a+b,0) / arr.length : 0;
+  const avgOpen  = avg(openRates);
+  const avgClick = avg(clickRates);
+  const bestOpen  = openRates.length  ? Math.max(...openRates)  : 0;
+  const bestClick = clickRates.length ? Math.max(...clickRates) : 0;
+  const set = (id, v) => { const el = document.getElementById(id); if (el) el.textContent = v; };
+  set('kpi-camp-count', fmt(n));
+  set('kpi-avg-open',   avgOpen.toFixed(2) + '%');
+  set('kpi-avg-click',  avgClick.toFixed(2) + '%');
+  set('kpi-best-open',  bestOpen.toFixed(2) + '%');
+  set('kpi-best-click', bestClick.toFixed(2) + '%');
+  set('kpi-recipients', fmt(totRecip));
+  set('kpi-unique-opens', fmt(totOpens));
+  set('kpi-clicks',     fmt(totClicks));
+  set('kpi-unsubs',     fmt(totUnsubs));
+}
+
+function _renderCampCharts(rows) {
+  // Top 15 by open rate, recomputed from the filtered set
+  const top15 = [...rows]
+    .map(r => ({ name: r.name, open_rate: _campPct(r.open_rate) || 0 }))
+    .sort((a,b) => b.open_rate - a.open_rate)
+    .slice(0, 15);
+  if (window._campTopBarChart) window._campTopBarChart.destroy();
+  window._campTopBarChart = new Chart(document.getElementById('camp-top-bar'), {
+    type: 'bar',
+    data: { labels: top15.map(r => r.name), datasets: [{ label: 'Open Rate %', data: top15.map(r => r.open_rate), backgroundColor: '#3fb950', borderRadius: 4 }] },
+    options: { responsive:true, maintainAspectRatio:false, indexAxis:'y',
+      scales: { x: { beginAtZero:true, ticks: { callback: v => v + '%' } } },
+      plugins: { legend: { display:false } } }
+  });
+
+  if (window._campScatterChart) window._campScatterChart.destroy();
+  window._campScatterChart = new Chart(document.getElementById('camp-scatter'), {
+    type: 'scatter',
+    data: { datasets: [{ label:'Campaigns', data: rows.map(r => ({ x: _campPct(r.open_rate)||0, y: _campPct(r.click_rate)||0, label: r.name })), backgroundColor:'rgba(63,185,80,.55)', pointRadius:5 }] },
+    options: { responsive:true, maintainAspectRatio:false,
+      scales: {
+        x: { title: { display:true, text:'Open Rate %' }, ticks: { callback: v => v + '%' } },
+        y: { title: { display:true, text:'Click Rate %' }, ticks: { callback: v => v + '%' } }
+      },
+      plugins: { legend: { display:false }, tooltip: { callbacks: { label: ctx => ctx.raw.label + ' — OR ' + ctx.raw.x.toFixed(2) + '% / CR ' + ctx.raw.y.toFixed(2) + '%' } } } }
+  });
+}
+
+function _campGoto(p) {
+  const total = window._campFilteredCount || 0;
+  const maxPage = Math.max(1, Math.ceil(total / CAMP_PAGE_SIZE));
+  window._campPage = Math.min(Math.max(1, p), maxPage);
+  _renderCampPage();
+}
+function _campCell(v) {
+  if (v == null) return '—';
+  if (typeof v === 'string') return esc(v) || '—';
+  return fmt(v);
+}
+function _renderCampPage() {
+  const rows = window._campFiltered || [];
+  const total = rows.length;
+  const page = window._campPage || 1;
+  const pages = Math.max(1, Math.ceil(total / CAMP_PAGE_SIZE));
+  const start = (page - 1) * CAMP_PAGE_SIZE;
+  const end = Math.min(start + CAMP_PAGE_SIZE, total);
+  const slice = rows.slice(start, end);
+  const wrap = document.getElementById('camp-table-wrap');
+  if (!wrap) return;
+  wrap.innerHTML = `<div class="tbl-wrap"><table class="dash-table">
+    <thead><tr><th>#</th><th>Campaign</th><th>Subject</th><th>Sent Date</th><th>Total Sent Emails</th><th>Unique Opens</th><th>Open Rate</th><th>Clicks</th><th>Click Rate</th><th>Unsubs</th></tr></thead>
+    <tbody>${slice.map((c,i)=>{
+      const nameCell = c.url ? `<a href="${esc(c.url)}" target="_blank" rel="noopener">${esc(c.name||'')}</a>` : esc(c.name||'');
+      return `<tr><td>${start+i+1}</td><td>${nameCell}</td><td>${esc(c.subject||'')}</td><td>${c.sent_date||''}</td><td>${_campCell(c.recipients)}</td><td>${_campCell(c.unique_opens)}</td><td>${c.open_rate||'—'}</td><td>${_campCell(c.clicks)}</td><td>${c.click_rate||'—'}</td><td>${_campCell(c.unsubs)}</td></tr>`;
+    }).join('')}</tbody></table></div>`;
+  const pager = document.getElementById('camp-pager');
+  if (pager) {
+    const btn = (label, p, disabled, active) =>
+      `<button class="camp-pager-btn${active?' active':''}" onclick="_campGoto(${p})" ${disabled?'disabled':''}>${label}</button>`;
+    const numBtns = [];
+    const windowSize = 7;
+    let lo = Math.max(1, page - Math.floor(windowSize/2));
+    let hi = Math.min(pages, lo + windowSize - 1);
+    lo = Math.max(1, hi - windowSize + 1);
+    for (let p=lo; p<=hi; p++) numBtns.push(btn(String(p), p, false, p===page));
+    pager.innerHTML =
+      `<span>Showing <strong style="color:var(--text);">${total ? (start+1) : 0}–${end}</strong> of <strong style="color:var(--text);">${total.toLocaleString()}</strong> · Page ${page} of ${pages}</span>
+       <div style="display:flex;gap:5px;flex-wrap:wrap;">
+         ${btn('« First', 1, page===1)}${btn('‹ Prev', page-1, page===1)}
+         ${numBtns.join('')}
+         ${btn('Next ›', page+1, page===pages)}${btn('Last »', pages, page===pages)}
+       </div>`;
+  }
+}
+
+/* ═══════════════════════════════════════
+   CLICK ANALYSIS  (was: Website Content)
+═══════════════════════════════════════ */
+function _clickTrendInsight(series, metric, unit) {
+  // series = M.campaign_clicks_*  with `clicks` and `is_current` arrays
+  const data = series[metric] || [];
+  if (data.length < 2) return '';
+  const cur  = data[data.length - 1] || 0;
+  const prev = data[data.length - 2] || 0;
+  if (prev === 0 && cur === 0) return '';
+  const pct = prev > 0 ? ((cur - prev) / prev * 100) : 100;
+  const dir = pct >= 0 ? '↑' : '↓';
+  const clr = pct >= 0 ? 'var(--green)' : 'var(--red)';
+  return `<strong style="color:${clr}">${dir} ${Math.abs(pct).toFixed(1)}%</strong> vs previous (${fmt(cur)} vs ${fmt(prev)} ${unit})`;
+}
+function _clickTrendChart(canvasId, series, metric, color, label) {
+  const labels = series.labels || [];
+  const data   = series[metric] || [];
+  const cur    = series.is_current || [];
+  const camps  = series.campaigns || [];
+  const bg = data.map((_,i) => cur[i] ? color + '66' : color);
+  const border = data.map((_,i) => cur[i] ? color : 'transparent');
+  const ctx = document.getElementById(canvasId);
+  if (!ctx) return;
+  if (ctx._chart) ctx._chart.destroy();
+  ctx._chart = new Chart(ctx, {
+    type: 'bar',
+    data: { labels, datasets: [{
+      label,
+      data,
+      backgroundColor: bg,
+      borderColor: border,
+      borderWidth: 2,
+      borderRadius: 4
+    }]},
+    options: { responsive:true, maintainAspectRatio:false,
+      plugins:{
+        legend:{ display:false },
+        tooltip:{ callbacks:{
+          afterLabel: (c) => {
+            const lines = [];
+            if (camps[c.dataIndex] != null) lines.push(`Campaigns: ${camps[c.dataIndex]}`);
+            if (cur[c.dataIndex]) lines.push('(in progress)');
+            return lines;
+          }
+        }}
+      },
+      scales:{ y:{ beginAtZero:true, ticks:{ callback: v => v.toLocaleString() } } } }
+  });
+}
+function renderContent(M) {
+  document.getElementById('content').innerHTML = `
+    <div class="section-context-banner">
+      <strong>Click Analysis</strong> — Engagement with SuperAge website articles. Tracks unique and total clicks per article, category, and author. Data starts December 2025.
+    </div>
+    <div class="kpi-row" style="grid-template-columns:repeat(auto-fit,minmax(140px,1fr));">
+      <div class="kpi-card accent"><div class="label">Total Clicks</div><div class="value">${fmt(M.total_article_clicks)}</div><div class="sub">All tracked articles</div></div>
+      <div class="kpi-card green"><div class="label">Unique Clickers</div><div class="value">${fmt(M.unique_article_clickers)}</div><div class="sub">Distinct email addresses</div></div>
+      <div class="kpi-card blue"><div class="label">Articles Clicked</div><div class="value">${fmt(M.articles_clicked_count)}</div><div class="sub">Distinct URLs tracked</div></div>
+      <div class="kpi-card orange"><div class="label">Avg Clicks/Article</div><div class="value">${M.avg_clicks_per_article||'—'}</div><div class="sub">Mean engagement depth</div></div>
+    </div>
+
+    <h3 style="margin:18px 0 10px;font-size:13px;text-transform:uppercase;letter-spacing:.5px;color:var(--text-muted);">Section 1 — Campaign-Level Aggregated <span class="badge-inline" style="text-transform:none;">sourced from superage."Campaigns"</span></h3>
+    <div class="grid-2">
+      <div class="chart-card">
+        <h3>Weekly Campaign Clicks <span class="badge-inline">— last 8 weeks, Mon-Sun rollup</span></h3>
+        <div class="chart-container h260"><canvas id="cnt-weekly-bar"></canvas></div>
+        <div class="insight">WoW: ${_clickTrendInsight(M.campaign_clicks_weekly || {}, 'clicks', 'clicks')}. The last bar is the current (in-progress) week — partial data only.</div>
+      </div>
+      <div class="chart-card">
+        <h3>Monthly Campaign Clicks <span class="badge-inline">— last 6 months</span></h3>
+        <div class="chart-container h260"><canvas id="cnt-monthly-bar"></canvas></div>
+        <div class="insight">MoM: ${_clickTrendInsight(M.campaign_clicks_monthly || {}, 'clicks', 'clicks')}. The last bar is the current (in-progress) month.</div>
+      </div>
+    </div>
+
+    <h3 style="margin:18px 0 10px;font-size:13px;text-transform:uppercase;letter-spacing:.5px;color:var(--text-muted);">Section 2 — Raw Click Events <span class="badge-inline" style="text-transform:none;">sourced from superage."Campaigns_Clicks" — per-event "Date"</span></h3>
+    <div class="grid-3">
+      <div class="chart-card">
+        <h3>Same Weekday <span class="badge-inline">— last 5 same-weekday clicks</span></h3>
+        <div class="chart-container h240"><canvas id="cnt-raw-weekday-bar"></canvas></div>
+        <div class="insight">This ${(new Date()).toLocaleDateString(undefined,{weekday:'long'})} vs prior ${(new Date()).toLocaleDateString(undefined,{weekday:'long'})}s: ${_clickTrendInsight(M.raw_clicks_same_weekday || {}, 'clicks', 'click events')}.</div>
+      </div>
+      <div class="chart-card">
+        <h3>Weekly <span class="badge-inline">— last 4 ISO weeks</span></h3>
+        <div class="chart-container h240"><canvas id="cnt-raw-weekly-bar"></canvas></div>
+        <div class="insight">WoW: ${_clickTrendInsight(M.raw_clicks_weekly || {}, 'clicks', 'click events')}.</div>
+      </div>
+      <div class="chart-card">
+        <h3>Monthly <span class="badge-inline">— last 3 months</span></h3>
+        <div class="chart-container h240"><canvas id="cnt-raw-monthly-bar"></canvas></div>
+        <div class="insight">MoM: ${_clickTrendInsight(M.raw_clicks_monthly || {}, 'clicks', 'click events')}.</div>
+      </div>
+    </div>
+    <div class="chart-card">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
+        <h3>Top Articles by Unique Clicks</h3>
+        <div style="display:flex;gap:4px;" id="art-window-btns">
+          <button onclick="_setArtWindow(0)"  id="artw-all" style="font-size:11px;padding:3px 10px;border:1px solid var(--card-border);border-radius:5px;background:var(--accent);color:#fff;cursor:pointer;">All</button>
+          <button onclick="_setArtWindow(7)"  id="artw-7"   style="font-size:11px;padding:3px 10px;border:1px solid var(--card-border);border-radius:5px;background:var(--card);color:var(--text-muted);cursor:pointer;">7d</button>
+          <button onclick="_setArtWindow(15)" id="artw-15"  style="font-size:11px;padding:3px 10px;border:1px solid var(--card-border);border-radius:5px;background:var(--card);color:var(--text-muted);cursor:pointer;">15d</button>
+          <button onclick="_setArtWindow(30)" id="artw-30"  style="font-size:11px;padding:3px 10px;border:1px solid var(--card-border);border-radius:5px;background:var(--card);color:var(--text-muted);cursor:pointer;">30d</button>
+          <button onclick="_setArtWindow(90)" id="artw-90"  style="font-size:11px;padding:3px 10px;border:1px solid var(--card-border);border-radius:5px;background:var(--card);color:var(--text-muted);cursor:pointer;">90d</button>
+        </div>
+      </div>
+      <div class="tbl-wrap" id="art-table-wrap">
+        <table class="dash-table" id="art-main-table">
+          <thead><tr><th>#</th><th>Article</th><th>Category</th><th>Author</th><th>Position</th><th>Unique Clicks</th><th>Total Clicks</th></tr></thead>
+          <tbody id="art-main-tbody"></tbody>
+        </table>
+      </div>
+    </div>
+    <div class="grid-2">
+      <div class="chart-card">
+        <h3>Clicks by Category</h3>
+        <div class="chart-container h300"><canvas id="cnt-cat-bar"></canvas></div>
+      </div>
+      <div class="chart-card">
+        <h3>Clicks by Author</h3>
+        <div class="chart-container h300"><canvas id="cnt-author-bar"></canvas></div>
+      </div>
+    </div>
+    <div class="chart-card">
+      <h3>Tag / Topic Performance</h3>
+      <div class="tbl-wrap"><table class="dash-table"><thead><tr><th>Tag / Topic</th><th>Articles</th><th>Unique Clicks</th><th>Total Clicks</th><th>Clicks per Placement</th></tr></thead>
+      <tbody>${(M.tag_performance||[]).sort((a,b)=>(b.avg_unique_clicks||0)-(a.avg_unique_clicks||0)).map(t=>`<tr><td>${esc(t.tag||'')}</td><td>${fmt(t.article_count)}</td><td>${fmt(t.unique_clicks)}</td><td>${fmt(t.total_clicks)}</td><td>${t.avg_unique_clicks != null ? Number(t.avg_unique_clicks).toFixed(1) : '—'}</td></tr>`).join('')}</tbody></table></div>
+    </div>
+  `;
+  /* Article table data */
+  artTableData   = M.top_articles || [];
+  artWindowedData = M.top_articles_windowed || {};
+  _setArtWindow(0);
+  // Section 1 — Campaign-level aggregated
+  _clickTrendChart('cnt-weekly-bar',        M.campaign_clicks_weekly        || {}, 'clicks', '#0969da', 'Clicks');
+  _clickTrendChart('cnt-monthly-bar',       M.campaign_clicks_monthly       || {}, 'clicks', '#1a7f37', 'Clicks');
+  // Section 2 — Raw click events from Campaigns_Clicks
+  _clickTrendChart('cnt-raw-weekday-bar',   M.raw_clicks_same_weekday       || {}, 'clicks', '#8250df', 'Click events');
+  _clickTrendChart('cnt-raw-weekly-bar',    M.raw_clicks_weekly             || {}, 'clicks', '#bf3989', 'Click events');
+  _clickTrendChart('cnt-raw-monthly-bar',   M.raw_clicks_monthly            || {}, 'clicks', '#9a6700', 'Click events');
+  // Category bar
+  const catD = M.category_performance || {labels:[],unique_clicks:[],total_clicks:[]};
+  new Chart(document.getElementById('cnt-cat-bar'), {
+    type: 'bar',
+    data: { labels: catD.labels, datasets: [
+      { label: 'Unique Clicks', data: catD.unique_clicks, backgroundColor: '#0969da' },
+      { label: 'Total Clicks',  data: catD.total_clicks,  backgroundColor: '#1a7f37' }
+    ]},
+    options: { responsive:true, maintainAspectRatio:false, indexAxis:'y', plugins:{legend:{position:'bottom',labels:{font:{size:11}}}}, scales:{x:{beginAtZero:true}} }
+  });
+  // Author bar
+  const authD = M.author_performance || {labels:[],unique_clicks:[],total_clicks:[]};
+  new Chart(document.getElementById('cnt-author-bar'), {
+    type: 'bar',
+    data: { labels: authD.labels, datasets: [
+      { label: 'Unique Clicks', data: authD.unique_clicks, backgroundColor: '#8250df' },
+      { label: 'Total Clicks',  data: authD.total_clicks,  backgroundColor: '#bf3989' }
+    ]},
+    options: { responsive:true, maintainAspectRatio:false, indexAxis:'y', plugins:{legend:{position:'bottom',labels:{font:{size:11}}}}, scales:{x:{beginAtZero:true}} }
+  });
+}
+let artTableData = [];
+let artWindowedData = {};
+let artCurrentWindow = 0;
+function _setArtWindow(days) {
+  artCurrentWindow = days;
+  // Update button styles
+  const btnMap = {0:'artw-all', 7:'artw-7', 15:'artw-15', 30:'artw-30', 90:'artw-90'};
+  Object.entries(btnMap).forEach(([d, id]) => {
+    const btn = document.getElementById(id);
+    if (!btn) return;
+    const active = parseInt(d) === days;
+    btn.style.background = active ? 'var(--accent)' : 'var(--card)';
+    btn.style.color = active ? '#fff' : 'var(--text-muted)';
+  });
+  // Pick data
+  let rows;
+  if (days === 0) {
+    rows = artTableData;
+  } else {
+    rows = (artWindowedData[String(days)] || artWindowedData[days] || []);
+  }
+  _renderArtTable(rows);
+}
+function _renderArtTable(rows) {
+  const tbody = document.getElementById('art-main-tbody');
+  if (!tbody) return;
+  tbody.innerHTML = rows.slice(0,50).map((r,i) => {
+    const posCell = r.story_position ? fmt(r.story_position) : '<span style="color:var(--text-muted);font-style:italic;">No position</span>';
+    const titleCell = r.url
+      ? `<a href="${esc(r.url)}" target="_blank" rel="noopener">${esc(r.title||'')}</a>`
+      : esc(r.title||'');
+    return `<tr class="art-row-expand">
+      <td>${i+1}</td>
+      <td>${titleCell}</td>
+      <td>${esc(r.category||'')}</td>
+      <td>${esc(r.author||'')}</td>
+      <td>${posCell}</td>
+      <td>${fmt(r.unique_clicks)}</td>
+      <td>${fmt(r.total_clicks)}</td>
+    </tr>`;
+  }).join('');
+}
+
+/* ═══════════════════════════════════════
+   CONTENT REFERENCE
+═══════════════════════════════════════ */
+/* Split a comma-separated list (e.g. "longevity, health") into trimmed unique values. */
+function _crSplit(s) {
+  if (!s) return [];
+  return String(s).split(',').map(v => v.trim()).filter(Boolean);
+}
+/* Accessors that tolerate either lambda field name. */
+function _crAuthor(r)   { return r.author   || r.written_by || ''; }
+function _crCategory(r) { return r.category || r.categories || ''; }
+function _crTags(r)     { return r.tags     || ''; }
+function _crPosCat(r)   { return (r.position_category || '').toLowerCase(); }
+
+const CR_PAGE_SIZE = 25;
+const _crPosColors = { high:'#1a7f37', medium:'#9a6700', low:'#cf222e', '':'#8c959f' };
+
+function renderContentRef(M) {
+  document.getElementById('content-ref').innerHTML = `
+    <div class="section-context-banner">
+      <strong>Content Reference</strong> — Article-level click data, inner-joined to WordPress metadata so only published SuperAge articles appear (sponsor placements are excluded). All filters scope the KPIs, charts, sleeper-hits insight and the article table together.
+    </div>
+
+    <div class="chart-card" style="padding:14px 18px;">
+      <div class="filter-row" id="cr-filter-row" style="margin-bottom:0;">
+        <label>Position Cat:</label>
+        <select id="cr-poscat" onchange="_crFilter()">
+          <option value="">All</option>
+          <option value="high">High</option>
+          <option value="medium">Medium</option>
+          <option value="low">Low</option>
+        </select>
+        <label>Position:</label>
+        <select id="cr-pos" onchange="_crFilter()">
+          <option value="">All positions</option>
+          <option value="0">No position</option>
+          ${[1,2,3,4,5,6,7,8,9,10].map(p=>`<option value="${p}">${p}</option>`).join('')}
+        </select>
+        <label>Author:</label>
+        <select id="cr-author" onchange="_crFilter()">
+          <option value="">All authors</option>
+        </select>
+        <label>Category:</label>
+        <select id="cr-cat" onchange="_crFilter()">
+          <option value="">All categories</option>
+        </select>
+        <label>Tag:</label>
+        <select id="cr-tag" onchange="_crFilter()">
+          <option value="">All tags</option>
+        </select>
+        <label>Title search:</label>
+        <input type="text" id="cr-search" placeholder="Search titles…" oninput="_crFilter()" style="width:160px;">
+        <button onclick="_crReset()" style="padding:5px 14px;border-radius:6px;border:1px solid var(--card-border);background:transparent;color:var(--text-muted);font-size:12px;cursor:pointer;">Reset</button>
+        <span id="cr-scope-label" style="font-size:12px;color:var(--text-muted);margin-left:auto;"></span>
+      </div>
+    </div>
+
+    <div class="kpi-row" style="grid-template-columns:repeat(auto-fit,minmax(150px,1fr));">
+      <div class="kpi-card accent"><div class="label">Articles in Scope</div><div class="value" id="cr-kpi-articles">—</div><div class="sub">After filters</div></div>
+      <div class="kpi-card green"><div class="label">Unique Clicks</div><div class="value" id="cr-kpi-uniq">—</div><div class="sub">Sum across articles</div></div>
+      <div class="kpi-card blue"><div class="label">Total Clicks</div><div class="value" id="cr-kpi-total">—</div><div class="sub">Including repeats</div></div>
+      <div class="kpi-card orange"><div class="label">Avg Unique Clicks / Article</div><div class="value" id="cr-kpi-avg">—</div><div class="sub">Mean engagement</div></div>
+      <div class="kpi-card purple"><div class="label">Top Position Cat</div><div class="value" id="cr-kpi-poscat" style="font-size:16px;">—</div><div class="sub" id="cr-kpi-poscat-sub">By unique clicks</div></div>
+    </div>
+
+    <div class="grid-2">
+      <div class="chart-card">
+        <h3>Unique Clicks by Position Category</h3>
+        <div class="chart-container h260"><canvas id="cr-poscat-bar"></canvas></div>
+        <div class="insight" id="cr-poscat-insight"></div>
+      </div>
+      <div class="chart-card">
+        <h3>Sleeper Hits <span class="badge-inline">— low position, high clicks</span></h3>
+        <div class="tbl-wrap" style="max-height:280px;overflow-y:auto;">
+          <table class="dash-table">
+            <thead><tr><th>#</th><th>Title</th><th>Pos</th><th>Cat</th><th>Unique Clicks</th></tr></thead>
+            <tbody id="cr-sleeper-tbody"></tbody>
+          </table>
+        </div>
+        <div class="insight">Articles with <code>position_category = low</code> that still pull strong unique clicks — content worth re-surfacing higher up.</div>
+      </div>
+    </div>
+
+    <div class="chart-card" style="padding:14px 18px;">
+      <h3 style="margin-bottom:10px;">All Articles</h3>
+      <div id="cr-count" style="font-size:12px;color:var(--text-muted);margin-bottom:8px;"></div>
+      <div class="tbl-wrap"><table class="dash-table" id="cr-table">
+        <thead><tr><th>Position</th><th>Pos Cat</th><th>Title</th><th>Category</th><th>Tags</th><th>Author</th><th>Unique Clicks</th><th>Total Clicks</th></tr></thead>
+        <tbody id="cr-tbody"></tbody>
+      </table></div>
+      <div id="cr-pager" style="display:flex;align-items:center;justify-content:space-between;gap:6px;margin-top:12px;font-size:12px;color:var(--text-muted);flex-wrap:wrap;"></div>
+    </div>
+  `;
+  const rows = M.content_drill_table || [];
+  window._crData = rows;
+  window._crPage = 1;
+  window._crPosCatChart = null;
+  // Unique authors (single-valued)
+  const authors = [...new Set(rows.map(_crAuthor).filter(Boolean))].sort();
+  // Unique categories and tags — split on comma since RDS stores them as "longevity, health"
+  const catSet = new Set();
+  const tagSet = new Set();
+  rows.forEach(r => {
+    _crSplit(_crCategory(r)).forEach(c => catSet.add(c));
+    _crSplit(_crTags(r)).forEach(t => tagSet.add(t));
+  });
+  const cats = [...catSet].sort();
+  const tags = [...tagSet].sort();
+  const authSel = document.getElementById('cr-author');
+  authors.forEach(a => { const o=document.createElement('option'); o.value=a; o.textContent=a; authSel.appendChild(o); });
+  const catSel = document.getElementById('cr-cat');
+  cats.forEach(c => { const o=document.createElement('option'); o.value=c; o.textContent=c; catSel.appendChild(o); });
+  const tagSel = document.getElementById('cr-tag');
+  tags.forEach(t => { const o=document.createElement('option'); o.value=t; o.textContent=t; tagSel.appendChild(o); });
+  _crFilter();
+}
+
+function _crFilter() {
+  const posCat = (document.getElementById('cr-poscat').value || '').toLowerCase();
+  const pos    = document.getElementById('cr-pos').value;
+  const author = document.getElementById('cr-author').value;
+  const cat    = document.getElementById('cr-cat').value;
+  const tag    = document.getElementById('cr-tag').value;
+  const q      = (document.getElementById('cr-search').value||'').toLowerCase();
+  let rows = window._crData || [];
+  if (posCat) rows = rows.filter(r => _crPosCat(r) === posCat);
+  if (pos !== '') {
+    if (pos === '0') rows = rows.filter(r => !r.story_position || r.story_position === 0);
+    else rows = rows.filter(r => String(r.story_position) === pos);
+  }
+  if (author) rows = rows.filter(r => _crAuthor(r) === author);
+  if (cat)    rows = rows.filter(r => _crSplit(_crCategory(r)).includes(cat));
+  if (tag)    rows = rows.filter(r => _crSplit(_crTags(r)).includes(tag));
+  if (q)      rows = rows.filter(r => (r.title||'').toLowerCase().includes(q));
+
+  window._crFiltered = rows;
+  window._crPage = 1;
+
+  _crRenderKpis(rows);
+  _crRenderPosCatChart(rows);
+  _crRenderSleepers(rows);
+  _crRenderPage();
+
+  const filtered = posCat || pos !== '' || author || cat || tag || q;
+  const scope = document.getElementById('cr-scope-label');
+  if (scope) scope.innerHTML = filtered
+    ? `<strong style="color:var(--text);">${rows.length}</strong> articles in scope`
+    : `<strong style="color:var(--text);">${rows.length}</strong> articles (all)`;
+}
+
+function _crRenderKpis(rows) {
+  const n = rows.length;
+  const uniq = rows.reduce((a,r) => a + (Number(r.unique_clicks)||0), 0);
+  const tot  = rows.reduce((a,r) => a + (Number(r.total_clicks)||0), 0);
+  const avg  = n ? (uniq / n) : 0;
+  const byCat = {};
+  rows.forEach(r => {
+    const k = _crPosCat(r) || 'unknown';
+    byCat[k] = (byCat[k]||0) + (Number(r.unique_clicks)||0);
+  });
+  let top = null;
+  Object.entries(byCat).forEach(([k,v]) => { if (!top || v > top[1]) top = [k,v]; });
+  const set = (id, v) => { const el=document.getElementById(id); if (el) el.textContent = v; };
+  set('cr-kpi-articles', fmt(n));
+  set('cr-kpi-uniq',     fmt(uniq));
+  set('cr-kpi-total',    fmt(tot));
+  set('cr-kpi-avg',      avg ? avg.toFixed(1) : '—');
+  if (top) {
+    set('cr-kpi-poscat', top[0].charAt(0).toUpperCase() + top[0].slice(1));
+    set('cr-kpi-poscat-sub', `${fmt(top[1])} unique clicks`);
+  } else { set('cr-kpi-poscat','—'); set('cr-kpi-poscat-sub','—'); }
+}
+
+function _crRenderPosCatChart(rows) {
+  const order = ['high','medium','low'];
+  const byCat = { high:{u:0,t:0,n:0}, medium:{u:0,t:0,n:0}, low:{u:0,t:0,n:0} };
+  rows.forEach(r => {
+    const k = _crPosCat(r);
+    if (!byCat[k]) return;
+    byCat[k].u += Number(r.unique_clicks)||0;
+    byCat[k].t += Number(r.total_clicks)||0;
+    byCat[k].n += 1;
+  });
+  const labels = order.map(k => k.charAt(0).toUpperCase()+k.slice(1));
+  const uniqData  = order.map(k => byCat[k].u);
+  const totalData = order.map(k => byCat[k].t);
+  const counts    = order.map(k => byCat[k].n);
+  if (window._crPosCatChart) window._crPosCatChart.destroy();
+  window._crPosCatChart = new Chart(document.getElementById('cr-poscat-bar'), {
+    type: 'bar',
+    data: { labels, datasets: [
+      { label:'Unique Clicks', data:uniqData,  backgroundColor:'#1a7f37', borderRadius:4 },
+      { label:'Total Clicks',  data:totalData, backgroundColor:'#0969da', borderRadius:4 }
+    ]},
+    options: { responsive:true, maintainAspectRatio:false,
+      plugins:{ legend:{position:'bottom',labels:{font:{size:11}}},
+                tooltip:{callbacks:{ afterLabel: ctx => `Articles: ${counts[ctx.dataIndex]}` }} },
+      scales:{ y:{ beginAtZero:true } } }
+  });
+  const ins = document.getElementById('cr-poscat-insight');
+  if (ins) {
+    const avgU = order.map((k,i) => counts[i] ? (uniqData[i]/counts[i]) : 0);
+    ins.innerHTML = order.map((k,i) =>
+      `<strong style="color:${_crPosColors[k]}">${labels[i]}</strong>: ${counts[i]} article${counts[i]===1?'':'s'} &middot; avg ${avgU[i].toFixed(1)} unique clicks`
+    ).join(' &nbsp;·&nbsp; ');
+  }
+}
+
+function _crRenderSleepers(rows) {
+  const sleepers = rows
+    .filter(r => _crPosCat(r) === 'low')
+    .slice()
+    .sort((a,b) => (Number(b.unique_clicks)||0) - (Number(a.unique_clicks)||0))
+    .slice(0, 10);
+  const tbody = document.getElementById('cr-sleeper-tbody');
+  if (!tbody) return;
+  if (!sleepers.length) {
+    tbody.innerHTML = `<tr><td colspan="5" style="text-align:center;color:var(--text-muted);padding:14px;">No low-position articles in scope.</td></tr>`;
+    return;
+  }
+  tbody.innerHTML = sleepers.map((r,i) => {
+    const titleCell = r.url
+      ? `<a href="${esc(r.url)}" target="_blank" rel="noopener">${esc(r.title||'')}</a>`
+      : esc(r.title||'');
+    return `<tr>
+      <td>${i+1}</td>
+      <td>${titleCell}</td>
+      <td>${r.story_position || '—'}</td>
+      <td>${esc(_crCategory(r))}</td>
+      <td>${fmt(r.unique_clicks)}</td>
+    </tr>`;
+  }).join('');
+}
+
+function _crGoto(p) {
+  const total = (window._crFiltered||[]).length;
+  const maxPage = Math.max(1, Math.ceil(total / CR_PAGE_SIZE));
+  window._crPage = Math.min(Math.max(1, p), maxPage);
+  _crRenderPage();
+}
+
+function _crRenderPage() {
+  const rows = window._crFiltered || [];
+  const total = rows.length;
+  const page = window._crPage || 1;
+  const pages = Math.max(1, Math.ceil(total / CR_PAGE_SIZE));
+  const start = (page - 1) * CR_PAGE_SIZE;
+  const end   = Math.min(start + CR_PAGE_SIZE, total);
+  const slice = rows.slice(start, end);
+
+  const countEl = document.getElementById('cr-count');
+  if (countEl) countEl.textContent = `Showing ${total ? (start+1) : 0}–${end} of ${total.toLocaleString()} article${total===1?'':'s'}.`;
+
+  const tbody = document.getElementById('cr-tbody');
+  if (tbody) {
+    tbody.innerHTML = slice.map(r => {
+      const posCell = r.story_position ? fmt(r.story_position) : '<span style="color:var(--text-muted);font-style:italic;">No position</span>';
+      const pc = _crPosCat(r);
+      const pcCell = pc
+        ? `<span style="color:${_crPosColors[pc]||'var(--text-muted)'};font-weight:600;text-transform:capitalize;">${pc}</span>`
+        : '<span style="color:var(--text-muted);">—</span>';
+      const titleCell = r.url
+        ? `<a href="${esc(r.url)}" target="_blank" rel="noopener">${esc(r.title||'')}</a>`
+        : esc(r.title||'');
+      return `<tr>
+        <td>${posCell}</td>
+        <td>${pcCell}</td>
+        <td>${titleCell}</td>
+        <td>${esc(_crCategory(r))}</td>
+        <td>${esc(_crTags(r))}</td>
+        <td>${esc(_crAuthor(r))}</td>
+        <td>${fmt(r.unique_clicks)}</td>
+        <td>${fmt(r.total_clicks)}</td>
+      </tr>`;
+    }).join('');
+  }
+
+  const pager = document.getElementById('cr-pager');
+  if (pager) {
+    const btn = (label, p, disabled, active) =>
+      `<button class="camp-pager-btn${active?' active':''}" onclick="_crGoto(${p})" ${disabled?'disabled':''}>${label}</button>`;
+    const numBtns = [];
+    const windowSize = 7;
+    let lo = Math.max(1, page - Math.floor(windowSize/2));
+    let hi = Math.min(pages, lo + windowSize - 1);
+    lo = Math.max(1, hi - windowSize + 1);
+    for (let p=lo; p<=hi; p++) numBtns.push(btn(String(p), p, false, p===page));
+    pager.innerHTML =
+      `<span>Page ${page} of ${pages}</span>
+       <div style="display:flex;gap:5px;flex-wrap:wrap;">
+         ${btn('« First', 1, page===1)}${btn('‹ Prev', page-1, page===1)}
+         ${numBtns.join('')}
+         ${btn('Next ›', page+1, page===pages)}${btn('Last »', pages, page===pages)}
+       </div>`;
+  }
+}
+
+function _crReset() {
+  ['cr-poscat','cr-pos','cr-author','cr-cat','cr-tag'].forEach(id => { const el = document.getElementById(id); if (el) el.value = ''; });
+  const si = document.getElementById('cr-search'); if (si) si.value = '';
+  _crFilter();
+}
+
+/* ═══════════════════════════════════════
+   AUDIENCE
+═══════════════════════════════════════ */
+function renderAudience(M) {
+  document.getElementById('audience').innerHTML = `
+    <div class="section-context-banner">
+      <strong>Audience Intelligence</strong> — Where subscribers come from and how engaged they are. Acquisition quality metrics help identify which sources deliver the highest-value contacts.
+      Data starts December 2025.
+    </div>
+    <div class="kpi-row">
+      <div class="kpi-card accent"><div class="label">Total Subscribers</div><div class="value">${fmt(M.total_subscribers)}</div><div class="sub">All-time base</div></div>
+      <div class="kpi-card green"><div class="label">Active Rate</div><div class="value">${M.active_rate||'—'}</div><div class="sub">Currently active</div></div>
+      <div class="kpi-card blue"><div class="label">Top UTM Source</div><div class="value" style="font-size:14px;">${utmLabel((M.acquisition_quality&&M.acquisition_quality.utm_source&&M.acquisition_quality.utm_source.rows&&M.acquisition_quality.utm_source.rows[0]&&M.acquisition_quality.utm_source.rows[0].label)||'')}</div><div class="sub">Largest acquisition channel</div></div>
+      <div class="kpi-card orange"><div class="label">Top Source %</div><div class="value">${(()=>{const r=M.acquisition_quality&&M.acquisition_quality.utm_source&&M.acquisition_quality.utm_source.rows||[];const total=r.reduce((s,x)=>s+(x.count||0),0);return r[0]&&total?(r[0].count/total*100).toFixed(1)+'%':'—';})()}</div><div class="sub">Share of total subscribers</div></div>
+    </div>
+    <div class="grid-2">
+      <div class="chart-card">
+        <h3>Acquisition by UTM Source</h3>
+        <div class="chart-container h300"><canvas id="aud-source-pie"></canvas></div>
+      </div>
+      <div class="chart-card">
+        <h3>UTM Clicks Performance</h3>
+        <div class="chart-container h300"><canvas id="aud-utm-clicks"></canvas></div>
+      </div>
+    </div>
+    <div class="chart-card">
+      <h3>Acquisition Quality by UTM Source</h3>
+      <div class="tbl-wrap"><table class="dash-table"><thead><tr><th>UTM Source</th><th>Subscribers</th><th>% of Total</th><th>Avg Open Rate</th><th>Avg Click Rate</th></tr></thead>
+      <tbody>${(()=>{
+        const aq = M.acquisition_quality&&M.acquisition_quality.utm_source||{rows:[]};
+        const total = (aq.rows||[]).reduce((s,r)=>s+(r.count||0),0);
+        return (aq.rows||[]).map(r=>`<tr><td>${utmLabel(r.label)}</td><td>${fmt(r.count)}</td><td>${total?(r.count/total*100).toFixed(1)+'%':'—'}</td><td>${r.avg_open_rate!=null?Number(r.avg_open_rate).toFixed(2)+'%':'—'}</td><td>${r.avg_click_rate!=null?Number(r.avg_click_rate).toFixed(2)+'%':'—'}</td></tr>`).join('');
+      })()}</tbody></table></div>
+    </div>
+  `;
+  // Acquisition source pie
+  const aq = M.acquisition_quality&&M.acquisition_quality.utm_source||{rows:[]};
+  const pieLabels = (aq.rows||[]).map(r=>utmLabel(r.label));
+  const pieData   = (aq.rows||[]).map(r=>r.count||0);
+  new Chart(document.getElementById('aud-source-pie'), {
+    type: 'doughnut',
+    data: { labels: pieLabels, datasets: [{ data: pieData, backgroundColor: ['#0969da','#1a7f37','#cf222e','#9a6700','#8250df','#bf3989','#1b7c83','#7d4e00','#58a6ff','#3fb950'] }] },
+    options: { responsive:true, maintainAspectRatio:false, plugins:{ legend:{position:'bottom',labels:{font:{size:11},padding:6}} } }
+  });
+  // UTM clicks performance bar
+  const uc = M.utm_clicks_performance || {labels:[],unique_clicks:[],total_clicks:[]};
+  new Chart(document.getElementById('aud-utm-clicks'), {
+    type: 'bar',
+    data: { labels: (uc.labels||[]).map(utmLabel), datasets: [
+      { label: 'Unique Clicks', data: uc.unique_clicks, backgroundColor: '#0969da' },
+      { label: 'Total Clicks',  data: uc.total_clicks,  backgroundColor: '#1a7f37' }
+    ]},
+    options: { responsive:true, maintainAspectRatio:false, indexAxis:'y', plugins:{legend:{position:'bottom',labels:{font:{size:11}}}}, scales:{x:{beginAtZero:true}} }
+  });
+}
+
+/* ═══════════════════════════════════════
+   LONGEVITY QUIZ
+═══════════════════════════════════════ */
+function renderQuiz(M) {
+  const qk = M.quiz_kpis || {};
+  document.getElementById('quiz').innerHTML = `
+    <div class="section-context-banner">
+      <strong>Longevity Quiz</strong> — SuperAge longevity-quiz engagement and demographic insights. Tracks completion volume, age distribution, longevity score and lifestyle indicators.
+    </div>
+    <div class="kpi-row" style="grid-template-columns:repeat(auto-fit,minmax(160px,1fr));">
+      <div class="kpi-card accent"><div class="label">Total Quiz Takers</div><div class="value">${fmt(qk.total_takers)}</div><div class="sub">Longevity quiz completions</div></div>
+      <div class="kpi-card green"><div class="label">Avg Age</div><div class="value">${qk.avg_age||'—'}</div><div class="sub">Mean respondent age</div></div>
+      <div class="kpi-card cyan"><div class="label">Avg Longevity Score</div><div class="value">${qk.avg_score||'—'}</div><div class="sub">Mean score</div></div>
+      <div class="kpi-card blue"><div class="label">Max Longevity Score</div><div class="value">${qk.max_score||'—'}</div><div class="sub">Highest recorded</div></div>
+      <div class="kpi-card orange"><div class="label">Fitness Quiz</div><div class="value">${fmt(qk.fitness_quiz_takers)}</div><div class="sub">Took fitness quiz</div></div>
+      <div class="kpi-card pink"><div class="label">Menupause Quiz</div><div class="value">${fmt(qk.menu_quiz_takers)}</div><div class="sub">Took menupause quiz</div></div>
+    </div>
+    <div class="grid-2">
+      <div class="chart-card">
+        <h3>Age Distribution of Quiz Takers</h3>
+        <div class="chart-container h300"><canvas id="quiz-age-dist"></canvas></div>
+      </div>
+      <div class="chart-card">
+        <h3>Longevity Score Distribution</h3>
+        <div class="chart-container h300"><canvas id="quiz-score-dist"></canvas></div>
+      </div>
+    </div>
+    <div class="grid-2">
+      <div class="chart-card">
+        <h3>Gender</h3>
+        <div class="chart-container h260"><canvas id="quiz-gender"></canvas></div>
+      </div>
+      <div class="chart-card">
+        <h3>Education Level</h3>
+        <div class="chart-container h260"><canvas id="quiz-education"></canvas></div>
+      </div>
+    </div>
+    <h2 style="font-size:14px;font-weight:600;color:var(--text);margin:18px 0 10px;">Lifestyle &amp; Longevity Indicators</h2>
+    <div class="grid-2">
+      <div class="chart-card">
+        <h3>Exercise Frequency</h3>
+        <div class="chart-container h260"><canvas id="quiz-exercise"></canvas></div>
+      </div>
+      <div class="chart-card">
+        <h3>Sleep Hours</h3>
+        <div class="chart-container h260"><canvas id="quiz-sleep"></canvas></div>
+      </div>
+    </div>
+    <div class="grid-2">
+      <div class="chart-card">
+        <h3>Marital Status</h3>
+        <div class="chart-container h260"><canvas id="quiz-marital"></canvas></div>
+      </div>
+      <div class="chart-card">
+        <h3>Body Weight Profile</h3>
+        <div class="chart-container h260"><canvas id="quiz-obesity"></canvas></div>
+      </div>
+    </div>
+  `;
+  const palette = ['#0969da','#1a7f37','#cf222e','#9a6700','#8250df','#bf3989','#1b7c83','#58a6ff','#3fb950','#f85149'];
+  function barH(id, d, label, color) {
+    const el = document.getElementById(id);
+    if (!el || !d) return;
+    new Chart(el, { type:'bar', data:{ labels:d.labels||[], datasets:[{label, data:d.data||[], backgroundColor:color}] }, options:{responsive:true,maintainAspectRatio:false,indexAxis:'y',plugins:{legend:{display:false}},scales:{x:{beginAtZero:true}}} });
+  }
+  function pie(id, d) {
+    const el = document.getElementById(id);
+    if (!el || !d) return;
+    new Chart(el, { type:'doughnut', data:{ labels:d.labels||[], datasets:[{data:d.data||[], backgroundColor:(d.colors&&d.colors.length?d.colors:palette)}] }, options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'bottom',labels:{font:{size:11},padding:6}}}} });
+  }
+  barH('quiz-age-dist',   M.quiz_age_dist,       'Takers', '#0969da');
+  barH('quiz-score-dist', M.quiz_score_dist,     'Count',  '#9a6700');
+  pie ('quiz-gender',     M.quiz_gender_dist);
+  pie ('quiz-education',  M.quiz_education_dist);
+  barH('quiz-exercise',   M.quiz_exercise_dist,  'Count',  '#8250df');
+  barH('quiz-sleep',      M.quiz_sleep_dist,     'Count',  '#1b7c83');
+  pie ('quiz-marital',    M.quiz_marital_dist);
+  pie ('quiz-obesity',    M.quiz_obesity_dist);
+}
+
+/* ═══════════════════════════════════════
+   REVENUE & SPONSORS
+═══════════════════════════════════════ */
+function renderRevenue(M) {
+  const ts = M.top_sponsors || [];
+  const topName = ts[0] ? ts[0].name : '—';
+  document.getElementById('revenue').innerHTML = `
+    <div class="section-context-banner">
+      <strong>Revenue &amp; Sponsors</strong> — Advertising and sponsorship performance. Tracks total revenue, deal volume, ECPM benchmarks, and sponsor-level breakdown.
+    </div>
+    <div class="kpi-row">
+      <div class="kpi-card gold"><div class="label">Total Revenue</div><div class="value">${esc(M.total_revenue_fmt||'—')}</div><div class="sub">All sponsors combined</div></div>
+      <div class="kpi-card green"><div class="label">Total Deals</div><div class="value">${fmt(M.total_sponsor_deals)}</div><div class="sub">Sponsorship placements</div></div>
+      <div class="kpi-card blue"><div class="label">Avg ECPM</div><div class="value">${esc(M.avg_ecpm||'—')}</div><div class="sub">Effective CPM across all deals</div></div>
+      <div class="kpi-card cyan"><div class="label">Avg Deal Size</div><div class="value">${esc(M.avg_deal_size_fmt||'—')}</div><div class="sub">Mean revenue per deal</div></div>
+      <div class="kpi-card orange"><div class="label">Top Sponsor</div><div class="value" style="font-size:14px;">${esc(topName)}</div><div class="sub">By revenue</div></div>
+    </div>
+    <div class="grid-2">
+      <div class="chart-card">
+        <h3>Monthly Revenue &amp; Deal Volume</h3>
+        <div class="chart-container h340"><canvas id="rev-monthly"></canvas></div>
+        <div class="insight">Bars = revenue (left axis). Line = number of deals (right axis). Lighter bars and dashed line = future / not-yet-closed months.</div>
+      </div>
+      <div class="chart-card">
+        <h3>Sponsor Type Distribution</h3>
+        <div class="chart-container h340"><canvas id="rev-stype"></canvas></div>
+        <div class="insight">Understanding the mix of sponsor types helps diversify revenue and manage dependency on any single category.</div>
+      </div>
+    </div>
+    <div class="chart-card">
+      <h3>Top Sponsors</h3>
+      <div class="tbl-wrap"><table class="dash-table">
+        <thead><tr><th>#</th><th>Sponsor</th><th>Deals</th><th>Revenue</th><th>Avg Rev / Deal</th><th>Avg ECPM</th><th>Revenue Share</th></tr></thead>
+        <tbody>${ts.map((s,i)=>{
+          const rev = parseFloat((s.revenue||'').replace(/[$,]/g,'')) || 0;
+          const deals = s.deals || 1;
+          const avgRev = rev ? '$' + (rev/deals).toLocaleString(undefined,{maximumFractionDigits:0}) : '—';
+          const totalRev = parseFloat(M.total_revenue) || 0;
+          const share = (totalRev && rev) ? (rev/totalRev*100).toFixed(1)+'%' : '—';
+          return `<tr><td>${i+1}</td><td>${esc(s.name||'')}</td><td>${fmt(s.deals)}</td><td>${esc(s.revenue||'—')}</td><td>${avgRev}</td><td>${esc(s.avg_ecpm||'—')}</td><td>${share}</td></tr>`;
+        }).join('')}</tbody>
+      </table></div>
+    </div>
+  `;
+
+  // Monthly revenue + deals — bars and line, with future-month differentiation
+  const rm = M.revenue_monthly || {labels:[],revenue:[],deals:[]};
+  const today = new Date();
+  const monthStart = new Date(today.getFullYear(), today.getMonth(), 1);
+  const isFuture = (lbl) => {
+    const d = new Date(lbl + ' 1');  // "May 2026" → Date
+    return isFinite(d.getTime()) && d > monthStart;
+  };
+  const revColors = (rm.labels||[]).map(l => isFuture(l) ? 'rgba(125,78,0,0.30)' : '#7d4e00');
+  const futureMask = (rm.labels||[]).map(isFuture);
+  // For the deals line: split into past (solid) + future (dashed) series so the future segment is visually distinct
+  const dealsPast   = (rm.deals||[]).map((v,i) => futureMask[i] ? null : v);
+  const dealsFuture = (rm.deals||[]).map((v,i) => futureMask[i] ? v : null);
+  // Bridge so the line connects across the boundary
+  for (let i=1; i<futureMask.length; i++) {
+    if (futureMask[i] && !futureMask[i-1]) dealsFuture[i-1] = rm.deals[i-1];
+  }
+  new Chart(document.getElementById('rev-monthly'), {
+    data: {
+      labels: rm.labels||[],
+      datasets: [
+        { type:'bar', label:'Revenue ($)', data: rm.revenue||[], backgroundColor: revColors, yAxisID:'y' },
+        { type:'line', label:'Deals',         data: dealsPast,    borderColor:'#0969da', backgroundColor:'transparent', tension:.25, pointRadius:3, yAxisID:'y1' },
+        { type:'line', label:'Deals (future)',data: dealsFuture,  borderColor:'#0969da', backgroundColor:'transparent', borderDash:[5,4], tension:.25, pointRadius:3, pointStyle:'circle', yAxisID:'y1' }
+      ]
+    },
+    options: { responsive:true, maintainAspectRatio:false,
+      plugins:{ legend:{ position:'top', labels:{ font:{ size:11 }, filter: it => it.text !== 'Deals (future)' } } },
+      scales:{
+        y:  { position:'left',  beginAtZero:true, ticks:{ callback:v=>'$'+v.toLocaleString() } },
+        y1: { position:'right', beginAtZero:true, grid:{ drawOnChartArea:false }, ticks:{ stepSize:1 } }
+      } }
+  });
+
+  // Sponsor type distribution donut
+  const st = M.sponsor_type_dist || {labels:[],data:[],colors:[]};
+  new Chart(document.getElementById('rev-stype'), {
+    type: 'doughnut',
+    data: { labels: st.labels||[], datasets: [{ data: st.data||[], backgroundColor: st.colors || ['#0969da','#1a7f37','#8250df','#9a6700','#cf222e','#1b7c83','#bf3989'], borderWidth: 1 }] },
+    options: { responsive:true, maintainAspectRatio:false, plugins:{ legend:{ position:'bottom', labels:{ font:{ size:11 }, padding:8 } } } }
+  });
+}
+
+/* ═══════════════════════════════════════
+   SUBSCRIBER RETENTION
+═══════════════════════════════════════ */
+function renderRetention(M) {
+  const rt = M.retention_overall || {};
+  const sc = M.survival_curve   || {labels:[],rates:[]};
+  const findRate = (dayLbl) => {
+    const i = (sc.labels||[]).indexOf(dayLbl);
+    return i < 0 ? null : (sc.rates||[])[i] != null ? sc.rates[i] : null;
+  };
+  const pct = v => v == null ? '—' : (Number(v).toFixed(1) + '%');
+
+  document.getElementById('retention').innerHTML = `
+    <div class="section-context-banner">
+      <strong>Subscriber Retention</strong> — How long subscribers stay engaged after joining, aggregated across all subscribers. Curves show the % still active at 30 / 60 / 90 / 180 / 365 days.
+    </div>
+    <div class="kpi-row">
+      <div class="kpi-card green"><div class="label">30-Day Retention</div><div class="value">${pct(findRate('Day 30'))}</div><div class="sub">Still active at day 30</div></div>
+      <div class="kpi-card blue"><div class="label">60-Day Retention</div><div class="value">${pct(findRate('Day 60'))}</div><div class="sub">Still active at day 60</div></div>
+      <div class="kpi-card orange"><div class="label">90-Day Retention</div><div class="value">${pct(findRate('Day 90'))}</div><div class="sub">Still active at day 90</div></div>
+      <div class="kpi-card cyan"><div class="label">Avg Lifespan</div><div class="value">${rt.avg_lifespan_days != null ? rt.avg_lifespan_days+' d' : '—'}</div><div class="sub">Median: ${rt.median_lifespan_days != null ? rt.median_lifespan_days+' d' : '—'}</div></div>
+      <div class="kpi-card purple"><div class="label">Active Rate</div><div class="value">${esc(rt.active_rate||'—')}</div><div class="sub">${fmt(rt.active)} of ${fmt(rt.total)} subscribers</div></div>
+    </div>
+    <div class="chart-card">
+      <h3>Survival Curve <span class="badge-inline">— all subscribers</span></h3>
+      <div class="chart-container h340"><canvas id="ret-curve"></canvas></div>
+      <div class="insight">30-day: <strong>${pct(findRate('Day 30'))}</strong> &middot; 60-day: <strong>${pct(findRate('Day 60'))}</strong> &middot; 90-day: <strong>${pct(findRate('Day 90'))}</strong>.</div>
+    </div>
+    <div class="grid-2">
+      <div class="chart-card">
+        <h3>Lifespan Distribution</h3>
+        <div class="chart-container h300"><canvas id="ret-lifespan"></canvas></div>
+        <div class="insight">How many subscribers fall into each lifespan bucket.</div>
+      </div>
+      <div class="chart-card">
+        <h3>Monthly Churn Volume</h3>
+        <div class="chart-container h300"><canvas id="ret-churn"></canvas></div>
+        <div class="insight">Count of subscribers who unsubscribed in each month.</div>
+      </div>
+    </div>
+  `;
+
+  new Chart(document.getElementById('ret-curve'), {
+    type: 'line',
+    data: { labels: sc.labels||[], datasets: [
+      { label: 'Retention %', data: sc.rates||[], borderColor: '#1a7f37', backgroundColor: 'rgba(26,127,55,.1)', tension:.3, fill:true, pointRadius:4 }
+    ]},
+    options: { responsive:true, maintainAspectRatio:false,
+      plugins:{ legend:{ display:false } },
+      scales:{ y:{ min:0, max:100, ticks:{ callback: v => v+'%' } } } }
+  });
+
+  const ld = M.lifespan_dist || {labels:[],data:[]};
+  new Chart(document.getElementById('ret-lifespan'), {
+    type: 'bar',
+    data: { labels: ld.labels||[], datasets: [
+      { label: 'Subscribers', data: ld.data||[], backgroundColor: '#0969da', borderRadius: 4 }
+    ]},
+    options: { responsive:true, maintainAspectRatio:false,
+      plugins:{ legend:{ display:false } },
+      scales:{ y:{ beginAtZero:true } } }
+  });
+
+  const mc = M.monthly_churn || {labels:[],data:[]};
+  new Chart(document.getElementById('ret-churn'), {
+    type: 'bar',
+    data: { labels: mc.labels||[], datasets: [
+      { label: 'Churn (unsubscribes)', data: mc.data||[], backgroundColor: '#cf222e', borderRadius: 4 }
+    ]},
+    options: { responsive:true, maintainAspectRatio:false,
+      plugins:{ legend:{ display:false } },
+      scales:{ y:{ beginAtZero:true } } }
+  });
+}
+
+/* ═══════════════════════════════════════
+   COHORT ANALYSIS
+═══════════════════════════════════════ */
+function renderCohort(M) {
+  const k = M.cohort_kpis || {};
+  const heatmap = M.cohort_heatmap || [];
+  const tableRows = M.cohort_table || [];
+  // Determine which month buckets are populated
+  const monthKeys = ['m1','m2','m3','m4','m5','m6','m9','m12'];
+  document.getElementById('cohort').innerHTML = `
+    <div class="section-context-banner">
+      <strong>Cohort Analysis</strong> — Subscribers grouped by their join month. Each cell is the % of that cohort still active N months later. Empty cells = cohort hasn't reached that age yet.
+    </div>
+    <div class="kpi-row">
+      <div class="kpi-card accent"><div class="label">Total Cohorts</div><div class="value">${fmt(k.total_cohorts)}</div><div class="sub">Join-month groups</div></div>
+      <div class="kpi-card green"><div class="label">Avg 90-Day Retention</div><div class="value">${esc(k.avg_90d_retention||'—')}</div><div class="sub">Across all cohorts</div></div>
+      <div class="kpi-card blue"><div class="label">Best Cohort (M3)</div><div class="value" style="font-size:16px;">${esc(k.best_cohort_label||'—')}</div><div class="sub">${esc(k.best_cohort_m3||'—')} at M3</div></div>
+      <div class="kpi-card red"><div class="label">Worst Cohort (M3)</div><div class="value" style="font-size:16px;">${esc(k.worst_cohort_label||'—')}</div><div class="sub">${esc(k.worst_cohort_m3||'—')} at M3</div></div>
+    </div>
+    <div class="chart-card">
+      <h3>Cohort Retention Heatmap</h3>
+      <div class="tbl-wrap" id="coh-heatmap-wrap"></div>
+      <div class="insight">Each row = a monthly cohort. M1 = % still active 1 month after joining, etc. Colors: dark green ≥ 80% &middot; light green ≥ 60% &middot; amber ≥ 40% &middot; red &lt; 40%.</div>
+    </div>
+    <div class="chart-card">
+      <h3>Cohort Performance Table</h3>
+      <div class="tbl-wrap"><table class="dash-table">
+        <thead><tr><th>Cohort</th><th>Size</th><th>Active Now</th><th>Churned</th><th>Retention %</th><th>Churn %</th><th>Early Churn (90d)</th><th>Campaigns Sent</th></tr></thead>
+        <tbody>${tableRows.map(r => `<tr>
+          <td>${esc(r.cohort||'')}</td>
+          <td>${fmt(r.size)}</td>
+          <td>${fmt(r.active_now)}</td>
+          <td>${fmt(r.churned)}</td>
+          <td>${esc(r.retention_pct||'—')}</td>
+          <td>${esc(r.churn_rate_pct||'—')}</td>
+          <td>${esc(r.early_churn_pct||'—')}</td>
+          <td>${fmt(r.campaigns_sent)}</td>
+        </tr>`).join('')}</tbody>
+      </table></div>
+    </div>
+  `;
+
+  // Build heatmap
+  const heatColor = v => {
+    if (v == null) return 'background:var(--card-2);color:var(--text-dim);';
+    if (v >= 80) return 'background:#1a7f37;color:#fff;';
+    if (v >= 60) return 'background:#2da44e;color:#fff;';
+    if (v >= 40) return 'background:#9a6700;color:#fff;';
+    if (v >= 20) return 'background:#d29922;color:#000;';
+    return 'background:#cf222e;color:#fff;';
+  };
+  let html = '<table class="dash-table"><thead><tr><th class="cohort-th-sticky">Cohort</th><th>Size</th>';
+  monthKeys.forEach(mk => html += `<th>M${mk.slice(1)}</th>`);
+  html += '</tr></thead><tbody>';
+  heatmap.forEach(row => {
+    html += `<tr><td class="cohort-td-sticky">${esc(row.cohort||'')}</td><td>${fmt(row.size)}</td>`;
+    monthKeys.forEach(mk => {
+      const v = row[mk];
+      if (v == null) html += `<td class="cohort-cell-null">—</td>`;
+      else html += `<td style="${heatColor(v)}">${v.toFixed(1)}%</td>`;
+    });
+    html += '</tr>';
+  });
+  html += '</tbody></table>';
+  const wrap = document.getElementById('coh-heatmap-wrap');
+  if (wrap) wrap.innerHTML = html;
+}
+</script>
+</body>
+</html>

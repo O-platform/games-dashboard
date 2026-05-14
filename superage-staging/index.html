@@ -646,6 +646,70 @@ function _clickTrendChart(canvasId, series, metric, color, label) {
       scales:{ y:{ beginAtZero:true, ticks:{ callback: v => v.toLocaleString() } } } }
   });
 }
+
+/* Raw-click section state for weekday/week-range selectors */
+let _rawClicksData = null;
+const _weekdayLong = { Mon:'Monday', Tue:'Tuesday', Wed:'Wednesday', Thu:'Thursday', Fri:'Friday', Sat:'Saturday', Sun:'Sunday' };
+
+function _sliceSeries(series, n) {
+  if (!series || !series.labels) return series || {};
+  const len = series.labels.length;
+  if (n >= len) return series;
+  const sl = (arr) => Array.isArray(arr) ? arr.slice(len - n) : arr;
+  const out = {};
+  for (const k of Object.keys(series)) out[k] = sl(series[k]);
+  return out;
+}
+
+function _setWeekdayPick(dow) {
+  if (!_rawClicksData) return;
+  const byDow = _rawClicksData.raw_clicks_by_weekday || {};
+  const todayDow = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'][(new Date()).getDay()];
+  // Prefer per-weekday data if available, else fall back to the legacy single-weekday payload for today.
+  let series = byDow[dow];
+  if ((!series || !(series.labels||[]).length) && dow === todayDow) {
+    series = _rawClicksData.raw_clicks_same_weekday || {};
+  }
+  series = series || { labels:[], clicks:[], is_current:[] };
+  _clickTrendChart('cnt-raw-weekday-bar', series, 'clicks', '#8250df', 'Click events');
+  const badge = document.getElementById('cnt-raw-weekday-badge');
+  if (badge) badge.textContent = `— last ${(series.labels||[]).length || 0} ${_weekdayLong[dow]||dow}s`;
+  const ins = document.getElementById('cnt-raw-weekday-insight');
+  if (ins) {
+    const trend = _clickTrendInsight(series, 'clicks', 'click events');
+    ins.innerHTML = trend
+      ? `Most recent ${_weekdayLong[dow]||dow} vs prior: ${trend}.`
+      : `No ${_weekdayLong[dow]||dow} data available — re-run the comparison lambda to populate.`;
+  }
+}
+
+function _setRawWeeklyWindow(n) {
+  if (!_rawClicksData) return;
+  ['rww-4','rww-8','rww-12'].forEach(id => {
+    const btn = document.getElementById(id);
+    if (!btn) return;
+    const active = parseInt(id.split('-')[1]) === n;
+    btn.style.background = active ? 'var(--accent)' : 'var(--card)';
+    btn.style.color = active ? '#fff' : 'var(--text-muted)';
+  });
+  const series = _sliceSeries(_rawClicksData.raw_clicks_weekly || {}, n);
+  _clickTrendChart('cnt-raw-weekly-bar', series, 'clicks', '#bf3989', 'Click events');
+  const badge = document.getElementById('cnt-raw-weekly-badge');
+  if (badge) badge.textContent = `— last ${(series.labels||[]).length || 0} ISO weeks`;
+  const ins = document.getElementById('cnt-raw-weekly-insight');
+  if (ins) ins.innerHTML = `WoW: ${_clickTrendInsight(series, 'clicks', 'click events')}.`;
+}
+
+function _renderRawMonthly() {
+  if (!_rawClicksData) return;
+  const series = _rawClicksData.raw_clicks_monthly || {};
+  _clickTrendChart('cnt-raw-monthly-bar', series, 'clicks', '#9a6700', 'Click events');
+  const badge = document.getElementById('cnt-raw-monthly-badge');
+  if (badge) badge.textContent = `— last ${(series.labels||[]).length || 0} months`;
+  const ins = document.getElementById('cnt-raw-monthly-insight');
+  if (ins) ins.innerHTML = `MoM: ${_clickTrendInsight(series, 'clicks', 'click events')}.`;
+}
+
 function renderContent(M) {
   document.getElementById('content').innerHTML = `
     <div class="section-context-banner">
@@ -653,9 +717,9 @@ function renderContent(M) {
     </div>
     <div class="kpi-row" style="grid-template-columns:repeat(auto-fit,minmax(140px,1fr));">
       <div class="kpi-card accent"><div class="label">Total Clicks</div><div class="value">${fmt(M.total_article_clicks)}</div><div class="sub">All tracked articles</div></div>
-      <div class="kpi-card green"><div class="label">Unique Clickers</div><div class="value">${fmt(M.unique_article_clickers)}</div><div class="sub">Distinct email addresses</div></div>
-      <div class="kpi-card blue"><div class="label">Articles Clicked</div><div class="value">${fmt(M.articles_clicked_count)}</div><div class="sub">Distinct URLs tracked</div></div>
-      <div class="kpi-card orange"><div class="label">Avg Clicks/Article</div><div class="value">${M.avg_clicks_per_article||'—'}</div><div class="sub">Mean engagement depth</div></div>
+      <div class="kpi-card green"><div class="label">Unique Clickers</div><div class="value">${fmt(M.unique_article_clickers != null ? M.unique_article_clickers : M.total_article_clickers)}</div><div class="sub">Distinct email addresses</div></div>
+      <div class="kpi-card blue"><div class="label">Articles Clicked</div><div class="value">${fmt(M.articles_clicked_count != null ? M.articles_clicked_count : (M.content_summary && M.content_summary.unique_articles))}</div><div class="sub">Distinct URLs tracked</div></div>
+      <div class="kpi-card orange"><div class="label">Avg Clicks/Article</div><div class="value">${(()=>{ if (M.avg_clicks_per_article) return M.avg_clicks_per_article; const tc=M.total_article_clicks||(M.content_summary&&M.content_summary.unique_clicks); const ua=M.articles_clicked_count!=null?M.articles_clicked_count:(M.content_summary&&M.content_summary.unique_articles); return (tc && ua) ? Math.round(tc/ua).toLocaleString() : '—'; })()}</div><div class="sub">Mean engagement depth</div></div>
     </div>
 
     <h3 style="margin:18px 0 10px;font-size:13px;text-transform:uppercase;letter-spacing:.5px;color:var(--text-muted);">Section 1 — Campaign-Level Aggregated <span class="badge-inline" style="text-transform:none;">sourced from superage."Campaigns"</span></h3>
@@ -675,19 +739,37 @@ function renderContent(M) {
     <h3 style="margin:18px 0 10px;font-size:13px;text-transform:uppercase;letter-spacing:.5px;color:var(--text-muted);">Section 2 — Raw Click Events <span class="badge-inline" style="text-transform:none;">sourced from superage."Campaigns_Clicks" — per-event "Date"</span></h3>
     <div class="grid-3">
       <div class="chart-card">
-        <h3>Same Weekday <span class="badge-inline">— last 5 same-weekday clicks</span></h3>
+        <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;margin-bottom:6px;flex-wrap:wrap;">
+          <h3 style="margin:0;">Same Weekday <span class="badge-inline" id="cnt-raw-weekday-badge">— last same-weekday clicks</span></h3>
+          <select id="cnt-raw-weekday-select" onchange="_setWeekdayPick(this.value)" style="font-size:11px;padding:3px 6px;border-radius:5px;border:1px solid var(--card-border);background:var(--card);color:var(--text);">
+            <option value="Mon">Monday</option>
+            <option value="Tue">Tuesday</option>
+            <option value="Wed">Wednesday</option>
+            <option value="Thu">Thursday</option>
+            <option value="Fri">Friday</option>
+            <option value="Sat">Saturday</option>
+            <option value="Sun">Sunday</option>
+          </select>
+        </div>
         <div class="chart-container h240"><canvas id="cnt-raw-weekday-bar"></canvas></div>
-        <div class="insight">This ${(new Date()).toLocaleDateString(undefined,{weekday:'long'})} vs prior ${(new Date()).toLocaleDateString(undefined,{weekday:'long'})}s: ${_clickTrendInsight(M.raw_clicks_same_weekday || {}, 'clicks', 'click events')}.</div>
+        <div class="insight" id="cnt-raw-weekday-insight"></div>
       </div>
       <div class="chart-card">
-        <h3>Weekly <span class="badge-inline">— last 4 ISO weeks</span></h3>
+        <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;margin-bottom:6px;flex-wrap:wrap;">
+          <h3 style="margin:0;">Weekly <span class="badge-inline" id="cnt-raw-weekly-badge">— last ISO weeks</span></h3>
+          <div style="display:flex;gap:4px;" id="cnt-raw-weekly-btns">
+            <button onclick="_setRawWeeklyWindow(4)"  id="rww-4"  style="font-size:11px;padding:3px 8px;border:1px solid var(--card-border);border-radius:5px;background:var(--card);color:var(--text-muted);cursor:pointer;">4w</button>
+            <button onclick="_setRawWeeklyWindow(8)"  id="rww-8"  style="font-size:11px;padding:3px 8px;border:1px solid var(--card-border);border-radius:5px;background:var(--accent);color:#fff;cursor:pointer;">8w</button>
+            <button onclick="_setRawWeeklyWindow(12)" id="rww-12" style="font-size:11px;padding:3px 8px;border:1px solid var(--card-border);border-radius:5px;background:var(--card);color:var(--text-muted);cursor:pointer;">12w</button>
+          </div>
+        </div>
         <div class="chart-container h240"><canvas id="cnt-raw-weekly-bar"></canvas></div>
-        <div class="insight">WoW: ${_clickTrendInsight(M.raw_clicks_weekly || {}, 'clicks', 'click events')}.</div>
+        <div class="insight" id="cnt-raw-weekly-insight"></div>
       </div>
       <div class="chart-card">
-        <h3>Monthly <span class="badge-inline">— last 3 months</span></h3>
+        <h3>Monthly <span class="badge-inline" id="cnt-raw-monthly-badge">— last months</span></h3>
         <div class="chart-container h240"><canvas id="cnt-raw-monthly-bar"></canvas></div>
-        <div class="insight">MoM: ${_clickTrendInsight(M.raw_clicks_monthly || {}, 'clicks', 'click events')}.</div>
+        <div class="insight" id="cnt-raw-monthly-insight"></div>
       </div>
     </div>
     <div class="chart-card">
@@ -732,9 +814,13 @@ function renderContent(M) {
   _clickTrendChart('cnt-weekly-bar',        M.campaign_clicks_weekly        || {}, 'clicks', '#0969da', 'Clicks');
   _clickTrendChart('cnt-monthly-bar',       M.campaign_clicks_monthly       || {}, 'clicks', '#1a7f37', 'Clicks');
   // Section 2 — Raw click events from Campaigns_Clicks
-  _clickTrendChart('cnt-raw-weekday-bar',   M.raw_clicks_same_weekday       || {}, 'clicks', '#8250df', 'Click events');
-  _clickTrendChart('cnt-raw-weekly-bar',    M.raw_clicks_weekly             || {}, 'clicks', '#bf3989', 'Click events');
-  _clickTrendChart('cnt-raw-monthly-bar',   M.raw_clicks_monthly            || {}, 'clicks', '#9a6700', 'Click events');
+  _rawClicksData = M;
+  const todayDow = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'][(new Date()).getDay()];
+  const wdSelect = document.getElementById('cnt-raw-weekday-select');
+  if (wdSelect) wdSelect.value = todayDow;
+  _setWeekdayPick(todayDow);
+  _setRawWeeklyWindow(8);
+  _renderRawMonthly();
   // Category bar
   const catD = M.category_performance || {labels:[],unique_clicks:[],total_clicks:[]};
   new Chart(document.getElementById('cnt-cat-bar'), {
@@ -1115,11 +1201,11 @@ function renderAudience(M) {
       <div class="kpi-card accent"><div class="label">Total Subscribers</div><div class="value">${fmt(M.total_subscribers)}</div><div class="sub">All-time base</div></div>
       <div class="kpi-card green"><div class="label">Active Rate</div><div class="value">${M.active_rate||'—'}</div><div class="sub">Currently active</div></div>
       <div class="kpi-card blue"><div class="label">Top UTM Source</div><div class="value" style="font-size:14px;">${utmLabel((M.acquisition_quality&&M.acquisition_quality.utm_source&&M.acquisition_quality.utm_source.rows&&M.acquisition_quality.utm_source.rows[0]&&M.acquisition_quality.utm_source.rows[0].label)||'')}</div><div class="sub">Largest acquisition channel</div></div>
-      <div class="kpi-card orange"><div class="label">Top Source %</div><div class="value">${(()=>{const r=M.acquisition_quality&&M.acquisition_quality.utm_source&&M.acquisition_quality.utm_source.rows||[];const total=r.reduce((s,x)=>s+(x.count||0),0);return r[0]&&total?(r[0].count/total*100).toFixed(1)+'%':'—';})()}</div><div class="sub">Share of total subscribers</div></div>
+      <div class="kpi-card orange"><div class="label">Top Source %</div><div class="value">${(()=>{const r=M.acquisition_quality&&M.acquisition_quality.utm_source&&M.acquisition_quality.utm_source.rows||[];const total=r.reduce((s,x)=>s+(x.subscribers||x.count||0),0);const top=r[0]?(r[0].subscribers||r[0].count||0):0;return top&&total?(top/total*100).toFixed(1)+'%':'—';})()}</div><div class="sub">Share of categorised subscribers</div></div>
     </div>
     <div class="grid-2">
       <div class="chart-card">
-        <h3>Acquisition by UTM Source</h3>
+        <h3>Acquisition by UTM Source <span class="badge-inline">utm_source → source → Organic</span></h3>
         <div class="chart-container h300"><canvas id="aud-source-pie"></canvas></div>
       </div>
       <div class="chart-card">
@@ -1128,19 +1214,25 @@ function renderAudience(M) {
       </div>
     </div>
     <div class="chart-card">
-      <h3>Acquisition Quality by UTM Source</h3>
-      <div class="tbl-wrap"><table class="dash-table"><thead><tr><th>UTM Source</th><th>Subscribers</th><th>% of Total</th><th>Avg Open Rate</th><th>Avg Click Rate</th></tr></thead>
+      <h3>Acquisition Quality by UTM Source <span class="badge-inline">utm_source → source → Organic</span></h3>
+      <div class="tbl-wrap"><table class="dash-table"><thead><tr><th>UTM Source</th><th>Subscribers</th><th>% of Total</th><th>Clickers</th><th>Clicker Rate</th><th>Unique Clicks</th><th>Avg Clicks / Subscriber</th></tr></thead>
       <tbody>${(()=>{
         const aq = M.acquisition_quality&&M.acquisition_quality.utm_source||{rows:[]};
-        const total = (aq.rows||[]).reduce((s,r)=>s+(r.count||0),0);
-        return (aq.rows||[]).map(r=>`<tr><td>${utmLabel(r.label)}</td><td>${fmt(r.count)}</td><td>${total?(r.count/total*100).toFixed(1)+'%':'—'}</td><td>${r.avg_open_rate!=null?Number(r.avg_open_rate).toFixed(2)+'%':'—'}</td><td>${r.avg_click_rate!=null?Number(r.avg_click_rate).toFixed(2)+'%':'—'}</td></tr>`).join('');
+        const total = (aq.rows||[]).reduce((s,r)=>s+(r.subscribers||r.count||0),0);
+        return (aq.rows||[]).map(r=>{
+          const subs = r.subscribers!=null?r.subscribers:(r.count||0);
+          const pct  = total ? (subs/total*100).toFixed(1)+'%' : '—';
+          const clk  = r.clicker_rate!=null ? (typeof r.clicker_rate==='string'?r.clicker_rate:Number(r.clicker_rate).toFixed(1)+'%') : '—';
+          const apc  = r.avg_unique_clicks_per_subscriber!=null ? Number(r.avg_unique_clicks_per_subscriber).toFixed(2) : '—';
+          return `<tr><td>${utmLabel(r.label)}</td><td>${fmt(subs)}</td><td>${pct}</td><td>${fmt(r.clickers)}</td><td>${clk}</td><td>${fmt(r.unique_clicks)}</td><td>${apc}</td></tr>`;
+        }).join('');
       })()}</tbody></table></div>
     </div>
   `;
   // Acquisition source pie
   const aq = M.acquisition_quality&&M.acquisition_quality.utm_source||{rows:[]};
   const pieLabels = (aq.rows||[]).map(r=>utmLabel(r.label));
-  const pieData   = (aq.rows||[]).map(r=>r.count||0);
+  const pieData   = (aq.rows||[]).map(r=>(r.subscribers!=null?r.subscribers:(r.count||0)));
   new Chart(document.getElementById('aud-source-pie'), {
     type: 'doughnut',
     data: { labels: pieLabels, datasets: [{ data: pieData, backgroundColor: ['#0969da','#1a7f37','#cf222e','#9a6700','#8250df','#bf3989','#1b7c83','#7d4e00','#58a6ff','#3fb950'] }] },

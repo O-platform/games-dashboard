@@ -693,5 +693,73 @@
       false,
       true
     ]
+  },
+  "raw_clicks_by_weekday": {
+    "Mon": {
+      "labels": [],
+      "days": [],
+      "clicks": [],
+      "is_current": []
+    },
+    "Tue": {
+      "labels": [],
+      "days": [],
+      "clicks": [],
+      "is_current": []
+    },
+    "Wed": {
+      "labels": [],
+      "days": [],
+      "clicks": [],
+      "is_current": []
+    },
+    "Thu": {
+      "labels": [
+        "Thu Apr 16",
+        "Thu Apr 23",
+        "Thu Apr 30",
+        "Thu May 07",
+        "Thu May 14"
+      ],
+      "days": [
+        "2026-04-16",
+        "2026-04-23",
+        "2026-04-30",
+        "2026-05-07",
+        "2026-05-14"
+      ],
+      "clicks": [
+        13170,
+        9926,
+        10259,
+        16412,
+        3
+      ],
+      "is_current": [
+        false,
+        false,
+        false,
+        false,
+        true
+      ]
+    },
+    "Fri": {
+      "labels": [],
+      "days": [],
+      "clicks": [],
+      "is_current": []
+    },
+    "Sat": {
+      "labels": [],
+      "days": [],
+      "clicks": [],
+      "is_current": []
+    },
+    "Sun": {
+      "labels": [],
+      "days": [],
+      "clicks": [],
+      "is_current": []
+    }
   }
 }

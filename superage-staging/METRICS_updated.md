@@ -880,7 +880,7 @@ GROUP BY 1, 2
 ORDER BY 1;
 ```
 
-**Future-month treatment (dashboard-side):** months whose `month_label` parses to a date strictly later than the current calendar month are rendered with reduced-opacity bars (revenue) and a dashed line segment (deals). Past + current months render solid. The split is computed client-side from the same array — the lambda emits the full series without partitioning.
+**Future-month treatment (dashboard-side):** months whose `month_label` parses to a date strictly later than the current calendar month are rendered with reduced-opacity bars (revenue) and a dashed line segment (deals). Past + current months render solid. A **vertical dashed separator line** is drawn between the last past/current month and the first future month, labelled `Future →`, via an inline Chart.js plugin (`futureSeparator`). The split is computed client-side from the same array — the lambda emits the full series without partitioning.
 
 ## Q32 — Revenue & Sponsors: Top Sponsors by Revenue (Table)
 

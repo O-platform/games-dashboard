@@ -176,7 +176,8 @@
     </div>
   </div>
   <div class="header-right">
-    <span class="as-of" id="as-of-label"></span>
+    <span class="as-of" id="as-of-label" title="Data refreshes daily; comparison snapshot refreshes every 6 hours"></span>
+    <span class="as-of" style="margin-left:6px;opacity:.75;">· Refreshed daily</span>
     <button class="dark-toggle" onclick="toggleDark()">Dark mode</button>
   </div>
 </header>
@@ -388,7 +389,7 @@ function _ovGrowthChart(gd, n) {
       { label: 'Gained (new)',     data: newS,   backgroundColor: '#1a7f37', yAxisID: 'y' },
       { label: 'Lost (unsubs)',    data: unsub,  backgroundColor: '#cf222e', yAxisID: 'y' },
       { label: 'Net change',       data: net,    type: 'line', borderColor: '#0969da', backgroundColor: 'transparent', tension: .3, pointRadius: 3, yAxisID: 'y' },
-      { label: 'Total Subscribers (Active)', data: active, type: 'line', borderColor: '#8250df', backgroundColor: 'transparent', tension: .25, pointRadius: 2, borderWidth: 2, yAxisID: 'y1' }
+      { label: 'Total Subscribers', data: active, type: 'line', borderColor: '#8250df', backgroundColor: 'transparent', tension: .25, pointRadius: 2, borderWidth: 2, yAxisID: 'y1' }
     ]},
     options: { responsive:true, maintainAspectRatio:false,
       plugins:{ legend:{ position:'bottom', labels:{ font:{ size:11 } } } },
@@ -440,7 +441,7 @@ function renderCampaigns(M) {
       <div class="kpi-card cyan"><div class="label">Avg Open Rate</div><div class="value" id="kpi-avg-open">—</div><div class="sub">Unique opens / recipients</div></div>
       <div class="kpi-card blue"><div class="label">Avg Click Rate</div><div class="value" id="kpi-avg-click">—</div><div class="sub">Clicks / recipients</div></div>
       <div class="kpi-card green"><div class="label">Best Open Rate</div><div class="value" id="kpi-best-open">—</div><div class="sub">Single campaign peak</div></div>
-      <div class="kpi-card orange"><div class="label">Total Recipients</div><div class="value" id="kpi-recipients">—</div><div class="sub"><span id="kpi-unique-opens">—</span> unique opens</div></div>
+      <div class="kpi-card orange"><div class="label">Total Sent Emails</div><div class="value" id="kpi-recipients">—</div><div class="sub"><span id="kpi-unique-opens">—</span> unique opens</div></div>
     </div>
 
     <div class="kpi-row" style="grid-template-columns:repeat(3,1fr);">
@@ -1510,6 +1511,36 @@ function renderRetention(M) {
         <div class="chart-container h300"><canvas id="ret-churn"></canvas></div>
         <div class="insight">Count of subscribers who unsubscribed in each month.</div>
       </div>
+    </div>
+    <h2 style="font-size:14px;font-weight:600;color:var(--text);margin:22px 0 10px;">Retention by Acquisition Source <span class="badge-inline" style="text-transform:none;">utm_source → source → 'Organic', bucketed</span></h2>
+    <div class="chart-card">
+      <div class="tbl-wrap"><table class="dash-table">
+        <thead><tr>
+          <th>Source</th><th>Subscribers</th><th>Active Now</th><th>Churned</th>
+          <th>Unsub ≤ 15 d</th><th>Unsub ≤ 30 d</th>
+          <th>Avg LTV (days)</th><th>Median LTV</th>
+          <th>Clickers</th><th>Clicker Rate</th><th>Unique Clicks</th><th>Clicks / Clicker</th>
+        </tr></thead>
+        <tbody>${(M.retention_by_source||[]).map(r => {
+          const u15 = `${fmt(r.unsub_15d)} <span style="color:var(--text-muted);">(${(r.unsub_15d_rate||0).toFixed(1)}%)</span>`;
+          const u30 = `${fmt(r.unsub_30d)} <span style="color:var(--text-muted);">(${(r.unsub_30d_rate||0).toFixed(1)}%)</span>`;
+          return `<tr>
+            <td><strong>${esc(r.source||'')}</strong></td>
+            <td>${fmt(r.subscribers)}</td>
+            <td>${fmt(r.active_now)}</td>
+            <td>${fmt(r.churned)}</td>
+            <td>${u15}</td>
+            <td>${u30}</td>
+            <td>${r.avg_lifespan_days != null ? r.avg_lifespan_days : '—'}</td>
+            <td>${r.median_lifespan_days != null ? r.median_lifespan_days : '—'}</td>
+            <td>${fmt(r.clickers)}</td>
+            <td>${(r.clicker_rate||0).toFixed(1)}%</td>
+            <td>${fmt(r.total_unique_clicks)}</td>
+            <td>${r.avg_clicks_per_clicker != null ? Number(r.avg_clicks_per_clicker).toFixed(1) : '—'}</td>
+          </tr>`;
+        }).join('')}</tbody>
+      </table></div>
+      <div class="insight">Buckets: <strong>AH CPL</strong> (allhealthy/AHCPL1), <strong>Ageist CPL</strong> (theageist), <strong>Share</strong> (referral/share), <strong>Meta</strong> (facebook/fb/ig/if), <strong>Google</strong>, <strong>Direct</strong> (organic / no UTM). LTV is computed only across churned subscribers (avg / median days from join to unsub). Unsub ≤ 15 d / ≤ 30 d are absolute counts plus the percentage of that source's total.</div>
     </div>
   `;
 

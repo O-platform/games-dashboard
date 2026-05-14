@@ -205,9 +205,24 @@ Source: `superage.sa_airtable_sales`.
 
 ## 7. Subscriber Retention
 
-Tracks L1 and L2 subscriber tiers. KPIs: total, active, churned, avg lifespan, churn rate.
+Aggregates retention across **all subscribers** (no L1/L2 split). KPIs: total, active, churned, avg + median lifespan, active rate.
 
-Charts: Survival Curve (% still active at day 30/60/90/180/365), Days Active Distribution, Monthly Churn Volume.
+Charts: Survival Curve (% still active at day 30 / 60 / 90 / 180 / 365), Lifespan Distribution, Monthly Churn Volume.
+
+### Retention by Acquisition Source
+
+A second table on the same tab buckets subscribers by `COALESCE(utm_source, source, 'Organic')` into six product-relevant labels (**AH CPL**, **Ageist CPL**, **Share**, **Meta**, **Google**, **Direct**) and reports for each:
+
+| Column | Meaning |
+|---|---|
+| Subscribers | Total subscribers in the bucket |
+| Active Now / Churned | State split |
+| Unsub ≤ 15 d / ≤ 30 d | Count + % of subscribers who unsubscribed within 15 / 30 days of join |
+| Avg LTV / Median LTV | Mean / median lifespan in days (across churned subscribers only) |
+| Clickers, Clicker Rate | Subscribers in the bucket who clicked ≥ 1 article (from `subscriber_clicks`) |
+| Unique Clicks, Clicks / Clicker | Sum of unique clicks and per-clicker average |
+
+Powered by `M.retention_by_source[]` — see Q35b for the SQL.
 
 ---
 
@@ -914,6 +929,73 @@ WHERE date_joined::date < CURRENT_DATE;
 ```
 
 Exposed as `M.retention_overall` (object with `total`, `active`, `churned`, `active_rate`, `churn_rate`, `avg_lifespan_days`, `median_lifespan_days`).
+
+## Q35b — Subscriber Retention: Retention by Acquisition Source
+
+Buckets every subscriber's source into the six product-relevant labels, then
+computes LTV (avg + median lifespan), early-unsub counts at 15 / 30 days, and
+click activity from `subscriber_clicks`.
+
+```sql
+WITH s AS (
+    SELECT
+        LOWER(TRIM(email))                                                 AS email,
+        date_joined::date                                                  AS joined,
+        date_unsubscribed::date                                            AS unsubbed,
+        state,
+        COALESCE(NULLIF(TRIM(utm_source), ''), NULLIF(TRIM(source), ''), 'Organic') AS source_raw
+    FROM superage.subscribers
+    WHERE date_joined IS NOT NULL AND date_joined::date < CURRENT_DATE
+),
+mapped AS (
+    SELECT
+        s.*,
+        CASE
+            WHEN LOWER(source_raw) IN ('ahcpl1', 'allhealthy')         THEN 'AH CPL'
+            WHEN LOWER(source_raw) IN ('theageist', 'ageist')          THEN 'Ageist CPL'
+            WHEN LOWER(source_raw) IN ('share', 'referral')            THEN 'Share'
+            WHEN LOWER(source_raw) IN ('meta', 'facebook', 'fb', 'if') THEN 'Meta'
+            WHEN LOWER(source_raw) = 'google'                          THEN 'Google'
+            WHEN LOWER(source_raw) IN ('organic', 'direct', '')        THEN 'Direct'
+            ELSE source_raw
+        END                                                                AS bucket,
+        CASE WHEN unsubbed IS NOT NULL THEN (unsubbed - joined) END        AS lifespan_days
+    FROM s
+),
+clicks AS (
+    SELECT LOWER(TRIM(email_address)) AS email,
+           SUM(unique_clicks)         AS unique_clicks
+    FROM superage.subscriber_clicks
+    WHERE email_address IS NOT NULL AND TRIM(email_address) != ''
+    GROUP BY 1
+)
+SELECT
+    m.bucket,
+    COUNT(*)                                              AS subscribers,
+    COUNT(*) FILTER (WHERE m.state = 'Active')            AS active_now,
+    COUNT(*) FILTER (WHERE m.state = 'Unsubscribed')      AS churned,
+    COUNT(*) FILTER (
+        WHERE m.state = 'Unsubscribed' AND m.lifespan_days IS NOT NULL AND m.lifespan_days <= 15
+    )                                                     AS unsub_15d,
+    COUNT(*) FILTER (
+        WHERE m.state = 'Unsubscribed' AND m.lifespan_days IS NOT NULL AND m.lifespan_days <= 30
+    )                                                     AS unsub_30d,
+    ROUND(AVG(m.lifespan_days) FILTER (WHERE m.lifespan_days IS NOT NULL)::numeric, 1) AS avg_lifespan_days,
+    ROUND(PERCENTILE_CONT(0.5) WITHIN GROUP (ORDER BY m.lifespan_days)
+          FILTER (WHERE m.lifespan_days IS NOT NULL)::numeric, 1)                       AS median_lifespan_days,
+    COALESCE(SUM(c.unique_clicks), 0)                     AS total_unique_clicks,
+    COUNT(c.email)                                        AS clickers
+FROM mapped m
+LEFT JOIN clicks c ON c.email = m.email
+WHERE m.bucket IN ('AH CPL', 'Ageist CPL', 'Share', 'Meta', 'Google', 'Direct')
+GROUP BY m.bucket
+ORDER BY subscribers DESC;
+```
+
+JSON output: `M.retention_by_source[]` with keys `source`, `subscribers`,
+`active_now`, `churned`, `unsub_15d`, `unsub_15d_rate`, `unsub_30d`,
+`unsub_30d_rate`, `avg_lifespan_days`, `median_lifespan_days`,
+`total_unique_clicks`, `clickers`, `clicker_rate`, `avg_clicks_per_clicker`.
 
 ## Q36 — Subscriber Retention: Lifespan Distribution (all subscribers)
 

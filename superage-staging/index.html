@@ -295,7 +295,7 @@ function renderOverview(M) {
 
     <div class="kpi-row">
       <div class="kpi-card accent"><div class="label">Total Subscribers</div><div class="value">${fmt(M.total_subscribers)}</div><div class="sub">All-time subscriber base</div></div>
-      <div class="kpi-card green"><div class="label">Active (Send-to)</div><div class="value">${fmt(M.send_to_active)}</div><div class="sub">${M.send_to_rate} of total — Active, Engaged, Unengaged</div></div>
+      <div class="kpi-card green"><div class="label">Active (Send-to)</div><div class="value">${fmt(M.send_to_active)}</div><div class="sub">${M.send_to_rate} of subscribers whose state is Active</div></div>
       <div class="kpi-card red"><div class="label">Unsubscribed</div><div class="value">${fmt(M.unsubscribed_count)}</div><div class="sub">${M.total_subscribers ? (M.unsubscribed_count/M.total_subscribers*100).toFixed(1)+'%' : '—'} of total</div></div>
       <div class="kpi-card orange"><div class="label">Bounced</div><div class="value">${fmt(M.bounced_count)}</div><div class="sub">${M.total_subscribers ? (M.bounced_count/M.total_subscribers*100).toFixed(1)+'%' : '—'} of total</div></div>
       <div class="kpi-card cyan"><div class="label">Avg Open Rate</div><div class="value">${M.avg_open_rate}</div><div class="sub">Best: ${M.best_open_rate}</div></div>
@@ -798,19 +798,19 @@ function renderContent(M) {
     </div>
 
     <h3 style="margin:18px 0 10px;font-size:13px;text-transform:uppercase;letter-spacing:.5px;color:var(--text-muted);">Section 2 — Raw Click Events <span class="badge-inline" style="text-transform:none;">sourced from superage."Campaigns_Clicks" — per-event "Date"</span></h3>
-    <div class="grid-3">
-      <div class="chart-card" style="grid-column:1 / -1;">
-        <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;margin-bottom:6px;flex-wrap:wrap;">
-          <h3 style="margin:0;">Same Weekday <span class="badge-inline" id="cnt-raw-weekday-badge">— last N occurrences per weekday</span></h3>
-          <div style="display:flex;gap:4px;" id="cnt-raw-weekday-btns">
-            <button onclick="_setWeekdayWindow(2)" id="rwd-2" style="font-size:11px;padding:3px 8px;border:1px solid var(--card-border);border-radius:5px;background:var(--card);color:var(--text-muted);cursor:pointer;">2 each</button>
-            <button onclick="_setWeekdayWindow(3)" id="rwd-3" style="font-size:11px;padding:3px 8px;border:1px solid var(--card-border);border-radius:5px;background:var(--accent);color:#fff;cursor:pointer;">3 each</button>
-            <button onclick="_setWeekdayWindow(5)" id="rwd-5" style="font-size:11px;padding:3px 8px;border:1px solid var(--card-border);border-radius:5px;background:var(--card);color:var(--text-muted);cursor:pointer;">5 each</button>
-          </div>
+    <div class="chart-card">
+      <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;margin-bottom:6px;flex-wrap:wrap;">
+        <h3 style="margin:0;">Same Weekday <span class="badge-inline" id="cnt-raw-weekday-badge">— last N occurrences per weekday</span></h3>
+        <div style="display:flex;gap:4px;" id="cnt-raw-weekday-btns">
+          <button onclick="_setWeekdayWindow(2)" id="rwd-2" style="font-size:11px;padding:3px 8px;border:1px solid var(--card-border);border-radius:5px;background:var(--card);color:var(--text-muted);cursor:pointer;">2 each</button>
+          <button onclick="_setWeekdayWindow(3)" id="rwd-3" style="font-size:11px;padding:3px 8px;border:1px solid var(--card-border);border-radius:5px;background:var(--accent);color:#fff;cursor:pointer;">3 each</button>
+          <button onclick="_setWeekdayWindow(5)" id="rwd-5" style="font-size:11px;padding:3px 8px;border:1px solid var(--card-border);border-radius:5px;background:var(--card);color:var(--text-muted);cursor:pointer;">5 each</button>
         </div>
-        <div class="chart-container h300"><canvas id="cnt-raw-weekday-bar"></canvas></div>
-        <div class="insight" id="cnt-raw-weekday-insight"></div>
       </div>
+      <div class="chart-container h300"><canvas id="cnt-raw-weekday-bar"></canvas></div>
+      <div class="insight" id="cnt-raw-weekday-insight"></div>
+    </div>
+    <div class="grid-2">
       <div class="chart-card">
         <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;margin-bottom:6px;flex-wrap:wrap;">
           <h3 style="margin:0;">Weekly <span class="badge-inline" id="cnt-raw-weekly-badge">— last ISO weeks</span></h3>
@@ -1486,7 +1486,7 @@ function renderRetention(M) {
 
   document.getElementById('retention').innerHTML = `
     <div class="section-context-banner">
-      <strong>Subscriber Retention</strong> — How long subscribers stay engaged after joining, aggregated across all subscribers. Curves show the % still active at 30 / 60 / 90 / 180 / 365 days.
+      <strong>Subscriber Retention</strong> — How long subscribers stay engaged after joining, aggregated across all subscribers. Curves show the % still active at 30 / 60 / 90 / 180 / 365 days. "Active" = state = 'Active' AND engagement_segment NOT IN (Ghosts, Zombies, Dormant).
     </div>
     <div class="kpi-row">
       <div class="kpi-card green"><div class="label">30-Day Retention</div><div class="value">${pct(findRate('Day 30'))}</div><div class="sub">Still active at day 30</div></div>
@@ -1540,7 +1540,7 @@ function renderRetention(M) {
           </tr>`;
         }).join('')}</tbody>
       </table></div>
-      <div class="insight">Buckets: <strong>AH CPL</strong> (allhealthy/AHCPL1), <strong>Ageist CPL</strong> (theageist), <strong>Share</strong> (referral/share), <strong>Meta</strong> (facebook/fb/ig/if), <strong>Google</strong>, <strong>Direct</strong> (organic / no UTM). LTV is computed only across churned subscribers (avg / median days from join to unsub). Unsub ≤ 15 d / ≤ 30 d are absolute counts plus the percentage of that source's total.</div>
+      <div class="insight"><strong>Active Now</strong> = state = 'Active' AND engagement_segment NOT IN (Ghosts, Zombies, Dormant). Buckets: <strong>AH CPL</strong> (allhealthy/AHCPL1), <strong>Ageist CPL</strong> (theageist), <strong>Share</strong> (referral/share), <strong>Meta</strong> (facebook/fb/ig/if), <strong>Google</strong>, <strong>Direct</strong> (organic / no UTM). LTV is computed only across churned subscribers (avg / median days from join to unsub).</div>
     </div>
   `;
 

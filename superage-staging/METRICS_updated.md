@@ -132,6 +132,27 @@ This section measures how SuperAge's website articles perform when featured in c
 | Total Clicks | All clicks including repeat visits |
 | Active Clickers | Subscribers who clicked at least one article |
 
+### Click Analysis tab — top KPIs
+
+The "Click Analysis" tab displays four headline KPIs. They read the
+metrics JSON with the following fallback chain so they stay populated
+even when the dedicated fields are absent:
+
+| KPI | Primary field | Fallback |
+|---|---|---|
+| Total Clicks | `total_article_clicks` | `content_summary.unique_clicks` |
+| Unique Clickers | `unique_article_clickers` | `total_article_clickers` |
+| Articles Clicked | `articles_clicked_count` | `content_summary.unique_articles` |
+| Avg Clicks / Article | `avg_clicks_per_article` | computed client-side as `total_article_clicks / articles_clicked_count` |
+
+The "Same Weekday" chart on this tab is a grouped bar chart with one
+group per weekday (Mon–Sun) and 2 / 3 / 5 bars per group, ordered
+oldest → most recent. Bars are sourced from
+`M.raw_clicks_by_weekday[<Mon..Sun>]` (see Comparison Lambda doc,
+section B.1b). The weekly chart exposes a 4 w / 8 w / 12 w window
+toggle backed by `M.raw_clicks_weekly` (12 weeks of history). Monthly
+shows 6 months from `M.raw_clicks_monthly`.
+
 > **Excluded:** content types `games` and `waitlist` are excluded from type/category/tag breakdowns.
 
 ---
@@ -144,7 +165,7 @@ Total subscribers, active, unsubscribed, bounced, and high-engagement (60-day wi
 
 ### Acquisition by UTM Source
 
-Grouped by `utm_source` only. Engagement quality table shows subscribers, clickers, unique clicks, total clicks, avg clicks/sub, and clicker rate per source.
+Grouped by the fallback label `COALESCE(NULLIF(TRIM(utm_source),''), NULLIF(TRIM(source),''), 'Organic')` — `utm_source` wins, then the legacy `source` column, then the literal string `Organic`. The dashboard's pie and table consume the rows of `M.acquisition_quality.utm_source.rows`; each row carries `label`, `subscribers`, `clickers`, `unique_clicks`, `non_unique_clicks`, `avg_unique_clicks_per_subscriber`, `clicker_rate`. The Audience tab displays Subscribers, % of Total, Clickers, Clicker Rate, Unique Clicks and Avg Clicks / Subscriber per source.
 
 ### UTM Source Subscriber Click Activity
 

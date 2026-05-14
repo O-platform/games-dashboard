@@ -589,7 +589,7 @@ shape. The dashboard fetches `superage-comparison.json` alongside
 
 Source of the **Content Reference** tab. One row per `articles_clicks` placement, **inner-joined** to the most-recently-modified `wordpress_articles` row that shares the same normalized URL. The inner join is intentional: `articles_clicks` also records sponsor placements that are not WordPress articles — those are out of scope for this view. Returns up to 300 rows.
 
-`categories` and `tags` are returned as the raw **comma-separated strings** stored in WordPress (e.g. `"longevity, health"`). The dashboard splits them on comma at render time to build per-value filter dropdowns and match individual categories/tags. `written_by` is single-valued — used as-is. `position_category` (`high` / `medium` / `low`) is sourced directly from `articles_clicks` and drives the dashboard's position-category filter, KPI chart, and "Sleeper Hits" insight.
+`categories` and `tags` are returned as the raw **comma-separated strings** stored in WordPress (e.g. `"longevity, health"`). The dashboard splits them on comma at render time to build per-value filter dropdowns, match individual categories/tags, and to aggregate the **Top Categories** and **Top Tags** charts. `written_by` is single-valued — used as-is. `position_category` (`high` / `medium` / `low`) is sourced directly from `articles_clicks` and drives the dashboard's position-category filter, position-category chart, and "Sleeper Hits" insight.
 
 ```sql
 WITH ac AS (
@@ -633,7 +633,7 @@ LIMIT 300;
 
 **JSON output** (`M.content_drill_table[]`): `title`, `url`, `unique_clicks`, `total_clicks` (renamed from `non_unique_clicks`), `story_position`, `position_category`, `categories`, `tags`, `written_by`.
 
-**Dashboard filters** (client-side, all scope the whole tab — KPIs, position-category chart, sleeper-hits insight, table+pagination):
+**Dashboard filters** (client-side, all scope the whole tab — KPIs, position-category chart, Top Categories chart, Top Tags chart, sleeper-hits insight, table+pagination):
 - Position Cat: exact match on `position_category` (`high` / `medium` / `low`).
 - Position: exact match on `story_position`; `No position` selects rows where `story_position` is null/0.
 - Author: exact match on `written_by`.
@@ -642,6 +642,8 @@ LIMIT 300;
 - Title search: case-insensitive substring match.
 
 **Sleeper Hits** insight: top 10 rows with `position_category = 'low'` ordered by `unique_clicks DESC` — surfaces articles placed near the bottom of an issue that nonetheless drew strong engagement.
+
+**Top Categories / Top Tags charts** (client-side, no extra SQL): the dashboard takes the current filter-scoped row set, splits each row's `categories` / `tags` string on comma, and sums `unique_clicks` and `total_clicks` per label. The horizontal bar charts show the **top 10 labels by unique clicks** with paired bars for unique vs total. Both charts re-render on every filter change via `_crRenderTopBar()` and replaced the prior **Top Position Cat** KPI card (which has been removed — its information is already covered by the position-category filter and chart).
 
 ---
 
@@ -1246,3 +1248,4 @@ LIMIT 12;
 21. **Logo background**: `.sa-logo` badge background changed to `#000` (black).
 22. **Dashboard title**: `SuperAge — Brand Pulse Dashboard`.
 23. **Canonical "Active" rule**: Every "Active" count in the dashboard uses `state = 'Active' AND engagement_segment NOT IN ('Ghosts','Zombies','Dormant')`. Applies to Q1b (send_to_active), Q35 (retention KPI), Q35b (retention_by_source), Q40 (cohort table) and Q41 (90-day retention by source).
+24. **Top Position Cat KPI removed; Top Categories + Top Tags charts added**: The Content Reference tab no longer renders the "Top Position Cat" KPI card (position-category info is already covered by the position-category filter and chart). Two new horizontal bar charts — **Top Categories** and **Top Tags** — were added below the position-category / sleeper-hits grid. Both are computed client-side from `M.content_drill_table` after applying the current filter scope (Position Cat / Position / Author / Category / Tag / Title search): the row set is iterated, `categories` / `tags` strings are split on commas, and `unique_clicks` + `total_clicks` are summed per label. The top 10 labels by unique clicks are shown with paired bars (unique vs total) and re-render on every filter change via `_crFilter()` → `_crRenderTopBar()`.

@@ -1456,7 +1456,7 @@ function renderRevenue(M) {
       <div class="chart-card">
         <h3>Monthly Revenue &amp; Deal Volume</h3>
         <div class="chart-container h340"><canvas id="rev-monthly"></canvas></div>
-        <div class="insight">Bars = revenue (left axis). Line = number of deals (right axis). Lighter bars and dashed line = future / not-yet-closed months.</div>
+        <div class="insight">Bars = revenue (left axis). Line = number of deals (right axis). <span style="color:#8250df;font-weight:600;">Purple bars</span> and dashed line, separated by the dashed vertical line, mark future / not-yet-closed months.</div>
       </div>
       <div class="chart-card">
         <h3>Sponsor Type Distribution</h3>
@@ -1488,7 +1488,7 @@ function renderRevenue(M) {
     const d = new Date(lbl + ' 1');  // "May 2026" → Date
     return isFinite(d.getTime()) && d > monthStart;
   };
-  const revColors = (rm.labels||[]).map(l => isFuture(l) ? 'rgba(125,78,0,0.30)' : '#7d4e00');
+  const revColors = (rm.labels||[]).map(l => isFuture(l) ? 'rgba(130,80,223,0.55)' : '#7d4e00');
   const futureMask = (rm.labels||[]).map(isFuture);
   const firstFutureIdx = futureMask.indexOf(true);
   // For the deals line: split into past (solid) + future (dashed) series so the future segment is visually distinct

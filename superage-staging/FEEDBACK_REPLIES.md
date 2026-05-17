@@ -177,3 +177,49 @@ falls back to plain text.
 The new per-source table will render empty until the metrics lambda runs again
 and writes `retention_by_source` into `superage-metrics.json` — the HTML is
 already wired to it.
+
+---
+
+## Round 2 — May 14-15, 2026
+
+### "The top numbers in order: Active (SEND-TO), AVG OPEN RATE, AVG CLICK RATE, CAMPAIGNS SENT. These are the top blocks to show, keep the others but have them in the second row (as they are less important)"
+
+**✓ shipped.** Overview KPI cards split into two rows:
+- **Primary row (4 cards):** Active (Send-to) · Avg Open Rate · Avg Click Rate · Campaigns Sent
+- **Secondary row (4 cards):** Total Subscribers · Unsubscribed · Bounced · Quiz Takers
+
+Both rows pinned to a 4-column grid so the ordering can't reflow on wide screens.
+
+### "In overview page, this needs to be 'Recent Campaigns Metrics' and should have the last 10 campaigns, not the top 10"
+
+**✓ shipped.** Renamed the bottom Overview table to **Recent Campaigns Metrics**.
+Rows are now the **last 10 sent campaigns by date** (most recent first), sorted
+client-side on `sent_date` DESC from `M.campaign_table`. No SQL change needed —
+the data was already loaded for the Campaigns tab.
+
+> **Heads-up:** When you first looked, `SA_PF_20260514` wasn't visible. That's
+> a data-freshness issue, not a dashboard bug: the metrics lambda last ran on
+> May 14 (`data_as_of: "May 14, 2026"`) and its SQL filter is
+> `"Sent Date "::date < CURRENT_DATE` — so the May 14 campaign was excluded
+> from that run's snapshot. It will appear on the next lambda invocation.
+
+### "Love this check box, super helpful. Make this turned off by default" — Sunday Spotlight toggle
+
+**✓ shipped.** Campaigns tab opens with **Sunday Spotlight excluded** by default
+(toggle unchecked, label "Excluding branded digest sends"). KPIs, charts and
+the paginated table all start scoped without Sunday Spotlight.
+
+### "Let's keep the date in 1 row, by making column size a little bigger" — Sent Date wraps
+
+**✓ shipped.** Added a `.nowrap` utility class to `dash-table` cells and applied
+it to the Sent Date `<td>` in both the Campaigns paginated table and the
+Overview Recent Campaigns Metrics table. Dates now stay on a single line even
+when other columns crowd the row.
+
+### Revenue chart future months — color + separator
+
+**✓ shipped (from earlier in the round).** Past/current months render in solid
+gold (`#7d4e00`); future months render in **red** (`rgba(207,34,46,0.55)`).
+A vertical dashed separator labelled `Future →` sits between the last
+past/current bar and the first future bar, drawn by an inline Chart.js plugin
+(`futureSeparator`).

@@ -113,6 +113,7 @@
   table.dash-table { width: 100%; border-collapse: collapse; font-size: 13px; }
   table.dash-table th { background: var(--card-2); font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: .4px; color: var(--text-muted); padding: 8px 10px; text-align: left; border-bottom: 1px solid var(--card-border); white-space: nowrap; }
   table.dash-table td { padding: 7px 10px; border-bottom: 1px solid var(--row-border); vertical-align: top; }
+  table.dash-table td.nowrap, table.dash-table th.nowrap { white-space: nowrap; }
   table.dash-table tr:hover td { background: var(--row-hover); }
   /* Misc */
   .badge-inline { font-size: 11px; font-weight: 500; color: var(--text-muted); }
@@ -340,7 +341,7 @@ function renderOverview(M) {
       <tbody>${([...(M.campaign_table||[])].sort((a,b)=>{const da=Date.parse(a.sent_date||'')||0;const db=Date.parse(b.sent_date||'')||0;return db-da;}).slice(0,10)).map((c,i)=>{
         const nameCell = c.url ? `<a href="${esc(c.url)}" target="_blank" rel="noopener">${esc(c.name||'')}</a>` : esc(c.name||'');
         const recip = (c.recipients == null) ? '—' : (typeof c.recipients === 'string' ? esc(c.recipients) : fmt(c.recipients));
-        return `<tr><td>${i+1}</td><td>${nameCell}</td><td>${c.sent_date||''}</td><td>${recip}</td><td>${c.open_rate||'—'}</td><td>${c.click_rate||'—'}</td></tr>`;
+        return `<tr><td>${i+1}</td><td>${nameCell}</td><td class="nowrap">${c.sent_date||''}</td><td>${recip}</td><td>${c.open_rate||'—'}</td><td>${c.click_rate||'—'}</td></tr>`;
       }).join('')}</tbody></table></div>
     </div>
   `;
@@ -428,12 +429,12 @@ function renderCampaigns(M) {
     <div class="camp-toolbar">
       <div class="camp-toolbar-left">
         <label class="switch" for="hideSundaySpotlight" title="Include Sunday Spotlight campaigns">
-          <input type="checkbox" id="hideSundaySpotlight" onchange="_filterCampaigns()" checked>
+          <input type="checkbox" id="hideSundaySpotlight" onchange="_filterCampaigns()">
           <span class="slider-round"></span>
         </label>
         <div>
           <div style="font-size:13px;font-weight:600;color:var(--text);">Include Sunday Spotlight</div>
-          <div style="font-size:11px;color:var(--text-muted);" id="camp-filter-state">Including branded digest sends</div>
+          <div style="font-size:11px;color:var(--text-muted);" id="camp-filter-state">Excluding branded digest sends</div>
         </div>
       </div>
       <div class="camp-toolbar-right" id="camp-scope-label" style="font-size:12px;color:var(--text-muted);"></div>
@@ -578,7 +579,7 @@ function _renderCampPage() {
     <thead><tr><th>#</th><th>Campaign</th><th>Subject</th><th>Sent Date</th><th>Total Sent Emails</th><th>Unique Opens</th><th>Open Rate</th><th>Clicks</th><th>Click Rate</th><th>Unsubs</th></tr></thead>
     <tbody>${slice.map((c,i)=>{
       const nameCell = c.url ? `<a href="${esc(c.url)}" target="_blank" rel="noopener">${esc(c.name||'')}</a>` : esc(c.name||'');
-      return `<tr><td>${start+i+1}</td><td>${nameCell}</td><td>${esc(c.subject||'')}</td><td>${c.sent_date||''}</td><td>${_campCell(c.recipients)}</td><td>${_campCell(c.unique_opens)}</td><td>${c.open_rate||'—'}</td><td>${_campCell(c.clicks)}</td><td>${c.click_rate||'—'}</td><td>${_campCell(c.unsubs)}</td></tr>`;
+      return `<tr><td>${start+i+1}</td><td>${nameCell}</td><td>${esc(c.subject||'')}</td><td class="nowrap">${c.sent_date||''}</td><td>${_campCell(c.recipients)}</td><td>${_campCell(c.unique_opens)}</td><td>${c.open_rate||'—'}</td><td>${_campCell(c.clicks)}</td><td>${c.click_rate||'—'}</td><td>${_campCell(c.unsubs)}</td></tr>`;
     }).join('')}</tbody></table></div>`;
   const pager = document.getElementById('camp-pager');
   if (pager) {

@@ -124,7 +124,7 @@ Client-paginated table (20 rows / page) of all qualifying campaigns sorted by se
 
 ### Sunday Spotlight Toggle (UI-side filter)
 
-The toggle excludes campaigns whose `name` contains `sunday spotlight` (case-insensitive) before KPIs, charts and the paginated table are rendered. It is purely client-side — no SQL change.
+The toggle excludes campaigns whose `name` contains `sunday spotlight` (case-insensitive) before KPIs, charts and the paginated table are rendered. It is purely client-side — no SQL change. **Default is OFF** (toggle unchecked = "Excluding branded digest sends"), so the tab opens with Sunday Spotlight filtered out by default.
 
 ---
 
@@ -1255,3 +1255,5 @@ LIMIT 12;
 23. **Canonical "Active" rule**: Every "Active" count in the dashboard uses `state = 'Active' AND engagement_segment NOT IN ('Ghosts','Zombies','Dormant')`. Applies to Q1b (send_to_active), Q35 (retention KPI), Q35b (retention_by_source), Q40 (cohort table) and Q41 (90-day retention by source).
 24. **Top Position Cat KPI removed; Top Categories + Top Tags charts added**: The Content Reference tab no longer renders the "Top Position Cat" KPI card (position-category info is already covered by the position-category filter and chart). Two new horizontal bar charts — **Top Categories** and **Top Tags** — were added below the position-category / sleeper-hits grid. Both are computed client-side from `M.content_drill_table` after applying the current filter scope (Position Cat / Position / Author / Category / Tag / Title search): the row set is iterated, `categories` / `tags` strings are split on commas, and `unique_clicks` + `total_clicks` are summed per label. The top 10 labels by unique clicks are shown with paired bars (unique vs total) and re-render on every filter change via `_crFilter()` → `_crRenderTopBar()`.
 25. **Overview KPI ordering + Recent Campaigns Metrics table**: Overview KPI cards are split into two rows. Primary row (most important): Active (Send-to), Avg Open Rate, Avg Click Rate, Campaigns Sent. Secondary row: Total Subscribers, Unsubscribed, Bounced, Quiz Takers. The bottom "Top Campaign Open Rates" table was renamed to **Recent Campaigns Metrics** and now lists the **last 10 sent campaigns by date** (most recent first), sorted client-side on `sent_date` DESC from `M.campaign_table` instead of the top-by-open-rate set.
+26. **Sunday Spotlight toggle default OFF**: The Campaigns tab toggle ships unchecked, so Sunday Spotlight is excluded by default. Initial label state is "Excluding branded digest sends".
+27. **Sent Date column nowrap**: A `.nowrap` utility class (`white-space: nowrap`) is applied to the Sent Date `<td>` cells in both the Campaigns paginated table and the Overview Recent Campaigns Metrics table so the date stays on one line even on narrow columns.

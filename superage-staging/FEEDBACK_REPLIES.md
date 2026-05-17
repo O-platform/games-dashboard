@@ -287,3 +287,22 @@ The percentage and absolute values are computed from those, and the caption
 explicitly says "(last 2 completed weeks)" / "(last 2 completed months)" so
 it's clear what's being compared. The in-progress bar is still rendered
 in the chart (slightly faded) but is excluded from the headline.
+
+### "Remove this part it's already in another section" — Clicks by Category / Author / Tag table
+
+**✓ shipped.** Removed the **Clicks by Category**, **Clicks by Author**,
+and **Tag / Topic Performance** blocks from the Click Analysis tab. Those
+breakdowns are already covered by the Content Reference tab (Top Categories
+and Top Tags charts, plus the Author filter on the article table and the
+Sleeper Hits insight). The lambda still publishes `category_performance`,
+`author_performance`, and `tag_performance` for backwards-compat, but the
+dashboard no longer renders them in Click Analysis.
+
+### "All of these filters return no data except All, so just remove them and make only top 10 by unique clicks"
+
+**✓ shipped.** The **Top Articles by Unique Clicks** card now renders
+exactly the **top 10** rows of `M.top_articles` (already sorted by
+`unique_clicks` DESC by Q13). The All / 7d / 15d / 30d / 90d window
+selector and the `_setArtWindow` plumbing were removed. The lambda still
+emits `top_articles_windowed` for backwards-compat (in case the windowed
+data starts arriving later), but the dashboard ignores it.

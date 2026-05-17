@@ -1020,16 +1020,7 @@ function renderContent(M) {
       </div>
     </div>
     <div class="chart-card">
-      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
-        <h3>Top Articles by Unique Clicks</h3>
-        <div style="display:flex;gap:4px;" id="art-window-btns">
-          <button onclick="_setArtWindow(0)"  id="artw-all" style="font-size:11px;padding:3px 10px;border:1px solid var(--card-border);border-radius:5px;background:var(--accent);color:#fff;cursor:pointer;">All</button>
-          <button onclick="_setArtWindow(7)"  id="artw-7"   style="font-size:11px;padding:3px 10px;border:1px solid var(--card-border);border-radius:5px;background:var(--card);color:var(--text-muted);cursor:pointer;">7d</button>
-          <button onclick="_setArtWindow(15)" id="artw-15"  style="font-size:11px;padding:3px 10px;border:1px solid var(--card-border);border-radius:5px;background:var(--card);color:var(--text-muted);cursor:pointer;">15d</button>
-          <button onclick="_setArtWindow(30)" id="artw-30"  style="font-size:11px;padding:3px 10px;border:1px solid var(--card-border);border-radius:5px;background:var(--card);color:var(--text-muted);cursor:pointer;">30d</button>
-          <button onclick="_setArtWindow(90)" id="artw-90"  style="font-size:11px;padding:3px 10px;border:1px solid var(--card-border);border-radius:5px;background:var(--card);color:var(--text-muted);cursor:pointer;">90d</button>
-        </div>
-      </div>
+      <h3 style="margin-bottom:12px;">Top Articles by Unique Clicks <span class="badge-inline">— top 10 all-time</span></h3>
       <div class="tbl-wrap" id="art-table-wrap">
         <table class="dash-table" id="art-main-table">
           <thead><tr><th>#</th><th>Article</th><th>Category</th><th>Author</th><th>Position</th><th>Unique Clicks</th><th>Total Clicks</th></tr></thead>
@@ -1037,26 +1028,10 @@ function renderContent(M) {
         </table>
       </div>
     </div>
-    <div class="grid-2">
-      <div class="chart-card">
-        <h3>Clicks by Category</h3>
-        <div class="chart-container h300"><canvas id="cnt-cat-bar"></canvas></div>
-      </div>
-      <div class="chart-card">
-        <h3>Clicks by Author</h3>
-        <div class="chart-container h300"><canvas id="cnt-author-bar"></canvas></div>
-      </div>
-    </div>
-    <div class="chart-card">
-      <h3>Tag / Topic Performance</h3>
-      <div class="tbl-wrap"><table class="dash-table"><thead><tr><th>Tag / Topic</th><th>Articles</th><th>Unique Clicks</th><th>Total Clicks</th><th>Clicks per Placement</th></tr></thead>
-      <tbody>${(M.tag_performance||[]).sort((a,b)=>(b.avg_unique_clicks||0)-(a.avg_unique_clicks||0)).map(t=>`<tr><td>${esc(t.tag||'')}</td><td>${fmt(t.article_count)}</td><td>${fmt(t.unique_clicks)}</td><td>${fmt(t.total_clicks)}</td><td>${t.avg_unique_clicks != null ? Number(t.avg_unique_clicks).toFixed(1) : '—'}</td></tr>`).join('')}</tbody></table></div>
-    </div>
   `;
-  /* Article table data */
-  artTableData   = M.top_articles || [];
-  artWindowedData = M.top_articles_windowed || {};
-  _setArtWindow(0);
+  /* Article table data — top 10 all-time by unique clicks (the windowed
+   * date filters were dropped because only "All" returned data). */
+  _renderArtTable(M.top_articles || []);
   // Both Click Analysis sections need the merged data object so the toolbar
   // (Sunday Spotlight toggle, Section-1 metric dropdown) can re-render
   // without a fresh fetch.
@@ -1065,54 +1040,13 @@ function renderContent(M) {
   _setWeekdayWindow(3);
   _setRawWeeklyWindow(8);
   _renderRawMonthly();
-  // Category bar
-  const catD = M.category_performance || {labels:[],unique_clicks:[],total_clicks:[]};
-  new Chart(document.getElementById('cnt-cat-bar'), {
-    type: 'bar',
-    data: { labels: catD.labels, datasets: [
-      { label: 'Unique Clicks', data: catD.unique_clicks, backgroundColor: '#0969da' },
-      { label: 'Total Clicks',  data: catD.total_clicks,  backgroundColor: '#1a7f37' }
-    ]},
-    options: { responsive:true, maintainAspectRatio:false, indexAxis:'y', plugins:{legend:{position:'bottom',labels:{font:{size:11}}}}, scales:{x:{beginAtZero:true}} }
-  });
-  // Author bar
-  const authD = M.author_performance || {labels:[],unique_clicks:[],total_clicks:[]};
-  new Chart(document.getElementById('cnt-author-bar'), {
-    type: 'bar',
-    data: { labels: authD.labels, datasets: [
-      { label: 'Unique Clicks', data: authD.unique_clicks, backgroundColor: '#8250df' },
-      { label: 'Total Clicks',  data: authD.total_clicks,  backgroundColor: '#bf3989' }
-    ]},
-    options: { responsive:true, maintainAspectRatio:false, indexAxis:'y', plugins:{legend:{position:'bottom',labels:{font:{size:11}}}}, scales:{x:{beginAtZero:true}} }
-  });
-}
-let artTableData = [];
-let artWindowedData = {};
-let artCurrentWindow = 0;
-function _setArtWindow(days) {
-  artCurrentWindow = days;
-  // Update button styles
-  const btnMap = {0:'artw-all', 7:'artw-7', 15:'artw-15', 30:'artw-30', 90:'artw-90'};
-  Object.entries(btnMap).forEach(([d, id]) => {
-    const btn = document.getElementById(id);
-    if (!btn) return;
-    const active = parseInt(d) === days;
-    btn.style.background = active ? 'var(--accent)' : 'var(--card)';
-    btn.style.color = active ? '#fff' : 'var(--text-muted)';
-  });
-  // Pick data
-  let rows;
-  if (days === 0) {
-    rows = artTableData;
-  } else {
-    rows = (artWindowedData[String(days)] || artWindowedData[days] || []);
-  }
-  _renderArtTable(rows);
+  // Clicks-by-Category / Clicks-by-Author / Tag-Topic-Performance moved to
+  // the Content Reference tab to avoid duplication.
 }
 function _renderArtTable(rows) {
   const tbody = document.getElementById('art-main-tbody');
   if (!tbody) return;
-  tbody.innerHTML = rows.slice(0,50).map((r,i) => {
+  tbody.innerHTML = rows.slice(0,10).map((r,i) => {
     const posCell = r.story_position ? fmt(r.story_position) : '<span style="color:var(--text-muted);font-style:italic;">No position</span>';
     const titleCell = r.url
       ? `<a href="${esc(r.url)}" target="_blank" rel="noopener">${esc(r.title||'')}</a>`

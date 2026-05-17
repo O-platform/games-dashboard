@@ -66,25 +66,30 @@ AND "Recipients" > 1000
 
 The overview tab surfaces the most important headline numbers across all sections.
 
+**KPI cards — primary row** (4 cards, in this order):
+
 | Metric | What it measures |
 |---|---|
-| Total Subscribers | All-time subscriber count |
-| Active Subscribers | Subscribers currently in Active state |
-| Active Rate | Active ÷ Total |
+| Active (Send-to) | Subscribers we actually send to (`state='Active' AND engagement_segment NOT IN Ghosts/Zombies/Dormant`) |
 | Avg Open Rate | Average unique open rate across campaigns (≥ 1,000 recipients) |
 | Avg Click Rate | Average click rate across campaigns |
-| Best Open Rate | Highest open rate recorded by a single campaign |
 | Campaigns Sent | Count of campaigns with ≥ 1,000 recipients sent before today |
+
+**KPI cards — secondary row** (4 cards, less critical):
+
+| Metric | What it measures |
+|---|---|
+| Total Subscribers | All-time subscriber count (active base) |
+| Unsubscribed | Count + % of total |
+| Bounced | Count + % of total |
 | Quiz Takers | Subscribers who completed the longevity quiz |
-| High Engagement (60d) | Subscribers flagged as high-engagement in the past 60 days |
-| Total Unique Opens | Sum of unique opens across all qualifying campaigns |
-| Campaign Clicks | Sum of all campaign clicks |
-| Article Clickers | Subscribers who clicked at least one article |
 
 **Charts:**
 - **Subscriber Status Mix** — Donut chart of subscriber states (Active, Unsubscribed, Bounced, Deleted).
 - **Campaign Performance Trend** — Line chart of open rate and click rate across the last 30 campaigns, ordered by send date.
 - **Subscriber Growth Over Time** — Green bars = gained (new subscribers), red bars = lost (unsubscribes), blue line = total active subscribers at month end (right Y axis). 18-month sliding window.
+
+**Recent Campaigns Metrics table** — last 10 sent campaigns (most recent first). Sourced client-side from `M.campaign_table.slice(-10).reverse()`; no separate SQL query (the data is already loaded for the Campaigns tab). Columns: #, Campaign (linked to `url`), Sent date, Recipients, Open Rate, Click Rate. Replaces the previous "Top Campaign Open Rates" table on Overview.
 
 ---
 
@@ -401,7 +406,7 @@ ORDER BY "Sent Date " ASC;
 Feeds `campaign_table` (dashboard list, scatter chart) and `campaign_trend` (line chart).
 `URL` becomes the click-through link on the campaign name in the dashboard table.
 
-## Q10 — Campaigns: Top 15 Campaigns by Open Rate (Bar Chart) + Overview "Top Campaign Open Rates" table
+## Q10 — Campaigns: Top 15 Campaigns by Open Rate (Bar Chart)
 
 ```sql
 SELECT
@@ -416,7 +421,7 @@ ORDER BY "UOpenRate" DESC NULLS LAST
 LIMIT 15;
 ```
 
-Feeds `M.top_campaigns[]` which is consumed by both the Campaigns tab "Top 15 by Open Rate" bar chart and the Overview "Top Campaign Open Rates" table. `recipients` is emitted as a raw integer (not a pre-formatted string). The `url` field becomes the click-through link on the campaign name in the Overview table.
+Feeds `M.top_campaigns[]` which is consumed by the Campaigns tab "Top 15 by Open Rate" bar chart. `recipients` is emitted as a raw integer (not a pre-formatted string). (The Overview tab now shows a **Recent Campaigns Metrics** table instead — last 10 rows of `M.campaign_table` reversed to most-recent-first; no separate query needed.)
 
 ## Q11 — Website Content: Article Placements KPIs
 
@@ -1249,3 +1254,4 @@ LIMIT 12;
 22. **Dashboard title**: `SuperAge — Brand Pulse Dashboard`.
 23. **Canonical "Active" rule**: Every "Active" count in the dashboard uses `state = 'Active' AND engagement_segment NOT IN ('Ghosts','Zombies','Dormant')`. Applies to Q1b (send_to_active), Q35 (retention KPI), Q35b (retention_by_source), Q40 (cohort table) and Q41 (90-day retention by source).
 24. **Top Position Cat KPI removed; Top Categories + Top Tags charts added**: The Content Reference tab no longer renders the "Top Position Cat" KPI card (position-category info is already covered by the position-category filter and chart). Two new horizontal bar charts — **Top Categories** and **Top Tags** — were added below the position-category / sleeper-hits grid. Both are computed client-side from `M.content_drill_table` after applying the current filter scope (Position Cat / Position / Author / Category / Tag / Title search): the row set is iterated, `categories` / `tags` strings are split on commas, and `unique_clicks` + `total_clicks` are summed per label. The top 10 labels by unique clicks are shown with paired bars (unique vs total) and re-render on every filter change via `_crFilter()` → `_crRenderTopBar()`.
+25. **Overview KPI ordering + Recent Campaigns Metrics table**: Overview KPI cards are split into two rows. Primary row (most important): Active (Send-to), Avg Open Rate, Avg Click Rate, Campaigns Sent. Secondary row: Total Subscribers, Unsubscribed, Bounced, Quiz Takers. The bottom "Top Campaign Open Rates" table was renamed to **Recent Campaigns Metrics** and now lists the **last 10 sent campaigns** (most recent first) from `M.campaign_table.slice(-10).reverse()` instead of the top-by-open-rate set.

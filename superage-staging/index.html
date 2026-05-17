@@ -293,14 +293,17 @@ function renderOverview(M) {
     </div>
 
 
-    <div class="kpi-row">
-      <div class="kpi-card accent"><div class="label">Total Subscribers</div><div class="value">${fmt(M.total_subscribers)}</div><div class="sub">All-time subscriber base</div></div>
+    <div class="kpi-row" style="grid-template-columns:repeat(4,1fr);">
       <div class="kpi-card green"><div class="label">Active (Send-to)</div><div class="value">${fmt(M.send_to_active)}</div><div class="sub">${M.send_to_rate} of subscribers whose state is Active</div></div>
-      <div class="kpi-card red"><div class="label">Unsubscribed</div><div class="value">${fmt(M.unsubscribed_count)}</div><div class="sub">${M.total_subscribers ? (M.unsubscribed_count/M.total_subscribers*100).toFixed(1)+'%' : '—'} of total</div></div>
-      <div class="kpi-card orange"><div class="label">Bounced</div><div class="value">${fmt(M.bounced_count)}</div><div class="sub">${M.total_subscribers ? (M.bounced_count/M.total_subscribers*100).toFixed(1)+'%' : '—'} of total</div></div>
       <div class="kpi-card cyan"><div class="label">Avg Open Rate</div><div class="value">${M.avg_open_rate}</div><div class="sub">Best: ${M.best_open_rate}</div></div>
       <div class="kpi-card blue"><div class="label">Avg Click Rate</div><div class="value">${M.avg_click_rate}</div><div class="sub">Best: ${M.best_click_rate}</div></div>
       <div class="kpi-card orange"><div class="label">Campaigns Sent</div><div class="value">${fmt(M.total_campaigns)}</div><div class="sub">${fmt(M.total_recipients)} total recipients</div></div>
+    </div>
+
+    <div class="kpi-row" style="grid-template-columns:repeat(4,1fr);">
+      <div class="kpi-card accent"><div class="label">Total Subscribers</div><div class="value">${fmt(M.total_subscribers)}</div><div class="sub">All-time subscriber base</div></div>
+      <div class="kpi-card red"><div class="label">Unsubscribed</div><div class="value">${fmt(M.unsubscribed_count)}</div><div class="sub">${M.total_subscribers ? (M.unsubscribed_count/M.total_subscribers*100).toFixed(1)+'%' : '—'} of total</div></div>
+      <div class="kpi-card orange"><div class="label">Bounced</div><div class="value">${fmt(M.bounced_count)}</div><div class="sub">${M.total_subscribers ? (M.bounced_count/M.total_subscribers*100).toFixed(1)+'%' : '—'} of total</div></div>
       <div class="kpi-card purple"><div class="label">Quiz Takers</div><div class="value">${fmt(M.quiz_takers)}</div><div class="sub">${M.quiz_takers_pct}% of total subscribers</div></div>
     </div>
 
@@ -332,9 +335,9 @@ function renderOverview(M) {
     </div>
 
     <div class="chart-card">
-      <h3>Top Campaign Open Rates</h3>
+      <h3>Recent Campaigns Metrics</h3>
       <div class="tbl-wrap"><table class="dash-table"><thead><tr><th>#</th><th>Campaign</th><th>Sent</th><th>Recipients</th><th>Open Rate</th><th>Click Rate</th></tr></thead>
-      <tbody>${(M.top_campaigns||[]).slice(0,10).map((c,i)=>{
+      <tbody>${((M.campaign_table||[]).slice(-10).reverse()).map((c,i)=>{
         const nameCell = c.url ? `<a href="${esc(c.url)}" target="_blank" rel="noopener">${esc(c.name||'')}</a>` : esc(c.name||'');
         const recip = (c.recipients == null) ? '—' : (typeof c.recipients === 'string' ? esc(c.recipients) : fmt(c.recipients));
         return `<tr><td>${i+1}</td><td>${nameCell}</td><td>${c.sent_date||''}</td><td>${recip}</td><td>${c.open_rate||'—'}</td><td>${c.click_rate||'—'}</td></tr>`;

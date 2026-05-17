@@ -306,3 +306,36 @@ exactly the **top 10** rows of `M.top_articles` (already sorted by
 selector and the `_setArtWindow` plumbing were removed. The lambda still
 emits `top_articles_windowed` for backwards-compat (in case the windowed
 data starts arriving later), but the dashboard ignores it.
+
+### Same Weekday → campaign-send view, above/below-average colours, in-progress fade
+
+> "It seems to be looking at click dates, rather than campaign dates. I want
+> to show campaign dates — compare Monday send to the previous Monday sends,
+> hence all the clicks of a certain Monday send are aggregated. If a campaign
+> was sent less than 2 days ago, make it appear as if it's in progress.
+> Colours don't need to be recent-to-less-recent, but above average (green)
+> to below average (red). I love the 2 / 3 / 5 each — just make it 2 / 3 / 5
+> weeks."
+
+**✓ shipped.** The Same Weekday chart is now built client-side from
+`M.campaign_table`:
+
+- **Send-date bucketing**: each campaign goes to the weekday of its
+  `sent_date`. The bar height is the campaign's total clicks (the same
+  `clicks` column the Campaigns tab uses).
+- **2 / 3 / 5 weeks** window buttons (re-labelled) pick how many recent
+  campaigns to show per weekday, most-recent → oldest.
+- **Above/below-average colours**: green when the campaign's total clicks
+  are ≥ that weekday's average across the visible window, red when below.
+  Each weekday has its own baseline so heavy-traffic weekdays (Mon, Sun)
+  don't drown out lighter ones.
+- **In-progress fade**: any campaign whose `sent_date` is within the last
+  2 days renders in pale grey with a dashed-look border and is **excluded
+  from the average** — its click total is still accumulating.
+- **Tooltip** shows the campaign name, send date, total clicks, and the
+  ± % vs that weekday's average (or "in progress" for fresh sends).
+- **Sunday Spotlight toggle** still applies.
+
+The `raw_clicks_by_weekday` and `raw_clicks_same_weekday` series stay in
+the comparison-lambda JSON for backwards-compat but are no longer consumed
+by this chart.

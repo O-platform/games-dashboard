@@ -805,9 +805,15 @@ function _sliceSeries(series, n) {
   return out;
 }
 
+/* Same Weekday chart — campaign-send view.
+ * For each weekday (Mon–Sun), we show the last `n` campaigns sent on that
+ * weekday (from M.campaign_table) with their *total clicks*. Bars are
+ * coloured green when above that weekday's average and red when below,
+ * with in-progress sends (< 2 days old) shown in pale grey because their
+ * click totals are still accumulating.
+ */
 function _setWeekdayWindow(n) {
   if (!_rawClicksData) return;
-  // Remember current `n` so we can re-render when the SS toggle changes.
   window._rawWeekdayN = n;
   ['rwd-2','rwd-3','rwd-5'].forEach(id => {
     const btn = document.getElementById(id);
@@ -817,47 +823,84 @@ function _setWeekdayWindow(n) {
     btn.style.color = active ? '#fff' : 'var(--text-muted)';
   });
   const dows = ['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];
-  const todayDow = dows[((new Date()).getDay()+6)%7];
-  const byDow = _rawClicksData.raw_clicks_by_weekday || {};
-  // Fall back to legacy raw_clicks_same_weekday for today's weekday only.
-  const legacy = _rawClicksData.raw_clicks_same_weekday || {};
-  function takeLastN(arr) {
-    const a = arr || [];
-    return a.length > n ? a.slice(a.length - n) : a.concat(Array(n - a.length).fill(null));
-  }
-  // Pull last N clicks and date labels for each weekday — respects the SS toggle
-  // by reading `clicks_no_ss` when present and the toggle is off.
-  const perDow = {};
+  const ssOn = _ssOn();
+  const today = new Date(); today.setHours(0,0,0,0);
+  const inProgressCutoff = today.getTime() - 2 * 86400000;
+
+  // Bucket every campaign by the weekday it was sent on.
+  const table = (_rawClicksData && _rawClicksData.campaign_table) || [];
+  const byDow = { Mon:[], Tue:[], Wed:[], Thu:[], Fri:[], Sat:[], Sun:[] };
+  table.forEach(c => {
+    if (!ssOn && (c.name||'').toLowerCase().includes('sunday spotlight')) return;
+    const d = new Date(c.sent_date || '');
+    if (isNaN(d)) return;
+    const dow = dows[((d.getDay()+6) % 7)];   // 0=Mon … 6=Sun
+    byDow[dow].push({
+      sent:       d,
+      label:      d.toLocaleDateString('en-US', { month:'short', day:'2-digit', year:'2-digit' }),
+      name:       c.name || '',
+      clicks:     _campNum(c.clicks),
+      inProgress: d.getTime() >= inProgressCutoff
+    });
+  });
+
+  // Keep the most recent `n` per weekday.
   let weekdaysWithData = 0;
   dows.forEach(d => {
-    let s = byDow[d];
-    if ((!s || !(s.labels||[]).length) && d === todayDow && (legacy.labels||[]).length) s = legacy;
-    s = s || { labels:[], clicks:[], days:[], clicks_no_ss:[] };
-    const metricKey = _rawMetric(s);
-    const clicks = takeLastN(s[metricKey] || s.clicks);
-    const labels = takeLastN(s.labels);
-    perDow[d] = { clicks, labels };
-    if ((s.clicks||[]).length) weekdaysWithData++;
+    byDow[d].sort((a,b) => b.sent - a.sent);
+    if (byDow[d].length) weekdaysWithData++;
+    byDow[d] = byDow[d].slice(0, n);
   });
-  // Build N datasets — dataset i = i-th most recent occurrence across all weekdays.
-  // Index 0 = oldest of the N, index N-1 = most recent.
-  const palette = ['#c4b5fd','#a78bfa','#8250df','#6d28d9','#4c1d95'];
+
+  // Average per weekday — excludes in-progress sends so their incomplete
+  // totals don't drag the baseline down for the rest of the bars.
+  const avgs = {};
+  dows.forEach(d => {
+    const done = byDow[d].filter(x => !x.inProgress);
+    avgs[d] = done.length ? done.reduce((s,x) => s + x.clicks, 0) / done.length : 0;
+  });
+
+  // Build n datasets — index `positionFromEnd = n-1-i` reads "0 = most recent".
+  // Each bar gets its own colour: green if ≥ that weekday's average, red if
+  // below, pale grey if still in-progress (excluded from the comparison).
+  const GREEN     = 'rgba(63,185,80,0.85)';
+  const RED       = 'rgba(248,81,73,0.85)';
+  const INP_GREY  = 'rgba(140,149,159,0.45)';
+  const INP_BORDER = 'rgba(140,149,159,0.85)';
   const datasets = [];
   for (let i = 0; i < n; i++) {
-    const colorIdx = Math.min(palette.length - 1, palette.length - n + i);
-    const positionFromEnd = n - 1 - i; // 0 = most recent
+    const positionFromEnd = n - 1 - i;        // 0 = most recent
     const labelTxt = positionFromEnd === 0 ? 'Most recent'
-                  : positionFromEnd === 1 ? '1 back'
-                  : `${positionFromEnd} back`;
+                   : positionFromEnd === 1 ? '1 week back'
+                   : `${positionFromEnd} weeks back`;
+    const data = dows.map(d => {
+      const row = byDow[d][positionFromEnd];
+      return row ? row.clicks : null;
+    });
+    const bg = dows.map(d => {
+      const row = byDow[d][positionFromEnd];
+      if (!row) return 'transparent';
+      if (row.inProgress) return INP_GREY;
+      return row.clicks >= avgs[d] ? GREEN : RED;
+    });
+    const borderColor = dows.map(d => {
+      const row = byDow[d][positionFromEnd];
+      return (row && row.inProgress) ? INP_BORDER : 'transparent';
+    });
     datasets.push({
       label: labelTxt,
-      data: dows.map(d => perDow[d].clicks[i] != null ? perDow[d].clicks[i] : 0),
-      // Carry the date label for tooltips.
-      _dates: dows.map(d => perDow[d].labels[i] || ''),
-      backgroundColor: palette[colorIdx >= 0 ? colorIdx : 0],
+      data,
+      backgroundColor: bg,
+      borderColor,
+      borderWidth: 1.5,
+      _dates: dows.map(d => byDow[d][positionFromEnd]?.label || ''),
+      _names: dows.map(d => byDow[d][positionFromEnd]?.name  || ''),
+      _inProg: dows.map(d => !!byDow[d][positionFromEnd]?.inProgress),
+      _avg:    dows.map(d => avgs[d]),
       borderRadius: 3
     });
   }
+
   const ctx = document.getElementById('cnt-raw-weekday-bar');
   if (!ctx) return;
   if (ctx._chart) ctx._chart.destroy();
@@ -867,27 +910,43 @@ function _setWeekdayWindow(n) {
     options: {
       responsive: true, maintainAspectRatio: false,
       plugins: {
-        legend: { position: 'bottom', labels: { font: { size: 11 } } },
+        legend: { display: false },
         tooltip: { callbacks: {
           title: (items) => items.length ? (items[0].chart.data.labels[items[0].dataIndex] || '') : '',
           label: (c) => {
             const ds = c.dataset;
             const date = (ds._dates && ds._dates[c.dataIndex]) || '';
-            const val = (c.parsed && c.parsed.y != null) ? Number(c.parsed.y).toLocaleString() : '0';
-            return `${ds.label}${date ? ' ('+date+')' : ''}: ${val} click events`;
+            const name = (ds._names && ds._names[c.dataIndex]) || '';
+            const inP  = (ds._inProg && ds._inProg[c.dataIndex]) || false;
+            const avg  = (ds._avg   && ds._avg[c.dataIndex])    || 0;
+            const val  = (c.parsed && c.parsed.y != null) ? Number(c.parsed.y) : 0;
+            const lines = [];
+            lines.push(`${name || ds.label}${date ? ' — '+date : ''}`);
+            lines.push(`${val.toLocaleString()} total clicks`);
+            if (inP) lines.push('(in progress — < 2 days since send)');
+            else if (avg > 0) {
+              const diff = ((val - avg) / avg * 100);
+              const dir = diff >= 0 ? '↑' : '↓';
+              lines.push(`Weekday avg: ${Math.round(avg).toLocaleString()} (${dir} ${Math.abs(diff).toFixed(1)}%)`);
+            }
+            return lines;
           }
         }}
       },
       scales: { y: { beginAtZero: true, ticks: { callback: v => v.toLocaleString() } } }
     }
   });
+
   const badge = document.getElementById('cnt-raw-weekday-badge');
-  if (badge) badge.textContent = `— last ${n} occurrences per weekday`;
+  if (badge) badge.textContent = `— last ${n} sends per weekday, total clicks per send`;
   const ins = document.getElementById('cnt-raw-weekday-insight');
   if (ins) {
+    const legend = `<span style="display:inline-block;width:10px;height:10px;background:${GREEN};border-radius:2px;vertical-align:middle;margin:0 4px 1px 0;"></span>above that weekday's average · `
+                 + `<span style="display:inline-block;width:10px;height:10px;background:${RED};border-radius:2px;vertical-align:middle;margin:0 4px 1px 6px;"></span>below average · `
+                 + `<span style="display:inline-block;width:10px;height:10px;background:${INP_GREY};border:1px solid ${INP_BORDER};border-radius:2px;vertical-align:middle;margin:0 4px 1px 6px;"></span>in progress (&lt; 2 days since send)`;
     ins.innerHTML = weekdaysWithData < 7
-      ? `Showing data for <strong>${weekdaysWithData} of 7</strong> weekdays — re-run the comparison lambda to populate the rest. Within each weekday, bars are ordered oldest → most recent.`
-      : `Each weekday group shows its last ${n} occurrences (oldest → most recent). Hover a bar for the exact date.`;
+      ? `Showing campaigns for <strong>${weekdaysWithData} of 7</strong> weekdays — only weekdays with at least one send appear. <br>${legend}`
+      : `Hover a bar for the campaign name, send date and how it compares to that weekday's average. <br>${legend}`;
   }
 }
 
@@ -990,11 +1049,11 @@ function renderContent(M) {
     <h3 style="margin:18px 0 10px;font-size:13px;text-transform:uppercase;letter-spacing:.5px;color:var(--text-muted);">Section 2 — Raw Click Events <span class="badge-inline" style="text-transform:none;">sourced from superage."Campaigns_Clicks" — per-event "Date"</span></h3>
     <div class="chart-card">
       <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;margin-bottom:6px;flex-wrap:wrap;">
-        <h3 style="margin:0;">Same Weekday <span class="badge-inline" id="cnt-raw-weekday-badge">— last N occurrences per weekday</span></h3>
+        <h3 style="margin:0;">Same Weekday <span class="badge-inline" id="cnt-raw-weekday-badge">— last N sends per weekday, total clicks per send</span></h3>
         <div style="display:flex;gap:4px;" id="cnt-raw-weekday-btns">
-          <button onclick="_setWeekdayWindow(2)" id="rwd-2" style="font-size:11px;padding:3px 8px;border:1px solid var(--card-border);border-radius:5px;background:var(--card);color:var(--text-muted);cursor:pointer;">2 each</button>
-          <button onclick="_setWeekdayWindow(3)" id="rwd-3" style="font-size:11px;padding:3px 8px;border:1px solid var(--card-border);border-radius:5px;background:var(--accent);color:#fff;cursor:pointer;">3 each</button>
-          <button onclick="_setWeekdayWindow(5)" id="rwd-5" style="font-size:11px;padding:3px 8px;border:1px solid var(--card-border);border-radius:5px;background:var(--card);color:var(--text-muted);cursor:pointer;">5 each</button>
+          <button onclick="_setWeekdayWindow(2)" id="rwd-2" style="font-size:11px;padding:3px 8px;border:1px solid var(--card-border);border-radius:5px;background:var(--card);color:var(--text-muted);cursor:pointer;">2 weeks</button>
+          <button onclick="_setWeekdayWindow(3)" id="rwd-3" style="font-size:11px;padding:3px 8px;border:1px solid var(--card-border);border-radius:5px;background:var(--accent);color:#fff;cursor:pointer;">3 weeks</button>
+          <button onclick="_setWeekdayWindow(5)" id="rwd-5" style="font-size:11px;padding:3px 8px;border:1px solid var(--card-border);border-radius:5px;background:var(--card);color:var(--text-muted);cursor:pointer;">5 weeks</button>
         </div>
       </div>
       <div class="chart-container h300"><canvas id="cnt-raw-weekday-bar"></canvas></div>

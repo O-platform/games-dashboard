@@ -266,8 +266,8 @@ toggle at the top (default OFF — matches the Campaigns tab) that scopes
 **✓ shipped.** Section 1 has a **Metric** dropdown next to the toggle with
 three modes:
 
-- **Total clicks** — the original raw sum (default).
-- **Clicks / campaign (normalised)** — `sum(clicks) / count(campaigns)`,
+- **Total clicks** — the original raw sum.
+- **Clicks / campaign** *(default)* — `sum(clicks) / count(campaigns)`,
   removes the bias from periods with more campaigns.
 - **Click-to-Open %** — `sum(clicks) / sum(unique_opens) × 100`,
   normalises for the size of the engaged audience (closest equivalent to

@@ -337,7 +337,7 @@ function renderOverview(M) {
     <div class="chart-card">
       <h3>Recent Campaigns Metrics</h3>
       <div class="tbl-wrap"><table class="dash-table"><thead><tr><th>#</th><th>Campaign</th><th>Sent</th><th>Recipients</th><th>Open Rate</th><th>Click Rate</th></tr></thead>
-      <tbody>${((M.campaign_table||[]).slice(-10).reverse()).map((c,i)=>{
+      <tbody>${([...(M.campaign_table||[])].sort((a,b)=>{const da=Date.parse(a.sent_date||'')||0;const db=Date.parse(b.sent_date||'')||0;return db-da;}).slice(0,10)).map((c,i)=>{
         const nameCell = c.url ? `<a href="${esc(c.url)}" target="_blank" rel="noopener">${esc(c.name||'')}</a>` : esc(c.name||'');
         const recip = (c.recipients == null) ? '—' : (typeof c.recipients === 'string' ? esc(c.recipients) : fmt(c.recipients));
         return `<tr><td>${i+1}</td><td>${nameCell}</td><td>${c.sent_date||''}</td><td>${recip}</td><td>${c.open_rate||'—'}</td><td>${c.click_rate||'—'}</td></tr>`;

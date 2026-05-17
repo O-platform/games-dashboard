@@ -237,3 +237,53 @@ past/current bar and the first future bar, drawn by an inline Chart.js plugin
 
 Because this dashboard is daily (not hourly), the pill says **"Daily updates"**
 and the date renders date-only — no time/timezone needed.
+
+### "Let's add the same (Sunday Spotlight) filter to the Clicks Analysis"
+
+**✓ shipped.** Click Analysis tab now has an **Include Sunday Spotlight**
+toggle at the top (default OFF — matches the Campaigns tab) that scopes
+**both** sections:
+
+- **Section 1 — Campaign-Level Aggregated** (Weekly / Monthly Campaign Clicks):
+  rebuilt **client-side** from `M.campaign_table` so the filter takes effect
+  immediately (no lambda re-run needed). Sunday Spotlight rows are skipped
+  by `name` match before bucketing.
+- **Section 2 — Raw Click Events** (Same Weekday / Weekly / Monthly): the
+  comparison lambda now emits a `clicks_no_ss` count alongside `clicks` for
+  every series, using
+  `COUNT(*) FILTER (WHERE issue_name NOT ILIKE '%sunday spotlight%')`. The
+  dashboard picks the right field based on the toggle, falling back to
+  `clicks` if `clicks_no_ss` isn't present yet.
+
+> Note: top-of-tab KPIs (Total Clicks, Unique Clickers, Articles Clicked,
+> Avg Clicks/Article) and the **Top Articles / Category / Author / Tag**
+> tables still aggregate from `articles_clicks` without the SS filter. If
+> you also want those scoped by the toggle, that's a separate `articles_clicks`-
+> based lambda change — happy to do it; just say the word.
+
+### "Can we normalise the numbers? such as divide the clicks by number of campaigns, or is there another option because we also have different number of recipients?"
+
+**✓ shipped.** Section 1 has a **Metric** dropdown next to the toggle with
+three modes:
+
+- **Total clicks** — the original raw sum (default).
+- **Clicks / campaign (normalised)** — `sum(clicks) / count(campaigns)`,
+  removes the bias from periods with more campaigns.
+- **Click-to-Open %** — `sum(clicks) / sum(unique_opens) × 100`,
+  normalises for the size of the engaged audience (closest equivalent to
+  the click-rate idea you raised, but using `unique_opens` instead of
+  `recipients`; the `campaign_table` doesn't carry `recipients` in the
+  pre-aggregated trend series — we'd need a lambda field to do
+  `clicks / recipients`. Let me know if you'd prefer that instead).
+
+The y-axis tick formatter and tooltip update per mode (e.g. CTOR shows
+`12.3 %`, per-campaign shows integers).
+
+### "The 40.3% is misleading and not true … it's just an ongoing month / when compare try to compare between last 2 completed weeks"
+
+**✓ shipped.** `_clickTrendInsight()` now scans backwards from the end of
+the series and picks the **last two indices where `is_current` is false**.
+The percentage and absolute values are computed from those, and the caption
+explicitly says "(last 2 completed weeks)" / "(last 2 completed months)" so
+it's clear what's being compared. The in-progress bar is still rendered
+in the chart (slightly faded) but is excluded from the headline.

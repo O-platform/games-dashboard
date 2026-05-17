@@ -404,9 +404,10 @@ def lambda_handler(event, context):
 
             # (B.1) Raw clicks — same weekday across last 5 occurrences (today's weekday).
             # Kept for backwards compatibility; the dashboard now prefers raw_clicks_by_weekday below.
+            # clicks_no_ss = clicks excluding Sunday Spotlight (issue_name match).
             cur.execute(f"""
                 WITH clicks AS (
-                    SELECT "Date"::date AS d
+                    SELECT "Date"::date AS d, issue_name
                     FROM {S}."Campaigns_Clicks"
                     WHERE "Date" IS NOT NULL
                       AND "Date" >= (CURRENT_DATE - INTERVAL '4 weeks')
@@ -423,6 +424,9 @@ def lambda_handler(event, context):
                     d.day,
                     TO_CHAR(d.day, 'Dy Mon DD')   AS label,
                     COUNT(c.d)                    AS clicks,
+                    COUNT(c.d) FILTER (
+                        WHERE c.issue_name NOT ILIKE '%sunday spotlight%'
+                    )                             AS clicks_no_ss,
                     (d.day = CURRENT_DATE)        AS is_current
                 FROM d
                 LEFT JOIN clicks c ON c.d = d.day
@@ -454,7 +458,7 @@ def lambda_handler(event, context):
                     FROM d
                 ),
                 clicks AS (
-                    SELECT "Date"::date AS d
+                    SELECT "Date"::date AS d, issue_name
                     FROM {S}."Campaigns_Clicks"
                     WHERE "Date" IS NOT NULL
                       AND "Date" >= (CURRENT_DATE - INTERVAL '6 weeks')
@@ -465,6 +469,9 @@ def lambda_handler(event, context):
                     r.dow,
                     TO_CHAR(r.day, 'Dy Mon DD')        AS label,
                     COUNT(c.d)                         AS clicks,
+                    COUNT(c.d) FILTER (
+                        WHERE c.issue_name NOT ILIKE '%sunday spotlight%'
+                    )                                  AS clicks_no_ss,
                     (r.day = CURRENT_DATE)             AS is_current
                 FROM ranked r
                 LEFT JOIN clicks c ON c.d = r.day
@@ -477,7 +484,7 @@ def lambda_handler(event, context):
             # (B.2) Raw clicks — last 12 ISO weeks (HTML defaults to 8w view; user can switch 4w/8w/12w).
             cur.execute(f"""
                 WITH clicks AS (
-                    SELECT DATE_TRUNC('week', "Date"::date)::date AS w
+                    SELECT DATE_TRUNC('week', "Date"::date)::date AS w, issue_name
                     FROM {S}."Campaigns_Clicks"
                     WHERE "Date" IS NOT NULL
                       AND "Date" >= (DATE_TRUNC('week', CURRENT_DATE) - INTERVAL '11 weeks')
@@ -494,6 +501,9 @@ def lambda_handler(event, context):
                     w.week_start,
                     TO_CHAR(w.week_start, 'Mon DD')                          AS label,
                     COUNT(c.w)                                               AS clicks,
+                    COUNT(c.w) FILTER (
+                        WHERE c.issue_name NOT ILIKE '%sunday spotlight%'
+                    )                                                        AS clicks_no_ss,
                     (w.week_start = DATE_TRUNC('week', CURRENT_DATE)::date)  AS is_current
                 FROM weeks w
                 LEFT JOIN clicks c ON c.w = w.week_start
@@ -505,7 +515,7 @@ def lambda_handler(event, context):
             # (B.3) Raw clicks — last 6 calendar months
             cur.execute(f"""
                 WITH clicks AS (
-                    SELECT DATE_TRUNC('month', "Date"::date)::date AS m
+                    SELECT DATE_TRUNC('month', "Date"::date)::date AS m, issue_name
                     FROM {S}."Campaigns_Clicks"
                     WHERE "Date" IS NOT NULL
                       AND "Date" >= (DATE_TRUNC('month', CURRENT_DATE) - INTERVAL '5 months')
@@ -522,6 +532,9 @@ def lambda_handler(event, context):
                     m.month_start,
                     TO_CHAR(m.month_start, 'Mon YYYY')                         AS label,
                     COUNT(c.m)                                                 AS clicks,
+                    COUNT(c.m) FILTER (
+                        WHERE c.issue_name NOT ILIKE '%sunday spotlight%'
+                    )                                                          AS clicks_no_ss,
                     (m.month_start = DATE_TRUNC('month', CURRENT_DATE)::date)  AS is_current
                 FROM months m
                 LEFT JOIN clicks c ON c.m = m.month_start
@@ -623,34 +636,41 @@ def lambda_handler(event, context):
             "campaigns":    [safe_int(r["campaigns"])    for r in campaign_same_dom_rows],
             "is_current":   [bool(r["is_current"])       for r in campaign_same_dom_rows],
         },
-        # Click Analysis trends (Section B — raw click events)
+        # Click Analysis trends (Section B — raw click events).
+        # clicks_no_ss = same count but excluding rows whose issue_name
+        # matches Sunday Spotlight; powers the "Include Sunday Spotlight"
+        # toggle on the Click Analysis tab.
         "raw_clicks_same_weekday": {
-            "labels":     [str(r["label"]) for r in raw_clicks_same_weekday_rows],
-            "days":       [str(r["day"])   for r in raw_clicks_same_weekday_rows],
-            "clicks":     [safe_int(r["clicks"])     for r in raw_clicks_same_weekday_rows],
-            "is_current": [bool(r["is_current"])     for r in raw_clicks_same_weekday_rows],
+            "labels":       [str(r["label"]) for r in raw_clicks_same_weekday_rows],
+            "days":         [str(r["day"])   for r in raw_clicks_same_weekday_rows],
+            "clicks":       [safe_int(r["clicks"])       for r in raw_clicks_same_weekday_rows],
+            "clicks_no_ss": [safe_int(r["clicks_no_ss"]) for r in raw_clicks_same_weekday_rows],
+            "is_current":   [bool(r["is_current"])       for r in raw_clicks_same_weekday_rows],
         },
         # Per-weekday raw click history (last 5 of each weekday).
         "raw_clicks_by_weekday": (lambda rows: {
             dow: {
-                "labels":     [str(r["label"]) for r in rows if str(r["dow"]).strip() == dow],
-                "days":       [str(r["day"])   for r in rows if str(r["dow"]).strip() == dow],
-                "clicks":     [safe_int(r["clicks"])     for r in rows if str(r["dow"]).strip() == dow],
-                "is_current": [bool(r["is_current"])     for r in rows if str(r["dow"]).strip() == dow],
+                "labels":       [str(r["label"]) for r in rows if str(r["dow"]).strip() == dow],
+                "days":         [str(r["day"])   for r in rows if str(r["dow"]).strip() == dow],
+                "clicks":       [safe_int(r["clicks"])       for r in rows if str(r["dow"]).strip() == dow],
+                "clicks_no_ss": [safe_int(r["clicks_no_ss"]) for r in rows if str(r["dow"]).strip() == dow],
+                "is_current":   [bool(r["is_current"])       for r in rows if str(r["dow"]).strip() == dow],
             }
             for dow in ("Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun")
         })(raw_clicks_by_weekday_rows),
         "raw_clicks_weekly": {
-            "labels":      [str(r["label"])      for r in raw_clicks_weekly_rows],
-            "week_starts": [str(r["week_start"]) for r in raw_clicks_weekly_rows],
-            "clicks":      [safe_int(r["clicks"])     for r in raw_clicks_weekly_rows],
-            "is_current":  [bool(r["is_current"])     for r in raw_clicks_weekly_rows],
+            "labels":       [str(r["label"])      for r in raw_clicks_weekly_rows],
+            "week_starts":  [str(r["week_start"]) for r in raw_clicks_weekly_rows],
+            "clicks":       [safe_int(r["clicks"])       for r in raw_clicks_weekly_rows],
+            "clicks_no_ss": [safe_int(r["clicks_no_ss"]) for r in raw_clicks_weekly_rows],
+            "is_current":   [bool(r["is_current"])       for r in raw_clicks_weekly_rows],
         },
         "raw_clicks_monthly": {
             "labels":       [str(r["label"])       for r in raw_clicks_monthly_rows],
             "month_starts": [str(r["month_start"]) for r in raw_clicks_monthly_rows],
-            "clicks":       [safe_int(r["clicks"])     for r in raw_clicks_monthly_rows],
-            "is_current":   [bool(r["is_current"])     for r in raw_clicks_monthly_rows],
+            "clicks":       [safe_int(r["clicks"])       for r in raw_clicks_monthly_rows],
+            "clicks_no_ss": [safe_int(r["clicks_no_ss"]) for r in raw_clicks_monthly_rows],
+            "is_current":   [bool(r["is_current"])       for r in raw_clicks_monthly_rows],
         },
     }
 

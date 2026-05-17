@@ -154,13 +154,19 @@ even when the dedicated fields are absent:
 | Articles Clicked | `articles_clicked_count` | `content_summary.unique_articles` |
 | Avg Clicks / Article | `avg_clicks_per_article` | computed client-side as `total_article_clicks / articles_clicked_count` |
 
-The "Same Weekday" chart on this tab is a grouped bar chart with one
-group per weekday (Mon–Sun) and 2 / 3 / 5 bars per group, ordered
-oldest → most recent. Bars are sourced from
-`M.raw_clicks_by_weekday[<Mon..Sun>]` (see Comparison Lambda doc,
-section B.1b). The weekly chart exposes a 4 w / 8 w / 12 w window
-toggle backed by `M.raw_clicks_weekly` (12 weeks of history). Monthly
-shows 6 months from `M.raw_clicks_monthly`.
+**Click Analysis tab toolbar:** a top toolbar exposes an **Include Sunday Spotlight** toggle (default OFF) and a **Section 1 metric** dropdown (Total clicks / Clicks per campaign / Click-to-Open %). The toggle scopes both Section 1 (campaign aggregates) and Section 2 (raw click events); the metric dropdown only applies to Section 1.
+
+**Section 1 — Campaign-Level Aggregated** (charts: Weekly Campaign Clicks, Monthly Campaign Clicks) is rebuilt **client-side** from `M.campaign_table` (sourced from `superage."Campaigns"` via Q9). Each campaign is bucketed by ISO week (Mon–Sun) or calendar month based on its `sent_date`, then `clicks`, `unique_opens`, `recipients`, and campaign count are summed per period. The three metric modes are computed from these sums:
+
+- **Total clicks** = `sum(clicks)`
+- **Clicks / campaign (normalised)** = `round(sum(clicks) / count(campaigns))` — removes campaign-count bias between periods
+- **Click-to-Open %** = `sum(clicks) / sum(unique_opens) * 100` (1 d.p.) — normalises for engaged audience size
+
+The "Include Sunday Spotlight" toggle simply filters out `campaign_table` rows whose `name` matches `sunday spotlight` (case-insensitive) before bucketing.
+
+**Section 2 — Raw Click Events** (Same Weekday, Weekly, Monthly) reads `M.raw_clicks_*` produced by the comparison lambda (`superage."Campaigns_Clicks"`). Each series now ships two parallel count arrays — `clicks` (all events) and `clicks_no_ss` (excluding events whose `issue_name` matches Sunday Spotlight). The dashboard picks the array based on the toggle; if the lambda hasn't been re-run yet, it falls back to `clicks`.
+
+**WoW / MoM comparison** under each Section 1 and Section 2 chart now compares the **last two completed periods** — `is_current[i]` bars are skipped — so an in-progress week/month no longer triggers a misleading "drop".
 
 > **Excluded:** content types `games` and `waitlist` are excluded from type/category/tag breakdowns.
 
@@ -1258,3 +1264,4 @@ LIMIT 12;
 26. **Sunday Spotlight toggle default OFF**: The Campaigns tab toggle ships unchecked, so Sunday Spotlight is excluded by default. Initial label state is "Excluding branded digest sends".
 27. **Sent Date column nowrap**: A `.nowrap` utility class (`white-space: nowrap`) is applied to the Sent Date `<td>` cells in both the Campaigns paginated table and the Overview Recent Campaigns Metrics table so the date stays on one line even on narrow columns.
 28. **Header restyle (pill + iOS dark switch)**: Top header on the right now shows a `Daily updates` pill (blue accent) followed by the `data_as_of` date (large), with a `SuperAge — Brand Pulse · Last updated` muted subtitle below. The dark-mode control is an iOS-style switch with a `DARK` label, replacing the old `Dark mode` button. State persists in `localStorage['sa-dark']` and is synced back to the checkbox on load via a small init block in the `DARK MODE` script section.
+29. **Click Analysis filter + normalisation + completed-period comparison**: Click Analysis tab gets an "Include Sunday Spotlight" toggle (default OFF) plus a Section 1 metric dropdown (Total / Clicks per campaign / Click-to-Open %). Section 1 charts re-aggregate from `M.campaign_table` client-side so the toggle and metric work without a lambda re-run. Section 2 (raw click events) reads new `clicks_no_ss` arrays added to `raw_clicks_same_weekday`, `raw_clicks_by_weekday`, `raw_clicks_weekly`, and `raw_clicks_monthly` — each computed via `COUNT(*) FILTER (WHERE issue_name NOT ILIKE '%sunday spotlight%')` in `superage_comparison_lambda.py`. WoW / MoM insight text now compares the last two **completed** periods (`is_current[i]` skipped) so an in-progress week/month no longer triggers a misleading drop percentage.

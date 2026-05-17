@@ -632,23 +632,32 @@ function _renderCampPage() {
 /* ═══════════════════════════════════════
    CLICK ANALYSIS  (was: Website Content)
 ═══════════════════════════════════════ */
-function _clickTrendInsight(series, metric, unit) {
-  // series = M.campaign_clicks_*  with `clicks` and `is_current` arrays
+function _clickTrendInsight(series, metric, unit, fmtVal) {
+  // Compare the LAST TWO COMPLETED periods — skip any bar flagged is_current
+  // so partial weeks/months don't produce a misleading drop.
   const data = series[metric] || [];
-  if (data.length < 2) return '';
-  const cur  = data[data.length - 1] || 0;
-  const prev = data[data.length - 2] || 0;
+  const isc  = series.is_current || [];
+  const completed = [];
+  for (let i = data.length - 1; i >= 0; i--) {
+    if (!isc[i] && data[i] != null) completed.push(i);
+    if (completed.length === 2) break;
+  }
+  if (completed.length < 2) return '';
+  const cur  = Number(data[completed[0]]) || 0;
+  const prev = Number(data[completed[1]]) || 0;
   if (prev === 0 && cur === 0) return '';
   const pct = prev > 0 ? ((cur - prev) / prev * 100) : 100;
   const dir = pct >= 0 ? '↑' : '↓';
   const clr = pct >= 0 ? 'var(--green)' : 'var(--red)';
-  return `<strong style="color:${clr}">${dir} ${Math.abs(pct).toFixed(1)}%</strong> vs previous (${fmt(cur)} vs ${fmt(prev)} ${unit})`;
+  const f = fmtVal || (v => fmt(v));
+  return `<strong style="color:${clr}">${dir} ${Math.abs(pct).toFixed(1)}%</strong> vs previous (${f(cur)} vs ${f(prev)} ${unit})`;
 }
-function _clickTrendChart(canvasId, series, metric, color, label) {
+function _clickTrendChart(canvasId, series, metric, color, label, tickFormat) {
   const labels = series.labels || [];
   const data   = series[metric] || [];
   const cur    = series.is_current || [];
   const camps  = series.campaigns || [];
+  const tickFn = tickFormat || (v => v.toLocaleString());
   const bg = data.map((_,i) => cur[i] ? color + '66' : color);
   const border = data.map((_,i) => cur[i] ? color : 'transparent');
   const ctx = document.getElementById(canvasId);
@@ -671,18 +680,120 @@ function _clickTrendChart(canvasId, series, metric, color, label) {
           afterLabel: (c) => {
             const lines = [];
             if (camps[c.dataIndex] != null) lines.push(`Campaigns: ${camps[c.dataIndex]}`);
-            if (cur[c.dataIndex]) lines.push('(in progress)');
+            if (cur[c.dataIndex]) lines.push('(in progress — excluded from comparison)');
             return lines;
           }
         }}
       },
-      scales:{ y:{ beginAtZero:true, ticks:{ callback: v => v.toLocaleString() } } } }
+      scales:{ y:{ beginAtZero:true, ticks:{ callback: v => tickFn(v) } } } }
   });
 }
 
 /* Raw-click section state for weekday/week-range selectors */
 let _rawClicksData = null;
 const _weekdayLong = { Mon:'Monday', Tue:'Tuesday', Wed:'Wednesday', Thu:'Thursday', Fri:'Friday', Sat:'Saturday', Sun:'Sunday' };
+
+/* Click Analysis — toolbar state helpers.
+ * `_ssOn()` returns true when the user wants Sunday Spotlight INCLUDED
+ * (toggle checked). Default OFF (excluded), matching the Campaigns tab.
+ * `_rawMetric(series)` picks the right field for raw-click series:
+ *   - SS included → 'clicks'
+ *   - SS excluded AND lambda emitted 'clicks_no_ss' → 'clicks_no_ss'
+ *   - Otherwise fall back to 'clicks' (older lambda output).
+ */
+function _ssOn() {
+  const el = document.getElementById('clicksIncludeSS');
+  return el ? el.checked : false;
+}
+function _rawMetric(series) {
+  if (_ssOn()) return 'clicks';
+  return (series && Array.isArray(series.clicks_no_ss)) ? 'clicks_no_ss' : 'clicks';
+}
+
+/* Section 1 client-side aggregation from M.campaign_table.
+ * Lets us filter Sunday Spotlight and switch between Total / Per-campaign /
+ * Click-to-Open % without needing a lambda re-run.
+ */
+function _isoWeekStart(d) {
+  const x = new Date(d);
+  if (isNaN(x)) return null;
+  const day = x.getDay();
+  const back = day === 0 ? 6 : day - 1;
+  x.setHours(0,0,0,0);
+  x.setDate(x.getDate() - back);
+  return x;
+}
+function _monthStart(d) {
+  const x = new Date(d);
+  if (isNaN(x)) return null;
+  x.setHours(0,0,0,0);
+  x.setDate(1);
+  return x;
+}
+const _fmtWeekLabel  = d => d.toLocaleDateString('en-US', { month:'short', day:'2-digit' });
+const _fmtMonthLabel = d => d.toLocaleDateString('en-US', { month:'short', year:'numeric' });
+
+function _buildCampaignSeries(rows, periodFn, formatter, limit) {
+  const today = new Date(); today.setHours(0,0,0,0);
+  const todayKey = periodFn(today).getTime();
+  const groups = new Map();
+  rows.forEach(c => {
+    const d = new Date(c.sent_date || '');
+    if (isNaN(d)) return;
+    const k = periodFn(d).getTime();
+    if (!groups.has(k)) groups.set(k, { clicks:0, opens:0, recipients:0, n:0 });
+    const g = groups.get(k);
+    g.clicks     += _campNum(c.clicks);
+    g.opens      += _campNum(c.unique_opens);
+    g.recipients += _campNum(c.recipients);
+    g.n          += 1;
+  });
+  let keys = [...groups.keys()].sort((a,b) => a - b);
+  if (limit && keys.length > limit) keys = keys.slice(keys.length - limit);
+  return {
+    labels:       keys.map(k => formatter(new Date(k))),
+    clicks:       keys.map(k => groups.get(k).clicks),
+    per_campaign: keys.map(k => { const g = groups.get(k); return g.n ? Math.round(g.clicks / g.n) : 0; }),
+    ctor:         keys.map(k => { const g = groups.get(k); return g.opens ? Number((g.clicks / g.opens * 100).toFixed(1)) : 0; }),
+    campaigns:    keys.map(k => groups.get(k).n),
+    unique_opens: keys.map(k => groups.get(k).opens),
+    recipients:   keys.map(k => groups.get(k).recipients),
+    is_current:   keys.map(k => k === todayKey)
+  };
+}
+
+function _renderClickSection1() {
+  const includeSS = _ssOn();
+  const metric    = (document.getElementById('clicksMetric') || {}).value || 'clicks';
+  const stateEl   = document.getElementById('clicks-ss-state');
+  if (stateEl) stateEl.textContent = includeSS ? 'Including branded digest sends' : 'Excluding branded digest sends';
+  const table = (_rawClicksData && _rawClicksData.campaign_table) || [];
+  const rows  = table.filter(c => includeSS ? true : !((c.name||'').toLowerCase().includes('sunday spotlight')));
+  const weekly  = _buildCampaignSeries(rows, _isoWeekStart, _fmtWeekLabel,  8);
+  const monthly = _buildCampaignSeries(rows, _monthStart,  _fmtMonthLabel, 6);
+  const isCtor    = metric === 'ctor';
+  const isPerCamp = metric === 'per_campaign';
+  const metricLabel = isPerCamp ? 'Clicks / campaign' : (isCtor ? 'Click-to-Open %' : 'Total clicks');
+  const unitLabel   = isPerCamp ? 'clicks/campaign'  : (isCtor ? 'CTOR'             : 'clicks');
+  const tickFmt     = isCtor ? (v => v.toFixed(1) + '%') : (v => Number(v).toLocaleString());
+  const valFmt      = isCtor ? (v => Number(v).toFixed(1) + '%') : (v => Number(v).toLocaleString());
+  _clickTrendChart('cnt-weekly-bar',  weekly,  metric, '#0969da', metricLabel, tickFmt);
+  _clickTrendChart('cnt-monthly-bar', monthly, metric, '#1a7f37', metricLabel, tickFmt);
+  const wIns = document.getElementById('cnt-weekly-insight');
+  if (wIns) {
+    const txt = _clickTrendInsight(weekly, metric, unitLabel, valFmt);
+    wIns.innerHTML = txt
+      ? `WoW (last 2 completed weeks): ${txt}. The faded bar is the current (in-progress) week — excluded from the comparison.`
+      : `Not enough completed weeks for a WoW comparison yet.`;
+  }
+  const mIns = document.getElementById('cnt-monthly-insight');
+  if (mIns) {
+    const txt = _clickTrendInsight(monthly, metric, unitLabel, valFmt);
+    mIns.innerHTML = txt
+      ? `MoM (last 2 completed months): ${txt}. The faded bar is the current (in-progress) month — excluded from the comparison.`
+      : `Not enough completed months for a MoM comparison yet.`;
+  }
+}
 
 function _sliceSeries(series, n) {
   if (!series || !series.labels) return series || {};
@@ -696,6 +807,8 @@ function _sliceSeries(series, n) {
 
 function _setWeekdayWindow(n) {
   if (!_rawClicksData) return;
+  // Remember current `n` so we can re-render when the SS toggle changes.
+  window._rawWeekdayN = n;
   ['rwd-2','rwd-3','rwd-5'].forEach(id => {
     const btn = document.getElementById(id);
     if (!btn) return;
@@ -712,14 +825,16 @@ function _setWeekdayWindow(n) {
     const a = arr || [];
     return a.length > n ? a.slice(a.length - n) : a.concat(Array(n - a.length).fill(null));
   }
-  // Pull last N clicks and date labels for each weekday.
+  // Pull last N clicks and date labels for each weekday — respects the SS toggle
+  // by reading `clicks_no_ss` when present and the toggle is off.
   const perDow = {};
   let weekdaysWithData = 0;
   dows.forEach(d => {
     let s = byDow[d];
     if ((!s || !(s.labels||[]).length) && d === todayDow && (legacy.labels||[]).length) s = legacy;
-    s = s || { labels:[], clicks:[], days:[] };
-    const clicks = takeLastN(s.clicks);
+    s = s || { labels:[], clicks:[], days:[], clicks_no_ss:[] };
+    const metricKey = _rawMetric(s);
+    const clicks = takeLastN(s[metricKey] || s.clicks);
     const labels = takeLastN(s.labels);
     perDow[d] = { clicks, labels };
     if ((s.clicks||[]).length) weekdaysWithData++;
@@ -778,6 +893,7 @@ function _setWeekdayWindow(n) {
 
 function _setRawWeeklyWindow(n) {
   if (!_rawClicksData) return;
+  window._rawWeeklyN = n;
   ['rww-4','rww-8','rww-12'].forEach(id => {
     const btn = document.getElementById(id);
     if (!btn) return;
@@ -786,21 +902,42 @@ function _setRawWeeklyWindow(n) {
     btn.style.color = active ? '#fff' : 'var(--text-muted)';
   });
   const series = _sliceSeries(_rawClicksData.raw_clicks_weekly || {}, n);
-  _clickTrendChart('cnt-raw-weekly-bar', series, 'clicks', '#bf3989', 'Click events');
+  const m = _rawMetric(series);
+  _clickTrendChart('cnt-raw-weekly-bar', series, m, '#bf3989', 'Click events');
   const badge = document.getElementById('cnt-raw-weekly-badge');
   if (badge) badge.textContent = `— last ${(series.labels||[]).length || 0} ISO weeks`;
   const ins = document.getElementById('cnt-raw-weekly-insight');
-  if (ins) ins.innerHTML = `WoW: ${_clickTrendInsight(series, 'clicks', 'click events')}.`;
+  if (ins) {
+    const txt = _clickTrendInsight(series, m, 'click events');
+    ins.innerHTML = txt
+      ? `WoW (last 2 completed weeks): ${txt}. The faded bar is the current (in-progress) week — excluded from the comparison.`
+      : `Not enough completed weeks for a WoW comparison yet.`;
+  }
 }
 
 function _renderRawMonthly() {
   if (!_rawClicksData) return;
   const series = _rawClicksData.raw_clicks_monthly || {};
-  _clickTrendChart('cnt-raw-monthly-bar', series, 'clicks', '#9a6700', 'Click events');
+  const m = _rawMetric(series);
+  _clickTrendChart('cnt-raw-monthly-bar', series, m, '#9a6700', 'Click events');
   const badge = document.getElementById('cnt-raw-monthly-badge');
   if (badge) badge.textContent = `— last ${(series.labels||[]).length || 0} months`;
   const ins = document.getElementById('cnt-raw-monthly-insight');
-  if (ins) ins.innerHTML = `MoM: ${_clickTrendInsight(series, 'clicks', 'click events')}.`;
+  if (ins) {
+    const txt = _clickTrendInsight(series, m, 'click events');
+    ins.innerHTML = txt
+      ? `MoM (last 2 completed months): ${txt}. The faded bar is the current (in-progress) month — excluded from the comparison.`
+      : `Not enough completed months for a MoM comparison yet.`;
+  }
+}
+
+/* Re-render every chart on the Click Analysis tab. Called when the
+ * "Include Sunday Spotlight" toggle flips. */
+function _refreshClicksTab() {
+  _renderClickSection1();
+  _setWeekdayWindow(window._rawWeekdayN || 3);
+  _setRawWeeklyWindow(window._rawWeeklyN || 8);
+  _renderRawMonthly();
 }
 
 function renderContent(M) {
@@ -815,17 +952,38 @@ function renderContent(M) {
       <div class="kpi-card orange"><div class="label">Avg Clicks/Article</div><div class="value">${(()=>{ if (M.avg_clicks_per_article) return M.avg_clicks_per_article; const tc=M.total_article_clicks||(M.content_summary&&M.content_summary.unique_clicks); const ua=M.articles_clicked_count!=null?M.articles_clicked_count:(M.content_summary&&M.content_summary.unique_articles); return (tc && ua) ? Math.round(tc/ua).toLocaleString() : '—'; })()}</div><div class="sub">Mean engagement depth</div></div>
     </div>
 
-    <h3 style="margin:18px 0 10px;font-size:13px;text-transform:uppercase;letter-spacing:.5px;color:var(--text-muted);">Section 1 — Campaign-Level Aggregated <span class="badge-inline" style="text-transform:none;">sourced from superage."Campaigns"</span></h3>
+    <div class="camp-toolbar" style="margin: 18px 0 12px;">
+      <div class="camp-toolbar-left">
+        <label class="switch" for="clicksIncludeSS" title="Include Sunday Spotlight campaigns">
+          <input type="checkbox" id="clicksIncludeSS" onchange="_refreshClicksTab()">
+          <span class="slider-round"></span>
+        </label>
+        <div>
+          <div style="font-size:13px;font-weight:600;color:var(--text);">Include Sunday Spotlight</div>
+          <div style="font-size:11px;color:var(--text-muted);" id="clicks-ss-state">Excluding branded digest sends</div>
+        </div>
+      </div>
+      <div style="display:flex;align-items:center;gap:8px;">
+        <label style="font-size:12px;color:var(--text-muted);">Section 1 metric:</label>
+        <select id="clicksMetric" onchange="_renderClickSection1()" style="font-size:12px;padding:5px 10px;border:1px solid var(--card-border);border-radius:6px;background:var(--card);color:var(--text);">
+          <option value="clicks">Total clicks</option>
+          <option value="per_campaign">Clicks / campaign (normalised)</option>
+          <option value="ctor">Click-to-Open %</option>
+        </select>
+      </div>
+    </div>
+
+    <h3 style="margin:18px 0 10px;font-size:13px;text-transform:uppercase;letter-spacing:.5px;color:var(--text-muted);">Section 1 — Campaign-Level Aggregated <span class="badge-inline" style="text-transform:none;">sourced from superage."Campaigns" — re-aggregated client-side per toggle</span></h3>
     <div class="grid-2">
       <div class="chart-card">
         <h3>Weekly Campaign Clicks <span class="badge-inline">— last 8 weeks, Mon-Sun rollup</span></h3>
         <div class="chart-container h260"><canvas id="cnt-weekly-bar"></canvas></div>
-        <div class="insight">WoW: ${_clickTrendInsight(M.campaign_clicks_weekly || {}, 'clicks', 'clicks')}. The last bar is the current (in-progress) week — partial data only.</div>
+        <div class="insight" id="cnt-weekly-insight"></div>
       </div>
       <div class="chart-card">
         <h3>Monthly Campaign Clicks <span class="badge-inline">— last 6 months</span></h3>
         <div class="chart-container h260"><canvas id="cnt-monthly-bar"></canvas></div>
-        <div class="insight">MoM: ${_clickTrendInsight(M.campaign_clicks_monthly || {}, 'clicks', 'clicks')}. The last bar is the current (in-progress) month.</div>
+        <div class="insight" id="cnt-monthly-insight"></div>
       </div>
     </div>
 
@@ -899,11 +1057,11 @@ function renderContent(M) {
   artTableData   = M.top_articles || [];
   artWindowedData = M.top_articles_windowed || {};
   _setArtWindow(0);
-  // Section 1 — Campaign-level aggregated
-  _clickTrendChart('cnt-weekly-bar',        M.campaign_clicks_weekly        || {}, 'clicks', '#0969da', 'Clicks');
-  _clickTrendChart('cnt-monthly-bar',       M.campaign_clicks_monthly       || {}, 'clicks', '#1a7f37', 'Clicks');
-  // Section 2 — Raw click events from Campaigns_Clicks
+  // Both Click Analysis sections need the merged data object so the toolbar
+  // (Sunday Spotlight toggle, Section-1 metric dropdown) can re-render
+  // without a fresh fetch.
   _rawClicksData = M;
+  _renderClickSection1();
   _setWeekdayWindow(3);
   _setRawWeeklyWindow(8);
   _renderRawMonthly();

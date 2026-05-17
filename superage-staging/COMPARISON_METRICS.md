@@ -508,7 +508,10 @@ GROUP BY d.day
 ORDER BY d.day;
 ```
 
-Exposed as `M.raw_clicks_same_weekday`.
+Exposed as `M.raw_clicks_same_weekday`. Each row also carries a
+`clicks_no_ss` count — the same query with
+`issue_name NOT ILIKE '%sunday spotlight%'` applied — so the Click Analysis
+"Include Sunday Spotlight" toggle can switch in/out without a separate query.
 
 ### B.1b — Raw Clicks by Weekday (last 5 occurrences of EACH weekday)
 
@@ -557,8 +560,9 @@ ORDER BY r.dow, r.day;
 ```
 
 Exposed as `M.raw_clicks_by_weekday`, a dict keyed by `Mon`…`Sun`
-where each value has `labels[]`, `days[]`, `clicks[]`, `is_current[]`
-in chronological order.
+where each value has `labels[]`, `days[]`, `clicks[]`, `clicks_no_ss[]`,
+`is_current[]` in chronological order. `clicks_no_ss[]` is the same count
+filtered by `issue_name NOT ILIKE '%sunday spotlight%'` for the SS toggle.
 
 ### B.2 — Raw Clicks Weekly (last 12 ISO weeks)
 
@@ -590,7 +594,9 @@ ORDER BY w.week_start;
 
 Exposed as `M.raw_clicks_weekly`. The dashboard exposes a 4w / 8w /
 12w toggle that slices the tail of this series client-side; default
-view is 8 weeks.
+view is 8 weeks. Each entry has `clicks` and `clicks_no_ss` (filtered by
+`issue_name NOT ILIKE '%sunday spotlight%'`); the dashboard picks the
+appropriate field based on the "Include Sunday Spotlight" toggle.
 
 ### B.3 — Raw Clicks Monthly (last 6 months)
 
@@ -620,7 +626,8 @@ GROUP BY m.month_start
 ORDER BY m.month_start;
 ```
 
-Exposed as `M.raw_clicks_monthly`.
+Exposed as `M.raw_clicks_monthly` with `clicks` and `clicks_no_ss`
+(filtered by `issue_name NOT ILIKE '%sunday spotlight%'`).
 
 ---
 

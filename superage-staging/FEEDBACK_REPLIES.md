@@ -223,3 +223,17 @@ gold (`#7d4e00`); future months render in **red** (`rgba(207,34,46,0.55)`).
 A vertical dashed separator labelled `Future →` sits between the last
 past/current bar and the first future bar, drawn by an inline Chart.js plugin
 (`futureSeparator`).
+
+### "Let's have the standard dark and light mode we had before, or we have in the other dashboards … note this dashboard is daily update"
+
+**✓ shipped.** Header restyled to match the other dashboards:
+
+- A **`Daily updates`** pill (blue accent on the left) sits next to the
+  `data_as_of` date in bold; below it a muted line reads
+  `SuperAge — Brand Pulse · Last updated`.
+- The old `Dark mode` button is now an **iOS-style switch** with a `DARK`
+  label, mirroring the screenshot. State persists in `localStorage`
+  (`sa-dark`) and the checkbox is synced to the saved state on load.
+
+Because this dashboard is daily (not hourly), the pill says **"Daily updates"**
+and the date renders date-only — no time/timezone needed.

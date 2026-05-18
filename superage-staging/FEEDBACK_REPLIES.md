@@ -307,14 +307,22 @@ selector and the `_setArtWindow` plumbing were removed. The lambda still
 emits `top_articles_windowed` for backwards-compat (in case the windowed
 data starts arriving later), but the dashboard ignores it.
 
-### "Show the average clicks in the visual" — Top Categories / Top Tags
+### "Show the average clicks in the visual" → "I want the bars to be clicks / # of articles and same with unique, with the 2 visuals"
 
-**✓ shipped.** Each horizontal bar in the **Top Categories** and **Top Tags**
-charts now has `avg N/article` printed at its right end (rendered by an
-inline Chart.js plugin, `avgLabels-…`). The tooltip also lists the average
-as its own line beneath the existing article count. The chart's right-side
-padding was bumped to leave room for the text. Average is computed as
-`round(unique_clicks / article_count)` for the visible label.
+**✓ shipped.** The **Top Categories** and **Top Tags** charts now plot
+**avg clicks per article** directly as the bar values:
+
+- Green bar = `round(unique_clicks / article_count)` ("Avg Unique Clicks / Article")
+- Blue bar  = `round(total_clicks  / article_count)` ("Avg Total Clicks / Article")
+- Top 10 is now sorted by **avg unique clicks per article DESC** so the
+  ranking matches what the bars show.
+- The inline label at the end of each Unique bar switched from
+  `avg N/article` (now redundant) to `N articles` so the volume behind the
+  average is still visible.
+- The tooltip still surfaces the **absolute totals** (`unique`, `total`)
+  and article count for that label.
+- Chart titles got an updated subtitle: `avg clicks per article (top 10 by
+  avg unique), in scope`.
 
 ### Same Weekday → campaign-send view, above/below-average colours, in-progress fade
 

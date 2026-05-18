@@ -1235,12 +1235,12 @@ function renderContentRef(M) {
 
     <div class="grid-2">
       <div class="chart-card">
-        <h3>Top Categories <span class="badge-inline">— unique vs total clicks, in scope</span></h3>
+        <h3>Top Categories <span class="badge-inline">— avg clicks per article (top 10 by avg unique), in scope</span></h3>
         <div class="chart-container h340"><canvas id="cr-cat-bar"></canvas></div>
         <div class="insight" id="cr-cat-insight"></div>
       </div>
       <div class="chart-card">
-        <h3>Top Tags <span class="badge-inline">— unique vs total clicks, in scope</span></h3>
+        <h3>Top Tags <span class="badge-inline">— avg clicks per article (top 10 by avg unique), in scope</span></h3>
         <div class="chart-container h340"><canvas id="cr-tag-bar"></canvas></div>
         <div class="insight" id="cr-tag-insight"></div>
       </div>
@@ -1329,7 +1329,9 @@ function _crRenderKpis(rows) {
 
 function _crAggregateBySplit(rows, accessor) {
   // Accumulate unique/total clicks + article count per split label
-  // (categories/tags are comma-separated in WordPress).
+  // (categories/tags are comma-separated in WordPress). Pre-compute the
+  // per-article averages so the Top Categories / Top Tags charts can plot
+  // them directly without re-deriving on every render.
   const acc = {};
   rows.forEach(r => {
     _crSplit(accessor(r)).forEach(label => {
@@ -1340,8 +1342,15 @@ function _crAggregateBySplit(rows, accessor) {
     });
   });
   return Object.entries(acc)
-    .map(([label, v]) => ({ label, ...v }))
-    .sort((a,b) => b.unique - a.unique)
+    .map(([label, v]) => ({
+      label,
+      unique:    v.unique,
+      total:     v.total,
+      count:     v.count,
+      avgUnique: v.count ? Math.round(v.unique / v.count) : 0,
+      avgTotal:  v.count ? Math.round(v.total  / v.count) : 0,
+    }))
+    .sort((a, b) => b.avgUnique - a.avgUnique)
     .slice(0, 10);
 }
 
@@ -1350,10 +1359,10 @@ function _crRenderTopBar(canvasId, insightId, chartKey, rows, accessor, noun) {
   const ctx = document.getElementById(canvasId);
   if (!ctx) return;
   if (window[chartKey]) window[chartKey].destroy();
-  // Inline plugin: draw "avg N/article" at the end of each Unique-Clicks bar
-  // so the per-article average is visible without leaving the chart.
-  const avgLabelPlugin = {
-    id: 'avgLabels-' + chartKey,
+  // Inline plugin: stamp "N articles" at the end of each Unique bar so the
+  // user can see how many articles back each average.
+  const countLabelPlugin = {
+    id: 'countLabels-' + chartKey,
     afterDatasetsDraw(chart) {
       const meta = chart.getDatasetMeta(0);
       if (!meta || !meta.data) return;
@@ -1367,8 +1376,7 @@ function _crRenderTopBar(canvasId, insightId, chartKey, rows, accessor, noun) {
       meta.data.forEach((bar, i) => {
         if (i >= data.length) return;
         const d = data[i];
-        const avg = d.count ? Math.round(d.unique / d.count) : 0;
-        c.fillText(`avg ${avg.toLocaleString()}/article`, bar.x + 6, bar.y);
+        c.fillText(`${d.count.toLocaleString()} article${d.count === 1 ? '' : 's'}`, bar.x + 6, bar.y);
       });
       c.restore();
     }
@@ -1378,22 +1386,24 @@ function _crRenderTopBar(canvasId, insightId, chartKey, rows, accessor, noun) {
     data: {
       labels: data.map(d => d.label),
       datasets: [
-        { label:'Unique Clicks', data: data.map(d => d.unique), backgroundColor:'#1a7f37', borderRadius:4 },
-        { label:'Total Clicks',  data: data.map(d => d.total),  backgroundColor:'#0969da', borderRadius:4 },
+        { label:'Avg Unique Clicks / Article', data: data.map(d => d.avgUnique), backgroundColor:'#1a7f37', borderRadius:4 },
+        { label:'Avg Total Clicks / Article',  data: data.map(d => d.avgTotal),  backgroundColor:'#0969da', borderRadius:4 },
       ],
     },
     options: { responsive:true, maintainAspectRatio:false, indexAxis:'y',
-      // Leave room on the right for the avg text the plugin draws.
-      layout: { padding: { right: 110 } },
+      // Leave room on the right for the article-count label the plugin draws.
+      layout: { padding: { right: 90 } },
       plugins:{ legend:{ position:'bottom', labels:{ font:{ size:11 } } },
                 tooltip:{ callbacks:{ afterLabel: ctx => {
                   const d = data[ctx.dataIndex];
                   if (!d) return '';
-                  const avg = d.count ? Math.round(d.unique / d.count) : 0;
-                  return [`Articles: ${d.count}`, `Avg ${avg.toLocaleString()} unique clicks/article`];
+                  return [
+                    `${d.count.toLocaleString()} article${d.count === 1 ? '' : 's'}`,
+                    `Totals: ${fmt(d.unique)} unique · ${fmt(d.total)} total clicks`
+                  ];
                 } } } },
       scales:{ x:{ beginAtZero:true, ticks:{ callback: v => v.toLocaleString() } } } },
-    plugins: [avgLabelPlugin]
+    plugins: [countLabelPlugin]
   });
   const ins = document.getElementById(insightId);
   if (ins) {
@@ -1401,7 +1411,7 @@ function _crRenderTopBar(canvasId, insightId, chartKey, rows, accessor, noun) {
       ins.textContent = `No ${noun} in scope.`;
     } else {
       const top = data[0];
-      ins.innerHTML = `Top ${noun}: <strong>${esc(top.label)}</strong> — ${fmt(top.unique)} unique / ${fmt(top.total)} total clicks across ${top.count} article${top.count===1?'':'s'}.`;
+      ins.innerHTML = `Top ${noun} by avg: <strong>${esc(top.label)}</strong> — avg ${fmt(top.avgUnique)} unique / ${fmt(top.avgTotal)} total clicks per article (${fmt(top.count)} article${top.count===1?'':'s'}, ${fmt(top.unique)} unique / ${fmt(top.total)} total clicks).`;
     }
   }
 }

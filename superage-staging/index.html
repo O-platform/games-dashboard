@@ -308,6 +308,15 @@ function utmLabel(raw) {
   // Campaign Monitor / Welcome Flow (case + URL-encoded collapse)
   if (s === 'campaign_monitor') return 'Campaign Monitor';
   if (['welcome flow','welcome+flow'].includes(s)) return 'Welcome Flow';
+  // NNCPL family
+  if (s === 'nncpl1' || s.startsWith('nn_cpl2') || s.startsWith('nn1_cpl2')) return 'NNCPL';
+  // ISCPL family
+  if (['is','iscpl1'].includes(s)) return 'ISCPL';
+  // AI referrers
+  if (['chatgpt.com','perplexity','nbot.ai'].includes(s)) return 'AI';
+  // Refind / SuperAge (own labels — SuperAge is distinct from SuperAge Quiz)
+  if (s === 'refind') return 'Refind';
+  if (s === 'superage') return 'SuperAge';
   return raw;
 }
 

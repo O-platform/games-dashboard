@@ -458,6 +458,18 @@ def lambda_handler(event, context):
                 WHEN {lc} = 'campaign_monitor'                          THEN 'Campaign Monitor'
                 -- Welcome Flow (URL-encoded variant)
                 WHEN {lc} IN ('welcome flow', 'welcome+flow')           THEN 'Welcome Flow'
+                -- NNCPL family (NNCPL1 + every NN_CPL2_* batch + NN1_CPL2oneclick)
+                WHEN {lc} = 'nncpl1'                                    THEN 'NNCPL'
+                WHEN {lc} LIKE 'nn_cpl2%'                               THEN 'NNCPL'
+                WHEN {lc} LIKE 'nn1_cpl2%'                              THEN 'NNCPL'
+                -- ISCPL family
+                WHEN {lc} IN ('is', 'iscpl1')                           THEN 'ISCPL'
+                -- AI referrers (ChatGPT, Perplexity, Nbot, etc.)
+                WHEN {lc} IN ('chatgpt.com', 'perplexity', 'nbot.ai')   THEN 'AI'
+                -- Refind / SuperAge (kept as their own labels — note SuperAge
+                -- is distinct from SuperAge Quiz above)
+                WHEN {lc} = 'refind'                                    THEN 'Refind'
+                WHEN {lc} = 'superage'                                  THEN 'SuperAge'
                 ELSE NULLIF(TRIM({col_sql}), '')
             END
             """

@@ -414,6 +414,35 @@ def lambda_handler(event, context):
         # events table (joined to subscribers by lowercased email) so the
         # window filter actually scopes click activity — the old query used
         # the date-less `subscriber_clicks` rollup and couldn't be windowed.
+
+        # Canonical source-label mapping — mirror of the `utmLabel()` JS
+        # function in `index.html`. Applied **before** GROUP BY so aliases
+        # like `meta` / `facebook` / `fb` / `ig` / `if` collapse into a
+        # single "Meta" row (was producing two Meta rows in the table).
+        # KEEP THIS LIST IN SYNC WITH `utmLabel()` IN index.html.
+        def _canon_source(col_sql: str) -> str:
+            return f"""
+            CASE LOWER(TRIM({col_sql}))
+                WHEN 'ahcpl1'         THEN 'AllHealthy'
+                WHEN 'allhealthy'     THEN 'AllHealthy'
+                WHEN 'tdcpl1'         THEN 'TrueDemocracy'
+                WHEN 'lscpl1'         THEN 'LivingSimply'
+                WHEN 'livingsimply'   THEN 'LivingSimply'
+                WHEN 'dpcpl1'         THEN 'DailyPuzzle'
+                WHEN 'hfcpl1'         THEN 'HealthFirst'
+                WHEN 'fccpl1'         THEN 'FitConnect'
+                WHEN 'facebook'       THEN 'Meta'
+                WHEN 'meta'           THEN 'Meta'
+                WHEN 'fb'             THEN 'Meta'
+                WHEN 'ig'             THEN 'Meta'
+                WHEN 'if'             THEN 'Meta'
+                WHEN 'taboola'        THEN 'Taboola'
+                WHEN 'healthbrief'    THEN 'HealthBrief'
+                WHEN 'superagequiz'   THEN 'SuperAge Quiz'
+                WHEN 'longevity_quiz' THEN 'SuperAge Quiz'
+                ELSE NULLIF(TRIM({col_sql}), '')
+            END
+            """
         def fetch_acquisition_rows(label_expr: str, fallback_label: str,
                                    since_days=None, limit: int = 12):
             sub_filter = ""
@@ -471,8 +500,9 @@ def lambda_handler(event, context):
             """, (fallback_label,))
             return cur.fetchall()
 
-        # Acquisition source label: utm_source → source → 'Organic'
-        _label_expr = "NULLIF(TRIM(utm_source),''), NULLIF(TRIM(source),'')"
+        # Acquisition source label: utm_source → source → 'Organic',
+        # with both columns canonicalised via _canon_source().
+        _label_expr = f"{_canon_source('utm_source')}, {_canon_source('source')}"
         acquisition_utm_rows     = fetch_acquisition_rows(_label_expr, "Organic")
         acquisition_utm_rows_30  = fetch_acquisition_rows(_label_expr, "Organic", since_days=30)
         acquisition_utm_rows_60  = fetch_acquisition_rows(_label_expr, "Organic", since_days=60)
@@ -485,7 +515,11 @@ def lambda_handler(event, context):
         # ─────────────────────────────────────────────────────
         cur.execute(f"""
             SELECT
-                COALESCE(NULLIF(TRIM(s.utm_source), ''), NULLIF(TRIM(s.source), ''), 'Organic') AS label,
+                COALESCE(
+                  {_canon_source('s.utm_source')},
+                  {_canon_source('s.source')},
+                  'Organic'
+                ) AS label,
                 COUNT(DISTINCT sc.email_address) AS clickers,
                 COALESCE(SUM(sc.unique_clicks), 0)     AS unique_clicks,
                 COALESCE(SUM(sc.non_unique_clicks), 0) AS total_clicks,

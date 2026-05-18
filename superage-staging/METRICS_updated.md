@@ -727,10 +727,25 @@ scopes click activity. The old query joined the date-less
 -- For each window, `since_days` is None / 30 / 60 / 90. The two date
 -- filters (`AND date_joined::date >= …` on subscribers, `AND cc."Date"::date >= …`
 -- on click events) are dropped for the all-time variant.
+--
+-- _canon(col) below is the source-label canonicaliser — it mirrors
+-- `utmLabel()` in index.html and collapses aliases (meta / facebook /
+-- fb / ig / if → 'Meta', ahcpl1 / allhealthy → 'AllHealthy', etc.) so
+-- duplicate display rows don't survive the GROUP BY:
+--     CASE LOWER(TRIM(col))
+--          WHEN 'facebook' THEN 'Meta'
+--          WHEN 'meta'     THEN 'Meta'
+--          WHEN 'fb'       THEN 'Meta'
+--          WHEN 'ig'       THEN 'Meta'
+--          WHEN 'if'       THEN 'Meta'
+--          WHEN 'ahcpl1'   THEN 'AllHealthy'
+--          ... (see _canon_source() in superage_metrics_lambda_updated.py)
+--          ELSE NULLIF(TRIM(col), '')
+--     END
 WITH s AS (
     SELECT
         LOWER(TRIM(email))                  AS email,
-        COALESCE(NULLIF(TRIM(utm_source), ''), NULLIF(TRIM(source), ''), 'Organic') AS label,
+        COALESCE(_canon(utm_source), _canon(source), 'Organic') AS label,
         state,
         date_joined::date                   AS joined,
         date_unsubscribed::date             AS unsubbed
@@ -1287,3 +1302,4 @@ ORDER BY c.cohort_month;
 39. **Click Analysis: missing `.h240` CSS rule added**: the raw Weekly / Monthly cards on the Click Analysis tab used `class="chart-container h240"` but `.chart-container.h240` had no `height` rule in the style block (the CSS only defined `h220 / h260 / h300 / h340 / h380 / h420`). That collapsed those canvases to 0 px tall — the headers, range buttons and insight strings rendered but the bars were invisible. Added `.chart-container.h240 { height: 240px; }` to match the rest of the size scale.
 40. **Top Tags "Tag appears in ≥ N articles" filter (2026-05)**: a five-button group (`1 / 3 / 5 / 7 / 10`) was added above the Top Tags chart on the Content Reference tab. The filter drops tags whose article count is below the threshold **before** the top-10 ranking is computed by avg unique clicks per article, so single-article tags can't dominate the ranking. The threshold is stored in `window._crTagMin` (default `1`, no filter) and is layered on top of the existing scope filters (Position Cat / Author / Category / Tag / Title search). `_crSetTagMin(n)` is the toolbar handler; it re-renders only the Tags chart — Top Categories is intentionally **not** filtered the same way. Insight text below the chart appends *"(showing tags that appear in ≥ N articles)"* when N > 1; if the filter empties the set, the insight switches to *"No tag in scope appears in ≥ N articles"*. Threshold resets to `1` on page reload.
 41. **Audience tab: unified time-window selector (2026-05)**: a single `All time / Last 30 / 60 / 90 days` toggle was lifted out of the Acquisition Quality table header and placed at the top of the Audience tab. The toggle now drives every component on the tab in one render — the four KPI cards (Total Subscribers flips to "New Subscribers" + "Joined in last N days" when filtered; Top Source + Top Source % recompute from the windowed cohort), the Acquisition by Source doughnut, the Source Clicks Performance bar chart, and the Acquisition Quality table — via `_setAcqWindow(win)`. The pie / table read `acquisition_quality.utm_source.rows_<win>` (Q19). The bar chart uses `utm_clicks_performance` (Q20, with the proper unique-vs-total split) for the all-time view, and falls back to Q19 rows for the windowed views (where unique == total because Q19 counts raw `Campaigns_Clicks` events). The Active Rate KPI stays global and is labelled "Currently active (global)" so it's clear it isn't window-scoped. State isn't persisted to localStorage.
+42. **Source-label canonicalisation moved server-side (2026-05)**: the dashboard's JS `utmLabel()` mapping (`meta` / `facebook` / `fb` / `ig` / `if` → `Meta`, `ahcpl1` / `allhealthy` → `AllHealthy`, `lscpl1` / `livingsimply` → `LivingSimply`, `tdcpl1` → `TrueDemocracy`, `dpcpl1` → `DailyPuzzle`, `hfcpl1` → `HealthFirst`, `fccpl1` → `FitConnect`, `taboola` → `Taboola`, `healthbrief` → `HealthBrief`, `superagequiz` / `longevity_quiz` → `SuperAge Quiz`) is now also applied in SQL **before** the `GROUP BY` in both Q19 (`fetch_acquisition_rows`) and Q20 (`utm_clicks_performance`) via a `_canon_source(col)` helper. This collapses duplicate display rows that previously appeared because the rollup was on the raw `utm_source` value — most visibly the "two Meta rows" in the Acquisition Quality table (one for `meta`, one for `facebook`). The JS `utmLabel()` stays in place as a safety net for raw values that still slip through; the canonicalisation list is duplicated in `superage_metrics_lambda_updated.py` (`_canon_source`) and `index.html` (`utmLabel`), with cross-references in both directions reminding future maintainers to keep them in sync.

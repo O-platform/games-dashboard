@@ -272,6 +272,12 @@ function esc(s) {
   return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
 }
 function utmLabel(raw) {
+  // Canonicalises a raw utm_source / source value to a display label.
+  // **Mirror of `_canon_source()` in superage_metrics_lambda_updated.py.**
+  // KEEP BOTH LISTS IN SYNC — the SQL applies this same mapping before
+  // GROUP BY so aliases (meta / facebook / fb / ig / if → Meta) collapse
+  // into a single row in the JSON; this JS function is the fallback for
+  // any raw values that still slip through.
   if (!raw) return '—';
   const s = String(raw).trim().toLowerCase();
   if (s === 'ahcpl1' || s === 'allhealthy') return 'AllHealthy';

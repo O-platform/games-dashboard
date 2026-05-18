@@ -23,10 +23,10 @@
   },
   "total_article_clicks": 1462959,
   "total_article_clickers": 264066,
-  "total_revenue": 1083750.0,
-  "total_revenue_fmt": "$1,083,750",
-  "avg_deal_size_fmt": "$7,037",
-  "total_sponsor_deals": 154,
+  "total_revenue": 1374350.0,
+  "total_revenue_fmt": "$1,374,350",
+  "avg_deal_size_fmt": "$6,976",
+  "total_sponsor_deals": 197,
   "quiz_kpis": {
     "total_takers": 650617,
     "avg_age": 67.3,
@@ -8459,7 +8459,14 @@
       "Feb 2026",
       "Mar 2026",
       "Apr 2026",
-      "May 2026"
+      "May 2026",
+      "Jun 2026",
+      "Jul 2026",
+      "Aug 2026",
+      "Sep 2026",
+      "Oct 2026",
+      "Nov 2026",
+      "Dec 2026"
     ],
     "revenue": [
       25350.0,
@@ -8474,7 +8481,14 @@
       88000.0,
       105900.0,
       98000.0,
-      86300.0
+      106300.0,
+      54800.0,
+      49300.0,
+      32300.0,
+      32300.0,
+      37300.0,
+      32300.0,
+      32300.0
     ],
     "deals": [
       5,
@@ -8489,69 +8503,76 @@
       13,
       14,
       14,
-      11
+      17,
+      10,
+      6,
+      4,
+      4,
+      5,
+      4,
+      4
     ]
   },
   "top_sponsors": [
     {
       "name": "Pendulum",
-      "deals": 22,
-      "revenue": "$195,500",
+      "deals": 38,
+      "revenue": "$302,600",
       "bar_width": "100%"
     },
     {
-      "name": "TimeLine",
-      "deals": 12,
-      "revenue": "$120,000",
-      "bar_width": "61%"
-    },
-    {
       "name": "Athletic Greens (AG-1)",
-      "deals": 14,
-      "revenue": "$113,350",
-      "bar_width": "58%"
+      "deals": 20,
+      "revenue": "$170,350",
+      "bar_width": "56%"
     },
     {
       "name": "Fatty15",
-      "deals": 20,
-      "revenue": "$107,500",
-      "bar_width": "55%"
+      "deals": 27,
+      "revenue": "$160,000",
+      "bar_width": "53%"
+    },
+    {
+      "name": "TimeLine",
+      "deals": 15,
+      "revenue": "$144,000",
+      "bar_width": "48%"
     },
     {
       "name": "Berkeley Life",
-      "deals": 10,
+      "deals": 11,
       "revenue": "$64,000",
-      "bar_width": "33%"
+      "bar_width": "21%"
     },
     {
       "name": "Noom",
       "deals": 6,
       "revenue": "$60,000",
-      "bar_width": "31%"
+      "bar_width": "20%"
     },
     {
       "name": "OneSkin",
-      "deals": 8,
-      "revenue": "$39,000",
-      "bar_width": "20%"
+      "deals": 10,
+      "revenue": "$49,000",
+      "bar_width": "16%"
     },
     {
       "name": "Maui Nui",
       "deals": 5,
       "revenue": "$37,500",
-      "bar_width": "19%"
+      "bar_width": "12%"
     },
     {
       "name": "BTL",
       "deals": 3,
       "revenue": "$32,400",
-      "bar_width": "17%"
+      "bar_width": "11%"
     },
     {
       "name": "NativePath",
       "deals": 7,
       "revenue": "$31,000",
-      "bar_width": "16%"
+      "bar_width": "10%"
     }
   ],
   "sponsor_type_dist": {
@@ -8564,12 +8585,12 @@
       "Sponsored Article"
     ],
     "data": [
-      244,
-      98,
-      23,
-      16,
-      11,
-      8
+      799,
+      134,
+      25,
+      17,
+      12,
+      11
     ],
     "colors": [
       "#4f8cff",
@@ -8598,11 +8619,11 @@
       "365d+"
     ],
     "data": [
-      250203,
-      182236,
-      204658,
-      336925,
-      829473
+      250180,
+      182241,
+      204669,
+      336616,
+      829783
     ]
   },
   "survival_curve": {

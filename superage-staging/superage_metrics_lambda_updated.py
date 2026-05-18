@@ -1045,7 +1045,9 @@ def lambda_handler(event, context):
         "menu_quiz_takers":    menu_quiz_takers,
     }
 
-    # Subscriber state distribution
+    # Subscriber state distribution (legacy four-state donut). Still emitted
+    # for backwards-compat, but the Overview tab now renders the new
+    # `subscriber_engagement_mix` donut below instead.
     state_colors = {
         "Active": "#34d399", "Unsubscribed": "#f87171",
         "Bounced": "#fbbf24", "Deleted": "#9ca3af", "Unknown": "#6b7280",
@@ -1054,6 +1056,23 @@ def lambda_handler(event, context):
         "labels": [r["state"] for r in state_rows],
         "data":   [safe_int(r["cnt"]) for r in state_rows],
         "colors": [state_colors.get(r["state"], "#a78bfa") for r in state_rows],
+    }
+
+    # New Overview donut — "Current Subscriber Engagement Mix".
+    # Denominator = subscribers we still **have** on the list (state='Active'
+    # in any engagement segment, plus state='Bounced'). Subscribers who left
+    # (Unsubscribed / Deleted) are excluded so the donut answers "of the
+    # people we still hold, how many are we actually reaching today?".
+    #
+    # Three slices:
+    #   • Send-To  = state='Active' AND engagement_segment NOT IN dormant set
+    #   • Dormant / Ghost / Zombie = state='Active' AND engagement_segment IN dormant set
+    #   • Bounced  = state='Bounced'  (delivery is failing — list-holding but unreachable)
+    dormant_cohort = max(total_subscribers - send_to_active, 0)
+    M["subscriber_engagement_mix"] = {
+        "labels": ["Send-To", "Dormant / Ghost / Zombie", "Bounced"],
+        "data":   [send_to_active, dormant_cohort, bounced_count],
+        "colors": ["#1a7f37", "#9a6700", "#cf222e"],
     }
 
     # Overview subscriber growth chart — sourced from growth_history table

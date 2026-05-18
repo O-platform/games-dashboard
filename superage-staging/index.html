@@ -376,13 +376,11 @@ function renderOverview(M) {
 
     <div class="grid-2">
       <div class="chart-card">
-        <h3>Subscriber Status Mix</h3>
+        <h3>Current Subscriber Engagement Mix <span class="badge-inline">— subscribers we still hold</span></h3>
         <div class="chart-container h260"><canvas id="ov-state-donut"></canvas></div>
         <div id="ov-state-pct-table" style="margin-top:8px;font-size:12px;"></div>
         <div class="insight">
-          <strong>${M.send_to_rate}</strong> of all subscribers are active (send-to).
-          Unsubscribed: <strong>${M.total_subscribers ? (M.unsubscribed_count/M.total_subscribers*100).toFixed(1)+'%' : '—'}</strong> &middot;
-          Bounced: <strong>${M.total_subscribers ? (M.bounced_count/M.total_subscribers*100).toFixed(1)+'%' : '—'}</strong>
+          Of the subscribers still on our list, <strong>${M.send_to_rate}</strong> are reachable (Send-To: state='Active' AND engagement_segment NOT IN Ghosts/Zombies/Dormant). The rest split into the <strong>Dormant/Ghost/Zombie</strong> cohort (still on the list but not engaging) and <strong>Bounced</strong> (delivery failing). Unsubscribed and Deleted subscribers are excluded — they've left the list.
         </div>
       </div>
       <div class="chart-card">
@@ -411,15 +409,18 @@ function renderOverview(M) {
       }).join('')}</tbody></table></div>
     </div>
   `;
-  // Subscriber status donut
-  const ss = M.subscriber_states || {labels:[], data:[]};
-  const donutColors = ['#1a7f37','#58a6ff','#cf222e','#9a6700','#8250df','#bf3989','#1b7c83'];
+  // Current Subscriber Engagement Mix donut. Three slices over subscribers
+  // we still hold (state='Active' or 'Bounced'). The lambda emits ready-to-go
+  // colours per slice; we fall back to the legacy `subscriber_states` shape
+  // if the new field isn't there yet (pre-lambda-rerun).
+  const ss = M.subscriber_engagement_mix || M.subscriber_states || {labels:[], data:[], colors:[]};
+  const donutColors = ss.colors && ss.colors.length ? ss.colors : ['#1a7f37','#9a6700','#cf222e','#58a6ff','#8250df','#bf3989','#1b7c83'];
   new Chart(document.getElementById('ov-state-donut'), {
     type: 'doughnut',
     data: { labels: ss.labels, datasets: [{ data: ss.data, backgroundColor: donutColors, borderWidth: 1 }] },
     options: { responsive:true, maintainAspectRatio:false, plugins:{ legend:{position:'bottom',labels:{font:{size:11},padding:8}} } }
   });
-  // Status mix % table
+  // % legend strip below the donut
   const pctTbl = document.getElementById('ov-state-pct-table');
   if (pctTbl && ss.labels && ss.labels.length) {
     const total = ss.data.reduce((a,b)=>a+b,0);

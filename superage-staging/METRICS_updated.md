@@ -85,7 +85,7 @@ The overview tab surfaces the most important headline numbers across all section
 | Quiz Takers | Subscribers who completed the longevity quiz |
 
 **Charts:**
-- **Subscriber Status Mix** — Donut chart of subscriber states (Active, Unsubscribed, Bounced, Deleted).
+- **Current Subscriber Engagement Mix** — Donut chart over the **current list** (subscribers we still hold; Unsubscribed and Deleted are excluded). Three slices: **Send-To** (reachable engaged subscribers), **Dormant / Ghost / Zombie** (state='Active' but flagged dormant), **Bounced** (delivery failing). See Q2.
 - **Campaign Performance Trend** — Line chart of open rate and click rate across the last 30 campaigns, ordered by send date.
 - **Subscriber Growth Over Time** — Green bars = gained (new subscribers), red bars = lost (unsubscribes), blue line = total active subscribers at month end (right Y axis). 18-month sliding window.
 
@@ -358,9 +358,48 @@ WHERE date_joined::date < CURRENT_DATE;
 
 Exposed as `M.send_to_active`; `send_to_rate = send_to_active / total_subscribers` (active base). **Every other "Active" count in this doc — retention KPI (Q35), cohort table (Q40), per-source retention (Q35b), 90-day source retention (Q41) — uses the same two-condition rule.**
 
-## Q2 — Overview: Subscriber Status Mix (Donut Chart)
+## Q2 — Overview: Current Subscriber Engagement Mix (Donut Chart)
+
+The Overview donut answers **"of the subscribers we still hold, how many can we actually reach today?"**. The denominator is the **current list** — only subscribers we still hold (CreateSend state `Active` or `Bounced`); Unsubscribed and Deleted records are excluded because they've left the list and dilute the engagement picture.
+
+Three slices, all derived from variables already populated by Q1:
+
+| Slice | Formula (existing lambda vars) | Colour |
+|---|---|---|
+| **Send-To** | `send_to_active` *(state='Active' AND engagement_segment NOT IN ('Ghosts','Zombies','Dormant'))* | green `#1a7f37` |
+| **Dormant / Ghost / Zombie** | `total_subscribers - send_to_active` *(state='Active' AND engagement_segment IN ('Ghosts','Zombies','Dormant'))* | amber `#9a6700` |
+| **Bounced** | `bounced_count` *(state='Bounced')* | red `#cf222e` |
 
 ```sql
+-- (no dedicated query — all three counts come from Q1 / Q1b above)
+SELECT
+    COUNT(*) FILTER (
+        WHERE state = 'Active'
+          AND engagement_segment NOT IN ('Ghosts','Zombies','Dormant')
+    )                                                        AS send_to,
+    COUNT(*) FILTER (
+        WHERE state = 'Active'
+          AND engagement_segment IN ('Ghosts','Zombies','Dormant')
+    )                                                        AS dormant_cohort,
+    COUNT(*) FILTER (WHERE state = 'Bounced')                AS bounced
+FROM superage.subscribers
+WHERE date_joined::date < CURRENT_DATE;
+```
+
+Emitted as:
+
+```json
+M.subscriber_engagement_mix = {
+  "labels": ["Send-To", "Dormant / Ghost / Zombie", "Bounced"],
+  "data":   [<send_to>, <dormant_cohort>, <bounced>],
+  "colors": ["#1a7f37", "#9a6700", "#cf222e"]
+}
+```
+
+The legacy `M.subscriber_states` four-state JSON (`Active` / `Unsubscribed` / `Bounced` / `Deleted`, ad-hoc query below) is still emitted for backwards compatibility, but the Overview chart now reads `subscriber_engagement_mix` and only falls back to `subscriber_states` when the new field is missing (i.e. before the lambda re-runs).
+
+```sql
+-- Legacy four-state distribution (kept in JSON, no longer the primary chart)
 SELECT COALESCE(NULLIF(state, ''), 'Unknown') AS state, COUNT(*) AS cnt
 FROM superage.subscribers
 WHERE date_joined::date < CURRENT_DATE
@@ -1381,3 +1420,4 @@ ORDER BY c.cohort_month;
 42. **Source-label canonicalisation moved server-side (2026-05)**: `utmLabel()` in `index.html` is now mirrored by an SQL helper `_canon_source(col)` in `superage_metrics_lambda_updated.py` that runs **before** the `GROUP BY` in Q19 / Q20 / Q35b, collapsing aliases (raw `meta` / `facebook` / `fb` / `ig` → one `Meta` row; `taboola`/`Taboola`/`TABOOLA` → one `Taboola`, etc.) in the rollup rather than at display time. The duplicate display rows that used to appear when the rollup was on the raw `utm_source` value (most visibly the "two Meta rows" issue) are gone. **Full mapping table is documented in §4 → "Source label canonicalisation (source of truth)" above** — that table is the single source of truth; when adding a new branch update both `_canon_source` and `utmLabel` in lockstep.
 43. **Source-canonicalisation expansion (2026-05, follow-ups)**: the canonicaliser was extended in three passes after the initial move-to-SQL — (a) split `IFCPL` (`if`/`ifcpl1`) out of `Meta` into its own bucket; (b) absorbed every TrueDemocracy CPL2 batch via `LIKE 'td_cpl2%'`, every TheAgeist sample/request issue via `LIKE 'ageist_%'`/`LIKE 'ageistrequest%'`, and every RecommendedReads CPL1 suffix via `LIKE 'rrcpl1%'` so the brand families don't fragment by date or A/B suffix; (c) added new top-level labels — `NNCPL` (NNCPL1 + NN_CPL2_* + NN1_CPL2oneclick), `ISCPL` (IS + ISCPL1), `AI` (chatgpt.com + perplexity + nbot.ai), plus standalone `Refind` and `SuperAge` (kept distinct from `SuperAge Quiz`). The matching `CASE` in Q35b was updated alongside (a) so the Retention-by-Acquisition-Source buckets stay consistent — its insight string in `renderRetention()` now lists `Meta (facebook/fb/ig/meta), IFCPL (if/ifcpl1), Google, Direct`.
 44. **Survival curve overlay per acquisition source (2026-05)**: the Retention tab's Survival Curve was upgraded from a single all-subscriber line into an overlay chart — the all-subscriber baseline (filled green, Q37) plus one thin line per source bucket from the new Q37b. Source buckets use the canonical mapping from §4 ("Source label canonicalisation"), with `'organic' / 'direct' / ''` collapsed into a **Direct** bucket. Top 8 sources by cohort size; minimum cohort 500 subscribers to keep noisy tail sources out of the chart. Tooltip uses `mode:'index'` so hovering a day shows every series' retention at once; legend is at the bottom and each entry includes the cohort size. Q35b was retrofitted in the same pass to use the canonical mapping instead of its previous hand-coded six-bucket list — the Retention-by-Acquisition-Source table now shows the same source labels as the Audience tab. JSON shape: `M.survival_curve_by_source = { labels: [...], series: [{label, total, rates}] }`.
+45. **Overview donut switched to "Current Subscriber Engagement Mix" (2026-05)**: the four-state CreateSend donut (Active / Unsubscribed / Bounced / Deleted) was replaced with a three-slice engagement view computed off the **current list only** — i.e. subscribers we still hold (state='Active' or 'Bounced'); Unsubscribed and Deleted are excluded because those records have left the list and were diluting the engagement picture. New JSON field `M.subscriber_engagement_mix = {labels:["Send-To","Dormant / Ghost / Zombie","Bounced"], data:[…], colors:[…]}` is emitted by the lambda from existing variables (no extra SQL — derived from `send_to_active`, `total_subscribers`, `bounced_count`). The Overview chart now reads the new field and falls back to the legacy `subscriber_states` shape only if the lambda hasn't re-run yet. Insight strip rewritten to describe Send-To / Dormant / Bounced rather than the four CreateSend states. Q2 in METRICS_updated.md and the Section 1 KPI table were rewritten in lockstep.

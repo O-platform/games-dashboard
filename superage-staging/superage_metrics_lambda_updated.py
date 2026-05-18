@@ -421,6 +421,11 @@ def lambda_handler(event, context):
         # WITH `utmLabel()` IN index.html. Pattern matches (LIKE) handle
         # date-stamped batches like TD_CPL2_20241102 and A/B suffixes like
         # RRCPL1002525 without needing one CASE branch per variant.
+        #
+        # NOTE on `%%`: this f-string output is later fed into a query that
+        # psycopg2 prepares with `%s` parameter binding. Any literal `%` in
+        # the SQL must be doubled so psycopg2 doesn't read the LIKE-pattern
+        # wildcards as positional placeholders (caused an IndexError before).
         def _canon_source(col_sql: str) -> str:
             lc = f"LOWER(TRIM({col_sql}))"
             return f"""
@@ -430,7 +435,7 @@ def lambda_handler(event, context):
                 -- TrueDemocracy: TDCPL1, TDCPL2, and every TD_CPL2_YYYYMMDD batch
                 WHEN {lc} = 'tdcpl1'                                    THEN 'TrueDemocracy'
                 WHEN {lc} = 'tdcpl2'                                    THEN 'TrueDemocracy'
-                WHEN {lc} LIKE 'td_cpl2%'                               THEN 'TrueDemocracy'
+                WHEN {lc} LIKE 'td_cpl2%%'                              THEN 'TrueDemocracy'
                 -- LivingSimply: CPL1, CPL2 and the .com variant
                 WHEN {lc} IN ('lscpl1', 'lscpl2', 'ls_cpl2', 'livingsimply', 'livingsimply.com') THEN 'LivingSimply'
                 -- DailyPuzzle
@@ -449,19 +454,19 @@ def lambda_handler(event, context):
                 WHEN {lc} IN ('superagequiz', 'longevity_quiz')         THEN 'SuperAge Quiz'
                 -- TheAgeist + every sample/request/etc. issue
                 WHEN {lc} IN ('theageist', 'theageist001', 'ageist')    THEN 'TheAgeist'
-                WHEN {lc} LIKE 'ageist_%'                               THEN 'TheAgeist'
-                WHEN {lc} LIKE 'ageistrequest%'                         THEN 'TheAgeist'
+                WHEN {lc} LIKE 'ageist_%%'                              THEN 'TheAgeist'
+                WHEN {lc} LIKE 'ageistrequest%%'                        THEN 'TheAgeist'
                 -- RecommendedReads (new canonical label)
                 WHEN {lc} IN ('recommendedreads.com', 'rr_cpl2')        THEN 'RecommendedReads'
-                WHEN {lc} LIKE 'rrcpl1%'                                THEN 'RecommendedReads'
+                WHEN {lc} LIKE 'rrcpl1%%'                               THEN 'RecommendedReads'
                 -- Campaign Monitor (case-only collapse)
                 WHEN {lc} = 'campaign_monitor'                          THEN 'Campaign Monitor'
                 -- Welcome Flow (URL-encoded variant)
                 WHEN {lc} IN ('welcome flow', 'welcome+flow')           THEN 'Welcome Flow'
                 -- NNCPL family (NNCPL1 + every NN_CPL2_* batch + NN1_CPL2oneclick)
                 WHEN {lc} = 'nncpl1'                                    THEN 'NNCPL'
-                WHEN {lc} LIKE 'nn_cpl2%'                               THEN 'NNCPL'
-                WHEN {lc} LIKE 'nn1_cpl2%'                              THEN 'NNCPL'
+                WHEN {lc} LIKE 'nn_cpl2%%'                              THEN 'NNCPL'
+                WHEN {lc} LIKE 'nn1_cpl2%%'                             THEN 'NNCPL'
                 -- ISCPL family
                 WHEN {lc} IN ('is', 'iscpl1')                           THEN 'ISCPL'
                 -- AI referrers (ChatGPT, Perplexity, Nbot, etc.)

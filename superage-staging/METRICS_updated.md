@@ -200,6 +200,43 @@ The Audience tab table renders these columns per source: **Subscribers**, **% of
 
 For the **All time** window, the bar chart uses `M.utm_clicks_performance` (Q20 — `subscriber_clicks` rollup with separate unique vs total counts). For **30 / 60 / 90-day windows**, it falls back to the per-source rows from Q19 (raw `Campaigns_Clicks` events scoped to the window). Q19 only carries one click count per row (events), so the windowed view's Unique-Clicks and Total-Clicks bars are identical heights — a known trade-off documented in the lambda.
 
+### Source label canonicalisation (source of truth)
+
+Raw `utm_source` and `source` values are normalised to a canonical display label **before** the `GROUP BY` in Q19 / Q20 / Q35b. The mapping lives in two places that must stay in sync:
+
+- **`_canon_source(col_sql)`** in `superage_metrics_lambda_updated.py` — SQL `CASE` statement, runs server-side so duplicate display rows collapse in the rollup itself.
+- **`utmLabel(raw)`** in `index.html` — JS fallback that hits any raw value that slipped through (e.g. a brand-new source the lambda hasn't been updated for).
+
+Comparisons use `LOWER(TRIM(value))`, so case + leading/trailing whitespace differences (e.g. `Taboola` vs `taboola` vs `TABOOLA`) collapse automatically. Anything that doesn't match a rule below falls through to `NULLIF(TRIM(value), '')` and is rendered with its raw string.
+
+| Canonical label | Matches (lowercased) | Notes |
+|---|---|---|
+| **AllHealthy** | `ahcpl1`, `allhealthy`, `allhealthy.com` | AH brand family |
+| **TrueDemocracy** | `tdcpl1`, `tdcpl2`, `td_cpl2*` *(LIKE prefix — every date-stamped batch)* | every `TD_CPL2_YYYYMMDD` batch rolls up here |
+| **LivingSimply** | `lscpl1`, `lscpl2`, `ls_cpl2`, `livingsimply`, `livingsimply.com` | LS family |
+| **DailyPuzzle** | `dpcpl1`, `dp_cpl2` | DP family |
+| **HealthFirst** | `hfcpl1` | |
+| **FitConnect** | `fccpl1` | |
+| **Meta** | `facebook`, `meta`, `fb`, `ig` | Facebook + Instagram only; `if`/`ifcpl1` are split out below |
+| **IFCPL** | `if`, `ifcpl1` | own brand — used to be folded into Meta but split out in commit `d106efe` |
+| **Taboola** | `taboola` *(LOWER handles every casing)* | |
+| **HealthBrief** | `healthbrief` | |
+| **SuperAge Quiz** | `superagequiz`, `longevity_quiz` | distinct from `SuperAge` below |
+| **TheAgeist** | `theageist`, `theageist001`, `ageist`, `ageist_*` *(LIKE prefix)*, `ageistrequest*` *(LIKE prefix)* | every sample / request / request-first-issue variant rolls up |
+| **RecommendedReads** | `recommendedreads.com`, `rr_cpl2`, `rrcpl1*` *(LIKE prefix — covers `rrcpl1`, `rrcpl1002525`, …)* | |
+| **Campaign Monitor** | `campaign_monitor` *(LOWER handles `Campaign_monitor`)* | |
+| **Welcome Flow** | `welcome flow`, `welcome+flow` | URL-encoded variant collapsed too |
+| **NNCPL** | `nncpl1`, `nn_cpl2*` *(LIKE prefix)*, `nn1_cpl2*` *(LIKE prefix)* | every NN_CPL2 batch + the oneclick variant |
+| **ISCPL** | `is`, `iscpl1` | |
+| **AI** | `chatgpt.com`, `perplexity`, `nbot.ai` | aggregated AI-referrer bucket |
+| **Refind** | `refind` | own label (just the casing fix) |
+| **SuperAge** | `superage` | own label — **distinct from SuperAge Quiz** |
+| **Organic** | `''` (empty `utm_source` and `source`) | final `COALESCE` fallback in Q19's label_expr |
+
+> Adding a new entry: add a `WHEN` branch to `_canon_source(col_sql)` in `superage_metrics_lambda_updated.py` **and** a matching `if (...) return '<label>';` block in `utmLabel(raw)` in `index.html`. Both files have cross-reference comments calling out the requirement.
+
+The same canonicaliser also runs in **Q35b — Retention by Acquisition Source**, where six labels (`AH CPL`, `Ageist CPL`, `Share`, `Meta`, `IFCPL`, `Google`, `Direct`) bucket subscribers for the LTV / unsubscribe-window table. The Q35b CASE has its own list — see the SQL itself or the matching insight string in `renderRetention()` — and it must stay aligned with the table above whenever a brand is split or renamed.
+
 ---
 
 ## 5. Audience Persona
@@ -729,19 +766,12 @@ scopes click activity. The old query joined the date-less
 -- on click events) are dropped for the all-time variant.
 --
 -- _canon(col) below is the source-label canonicaliser — it mirrors
--- `utmLabel()` in index.html and collapses aliases (meta / facebook /
--- fb / ig / if → 'Meta', ahcpl1 / allhealthy → 'AllHealthy', etc.) so
--- duplicate display rows don't survive the GROUP BY:
---     CASE LOWER(TRIM(col))
---          WHEN 'facebook' THEN 'Meta'
---          WHEN 'meta'     THEN 'Meta'
---          WHEN 'fb'       THEN 'Meta'
---          WHEN 'ig'       THEN 'Meta'
---          WHEN 'if'       THEN 'Meta'
---          WHEN 'ahcpl1'   THEN 'AllHealthy'
---          ... (see _canon_source() in superage_metrics_lambda_updated.py)
---          ELSE NULLIF(TRIM(col), '')
---     END
+-- `utmLabel()` in index.html and collapses aliases (facebook/fb/ig/meta
+-- → 'Meta', if/ifcpl1 → 'IFCPL', taboola → 'Taboola', every TD_CPL2_*
+-- date-stamped batch → 'TrueDemocracy', etc.) so duplicate display rows
+-- don't survive the GROUP BY. **Full table of mappings is in §4 →
+-- "Source label canonicalisation (source of truth)"** — keep this SQL
+-- comment short and treat that table as the reference.
 WITH s AS (
     SELECT
         LOWER(TRIM(email))                  AS email,
@@ -1302,4 +1332,5 @@ ORDER BY c.cohort_month;
 39. **Click Analysis: missing `.h240` CSS rule added**: the raw Weekly / Monthly cards on the Click Analysis tab used `class="chart-container h240"` but `.chart-container.h240` had no `height` rule in the style block (the CSS only defined `h220 / h260 / h300 / h340 / h380 / h420`). That collapsed those canvases to 0 px tall — the headers, range buttons and insight strings rendered but the bars were invisible. Added `.chart-container.h240 { height: 240px; }` to match the rest of the size scale.
 40. **Top Tags "Tag appears in ≥ N articles" filter (2026-05)**: a five-button group (`1 / 3 / 5 / 7 / 10`) was added above the Top Tags chart on the Content Reference tab. The filter drops tags whose article count is below the threshold **before** the top-10 ranking is computed by avg unique clicks per article, so single-article tags can't dominate the ranking. The threshold is stored in `window._crTagMin` (default `1`, no filter) and is layered on top of the existing scope filters (Position Cat / Author / Category / Tag / Title search). `_crSetTagMin(n)` is the toolbar handler; it re-renders only the Tags chart — Top Categories is intentionally **not** filtered the same way. Insight text below the chart appends *"(showing tags that appear in ≥ N articles)"* when N > 1; if the filter empties the set, the insight switches to *"No tag in scope appears in ≥ N articles"*. Threshold resets to `1` on page reload.
 41. **Audience tab: unified time-window selector (2026-05)**: a single `All time / Last 30 / 60 / 90 days` toggle was lifted out of the Acquisition Quality table header and placed at the top of the Audience tab. The toggle now drives every component on the tab in one render — the four KPI cards (Total Subscribers flips to "New Subscribers" + "Joined in last N days" when filtered; Top Source + Top Source % recompute from the windowed cohort), the Acquisition by Source doughnut, the Source Clicks Performance bar chart, and the Acquisition Quality table — via `_setAcqWindow(win)`. The pie / table read `acquisition_quality.utm_source.rows_<win>` (Q19). The bar chart uses `utm_clicks_performance` (Q20, with the proper unique-vs-total split) for the all-time view, and falls back to Q19 rows for the windowed views (where unique == total because Q19 counts raw `Campaigns_Clicks` events). The Active Rate KPI stays global and is labelled "Currently active (global)" so it's clear it isn't window-scoped. State isn't persisted to localStorage.
-42. **Source-label canonicalisation moved server-side (2026-05)**: the dashboard's JS `utmLabel()` mapping (`meta` / `facebook` / `fb` / `ig` / `if` → `Meta`, `ahcpl1` / `allhealthy` → `AllHealthy`, `lscpl1` / `livingsimply` → `LivingSimply`, `tdcpl1` → `TrueDemocracy`, `dpcpl1` → `DailyPuzzle`, `hfcpl1` → `HealthFirst`, `fccpl1` → `FitConnect`, `taboola` → `Taboola`, `healthbrief` → `HealthBrief`, `superagequiz` / `longevity_quiz` → `SuperAge Quiz`) is now also applied in SQL **before** the `GROUP BY` in both Q19 (`fetch_acquisition_rows`) and Q20 (`utm_clicks_performance`) via a `_canon_source(col)` helper. This collapses duplicate display rows that previously appeared because the rollup was on the raw `utm_source` value — most visibly the "two Meta rows" in the Acquisition Quality table (one for `meta`, one for `facebook`). The JS `utmLabel()` stays in place as a safety net for raw values that still slip through; the canonicalisation list is duplicated in `superage_metrics_lambda_updated.py` (`_canon_source`) and `index.html` (`utmLabel`), with cross-references in both directions reminding future maintainers to keep them in sync.
+42. **Source-label canonicalisation moved server-side (2026-05)**: `utmLabel()` in `index.html` is now mirrored by an SQL helper `_canon_source(col)` in `superage_metrics_lambda_updated.py` that runs **before** the `GROUP BY` in Q19 / Q20 / Q35b, collapsing aliases (raw `meta` / `facebook` / `fb` / `ig` → one `Meta` row; `taboola`/`Taboola`/`TABOOLA` → one `Taboola`, etc.) in the rollup rather than at display time. The duplicate display rows that used to appear when the rollup was on the raw `utm_source` value (most visibly the "two Meta rows" issue) are gone. **Full mapping table is documented in §4 → "Source label canonicalisation (source of truth)" above** — that table is the single source of truth; when adding a new branch update both `_canon_source` and `utmLabel` in lockstep.
+43. **Source-canonicalisation expansion (2026-05, follow-ups)**: the canonicaliser was extended in three passes after the initial move-to-SQL — (a) split `IFCPL` (`if`/`ifcpl1`) out of `Meta` into its own bucket; (b) absorbed every TrueDemocracy CPL2 batch via `LIKE 'td_cpl2%'`, every TheAgeist sample/request issue via `LIKE 'ageist_%'`/`LIKE 'ageistrequest%'`, and every RecommendedReads CPL1 suffix via `LIKE 'rrcpl1%'` so the brand families don't fragment by date or A/B suffix; (c) added new top-level labels — `NNCPL` (NNCPL1 + NN_CPL2_* + NN1_CPL2oneclick), `ISCPL` (IS + ISCPL1), `AI` (chatgpt.com + perplexity + nbot.ai), plus standalone `Refind` and `SuperAge` (kept distinct from `SuperAge Quiz`). The matching `CASE` in Q35b was updated alongside (a) so the Retention-by-Acquisition-Source buckets stay consistent — its insight string in `renderRetention()` now lists `Meta (facebook/fb/ig/meta), IFCPL (if/ifcpl1), Google, Direct`.

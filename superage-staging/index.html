@@ -2019,14 +2019,27 @@ function renderRetention(M) {
     <div class="chart-card">
       <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:6px;">
         <h3 style="margin:0;">Survival Curve <span class="badge-inline">— all subscribers + acquisition sources</span></h3>
-        <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;">
-          <span style="font-size:11px;color:var(--text-muted);text-transform:uppercase;letter-spacing:.3px;">Sources</span>
-          <button onclick="_retCurveAll(true)"  style="font-size:11px;padding:3px 9px;border:1px solid var(--card-border);border-radius:5px;background:var(--card);color:var(--text-muted);cursor:pointer;" title="Show every source line">Show all</button>
-          <button onclick="_retCurveAll(false)" style="font-size:11px;padding:3px 9px;border:1px solid var(--card-border);border-radius:5px;background:var(--card);color:var(--text-muted);cursor:pointer;" title="Hide every source line — leave only the all-subscriber baseline">Hide all</button>
+        <div style="position:relative;" id="ret-src-picker">
+          <button type="button" id="ret-src-btn"
+                  onclick="_retCurveToggleMenu(event)"
+                  style="font-size:11px;padding:5px 12px;border:1px solid var(--card-border);border-radius:6px;background:var(--card);color:var(--text);cursor:pointer;display:inline-flex;align-items:center;gap:6px;"
+                  aria-haspopup="true" aria-expanded="false">
+            <span>Filter sources</span>
+            <span id="ret-src-summary" style="color:var(--text-muted);font-weight:500;">— all selected</span>
+            <span style="font-size:9px;">▼</span>
+          </button>
+          <div id="ret-src-menu"
+               style="display:none;position:absolute;right:0;top:calc(100% + 4px);z-index:50;min-width:240px;max-width:320px;max-height:340px;overflow:auto;background:var(--card);border:1px solid var(--card-border);border-radius:8px;box-shadow:0 6px 18px rgba(0,0,0,.25);padding:6px;font-size:11px;">
+            <div style="display:flex;gap:6px;padding:6px 8px;border-bottom:1px solid var(--card-border);margin-bottom:4px;">
+              <button type="button" onclick="_retCurveAll(true)"  style="flex:1;font-size:11px;padding:3px 8px;border:1px solid var(--card-border);border-radius:5px;background:var(--card-2);color:var(--text);cursor:pointer;">All</button>
+              <button type="button" onclick="_retCurveAll(false)" style="flex:1;font-size:11px;padding:3px 8px;border:1px solid var(--card-border);border-radius:5px;background:var(--card-2);color:var(--text);cursor:pointer;">None</button>
+            </div>
+            <div id="ret-src-list"></div>
+          </div>
         </div>
       </div>
       <div class="chart-container h340"><canvas id="ret-curve"></canvas></div>
-      <div class="insight">Overall — 30-day: <strong>${pct(findRate('Day 30'))}</strong> &middot; 60-day: <strong>${pct(findRate('Day 60'))}</strong> &middot; 90-day: <strong>${pct(findRate('Day 90'))}</strong>. Thick green line = all subscribers; each thin coloured line = one canonical source bucket (≥ 100 subscribers). <strong>Click a legend entry to hide / show that source</strong>, or use the <em>Show all / Hide all</em> buttons above.</div>
+      <div class="insight">Overall — 30-day: <strong>${pct(findRate('Day 30'))}</strong> &middot; 60-day: <strong>${pct(findRate('Day 60'))}</strong> &middot; 90-day: <strong>${pct(findRate('Day 90'))}</strong>. Thick green line = all subscribers (always visible); each thin coloured line = one canonical source bucket (≥ 100 subscribers). Use <strong>Filter sources</strong> above to pick which sources to overlay — checkbox per source, plus All / None for bulk control.</div>
     </div>
     <div class="grid-2">
       <div class="chart-card">
@@ -2046,7 +2059,7 @@ function renderRetention(M) {
         <thead><tr>
           <th>Source</th><th>Subscribers</th><th>Active Now</th><th>Churned</th>
           <th>Unsub ≤ 15 d</th><th>Unsub ≤ 30 d</th>
-          <th>Avg LTV (days)</th><th>Median LTV</th>
+          <th title="Average lifespan in days, across churned subscribers only">Avg Lifespan (days)</th><th title="Median lifespan in days, across churned subscribers only">Median Lifespan</th>
           <th>Clickers</th><th>Clicker Rate</th><th>Unique Clicks</th><th>Clicks / Clicker</th>
         </tr></thead>
         <tbody>${(M.retention_by_source||[]).map(r => {
@@ -2068,7 +2081,7 @@ function renderRetention(M) {
           </tr>`;
         }).join('')}</tbody>
       </table></div>
-      <div class="insight"><strong>Active Now</strong> = state = 'Active' AND engagement_segment NOT IN (Ghosts, Zombies, Dormant). Source buckets use the canonical source-label mapping shared with the Audience tab — see METRICS_updated.md §4 "Source label canonicalisation". <strong>Direct</strong> rolls up <code>organic</code>, <code>direct</code> and empty UTM. LTV is computed only across churned subscribers (avg / median days from join to unsub). <em>Clicker / Unique Clicks / Clicks per Clicker columns reflect click events from December 2025 onwards; the Subscribers / Active / Churned / LTV columns use full history.</em></div>
+      <div class="insight"><strong>Active Now</strong> = state = 'Active' AND engagement_segment NOT IN (Ghosts, Zombies, Dormant). Source buckets use the canonical source-label mapping shared with the Audience tab — see METRICS_updated.md §4 "Source label canonicalisation". <strong>Direct</strong> rolls up <code>organic</code>, <code>direct</code> and empty UTM. Lifespan is computed only across churned subscribers (avg / median days from join to unsub) — still-active subscribers haven't churned yet so they're excluded. <em>Clicker / Unique Clicks / Clicks per Clicker columns reflect click events from December 2025 onwards; the Subscribers / Active / Churned / Lifespan columns use full history.</em></div>
     </div>
   `;
 
@@ -2099,11 +2112,30 @@ function renderRetention(M) {
     type: 'line',
     data: { labels: overlayLabels, datasets },
     options: { responsive:true, maintainAspectRatio:false,
-      plugins:{ legend:{ position:'bottom', labels:{ font:{ size:11 }, padding:6, boxWidth:12 } },
+      // Legend is replaced by the "Filter sources" dropdown above the chart
+      // — that gives a multi-select panel with checkboxes plus All / None.
+      plugins:{ legend:{ display: false },
                 tooltip:{ callbacks:{ label: c => `${c.dataset.label}: ${Number(c.parsed.y).toFixed(1)}%` } } },
       interaction: { mode:'index', intersect:false },
       scales:{ y:{ min:0, max:100, ticks:{ callback: v => v+'%' } } } }
   });
+  // Populate the "Filter sources" dropdown — one checkbox per per-source
+  // dataset (datasets[0] is the always-visible "All subscribers" baseline,
+  // skipped). _retCurveToggleSrc(i, checked) flips a single dataset; the
+  // All / None buttons up top route through _retCurveAll().
+  const srcList = document.getElementById('ret-src-list');
+  if (srcList) {
+    srcList.innerHTML = datasets.slice(1).map((d, idx) => {
+      const i = idx + 1; // real dataset index in the chart
+      const safeLabel = esc(d.label);
+      const swatch = `<span style="display:inline-block;width:10px;height:10px;border-radius:2px;background:${d.borderColor};margin-right:8px;vertical-align:middle;"></span>`;
+      return `<label style="display:flex;align-items:center;gap:8px;padding:5px 8px;cursor:pointer;border-radius:4px;" onmouseover="this.style.background='var(--card-2)'" onmouseout="this.style.background=''">
+        <input type="checkbox" checked onchange="_retCurveToggleSrc(${i}, this.checked)" style="cursor:pointer;">
+        ${swatch}<span style="flex:1;color:var(--text);">${safeLabel}</span>
+      </label>`;
+    }).join('');
+  }
+  _retCurveUpdateSummary();
 
   const ld = M.lifespan_dist || {labels:[],data:[]};
   new Chart(document.getElementById('ret-lifespan'), {
@@ -2128,10 +2160,13 @@ function renderRetention(M) {
   });
 }
 
-/* Show / hide every per-source line on the Retention survival overlay.
- * The "All subscribers" baseline (dataset index 0) stays visible — only
- * datasets 1..N get toggled. Mirrors Chart.js's built-in legend-click
- * behaviour, just applied in bulk. */
+/* "Filter sources" dropdown plumbing for the Retention survival overlay.
+ * - _retCurveToggleMenu(e)        — open / close the panel (also closes on outside click)
+ * - _retCurveToggleSrc(idx, vis)  — flip one per-source dataset's visibility
+ * - _retCurveAll(visible)         — bulk-toggle every per-source dataset
+ * - _retCurveUpdateSummary()      — refreshes the "N of M selected" hint on the button
+ *
+ * The "All subscribers" baseline (dataset index 0) is always visible. */
 function _retCurveAll(visible) {
   const c = window._retCurveChart;
   if (!c) return;
@@ -2139,7 +2174,57 @@ function _retCurveAll(visible) {
     if (i === 0) return; // keep the "All subscribers" baseline visible
     c.setDatasetVisibility(i, visible);
   });
+  // Keep the dropdown checkboxes in sync with the chart state.
+  document.querySelectorAll('#ret-src-list input[type="checkbox"]').forEach(cb => {
+    cb.checked = visible;
+  });
   c.update();
+  _retCurveUpdateSummary();
+}
+function _retCurveToggleSrc(idx, visible) {
+  const c = window._retCurveChart;
+  if (!c) return;
+  c.setDatasetVisibility(idx, visible);
+  c.update();
+  _retCurveUpdateSummary();
+}
+function _retCurveToggleMenu(ev) {
+  if (ev) ev.stopPropagation();
+  const m = document.getElementById('ret-src-menu');
+  const btn = document.getElementById('ret-src-btn');
+  if (!m) return;
+  const opening = m.style.display !== 'block';
+  m.style.display = opening ? 'block' : 'none';
+  if (btn) btn.setAttribute('aria-expanded', opening ? 'true' : 'false');
+  // One-shot outside-click listener while the menu is open.
+  if (opening) {
+    setTimeout(() => {
+      const closer = (e) => {
+        const picker = document.getElementById('ret-src-picker');
+        if (picker && !picker.contains(e.target)) {
+          const mm = document.getElementById('ret-src-menu');
+          if (mm) mm.style.display = 'none';
+          if (btn) btn.setAttribute('aria-expanded', 'false');
+          document.removeEventListener('click', closer);
+        }
+      };
+      document.addEventListener('click', closer);
+    }, 0);
+  }
+}
+function _retCurveUpdateSummary() {
+  const c = window._retCurveChart;
+  const out = document.getElementById('ret-src-summary');
+  if (!c || !out) return;
+  const total = c.data.datasets.length - 1; // exclude baseline
+  let on = 0;
+  for (let i = 1; i < c.data.datasets.length; i++) {
+    if (c.isDatasetVisible(i)) on++;
+  }
+  out.textContent = total === 0 ? '— no sources'
+                  : on === total ? `— all ${total} selected`
+                  : on === 0     ? `— none selected (baseline only)`
+                                 : `— ${on} of ${total} selected`;
 }
 
 /* ═══════════════════════════════════════

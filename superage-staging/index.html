@@ -2018,9 +2018,16 @@ function renderRetention(M) {
       <div class="kpi-card purple"><div class="label">Active Rate</div><div class="value">${esc(rt.active_rate||'—')}</div><div class="sub">${fmt(rt.active)} of ${fmt(rt.total)} subscribers</div></div>
     </div>
     <div class="chart-card">
-      <h3>Survival Curve <span class="badge-inline">— all subscribers + top acquisition sources</span></h3>
+      <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:6px;">
+        <h3 style="margin:0;">Survival Curve <span class="badge-inline">— all subscribers + acquisition sources</span></h3>
+        <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;">
+          <span style="font-size:11px;color:var(--text-muted);text-transform:uppercase;letter-spacing:.3px;">Sources</span>
+          <button onclick="_retCurveAll(true)"  style="font-size:11px;padding:3px 9px;border:1px solid var(--card-border);border-radius:5px;background:var(--card);color:var(--text-muted);cursor:pointer;" title="Show every source line">Show all</button>
+          <button onclick="_retCurveAll(false)" style="font-size:11px;padding:3px 9px;border:1px solid var(--card-border);border-radius:5px;background:var(--card);color:var(--text-muted);cursor:pointer;" title="Hide every source line — leave only the all-subscriber baseline">Hide all</button>
+        </div>
+      </div>
       <div class="chart-container h340"><canvas id="ret-curve"></canvas></div>
-      <div class="insight">Overall — 30-day: <strong>${pct(findRate('Day 30'))}</strong> &middot; 60-day: <strong>${pct(findRate('Day 60'))}</strong> &middot; 90-day: <strong>${pct(findRate('Day 90'))}</strong>. Each thin line is one source bucket (canonicalised, ≥ 500 subscribers, top 8 by cohort size); the thicker green line is the all-subscriber baseline. Hover a series for the per-source breakdown.</div>
+      <div class="insight">Overall — 30-day: <strong>${pct(findRate('Day 30'))}</strong> &middot; 60-day: <strong>${pct(findRate('Day 60'))}</strong> &middot; 90-day: <strong>${pct(findRate('Day 90'))}</strong>. Thick green line = all subscribers; each thin coloured line = one canonical source bucket (≥ 100 subscribers). <strong>Click a legend entry to hide / show that source</strong>, or use the <em>Show all / Hide all</em> buttons above.</div>
     </div>
     <div class="grid-2">
       <div class="chart-card">
@@ -2068,8 +2075,14 @@ function renderRetention(M) {
 
   // Overlay chart: the overall "all subscribers" line (filled, thick green)
   // plus one thin line per acquisition-source bucket from
-  // M.survival_curve_by_source.series. Legend at the bottom drives toggling.
-  const sourcePalette = ['#0969da','#cf222e','#8250df','#9a6700','#bf3989','#1b7c83','#58a6ff','#3fb950'];
+  // M.survival_curve_by_source.series. Legend at the bottom drives per-source
+  // toggling; the Show all / Hide all buttons up top fan out to every
+  // non-baseline dataset (see _retCurveAll). Palette has 16 entries to
+  // comfortably cover ~15 canonical buckets without colour collisions.
+  const sourcePalette = [
+    '#0969da','#cf222e','#8250df','#9a6700','#bf3989','#1b7c83','#58a6ff','#3fb950',
+    '#fb8500','#fb6f92','#7d4e00','#4f8cff','#34d399','#a78bfa','#f87171','#fbbf24'
+  ];
   const bySource = (M.survival_curve_by_source && M.survival_curve_by_source.series) || [];
   const overlayLabels = (M.survival_curve_by_source && M.survival_curve_by_source.labels) || sc.labels || [];
   const datasets = [
@@ -2083,7 +2096,7 @@ function renderRetention(M) {
     backgroundColor: 'transparent',
     tension: .3, fill: false, pointRadius: 3, borderWidth: 2, order: i
   })));
-  new Chart(document.getElementById('ret-curve'), {
+  window._retCurveChart = new Chart(document.getElementById('ret-curve'), {
     type: 'line',
     data: { labels: overlayLabels, datasets },
     options: { responsive:true, maintainAspectRatio:false,
@@ -2114,6 +2127,20 @@ function renderRetention(M) {
       plugins:{ legend:{ display:false } },
       scales:{ y:{ beginAtZero:true } } }
   });
+}
+
+/* Show / hide every per-source line on the Retention survival overlay.
+ * The "All subscribers" baseline (dataset index 0) stays visible — only
+ * datasets 1..N get toggled. Mirrors Chart.js's built-in legend-click
+ * behaviour, just applied in bulk. */
+function _retCurveAll(visible) {
+  const c = window._retCurveChart;
+  if (!c) return;
+  c.data.datasets.forEach((_, i) => {
+    if (i === 0) return; // keep the "All subscribers" baseline visible
+    c.setDatasetVisibility(i, visible);
+  });
+  c.update();
 }
 
 /* ═══════════════════════════════════════

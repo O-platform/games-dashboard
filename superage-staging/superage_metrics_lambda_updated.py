@@ -786,10 +786,13 @@ def lambda_handler(event, context):
         survival_row = cur.fetchone() or {}
 
         # Survival curves split by acquisition source bucket — overlays one
-        # line per major source on the Retention tab so churn shapes can be
+        # line per source on the Retention tab so churn shapes can be
         # compared. Uses the same canonical source mapping as Q35b (Direct
-        # rolls up organic / direct / empty); minimum cohort of 500 to keep
-        # noisy tail sources out of the chart, top 8 by total.
+        # rolls up organic / direct / empty). Minimum cohort of 100 to keep
+        # one-off / test sources out of the legend; no LIMIT — the chart's
+        # legend supports click-to-toggle so users can show/hide individual
+        # sources, and quick "show all / hide all" buttons live above the
+        # chart for bulk control.
         cur.execute(f"""
             WITH s AS (
                 SELECT
@@ -816,9 +819,8 @@ def lambda_handler(event, context):
                 COUNT(*) FILTER (WHERE days_to_unsub IS NULL OR days_to_unsub > 365)    AS alive_365
             FROM s
             GROUP BY 1
-            HAVING COUNT(*) >= 500
+            HAVING COUNT(*) >= 100
             ORDER BY total DESC
-            LIMIT 8
         """)
         survival_by_source_rows = cur.fetchall()
 

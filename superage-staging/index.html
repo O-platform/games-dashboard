@@ -214,7 +214,7 @@
   <button class="tab" onclick="showPage('content',this)">Click Analysis</button>
   <button class="tab" onclick="showPage('content-ref',this)">Content Reference</button>
   <button class="tab" onclick="showPage('audience',this)">Audience</button>
-  <button class="tab" onclick="showPage('quiz',this)">Longevity Quiz</button>
+  <button class="tab" onclick="showPage('quiz',this)">Audience Persona</button>
   <button class="tab" onclick="showPage('revenue',this)">Revenue &amp; Sponsors</button>
   <button class="tab" onclick="showPage('retention',this)">Subscriber Retention</button>
   <button class="tab" onclick="showPage('cohort',this)">Cohort Analysis</button>
@@ -1703,19 +1703,17 @@ function _setAcqWindow(win) {
 }
 
 /* ═══════════════════════════════════════
-   LONGEVITY QUIZ
+   AUDIENCE PERSONA (quiz-sourced)
 ═══════════════════════════════════════ */
 function renderQuiz(M) {
   const qk = M.quiz_kpis || {};
   document.getElementById('quiz').innerHTML = `
     <div class="section-context-banner">
-      <strong>Longevity Quiz</strong> — SuperAge longevity-quiz engagement and demographic insights. Tracks completion volume, age distribution, longevity score and lifestyle indicators.
+      <strong>Audience Persona</strong> — SuperAge audience demographics and lifestyle indicators sourced from quiz responses. Tracks completion volume, age distribution, and lifestyle signals.
     </div>
     <div class="kpi-row" style="grid-template-columns:repeat(auto-fit,minmax(160px,1fr));">
       <div class="kpi-card accent"><div class="label">Total Quiz Takers</div><div class="value">${fmt(qk.total_takers)}</div><div class="sub">Longevity quiz completions</div></div>
       <div class="kpi-card green"><div class="label">Avg Age</div><div class="value">${qk.avg_age||'—'}</div><div class="sub">Mean respondent age</div></div>
-      <div class="kpi-card cyan"><div class="label">Avg Longevity Score</div><div class="value">${qk.avg_score||'—'}</div><div class="sub">Mean score</div></div>
-      <div class="kpi-card blue"><div class="label">Max Longevity Score</div><div class="value">${qk.max_score||'—'}</div><div class="sub">Highest recorded</div></div>
       <div class="kpi-card orange"><div class="label">Fitness Quiz</div><div class="value">${fmt(qk.fitness_quiz_takers)}</div><div class="sub">Took fitness quiz</div></div>
       <div class="kpi-card pink"><div class="label">Menupause Quiz</div><div class="value">${fmt(qk.menu_quiz_takers)}</div><div class="sub">Took menupause quiz</div></div>
     </div>
@@ -1725,21 +1723,15 @@ function renderQuiz(M) {
         <div class="chart-container h300"><canvas id="quiz-age-dist"></canvas></div>
       </div>
       <div class="chart-card">
-        <h3>Longevity Score Distribution</h3>
-        <div class="chart-container h300"><canvas id="quiz-score-dist"></canvas></div>
-      </div>
-    </div>
-    <div class="grid-2">
-      <div class="chart-card">
         <h3>Gender</h3>
-        <div class="chart-container h260"><canvas id="quiz-gender"></canvas></div>
-      </div>
-      <div class="chart-card">
-        <h3>Education Level</h3>
-        <div class="chart-container h260"><canvas id="quiz-education"></canvas></div>
+        <div class="chart-container h300"><canvas id="quiz-gender"></canvas></div>
       </div>
     </div>
-    <h2 style="font-size:14px;font-weight:600;color:var(--text);margin:18px 0 10px;">Lifestyle &amp; Longevity Indicators</h2>
+    <div class="chart-card">
+      <h3>Education Level</h3>
+      <div class="chart-container h260"><canvas id="quiz-education"></canvas></div>
+    </div>
+    <h2 style="font-size:14px;font-weight:600;color:var(--text);margin:18px 0 10px;">Lifestyle Indicators</h2>
     <div class="grid-2">
       <div class="chart-card">
         <h3>Exercise Frequency</h3>
@@ -1773,7 +1765,6 @@ function renderQuiz(M) {
     new Chart(el, { type:'doughnut', data:{ labels:d.labels||[], datasets:[{data:d.data||[], backgroundColor:(d.colors&&d.colors.length?d.colors:palette)}] }, options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'bottom',labels:{font:{size:11},padding:6}}}} });
   }
   barH('quiz-age-dist',   M.quiz_age_dist,       'Takers', '#0969da');
-  barH('quiz-score-dist', M.quiz_score_dist,     'Count',  '#9a6700');
   pie ('quiz-gender',     M.quiz_gender_dist);
   pie ('quiz-education',  M.quiz_education_dist);
   barH('quiz-exercise',   M.quiz_exercise_dist,  'Count',  '#8250df');
@@ -1803,7 +1794,7 @@ function renderRevenue(M) {
       <div class="chart-card">
         <h3>Monthly Revenue &amp; Deal Volume</h3>
         <div class="chart-container h340"><canvas id="rev-monthly"></canvas></div>
-        <div class="insight">Bars = revenue (left axis). Line = number of deals (right axis). <span style="color:#cf222e;font-weight:600;">Red bars</span> and dashed line, separated by the dashed vertical line, mark future / not-yet-closed months.</div>
+        <div class="insight">Bars = revenue (left axis). Line = number of deals (right axis). Faded bars are the current (in-progress) or not-yet-closed months.</div>
       </div>
       <div class="chart-card">
         <h3>Sponsor Type Distribution</h3>
@@ -1827,69 +1818,38 @@ function renderRevenue(M) {
     </div>
   `;
 
-  // Monthly revenue + deals — bars and line, with future-month differentiation
+  // Monthly revenue + deals — styled to match the Monthly Campaign Clicks
+  // chart (single green bar series; current / future months use the same
+  // colour but at 40% alpha to read as "in-progress"). The deals line stays
+  // as one continuous overlay, no past/future split, no "Future →" label.
   const rm = M.revenue_monthly || {labels:[],revenue:[],deals:[]};
   const today = new Date();
   const monthStart = new Date(today.getFullYear(), today.getMonth(), 1);
-  const isFuture = (lbl) => {
+  const isInProgress = (lbl) => {
     const d = new Date(lbl + ' 1');  // "May 2026" → Date
-    return isFinite(d.getTime()) && d > monthStart;
+    return isFinite(d.getTime()) && d >= monthStart;
   };
-  const revColors = (rm.labels||[]).map(l => isFuture(l) ? 'rgba(207,34,46,0.55)' : '#7d4e00');
-  const futureMask = (rm.labels||[]).map(isFuture);
-  const firstFutureIdx = futureMask.indexOf(true);
-  // For the deals line: split into past (solid) + future (dashed) series so the future segment is visually distinct
-  const dealsPast   = (rm.deals||[]).map((v,i) => futureMask[i] ? null : v);
-  const dealsFuture = (rm.deals||[]).map((v,i) => futureMask[i] ? v : null);
-  // Bridge so the line connects across the boundary
-  for (let i=1; i<futureMask.length; i++) {
-    if (futureMask[i] && !futureMask[i-1]) dealsFuture[i-1] = rm.deals[i-1];
-  }
-  // Inline plugin: vertical dashed separator between past/current and future months
-  const futureSeparator = {
-    id: 'futureSeparator',
-    afterDatasetsDraw(chart) {
-      if (firstFutureIdx <= 0) return;
-      const xScale = chart.scales.x;
-      const yArea  = chart.chartArea;
-      if (!xScale || !yArea) return;
-      const xPrev = xScale.getPixelForValue(firstFutureIdx - 1);
-      const xCurr = xScale.getPixelForValue(firstFutureIdx);
-      const x = (xPrev + xCurr) / 2;
-      const ctx = chart.ctx;
-      ctx.save();
-      ctx.strokeStyle = '#9a6700';
-      ctx.lineWidth = 1.5;
-      ctx.setLineDash([6,4]);
-      ctx.beginPath();
-      ctx.moveTo(x, yArea.top);
-      ctx.lineTo(x, yArea.bottom);
-      ctx.stroke();
-      ctx.setLineDash([]);
-      ctx.fillStyle = '#9a6700';
-      ctx.font = '10px system-ui, sans-serif';
-      ctx.textAlign = 'left';
-      ctx.textBaseline = 'top';
-      ctx.fillText(' Future →', x + 2, yArea.top + 2);
-      ctx.restore();
-    }
-  };
+  const BAR_COLOR = '#1a7f37';
+  const revColors  = (rm.labels||[]).map(l => isInProgress(l) ? BAR_COLOR + '66' : BAR_COLOR);
+  const revBorders = (rm.labels||[]).map(l => isInProgress(l) ? BAR_COLOR        : 'transparent');
   new Chart(document.getElementById('rev-monthly'), {
     data: {
       labels: rm.labels||[],
       datasets: [
-        { type:'bar', label:'Revenue ($)', data: rm.revenue||[], backgroundColor: revColors, yAxisID:'y' },
-        { type:'line', label:'Deals',         data: dealsPast,    borderColor:'#0969da', backgroundColor:'transparent', tension:.25, pointRadius:3, yAxisID:'y1' },
-        { type:'line', label:'Deals (future)',data: dealsFuture,  borderColor:'#0969da', backgroundColor:'transparent', borderDash:[5,4], tension:.25, pointRadius:3, pointStyle:'circle', yAxisID:'y1' }
+        { type:'bar', label:'Revenue ($)', data: rm.revenue||[],
+          backgroundColor: revColors, borderColor: revBorders, borderWidth: 2, borderRadius: 4,
+          yAxisID:'y' },
+        { type:'line', label:'Deals', data: rm.deals||[],
+          borderColor:'#0969da', backgroundColor:'transparent',
+          tension:.25, pointRadius:3, yAxisID:'y1' }
       ]
     },
     options: { responsive:true, maintainAspectRatio:false,
-      plugins:{ legend:{ position:'top', labels:{ font:{ size:11 }, filter: it => it.text !== 'Deals (future)' } } },
+      plugins:{ legend:{ position:'top', labels:{ font:{ size:11 } } } },
       scales:{
         y:  { position:'left',  beginAtZero:true, ticks:{ callback:v=>'$'+v.toLocaleString() } },
         y1: { position:'right', beginAtZero:true, grid:{ drawOnChartArea:false }, ticks:{ stepSize:1 } }
-      } },
-    plugins: [futureSeparator]
+      } }
   });
 
   // Sponsor type distribution donut

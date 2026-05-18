@@ -1914,12 +1914,11 @@ function renderRevenue(M) {
   const topName = ts[0] ? ts[0].name : '—';
   document.getElementById('revenue').innerHTML = `
     <div class="section-context-banner">
-      <strong>Revenue &amp; Sponsors</strong> — Advertising and sponsorship performance. Tracks total revenue, deal volume, ECPM benchmarks, and sponsor-level breakdown.
+      <strong>Revenue &amp; Sponsors</strong> — Advertising and sponsorship performance. Tracks total revenue, deal volume, and sponsor-level breakdown. Future-dated rows in <code>sa_airtable_sales</code> are excluded — totals reflect deals booked on or before today.
     </div>
     <div class="kpi-row">
       <div class="kpi-card gold"><div class="label">Total Revenue</div><div class="value">${esc(M.total_revenue_fmt||'—')}</div><div class="sub">All sponsors combined</div></div>
       <div class="kpi-card green"><div class="label">Total Deals</div><div class="value">${fmt(M.total_sponsor_deals)}</div><div class="sub">Sponsorship placements</div></div>
-      <div class="kpi-card blue"><div class="label">Avg ECPM</div><div class="value">${esc(M.avg_ecpm||'—')}</div><div class="sub">Effective CPM across all deals</div></div>
       <div class="kpi-card cyan"><div class="label">Avg Deal Size</div><div class="value">${esc(M.avg_deal_size_fmt||'—')}</div><div class="sub">Mean revenue per deal</div></div>
       <div class="kpi-card orange"><div class="label">Top Sponsor</div><div class="value" style="font-size:14px;">${esc(topName)}</div><div class="sub">By revenue</div></div>
     </div>
@@ -1938,14 +1937,14 @@ function renderRevenue(M) {
     <div class="chart-card">
       <h3>Top Sponsors</h3>
       <div class="tbl-wrap"><table class="dash-table">
-        <thead><tr><th>#</th><th>Sponsor</th><th>Deals</th><th>Revenue</th><th>Avg Rev / Deal</th><th>Avg ECPM</th><th>Revenue Share</th></tr></thead>
+        <thead><tr><th>#</th><th>Sponsor</th><th>Deals</th><th>Revenue</th><th>Avg Rev / Deal</th><th>Revenue Share</th></tr></thead>
         <tbody>${ts.map((s,i)=>{
           const rev = parseFloat((s.revenue||'').replace(/[$,]/g,'')) || 0;
           const deals = s.deals || 1;
           const avgRev = rev ? '$' + (rev/deals).toLocaleString(undefined,{maximumFractionDigits:0}) : '—';
           const totalRev = parseFloat(M.total_revenue) || 0;
           const share = (totalRev && rev) ? (rev/totalRev*100).toFixed(1)+'%' : '—';
-          return `<tr><td>${i+1}</td><td>${esc(s.name||'')}</td><td>${fmt(s.deals)}</td><td>${esc(s.revenue||'—')}</td><td>${avgRev}</td><td>${esc(s.avg_ecpm||'—')}</td><td>${share}</td></tr>`;
+          return `<tr><td>${i+1}</td><td>${esc(s.name||'')}</td><td>${fmt(s.deals)}</td><td>${esc(s.revenue||'—')}</td><td>${avgRev}</td><td>${share}</td></tr>`;
         }).join('')}</tbody>
       </table></div>
     </div>
@@ -2168,14 +2167,25 @@ function renderCohort(M) {
       <div class="insight">Each row = a monthly cohort. M1 = % still active 1 month after joining, etc. Colors: dark green ≥ 80% &middot; light green ≥ 60% &middot; amber ≥ 40% &middot; red &lt; 40%.</div>
     </div>
     <div class="chart-card">
-      <h3>Cohort Performance Table</h3>
+      <h3>Cohort Performance Table <span class="badge-inline">— 2025+ cohorts only</span></h3>
       <div class="tbl-wrap"><table class="dash-table">
-        <thead><tr><th>Cohort</th><th>Size</th><th>Active Now</th><th>Churned</th><th>Retention %</th><th>Churn %</th><th>Early Churn (90d)</th><th>Campaigns Sent</th></tr></thead>
+        <thead><tr>
+          <th title="Join-month label">Cohort</th>
+          <th title="Cohort size at join — total subscribers who joined in this month">Cohort Size</th>
+          <th title="Still on the list today (state = Active or Bounced)">Total Subscribers</th>
+          <th title="Reachable engaged subscribers — state = 'Active' AND engagement_segment NOT IN Ghosts/Zombies/Dormant">Total Active</th>
+          <th title="Total Subscribers / Cohort Size">Still on List %</th>
+          <th title="Total Active / Cohort Size — canonical Active rule">Retention %</th>
+          <th title="Churned / Cohort Size">Churn %</th>
+          <th title="Subscribers who unsubscribed within 90 days of joining, as % of cohort">Early Churn (90d)</th>
+          <th title="Campaigns with > 95 recipients sent during this cohort's join month">Campaigns Sent</th>
+        </tr></thead>
         <tbody>${tableRows.map(r => `<tr>
           <td>${esc(r.cohort||'')}</td>
           <td>${fmt(r.size)}</td>
+          <td>${fmt(r.total_subscribers != null ? r.total_subscribers : (Number(r.size) - Number(r.churned||0)))}</td>
           <td>${fmt(r.active_now)}</td>
-          <td>${fmt(r.churned)}</td>
+          <td>${esc(r.still_on_list_pct||'—')}</td>
           <td>${esc(r.retention_pct||'—')}</td>
           <td>${esc(r.churn_rate_pct||'—')}</td>
           <td>${esc(r.early_churn_pct||'—')}</td>

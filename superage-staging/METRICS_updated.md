@@ -254,13 +254,16 @@ Demographics: age distribution, gender, marital status, exercise frequency, slee
 
 ## 6. Revenue & Sponsors
 
-Source: `superage.sa_airtable_sales`.
+Source: `superage.sa_airtable_sales`. Every query in this section filters out future-dated rows via `(issue_date IS NULL OR issue_date::date <= CURRENT_DATE)` — totals reflect deals booked on or before today.
 
 | Metric | What it measures |
 |---|---|
 | Total Revenue | Sum of all closed deal amounts |
+| Total Deals | Count of sponsorship placements |
 | Avg Deal Size | Average revenue per placement |
-| Avg ECPM | Effective cost per thousand impressions |
+| Top Sponsor | Highest-revenue sponsor (by `$_line_amount` sum) |
+
+> **ECPM retired (2026-05).** The `Avg ECPM` KPI card, the dedicated `avg_ecpm` SQL (old Q34), and the `Avg ECPM` column on the Top Sponsors table were all removed. The lambda no longer emits `M.avg_ecpm` or per-row `avg_ecpm` on `top_sponsors[]`.
 
 ---
 
@@ -1041,15 +1044,7 @@ FROM superage.sa_airtable_sales
 GROUP BY 1 ORDER BY 2 DESC;
 ```
 
-## Q34 — Revenue & Sponsors: Avg ECPM (KPI)
-
-```sql
-SELECT
-    ROUND(AVG(NULLIF(ecpm, '')::numeric)::numeric, 2) AS avg_ecpm
-FROM superage.sa_airtable_sales;
-```
-
-> **Note:** CTOR (click-to-open rate) has been removed from the Revenue section. Only ECPM is displayed.
+> **Q34 — Avg ECPM** was retired (2026-05). The dedicated `AVG(NULLIF(ecpm,'')::numeric)` query, the `M.avg_ecpm` JSON field, and the per-row `avg_ecpm` on the Top Sponsors table are all gone. The Revenue tab still shows Total Revenue / Total Deals / Avg Deal Size / Top Sponsor; ECPM was deemed too noisy at the per-sponsor level given the small deal counts.
 
 ## Q35 — Subscriber Retention: Retention KPIs (all subscribers)
 
@@ -1294,20 +1289,36 @@ GROUP BY 1 ORDER BY 1;
 > per-cohort `active_now` figure in the cohort *table* (Q40) is stricter — it uses the
 > canonical Active rule (state='Active' AND engagement_segment NOT IN Ghosts/Zombies/Dormant).
 
-## Q40 — Cohort Analysis: Cohort Performance Table (with campaigns sent that month)
+## Q40 — Cohort Analysis: Cohort Performance Table (2025+ cohorts)
+
+Restricted to cohorts where `date_joined >= '2025-01-01'` so the table focuses on recent acquisition quality. Each row exposes three primary counts derived from the same single scan plus a few rates:
+
+| Column | What it counts | Definition |
+|---|---|---|
+| **Cohort Size** | Subscribers who joined this month | `COUNT(*)` over the cohort |
+| **Total Subscribers** | Still on the list today | `COUNT(*) FILTER (WHERE state IN ('Active','Bounced'))` |
+| **Total Active** | Reachable + engaged | `COUNT(*) FILTER (WHERE state = 'Active' AND engagement_segment NOT IN ('Ghosts','Zombies','Dormant'))` |
+| Still on List % | Total Subscribers / Cohort Size | derived |
+| Retention % | Total Active / Cohort Size | derived |
+| Churn % | Unsubscribed / Cohort Size | derived |
+| Early Churn (90d) | Unsubscribed within 90 days of joining / Cohort Size | derived |
+| Campaigns Sent | Qualifying campaigns sent during the cohort's join month | `Campaigns` table, `Recipients > 95` |
+
+The earlier heatmap (Q39) still includes pre-2025 cohorts; this table is the only place the cut-off applies.
 
 ```sql
 WITH cohorts AS (
     SELECT
         TO_CHAR(DATE_TRUNC('month', date_joined::date), 'Mon YYYY') AS cohort_label,
         DATE_TRUNC('month', date_joined::date)::date                AS cohort_month,
-        COUNT(*) AS total,
+        COUNT(*)                                                    AS total,
+        COUNT(*) FILTER (WHERE state IN ('Active', 'Bounced'))      AS total_subscribers,
         COUNT(*) FILTER (
             WHERE state = 'Active'
               AND engagement_segment NOT IN ('Ghosts', 'Zombies', 'Dormant')
-        ) AS active_now,
-        COUNT(*) FILTER (WHERE state = 'Unsubscribed') AS churned,
-        COUNT(*) FILTER (WHERE unsubbed_within_90)     AS churned_90d
+        )                                                           AS active_now,
+        COUNT(*) FILTER (WHERE state = 'Unsubscribed')              AS churned,
+        COUNT(*) FILTER (WHERE unsubbed_within_90)                  AS churned_90d
     FROM (
         SELECT
             date_joined,
@@ -1319,7 +1330,9 @@ WITH cohorts AS (
                 AND date_unsubscribed::date <= date_joined::date + 90
             ) AS unsubbed_within_90
         FROM superage.subscribers
-        WHERE date_joined IS NOT NULL AND date_joined::date < CURRENT_DATE
+        WHERE date_joined IS NOT NULL
+          AND date_joined::date < CURRENT_DATE
+          AND date_joined::date >= DATE '2025-01-01'
     ) x
     GROUP BY 1, 2
     HAVING COUNT(*) >= 20
@@ -1338,12 +1351,14 @@ SELECT
     c.cohort_label,
     c.cohort_month,
     c.total,
+    c.total_subscribers,
     c.active_now,
     c.churned,
-    ROUND(c.churned::numeric   / NULLIF(c.total,0) * 100, 1) AS churn_rate_pct,
-    ROUND(c.active_now::numeric / NULLIF(c.total,0) * 100, 1) AS retention_pct,
-    ROUND(c.churned_90d::numeric / NULLIF(c.total,0) * 100, 1) AS early_churn_pct,
-    COALESCE(k.campaigns_sent, 0) AS campaigns_sent
+    ROUND(c.total_subscribers::numeric / NULLIF(c.total,0) * 100, 1) AS still_on_list_pct,
+    ROUND(c.active_now::numeric        / NULLIF(c.total,0) * 100, 1) AS retention_pct,
+    ROUND(c.churned::numeric           / NULLIF(c.total,0) * 100, 1) AS churn_rate_pct,
+    ROUND(c.churned_90d::numeric       / NULLIF(c.total,0) * 100, 1) AS early_churn_pct,
+    COALESCE(k.campaigns_sent, 0)                                    AS campaigns_sent
 FROM cohorts c
 LEFT JOIN camps k ON k.camp_month = c.cohort_month
 ORDER BY c.cohort_month;
@@ -1430,3 +1445,5 @@ ORDER BY c.cohort_month;
 44. **Survival curve overlay per acquisition source (2026-05)**: the Retention tab's Survival Curve was upgraded from a single all-subscriber line into an overlay chart — the all-subscriber baseline (filled green, Q37) plus one thin line per source bucket from the new Q37b. Source buckets use the canonical mapping from §4 ("Source label canonicalisation"), with `'organic' / 'direct' / ''` collapsed into a **Direct** bucket. Top 8 sources by cohort size; minimum cohort 500 subscribers to keep noisy tail sources out of the chart. Tooltip uses `mode:'index'` so hovering a day shows every series' retention at once; legend is at the bottom and each entry includes the cohort size. Q35b was retrofitted in the same pass to use the canonical mapping instead of its previous hand-coded six-bucket list — the Retention-by-Acquisition-Source table now shows the same source labels as the Audience tab. JSON shape: `M.survival_curve_by_source = { labels: [...], series: [{label, total, rates}] }`.
 45. **Overview donut switched to "Current Subscriber Engagement Mix" (2026-05)**: the four-state CreateSend donut (Active / Unsubscribed / Bounced / Deleted) was replaced with a three-slice engagement view computed off the **current list only** — i.e. subscribers we still hold (state='Active' or 'Bounced'); Unsubscribed and Deleted are excluded because those records have left the list and were diluting the engagement picture. New JSON field `M.subscriber_engagement_mix = {labels:["Send-To","Dormant / Ghost / Zombie","Bounced"], data:[…], colors:[…]}` is emitted by the lambda from existing variables (no extra SQL — derived from `send_to_active`, `total_subscribers`, `bounced_count`). The Overview chart now reads the new field and falls back to the legacy `subscriber_states` shape only if the lambda hasn't re-run yet. Insight strip rewritten to describe Send-To / Dormant / Bounced rather than the four CreateSend states. Q2 in METRICS_updated.md and the Section 1 KPI table were rewritten in lockstep.
 46. **Survival Curve — toggle individual sources (2026-05)**: the per-source overlay (Q37b) was opened up from "top 8 by cohort" to "every canonical bucket with ≥ 100 subscribers" — no LIMIT. The Retention tab gets two new buttons above the chart, **Show all** and **Hide all** (`_retCurveAll(visible)`), which fan-toggle every non-baseline dataset. Clicking individual legend entries still toggles a single source the standard Chart.js way. Insight strip below the chart now reads "Click a legend entry to hide / show that source, or use the Show all / Hide all buttons above." The palette was expanded from 8 to 16 distinct colours so the larger source list doesn't collide. The "All subscribers" baseline (dataset 0) is exempted from the bulk-toggle so the reference line stays visible.
+47. **Revenue & Sponsors: ECPM retired + future-date guard on sa_airtable_sales (2026-05)**: the "Avg ECPM" KPI card on the Revenue & Sponsors tab and the "Avg ECPM" column on the Top Sponsors table were removed. The dedicated `AVG(NULLIF(ecpm,'')::numeric)` SQL block was deleted from the lambda, along with the `AVG(NULLIF(ecpm,'')::numeric)` aggregate on the per-sponsor query. `M.avg_ecpm` no longer ships in the JSON, and `top_sponsors[].avg_ecpm` is gone. In the same pass every query against `superage.sa_airtable_sales` (totals, monthly chart, top sponsors, sponsor-type distribution) now filters `(issue_date IS NULL OR issue_date::date <= CURRENT_DATE)` so future-dated rows can't inflate the headline totals or push the monthly chart past today. The Monthly Revenue chart's "future-month fade" behaviour now naturally renders only the in-progress month rather than several months of red bars. Q34 marked retired; Section 6 of METRICS_updated.md updated.
+48. **Cohort Performance Table reshaped — 2025+ only with three explicit cohort counts (2026-05)**: Q40 was restricted to cohorts with `date_joined >= '2025-01-01'` so the table focuses on recent acquisition quality (the heatmap above keeps its longer history). Columns rebuilt around three primary counts derived from the same scan: **Cohort Size** (subscribers who joined the month — `COUNT(*)`), **Total Subscribers** (still on the list today — `COUNT(*) FILTER (WHERE state IN ('Active','Bounced'))`), and **Total Active** (state='Active' AND engagement_segment NOT IN Ghosts/Zombies/Dormant). Derived rates: **Still on List %**, **Retention %**, **Churn %**, **Early Churn (90d)**. Existing **Campaigns Sent** column kept for context. Lambda now emits `cohort_table[].total_subscribers` + `cohort_table[].still_on_list_pct`; the dashboard table renders the new shape and tooltips document each column's formula.

@@ -671,6 +671,7 @@ def lambda_handler(event, context):
                 MAX(NULLIF("$_line_amount", '')::numeric) AS max_deal
             FROM {S}.sa_airtable_sales
             WHERE "$_line_amount" IS NOT NULL AND "$_line_amount" != ''
+              AND (issue_date IS NULL OR issue_date::date <= CURRENT_DATE)
         """)
         rs = cur.fetchone() or {}
         total_revenue    = safe_float(rs.get("total_revenue"))
@@ -686,6 +687,7 @@ def lambda_handler(event, context):
             FROM {S}.sa_airtable_sales
             WHERE issue_date IS NOT NULL
               AND TRIM(CAST(issue_date AS TEXT)) != ''
+              AND issue_date::date <= CURRENT_DATE
               AND "$_line_amount" IS NOT NULL AND "$_line_amount" != ''
             GROUP BY 1, 2
             ORDER BY 1
@@ -696,10 +698,10 @@ def lambda_handler(event, context):
             SELECT
                 COALESCE("sponsor_name"->>0, "sponsor_name"::text, 'Unknown') AS sponsor,
                 COUNT(*) AS deals,
-                SUM(NULLIF("$_line_amount", '')::numeric) AS revenue,
-                AVG(NULLIF(ecpm, '')::numeric) AS avg_ecpm
+                SUM(NULLIF("$_line_amount", '')::numeric) AS revenue
             FROM {S}.sa_airtable_sales
             WHERE "$_line_amount" IS NOT NULL AND "$_line_amount" != ''
+              AND (issue_date IS NULL OR issue_date::date <= CURRENT_DATE)
             GROUP BY 1 ORDER BY 3 DESC NULLS LAST LIMIT 10
         """)
         sponsor_rows = cur.fetchall()
@@ -707,17 +709,12 @@ def lambda_handler(event, context):
         cur.execute(f"""
             SELECT COALESCE(NULLIF(sponsor_type, ''), 'Unknown') AS stype, COUNT(*) AS cnt
             FROM {S}.sa_airtable_sales
+            WHERE (issue_date IS NULL OR issue_date::date <= CURRENT_DATE)
             GROUP BY 1 ORDER BY 2 DESC
         """)
         sponsor_type_rows = cur.fetchall()
-
-        cur.execute(f"""
-            SELECT
-                ROUND(AVG(NULLIF(ecpm, '')::numeric)::numeric, 2) AS avg_ecpm
-            FROM {S}.sa_airtable_sales
-        """)
-        perf = cur.fetchone() or {}
-        avg_ecpm = safe_float(perf.get("avg_ecpm"))
+        # ECPM retired (2026-05): the dedicated avg-ecpm query and the
+        # per-sponsor avg_ecpm column were removed from the dashboard.
 
         # ─────────────────────────────────────────────────────
         # 8. Retention
@@ -944,13 +941,22 @@ def lambda_handler(event, context):
         # Overall survival curve by join-month cohort (for the overlay line chart)
         # already captured above via survival_rows; reuse for cohort level
 
-        # Cohort churn rate table (best / worst retention cohorts) + campaigns sent that month
+        # Cohort performance table — restricted to 2025+ cohorts (earlier
+        # months are kept in the heatmap above but dropped here so this
+        # table focuses on recent acquisition quality). Three primary
+        # counts per cohort, all derived from the same row scan:
+        #   • total                — cohort size at join (the original cohort)
+        #   • total_subscribers    — still on the list (state IN ('Active','Bounced'))
+        #   • active_now           — reachable + engaged
+        #                            (state='Active' AND engagement_segment NOT IN dormant)
+        # Plus derived rates and the campaigns-sent count for context.
         cur.execute(f"""
             WITH cohorts AS (
                 SELECT
                     TO_CHAR(DATE_TRUNC('month', date_joined::date), 'Mon YYYY') AS cohort_label,
                     DATE_TRUNC('month', date_joined::date)::date AS cohort_month,
                     COUNT(*) AS total,
+                    COUNT(*) FILTER (WHERE state IN ('Active', 'Bounced')) AS total_subscribers,
                     COUNT(*) FILTER (
                         WHERE state = 'Active'
                           AND engagement_segment NOT IN ('Ghosts', 'Zombies', 'Dormant')
@@ -968,7 +974,9 @@ def lambda_handler(event, context):
                             AND date_unsubscribed::date <= date_joined::date + 90
                         ) AS unsubbed_within_90
                     FROM {S}.subscribers
-                    WHERE date_joined IS NOT NULL AND date_joined::date < CURRENT_DATE
+                    WHERE date_joined IS NOT NULL
+                      AND date_joined::date < CURRENT_DATE
+                      AND date_joined::date >= DATE '2025-01-01'
                 ) x
                 GROUP BY 1, 2
                 HAVING COUNT(*) >= 20
@@ -986,8 +994,9 @@ def lambda_handler(event, context):
             )
             SELECT
                 c.*,
-                ROUND(c.churned::numeric / NULLIF(c.total,0) * 100, 1) AS churn_rate_pct,
+                ROUND(c.total_subscribers::numeric / NULLIF(c.total,0) * 100, 1) AS still_on_list_pct,
                 ROUND(c.active_now::numeric / NULLIF(c.total,0) * 100, 1) AS retention_pct,
+                ROUND(c.churned::numeric / NULLIF(c.total,0) * 100, 1) AS churn_rate_pct,
                 ROUND(c.churned_90d::numeric / NULLIF(c.total,0) * 100, 1) AS early_churn_pct,
                 COALESCE(k.campaigns_sent, 0) AS campaigns_sent
             FROM cohorts c
@@ -1044,7 +1053,6 @@ def lambda_handler(event, context):
     M["total_revenue_fmt"]  = f"${total_revenue:,.0f}"
     M["avg_deal_size_fmt"]  = f"${avg_deal_size:,.0f}"
     M["total_sponsor_deals"]= total_sponsor_deals
-    M["avg_ecpm"]           = f"${avg_ecpm:.2f}"
 
     # Audience-Persona KPIs (longevity-score fields were removed when the
     # tab stopped surfacing score visuals).
@@ -1269,7 +1277,6 @@ def lambda_handler(event, context):
             "name":      str(r["sponsor"] or "Unknown")[:35],
             "deals":     safe_int(r["deals"]),
             "revenue":   f"${safe_float(r['revenue']):,.0f}",
-            "avg_ecpm":  f"${safe_float(r['avg_ecpm']):.2f}" if r.get("avg_ecpm") is not None else "—",
             "bar_width": f"{round(safe_float(r['revenue']) / max_sp * 100)}%",
         }
         for r in sponsor_rows
@@ -1390,17 +1397,19 @@ def lambda_handler(event, context):
 
     M["cohort_heatmap"] = heatmap_rows
 
-    # ── Cohort table ──
+    # ── Cohort table ── (2025+ only; see Q40 in METRICS_updated.md)
     M["cohort_table"] = [
         {
-            "cohort":           str(r["cohort_label"]),
-            "size":             safe_int(r["total"]),
-            "active_now":       safe_int(r["active_now"]),
-            "churned":          safe_int(r["churned"]),
-            "retention_pct":    f"{safe_float(r['retention_pct']):.1f}%",
-            "churn_rate_pct":   f"{safe_float(r['churn_rate_pct']):.1f}%",
-            "early_churn_pct":  f"{safe_float(r['early_churn_pct']):.1f}%",
-            "campaigns_sent":   safe_int(r["campaigns_sent"]),
+            "cohort":             str(r["cohort_label"]),
+            "size":               safe_int(r["total"]),
+            "total_subscribers":  safe_int(r["total_subscribers"]),
+            "active_now":         safe_int(r["active_now"]),
+            "churned":            safe_int(r["churned"]),
+            "still_on_list_pct":  f"{safe_float(r['still_on_list_pct']):.1f}%",
+            "retention_pct":      f"{safe_float(r['retention_pct']):.1f}%",
+            "churn_rate_pct":     f"{safe_float(r['churn_rate_pct']):.1f}%",
+            "early_churn_pct":    f"{safe_float(r['early_churn_pct']):.1f}%",
+            "campaigns_sent":     safe_int(r["campaigns_sent"]),
         }
         for r in cohort_table_rows
     ]

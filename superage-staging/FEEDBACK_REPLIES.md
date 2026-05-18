@@ -35,7 +35,8 @@ Subscriber Retention tab.
   - `AH CPL` ← `ahcpl1`, `allhealthy`
   - `Ageist CPL` ← `theageist`, `ageist`
   - `Share` ← `share`, `referral`
-  - `Meta` ← `meta`, `facebook`, `fb`, `if`
+  - `Meta` ← `meta`, `facebook`, `fb`, `ig`
+  - `IFCPL` ← `if`, `ifcpl1`
   - `Google` ← `google`
   - `Direct` ← `organic`, `direct`, empty
 - **Columns:** Subscribers · Active Now · Churned · **Unsub ≤ 15 d** (count + %)

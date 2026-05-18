@@ -438,8 +438,10 @@ def lambda_handler(event, context):
                 -- HealthFirst / FitConnect
                 WHEN {lc} = 'hfcpl1'                                    THEN 'HealthFirst'
                 WHEN {lc} = 'fccpl1'                                    THEN 'FitConnect'
-                -- Meta: facebook, instagram, IF/IG short codes, IFCPL1
-                WHEN {lc} IN ('facebook', 'meta', 'fb', 'ig', 'if', 'ifcpl1') THEN 'Meta'
+                -- Meta: facebook + instagram only (IF / IFCPL1 split out below)
+                WHEN {lc} IN ('facebook', 'meta', 'fb', 'ig')           THEN 'Meta'
+                -- IFCPL: IF short code + IFCPL1 batch (its own brand, not Meta)
+                WHEN {lc} IN ('if', 'ifcpl1')                           THEN 'IFCPL'
                 -- Taboola (LOWER handles taboola/Taboola/TABOOLA)
                 WHEN {lc} = 'taboola'                                   THEN 'Taboola'
                 -- HealthBrief / SuperAge Quiz
@@ -803,7 +805,8 @@ def lambda_handler(event, context):
                         WHEN LOWER(source_raw) IN ('ahcpl1', 'allhealthy')         THEN 'AH CPL'
                         WHEN LOWER(source_raw) IN ('theageist', 'ageist')          THEN 'Ageist CPL'
                         WHEN LOWER(source_raw) IN ('share', 'referral')            THEN 'Share'
-                        WHEN LOWER(source_raw) IN ('meta', 'facebook', 'fb', 'if') THEN 'Meta'
+                        WHEN LOWER(source_raw) IN ('meta', 'facebook', 'fb', 'ig') THEN 'Meta'
+                        WHEN LOWER(source_raw) IN ('if', 'ifcpl1')                 THEN 'IFCPL'
                         WHEN LOWER(source_raw) = 'google'                          THEN 'Google'
                         WHEN LOWER(source_raw) IN ('organic', 'direct', '')        THEN 'Direct'
                         ELSE source_raw

@@ -290,8 +290,10 @@ function utmLabel(raw) {
   // HealthFirst / FitConnect
   if (s === 'hfcpl1') return 'HealthFirst';
   if (s === 'fccpl1') return 'FitConnect';
-  // Meta: facebook + instagram + IF/IG short codes + IFCPL1
-  if (['facebook','meta','fb','ig','if','ifcpl1'].includes(s)) return 'Meta';
+  // Meta: facebook + instagram only (IF / IFCPL1 split out below)
+  if (['facebook','meta','fb','ig'].includes(s)) return 'Meta';
+  // IFCPL: IF short code + IFCPL1 batch (its own brand, not Meta)
+  if (['if','ifcpl1'].includes(s)) return 'IFCPL';
   // Taboola
   if (s === 'taboola') return 'Taboola';
   // HealthBrief / SuperAge Quiz
@@ -2050,7 +2052,7 @@ function renderRetention(M) {
           </tr>`;
         }).join('')}</tbody>
       </table></div>
-      <div class="insight"><strong>Active Now</strong> = state = 'Active' AND engagement_segment NOT IN (Ghosts, Zombies, Dormant). Buckets: <strong>AH CPL</strong> (allhealthy/AHCPL1), <strong>Ageist CPL</strong> (theageist), <strong>Share</strong> (referral/share), <strong>Meta</strong> (facebook/fb/ig/if), <strong>Google</strong>, <strong>Direct</strong> (organic / no UTM). LTV is computed only across churned subscribers (avg / median days from join to unsub).</div>
+      <div class="insight"><strong>Active Now</strong> = state = 'Active' AND engagement_segment NOT IN (Ghosts, Zombies, Dormant). Buckets: <strong>AH CPL</strong> (allhealthy/AHCPL1), <strong>Ageist CPL</strong> (theageist), <strong>Share</strong> (referral/share), <strong>Meta</strong> (facebook/fb/ig/meta), <strong>IFCPL</strong> (if/ifcpl1), <strong>Google</strong>, <strong>Direct</strong> (organic / no UTM). LTV is computed only across churned subscribers (avg / median days from join to unsub).</div>
     </div>
   `;
 

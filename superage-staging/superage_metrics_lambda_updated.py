@@ -1048,9 +1048,6 @@ def lambda_handler(event, context):
             "churned_30d_rate": round((c30 / subs * 100), 1) if subs else 0.0,
             "churned_90d":      c90,
             "churned_90d_rate": round((c90 / subs * 100), 1) if subs else 0.0,
-            # Placeholders for columns we can't compute yet — see FEEDBACK_REPLIES.md.
-            "sponsor_clicks_per_subscriber": None,   # needs Campaigns_Clicks→articles_clicks join key
-            "open_rate":                     None,   # no per-subscriber open data yet
         }
 
     def acquisition_payload(rows_all, rows_30, rows_60, rows_90):

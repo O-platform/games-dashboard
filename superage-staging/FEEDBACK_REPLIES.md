@@ -337,22 +337,35 @@ data starts arriving later), but the dashboard ignores it.
   same count.
 - **30-Day Churn** and **90-Day Churn** columns added — `COUNT(*) FILTER (state='Unsubscribed' AND unsubbed - joined <= N)` divided by the source cohort. Each cell shows the percentage and the raw count, e.g. `4.2% (1,234)`.
 
-**Skipped this round** *(explicitly per your earlier answers)* — columns
-reserved structurally but render as `—`:
+- **Click Rate** (renamed from "Clicker Rate") — same field
+  (`clickers / subscribers`), just a clearer label. The tooltip on the
+  header spells out the formula so it's not confused with CreateSend's
+  campaign-level `UClickRate`.
+
+**Skipped this round** *(removed from the table entirely — neither column
+ships in the JSON or renders in the HTML; both will come back the moment
+the underlying data exists):*
 
 - **Avg Sponsor Click / Subscriber.** Needs a join key between
   `Campaigns_Clicks` and `articles_clicks` so we can flag raw click events
   whose placement has `type='sponsor'`. You said "skip per-subscriber
-  sponsor for now" — I left the column header in place with a tooltip
-  noting that, plus a note that **affiliate clicks aren't tracked
-  accurately yet** (you mentioned they "existed but not accurately").
-- **Open Rate %.** No per-subscriber open data exists today. Column
-  header is reserved with a tooltip explaining it'll fill in once a
-  `Campaigns_Opens`-style table (or a per-subscriber rolling open count)
-  is available.
-- **CAC.** Skipped entirely — no per-source spend data in the schema. Not
-  added as a column. When you wire up an `ad_spend` table I can layer it
-  on top of `subscribers / spend` per source.
+  sponsor for now" and then "remove the avg sponsor click for now" — the
+  column header **and** the `sponsor_clicks_per_subscriber` field on each
+  row are both gone. Affiliate clicks are also out of scope (you flagged
+  them as "existed but not tracked accurately"). To bring this back: add
+  a URL / placement_id column to `Campaigns_Clicks` (or a join view), and
+  I'll restore the column with a real per-subscriber sponsor-click count.
+- **Open Rate %.** No per-subscriber open data exists in the schema
+  ("we don't have open rate sorry"). The placeholder column has been
+  removed along with the `open_rate` field on every row. Per-source open
+  rate would need either (a) a `Campaigns_Opens`-style events table that
+  records each (`subscriber`, `campaign`) open pair, or (b) a per-subscriber
+  rolling-opens counter on `subscribers` similar to `subscriber_clicks`.
+  Either lets the lambda compute `opens / subscribers * 100` per source the
+  same way `clicks` does today.
+- **CAC.** Same status as before: no per-source spend data in the schema.
+  When an `ad_spend` table exists I'll layer `subscribers / spend` per
+  source on top.
 
 **Note on the 30 / 60 / 90-day cohort views**: the time filter is
 cohort-style — it scopes the table to subscribers who **joined** within

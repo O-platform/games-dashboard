@@ -1662,12 +1662,10 @@ function renderAudience(M) {
       </div>
       <div class="tbl-wrap"><table class="dash-table" id="aud-acq-table">
         <thead><tr>
-          <th>Source</th><th>Subscribers</th><th>% of Total</th><th>Clickers</th><th>Clicker Rate</th>
+          <th>Source</th><th>Subscribers</th><th>% of Total</th><th>Clickers</th><th title="Share of subscribers in this source cohort who clicked at least one campaign in the window — clickers / subscribers.">Click Rate</th>
           <th>Clicks</th><th>Avg Clicks / Subscriber</th>
           <th title="Subscribers from this source who unsubscribed within 30 days of joining, as a % of the source cohort">30-Day Churn</th>
           <th title="Subscribers from this source who unsubscribed within 90 days of joining, as a % of the source cohort">90-Day Churn</th>
-          <th title="Sponsor / affiliate links — needs a join key between Campaigns_Clicks and articles_clicks. Affiliate isn't tracked accurately yet.">Avg Sponsor Click / Sub</th>
-          <th title="No per-subscriber open data yet — column reserved.">Open Rate %</th>
         </tr></thead>
         <tbody id="aud-acq-tbody"></tbody>
       </table></div>
@@ -1725,7 +1723,7 @@ function _setAcqWindow(win) {
   const tbody = document.getElementById('aud-acq-tbody');
   if (!tbody) return;
   if (!rows.length) {
-    tbody.innerHTML = `<tr><td colspan="11" style="text-align:center;color:var(--text-muted);padding:14px;">No data in this window yet — re-run the metrics lambda to populate.</td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="9" style="text-align:center;color:var(--text-muted);padding:14px;">No data in this window yet — re-run the metrics lambda to populate.</td></tr>`;
     return;
   }
   const total = rows.reduce((s, r) => s + (Number(r.subscribers) || 0), 0);
@@ -1738,9 +1736,7 @@ function _setAcqWindow(win) {
     const clicks = r.clicks != null ? r.clicks : r.unique_clicks;
     const c30  = (r.churned_30d_rate != null) ? `${Number(r.churned_30d_rate).toFixed(1)}% <span style="color:var(--text-muted);">(${fmt(r.churned_30d)})</span>` : '—';
     const c90  = (r.churned_90d_rate != null) ? `${Number(r.churned_90d_rate).toFixed(1)}% <span style="color:var(--text-muted);">(${fmt(r.churned_90d)})</span>` : '—';
-    const spo  = (r.sponsor_clicks_per_subscriber != null) ? Number(r.sponsor_clicks_per_subscriber).toFixed(2) : '<span style="color:var(--text-dim);" title="Needs a Campaigns_Clicks ↔ articles_clicks join key — affiliates aren\'t tracked accurately yet.">—</span>';
-    const opn  = (r.open_rate != null) ? Number(r.open_rate).toFixed(1) + '%' : '<span style="color:var(--text-dim);" title="No per-subscriber open data yet.">—</span>';
-    return `<tr><td>${utmLabel(r.label)}</td><td>${fmt(subs)}</td><td>${pct}</td><td>${fmt(r.clickers)}</td><td>${clk}</td><td>${fmt(clicks)}</td><td>${apcS}</td><td>${c30}</td><td>${c90}</td><td>${spo}</td><td>${opn}</td></tr>`;
+    return `<tr><td>${utmLabel(r.label)}</td><td>${fmt(subs)}</td><td>${pct}</td><td>${fmt(r.clickers)}</td><td>${clk}</td><td>${fmt(clicks)}</td><td>${apcS}</td><td>${c30}</td><td>${c90}</td></tr>`;
   }).join('');
 }
 

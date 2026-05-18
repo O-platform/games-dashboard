@@ -654,6 +654,8 @@ LIMIT 300;
 
 **Sleeper Hits** insight: top 10 rows with `position_category = 'low'` ordered by `unique_clicks DESC` — surfaces articles placed near the bottom of an issue that nonetheless drew strong engagement.
 
+**Clicks by Position Category chart** (top of the grid, vertical bars): grouped bars per `high` / `medium` / `low` position bucket plot **avg unique clicks per article** (green) and **avg total clicks per article** (blue) — values are `sum / count` for the in-scope rows in each bucket, formatted to 1 decimal place. Article count for each bucket is drawn above the green bar via an inline plugin (`countLabels-poscat`), and the tooltip lists absolute totals (`unique`, `total`) plus the article count. The insight strip below echoes the averages alongside the colour-coded bucket name.
+
 **Top Categories / Top Tags charts** (client-side, no extra SQL): the dashboard takes the current filter-scoped row set, splits each row's `categories` / `tags` string on comma, and sums `unique_clicks` and `total_clicks` per label. The horizontal bar charts plot **avg clicks per article** — paired bars for `round(unique_clicks / count)` and `round(total_clicks / count)` — and surface the **top 10 labels by avg unique clicks per article**. Each bar is annotated inline with `N articles` at its right end (drawn by an inline Chart.js plugin) so the user can see how many articles back each average; the tooltip lists the absolute totals (`unique`, `total`) and the article count. Both charts re-render on every filter change via `_crRenderTopBar()` and replaced the prior **Top Position Cat** KPI card (whose info is already covered by the position-category filter and chart).
 
 ---

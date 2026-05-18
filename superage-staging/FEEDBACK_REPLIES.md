@@ -307,6 +307,15 @@ selector and the `_setArtWindow` plumbing were removed. The lambda still
 emits `top_articles_windowed` for backwards-compat (in case the windowed
 data starts arriving later), but the dashboard ignores it.
 
+### "Same in this visual — Unique Clicks by Position Category"
+
+**✓ shipped.** The **Clicks by Position Category** chart (renamed from
+"Unique Clicks by Position Category") now plots **avg unique** and
+**avg total** clicks per article for each High / Medium / Low bucket
+instead of raw totals. `N articles` is drawn above each green bar; the
+tooltip surfaces the absolute totals + article count, and the insight
+strip below the chart now shows both averages alongside the bucket name.
+
 ### "Show the average clicks in the visual" → "I want the bars to be clicks / # of articles and same with unique, with the 2 visuals"
 
 **✓ shipped.** The **Top Categories** and **Top Tags** charts now plot

@@ -1217,7 +1217,7 @@ function renderContentRef(M) {
 
     <div class="grid-2">
       <div class="chart-card">
-        <h3>Unique Clicks by Position Category</h3>
+        <h3>Clicks by Position Category <span class="badge-inline">— avg per article (unique &amp; total), in scope</span></h3>
         <div class="chart-container h260"><canvas id="cr-poscat-bar"></canvas></div>
         <div class="insight" id="cr-poscat-insight"></div>
       </div>
@@ -1426,27 +1426,64 @@ function _crRenderPosCatChart(rows) {
     byCat[k].t += Number(r.total_clicks)||0;
     byCat[k].n += 1;
   });
-  const labels = order.map(k => k.charAt(0).toUpperCase()+k.slice(1));
+  const labels    = order.map(k => k.charAt(0).toUpperCase()+k.slice(1));
+  const counts    = order.map(k => byCat[k].n);
   const uniqData  = order.map(k => byCat[k].u);
   const totalData = order.map(k => byCat[k].t);
-  const counts    = order.map(k => byCat[k].n);
+  // Bars now show per-article averages (matches the Top Categories /
+  // Top Tags charts). One decimal kept because the buckets are narrow
+  // and rounding to ints would crush low-volume categories.
+  const avgUnique = order.map((k,i) => counts[i] ? (uniqData[i]/counts[i])  : 0);
+  const avgTotal  = order.map((k,i) => counts[i] ? (totalData[i]/counts[i]) : 0);
+  // Plugin: write "N articles" above each Avg-Unique bar so the volume
+  // backing each average is visible.
+  const countLabelPlugin = {
+    id: 'countLabels-poscat',
+    afterDatasetsDraw(chart) {
+      const meta = chart.getDatasetMeta(0);
+      if (!meta || !meta.data) return;
+      const c = chart.ctx;
+      const isDark = document.body.classList.contains('dark');
+      c.save();
+      c.font = '10px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
+      c.fillStyle = isDark ? '#8b949e' : '#57606a';
+      c.textAlign = 'center';
+      c.textBaseline = 'bottom';
+      meta.data.forEach((bar, i) => {
+        if (i >= counts.length) return;
+        c.fillText(`${counts[i].toLocaleString()} article${counts[i] === 1 ? '' : 's'}`, bar.x, bar.y - 4);
+      });
+      c.restore();
+    }
+  };
   if (window._crPosCatChart) window._crPosCatChart.destroy();
   window._crPosCatChart = new Chart(document.getElementById('cr-poscat-bar'), {
     type: 'bar',
     data: { labels, datasets: [
-      { label:'Unique Clicks', data:uniqData,  backgroundColor:'#1a7f37', borderRadius:4 },
-      { label:'Total Clicks',  data:totalData, backgroundColor:'#0969da', borderRadius:4 }
+      { label:'Avg Unique Clicks / Article', data: avgUnique, backgroundColor:'#1a7f37', borderRadius:4 },
+      { label:'Avg Total Clicks / Article',  data: avgTotal,  backgroundColor:'#0969da', borderRadius:4 }
     ]},
     options: { responsive:true, maintainAspectRatio:false,
+      // Top padding so the "N articles" plugin text doesn't get clipped.
+      layout: { padding: { top: 18 } },
       plugins:{ legend:{position:'bottom',labels:{font:{size:11}}},
-                tooltip:{callbacks:{ afterLabel: ctx => `Articles: ${counts[ctx.dataIndex]}` }} },
-      scales:{ y:{ beginAtZero:true } } }
+                tooltip:{callbacks:{
+                  label: ctx => `${ctx.dataset.label}: ${Number(ctx.parsed.y).toLocaleString(undefined, {maximumFractionDigits:1})}`,
+                  afterLabel: ctx => {
+                    const i = ctx.dataIndex;
+                    return [
+                      `${counts[i].toLocaleString()} article${counts[i] === 1 ? '' : 's'}`,
+                      `Totals: ${fmt(uniqData[i])} unique · ${fmt(totalData[i])} total clicks`
+                    ];
+                  }
+                }} },
+      scales:{ y:{ beginAtZero:true, ticks:{ callback: v => Number(v).toLocaleString() } } } },
+    plugins: [countLabelPlugin]
   });
   const ins = document.getElementById('cr-poscat-insight');
   if (ins) {
-    const avgU = order.map((k,i) => counts[i] ? (uniqData[i]/counts[i]) : 0);
     ins.innerHTML = order.map((k,i) =>
-      `<strong style="color:${_crPosColors[k]}">${labels[i]}</strong>: ${counts[i]} article${counts[i]===1?'':'s'} &middot; avg ${avgU[i].toFixed(1)} unique clicks`
+      `<strong style="color:${_crPosColors[k]}">${labels[i]}</strong>: ${counts[i]} article${counts[i]===1?'':'s'} &middot; avg ${avgUnique[i].toFixed(1)} unique / ${avgTotal[i].toFixed(1)} total clicks per article`
     ).join(' &nbsp;·&nbsp; ');
   }
 }

@@ -13,54 +13,54 @@
     "current": {
       "campaigns": 2,
       "recipients": 1487092,
-      "unique_opens": 612213,
-      "clicks": 33361,
-      "unsubs": 2516,
-      "bounced": 4861,
-      "avg_open_rate": 42.16,
+      "unique_opens": 612405,
+      "clicks": 33391,
+      "unsubs": 2517,
+      "bounced": 4862,
+      "avg_open_rate": 42.17,
       "avg_click_rate": 2.23,
-      "best_open_rate": 51.29,
+      "best_open_rate": 51.31,
       "best_click_rate": 2.37
     },
     "previous": {
-      "campaigns": 4,
-      "recipients": 2165997,
-      "unique_opens": 1101974,
-      "clicks": 32341,
+      "campaigns": 3,
+      "recipients": 2165900,
+      "unique_opens": 1101978,
+      "clicks": 32315,
       "unsubs": 4832,
       "bounced": 5786,
-      "avg_open_rate": 56.89,
-      "avg_click_rate": 9.65,
-      "best_open_rate": 73.2,
-      "best_click_rate": 34.02
+      "avg_open_rate": 51.45,
+      "avg_click_rate": 1.52,
+      "best_open_rate": 55.98,
+      "best_click_rate": 2.16
     },
     "delta": {
       "campaigns": {
-        "value": -2,
-        "pct_change": -50.0
+        "value": -1,
+        "pct_change": -33.3
       },
       "recipients": {
-        "value": -678905,
+        "value": -678808,
         "pct_change": -31.3
       },
       "unique_opens": {
-        "value": -489761,
+        "value": -489573,
         "pct_change": -44.4
       },
       "clicks": {
-        "value": 1020,
-        "pct_change": 3.2
+        "value": 1076,
+        "pct_change": 3.3
       },
       "unsubs": {
-        "value": -2316,
+        "value": -2315,
         "pct_change": -47.9
       },
       "avg_open_rate": {
-        "value": -14.73,
+        "value": -9.28,
         "unit": "pp"
       },
       "avg_click_rate": {
-        "value": -7.42,
+        "value": 0.71,
         "unit": "pp"
       }
     }
@@ -74,19 +74,19 @@
         "current": {
           "campaigns": 1,
           "recipients": 824240,
-          "unique_opens": 272247,
-          "clicks": 19531,
+          "unique_opens": 272289,
+          "clicks": 19541,
           "unsubs": 1177,
-          "bounced": 3354,
-          "avg_open_rate": 33.03,
+          "bounced": 3355,
+          "avg_open_rate": 33.04,
           "avg_click_rate": 2.37,
-          "best_open_rate": 33.03,
+          "best_open_rate": 33.04,
           "best_click_rate": 2.37
         },
         "previous": {
           "campaigns": 1,
           "recipients": 835249,
-          "unique_opens": 368539,
+          "unique_opens": 368551,
           "clicks": 9282,
           "unsubs": 1925,
           "bounced": 3390,
@@ -105,19 +105,19 @@
             "pct_change": -1.3
           },
           "unique_opens": {
-            "value": -96292,
+            "value": -96262,
             "pct_change": -26.1
           },
           "clicks": {
-            "value": 10249,
-            "pct_change": 110.4
+            "value": 10259,
+            "pct_change": 110.5
           },
           "unsubs": {
             "value": -748,
             "pct_change": -38.9
           },
           "avg_open_rate": {
-            "value": -11.09,
+            "value": -11.08,
             "unit": "pp"
           },
           "avg_click_rate": {
@@ -133,10 +133,10 @@
           "sent_date": "2026-05-11",
           "weekday": "Monday",
           "recipients": 824240,
-          "unique_opens": 272247,
-          "clicks": 19531,
+          "unique_opens": 272289,
+          "clicks": 19541,
           "unsubs": 1177,
-          "open_rate": 33.03,
+          "open_rate": 33.04,
           "click_rate": 2.37,
           "url": "http://createsend.com/t/y-10C1604E3BC6F9462540EF23F30FEDED"
         }
@@ -148,7 +148,7 @@
           "sent_date": "2026-05-04",
           "weekday": "Monday",
           "recipients": 835249,
-          "unique_opens": 368539,
+          "unique_opens": 368551,
           "clicks": 9282,
           "unsubs": 1925,
           "open_rate": 44.12,
@@ -175,36 +175,11 @@
       "previous_date": "2026-05-06",
       "comparison": {
         "current": null,
-        "previous": {
-          "campaigns": 1,
-          "recipients": 97,
-          "unique_opens": 71,
-          "clicks": 33,
-          "unsubs": 0,
-          "bounced": 0,
-          "avg_open_rate": 73.2,
-          "avg_click_rate": 34.02,
-          "best_open_rate": 73.2,
-          "best_click_rate": 34.02
-        },
+        "previous": null,
         "delta": {}
       },
       "current_campaigns": [],
-      "previous_campaigns": [
-        {
-          "name": "SA_EA_20260506 (Super Age Games)",
-          "subject": "Welcome, Founding Athlete",
-          "sent_date": "2026-05-06",
-          "weekday": "Wednesday",
-          "recipients": 97,
-          "unique_opens": 71,
-          "clicks": 33,
-          "unsubs": 0,
-          "open_rate": 73.2,
-          "click_rate": 34.02,
-          "url": "http://createsend.com/t/y-F24F79A4AC358F292540EF23F30FEDED"
-        }
-      ]
+      "previous_campaigns": []
     },
     {
       "weekday": "Thursday",
@@ -214,20 +189,20 @@
         "current": {
           "campaigns": 1,
           "recipients": 662852,
-          "unique_opens": 339966,
-          "clicks": 13830,
-          "unsubs": 1339,
+          "unique_opens": 340116,
+          "clicks": 13850,
+          "unsubs": 1340,
           "bounced": 1507,
-          "avg_open_rate": 51.29,
+          "avg_open_rate": 51.31,
           "avg_click_rate": 2.09,
-          "best_open_rate": 51.29,
+          "best_open_rate": 51.31,
           "best_click_rate": 2.09
         },
         "previous": {
           "campaigns": 1,
           "recipients": 666138,
-          "unique_opens": 372884,
-          "clicks": 14369,
+          "unique_opens": 372909,
+          "clicks": 14372,
           "unsubs": 1558,
           "bounced": 1194,
           "avg_open_rate": 55.98,
@@ -245,19 +220,19 @@
             "pct_change": -0.5
           },
           "unique_opens": {
-            "value": -32918,
+            "value": -32793,
             "pct_change": -8.8
           },
           "clicks": {
-            "value": -539,
-            "pct_change": -3.8
+            "value": -522,
+            "pct_change": -3.6
           },
           "unsubs": {
-            "value": -219,
-            "pct_change": -14.1
+            "value": -218,
+            "pct_change": -14.0
           },
           "avg_open_rate": {
-            "value": -4.69,
+            "value": -4.67,
             "unit": "pp"
           },
           "avg_click_rate": {
@@ -273,10 +248,10 @@
           "sent_date": "2026-05-14",
           "weekday": "Thursday",
           "recipients": 662852,
-          "unique_opens": 339966,
-          "clicks": 13830,
-          "unsubs": 1339,
-          "open_rate": 51.29,
+          "unique_opens": 340116,
+          "clicks": 13850,
+          "unsubs": 1340,
+          "open_rate": 51.31,
           "click_rate": 2.09,
           "url": "http://createsend.com/t/y-979D9C5A33A1355C2540EF23F30FEDED"
         }
@@ -288,8 +263,8 @@
           "sent_date": "2026-05-07",
           "weekday": "Thursday",
           "recipients": 666138,
-          "unique_opens": 372884,
-          "clicks": 14369,
+          "unique_opens": 372909,
+          "clicks": 14372,
           "unsubs": 1558,
           "open_rate": 55.98,
           "click_rate": 2.16,
@@ -330,8 +305,8 @@
         "previous": {
           "campaigns": 1,
           "recipients": 664513,
-          "unique_opens": 360480,
-          "clicks": 8657,
+          "unique_opens": 360518,
+          "clicks": 8661,
           "unsubs": 1349,
           "bounced": 1202,
           "avg_open_rate": 54.25,
@@ -349,8 +324,8 @@
           "sent_date": "2026-05-10",
           "weekday": "Sunday",
           "recipients": 664513,
-          "unique_opens": 360480,
-          "clicks": 8657,
+          "unique_opens": 360518,
+          "clicks": 8661,
           "unsubs": 1349,
           "open_rate": 54.25,
           "click_rate": 1.3,
@@ -366,10 +341,10 @@
       "sent_date": "2026-05-11",
       "weekday": "Monday",
       "recipients": 824240,
-      "unique_opens": 272247,
-      "clicks": 19531,
+      "unique_opens": 272289,
+      "clicks": 19541,
       "unsubs": 1177,
-      "open_rate": 33.03,
+      "open_rate": 33.04,
       "click_rate": 2.37,
       "url": "http://createsend.com/t/y-10C1604E3BC6F9462540EF23F30FEDED"
     },
@@ -379,10 +354,10 @@
       "sent_date": "2026-05-14",
       "weekday": "Thursday",
       "recipients": 662852,
-      "unique_opens": 339966,
-      "clicks": 13830,
-      "unsubs": 1339,
-      "open_rate": 51.29,
+      "unique_opens": 340116,
+      "clicks": 13850,
+      "unsubs": 1340,
+      "open_rate": 51.31,
       "click_rate": 2.09,
       "url": "http://createsend.com/t/y-979D9C5A33A1355C2540EF23F30FEDED"
     }
@@ -394,7 +369,7 @@
       "sent_date": "2026-05-04",
       "weekday": "Monday",
       "recipients": 835249,
-      "unique_opens": 368539,
+      "unique_opens": 368551,
       "clicks": 9282,
       "unsubs": 1925,
       "open_rate": 44.12,
@@ -402,26 +377,13 @@
       "url": "http://createsend.com/t/y-52975ED75AACDBEB2540EF23F30FEDED"
     },
     {
-      "name": "SA_EA_20260506 (Super Age Games)",
-      "subject": "Welcome, Founding Athlete",
-      "sent_date": "2026-05-06",
-      "weekday": "Wednesday",
-      "recipients": 97,
-      "unique_opens": 71,
-      "clicks": 33,
-      "unsubs": 0,
-      "open_rate": 73.2,
-      "click_rate": 34.02,
-      "url": "http://createsend.com/t/y-F24F79A4AC358F292540EF23F30FEDED"
-    },
-    {
       "name": "SA_PF_20260507 (Sponsor: AG1)",
       "subject": "How Aggressive Are You, Naturally? Take The Test",
       "sent_date": "2026-05-07",
       "weekday": "Thursday",
       "recipients": 666138,
-      "unique_opens": 372884,
-      "clicks": 14369,
+      "unique_opens": 372909,
+      "clicks": 14372,
       "unsubs": 1558,
       "open_rate": 55.98,
       "click_rate": 2.16,
@@ -433,8 +395,8 @@
       "sent_date": "2026-05-10",
       "weekday": "Sunday",
       "recipients": 664513,
-      "unique_opens": 360480,
-      "clicks": 8657,
+      "unique_opens": 360518,
+      "clicks": 8661,
       "unsubs": 1349,
       "open_rate": 54.25,
       "click_rate": 1.3,
@@ -467,7 +429,7 @@
       3,
       5,
       5,
-      4,
+      3,
       2
     ],
     "avg_open_rate": [
@@ -480,9 +442,9 @@
       57.8,
       49.19,
       52.77,
-      54.56,
-      56.89,
-      42.16
+      54.57,
+      51.45,
+      42.17
     ],
     "avg_click_rate": [
       2.93,
@@ -495,7 +457,7 @@
       2.53,
       6.02,
       2.47,
-      9.65,
+      1.52,
       2.23
     ],
     "recipients": [
@@ -509,22 +471,22 @@
       2304906,
       2544161,
       2297178,
-      2165997,
+      2165900,
       1487092
     ],
     "clicks": [
       62037,
       28855,
-      85915,
+      85916,
       56999,
-      63929,
+      63930,
       38836,
       31699,
-      58275,
-      58449,
-      61046,
-      32341,
-      33361
+      58277,
+      58451,
+      61047,
+      32315,
+      33391
     ]
   },
   "campaign_clicks_weekly": {
@@ -551,21 +513,21 @@
     "clicks": [
       38836,
       31699,
-      58275,
-      58449,
-      61046,
-      32341,
-      42812,
+      58277,
+      58451,
+      61047,
+      32315,
+      43050,
       0
     ],
     "unique_opens": [
-      1159703,
-      1137159,
-      1103913,
-      1089120,
-      1085210,
-      1101974,
-      937947,
+      1159706,
+      1137164,
+      1103924,
+      1089140,
+      1085239,
+      1101978,
+      941462,
       0
     ],
     "campaigns": [
@@ -574,7 +536,7 @@
       3,
       5,
       5,
-      4,
+      3,
       3,
       0
     ],
@@ -608,27 +570,27 @@
     ],
     "clicks": [
       224175,
-      233322,
-      222693,
-      270211,
-      209113,
-      92804
+      233185,
+      222694,
+      270213,
+      209117,
+      93017
     ],
     "unique_opens": [
-      5081373,
-      5438355,
-      4834251,
-      5540787,
-      4783210,
-      2430614
+      5081374,
+      5437710,
+      4834257,
+      5540794,
+      4783269,
+      2434141
     ],
     "campaigns": [
       12,
-      14,
+      13,
       12,
       16,
       17,
-      9
+      8
     ],
     "is_current": [
       false,
@@ -655,17 +617,17 @@
       "2026-05-18"
     ],
     "clicks": [
-      32512,
+      32513,
       35094,
       9282,
-      19531,
+      19541,
       0
     ],
     "unique_opens": [
-      373964,
-      358380,
-      368539,
-      272247,
+      373977,
+      358390,
+      368551,
+      272289,
       0
     ],
     "campaigns": [

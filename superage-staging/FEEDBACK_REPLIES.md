@@ -307,6 +307,60 @@ selector and the `_setArtWindow` plumbing were removed. The lambda still
 emits `top_articles_windowed` for backwards-compat (in case the windowed
 data starts arriving later), but the dashboard ignores it.
 
+### "Acquisition Quality by UTM Source" — time filter, churn columns, sponsor / open rate / CAC, rename UTM → Source
+
+> "Need to add filter by time or at least option to select last 30 / 60 / 90
+> days. Need to add 30-day churn rate column, 90-day churn rate column,
+> Open Rate %, Avg Ad click / subscriber (sponsor or affiliate links), CAC
+> (will be tough to calculate). UTM is an internal term, 'Sources' is a more
+> user-friendly term. Also remove the part of utm_source → source → organic."
+
+**✓ shipped (most of it):**
+
+- **Renamed UTM → Source** everywhere on the Audience tab: KPI card title,
+  pie-chart title, second-chart title, and the engagement table.
+- **Removed the `utm_source → source → Organic` subtitle** from the two
+  chart cards and the table card. (The fallback logic is documented in
+  `METRICS_updated.md` Q19; the dashboard label is now just "Source".)
+- **Time-window selector** added above the table: **All time** (default) /
+  **Last 30 days** / **Last 60 days** / **Last 90 days**. Switching windows
+  re-renders the table from the appropriate per-window array the lambda
+  ships (`rows_all`, `rows_30d`, `rows_60d`, `rows_90d`).
+- **Click stats re-sourced from raw events.** Originally Q19 joined
+  `subscribers` to the pre-aggregated `subscriber_clicks` rollup, which
+  carries no date column — so a time filter would have been a no-op. Q19
+  now joins `subscribers → "Campaigns_Clicks"` on lowercased `email_address`
+  and the date filter goes on `cc."Date"`. As a side-effect, the "Unique
+  Clicks" column was renamed **Clicks** (it's a count of raw click events
+  within the window); the legacy `unique_clicks` / `non_unique_clicks`
+  fields still ship inside each row for backwards-compat but now mirror the
+  same count.
+- **30-Day Churn** and **90-Day Churn** columns added — `COUNT(*) FILTER (state='Unsubscribed' AND unsubbed - joined <= N)` divided by the source cohort. Each cell shows the percentage and the raw count, e.g. `4.2% (1,234)`.
+
+**Skipped this round** *(explicitly per your earlier answers)* — columns
+reserved structurally but render as `—`:
+
+- **Avg Sponsor Click / Subscriber.** Needs a join key between
+  `Campaigns_Clicks` and `articles_clicks` so we can flag raw click events
+  whose placement has `type='sponsor'`. You said "skip per-subscriber
+  sponsor for now" — I left the column header in place with a tooltip
+  noting that, plus a note that **affiliate clicks aren't tracked
+  accurately yet** (you mentioned they "existed but not accurately").
+- **Open Rate %.** No per-subscriber open data exists today. Column
+  header is reserved with a tooltip explaining it'll fill in once a
+  `Campaigns_Opens`-style table (or a per-subscriber rolling open count)
+  is available.
+- **CAC.** Skipped entirely — no per-source spend data in the schema. Not
+  added as a column. When you wire up an `ad_spend` table I can layer it
+  on top of `subscribers / spend` per source.
+
+**Note on the 30 / 60 / 90-day cohort views**: the time filter is
+cohort-style — it scopes the table to subscribers who **joined** within
+the window, and counts only their click events within that same window.
+For a 30-day cohort the 90-day churn column is by definition
+under-observable (subscribers haven't been around 90 days yet); the
+tooltip on the column header calls that out.
+
 ### "Same in this visual — Unique Clicks by Position Category"
 
 **✓ shipped.** The **Clicks by Position Category** chart (renamed from

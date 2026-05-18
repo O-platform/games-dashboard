@@ -1595,33 +1595,40 @@ function renderAudience(M) {
     <div class="kpi-row">
       <div class="kpi-card accent"><div class="label">Total Subscribers</div><div class="value">${fmt(M.total_subscribers)}</div><div class="sub">All-time base</div></div>
       <div class="kpi-card green"><div class="label">Active Rate</div><div class="value">${M.active_rate||'—'}</div><div class="sub">Currently active</div></div>
-      <div class="kpi-card blue"><div class="label">Top UTM Source</div><div class="value" style="font-size:14px;">${utmLabel((M.acquisition_quality&&M.acquisition_quality.utm_source&&M.acquisition_quality.utm_source.rows&&M.acquisition_quality.utm_source.rows[0]&&M.acquisition_quality.utm_source.rows[0].label)||'')}</div><div class="sub">Largest acquisition channel</div></div>
+      <div class="kpi-card blue"><div class="label">Top Source</div><div class="value" style="font-size:14px;">${utmLabel((M.acquisition_quality&&M.acquisition_quality.utm_source&&M.acquisition_quality.utm_source.rows&&M.acquisition_quality.utm_source.rows[0]&&M.acquisition_quality.utm_source.rows[0].label)||'')}</div><div class="sub">Largest acquisition channel</div></div>
       <div class="kpi-card orange"><div class="label">Top Source %</div><div class="value">${(()=>{const r=M.acquisition_quality&&M.acquisition_quality.utm_source&&M.acquisition_quality.utm_source.rows||[];const total=r.reduce((s,x)=>s+(x.subscribers||x.count||0),0);const top=r[0]?(r[0].subscribers||r[0].count||0):0;return top&&total?(top/total*100).toFixed(1)+'%':'—';})()}</div><div class="sub">Share of categorised subscribers</div></div>
     </div>
     <div class="grid-2">
       <div class="chart-card">
-        <h3>Acquisition by UTM Source <span class="badge-inline">utm_source → source → Organic</span></h3>
+        <h3>Acquisition by Source</h3>
         <div class="chart-container h300"><canvas id="aud-source-pie"></canvas></div>
       </div>
       <div class="chart-card">
-        <h3>UTM Clicks Performance</h3>
+        <h3>Source Clicks Performance</h3>
         <div class="chart-container h300"><canvas id="aud-utm-clicks"></canvas></div>
       </div>
     </div>
     <div class="chart-card">
-      <h3>Acquisition Quality by UTM Source <span class="badge-inline">utm_source → source → Organic</span></h3>
-      <div class="tbl-wrap"><table class="dash-table"><thead><tr><th>UTM Source</th><th>Subscribers</th><th>% of Total</th><th>Clickers</th><th>Clicker Rate</th><th>Unique Clicks</th><th>Avg Clicks / Subscriber</th></tr></thead>
-      <tbody>${(()=>{
-        const aq = M.acquisition_quality&&M.acquisition_quality.utm_source||{rows:[]};
-        const total = (aq.rows||[]).reduce((s,r)=>s+(r.subscribers||r.count||0),0);
-        return (aq.rows||[]).map(r=>{
-          const subs = r.subscribers!=null?r.subscribers:(r.count||0);
-          const pct  = total ? (subs/total*100).toFixed(1)+'%' : '—';
-          const clk  = r.clicker_rate!=null ? (typeof r.clicker_rate==='string'?r.clicker_rate:Number(r.clicker_rate).toFixed(1)+'%') : '—';
-          const apc  = r.avg_unique_clicks_per_subscriber!=null ? Number(r.avg_unique_clicks_per_subscriber).toFixed(2) : '—';
-          return `<tr><td>${utmLabel(r.label)}</td><td>${fmt(subs)}</td><td>${pct}</td><td>${fmt(r.clickers)}</td><td>${clk}</td><td>${fmt(r.unique_clicks)}</td><td>${apc}</td></tr>`;
-        }).join('');
-      })()}</tbody></table></div>
+      <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;margin-bottom:10px;flex-wrap:wrap;">
+        <h3 style="margin:0;">Acquisition Quality by Source <span class="badge-inline" id="aud-window-badge">— all time</span></h3>
+        <div style="display:flex;gap:4px;" id="aud-window-btns">
+          <button onclick="_setAcqWindow('all')" id="audw-all" style="font-size:11px;padding:3px 10px;border:1px solid var(--card-border);border-radius:5px;background:var(--accent);color:#fff;cursor:pointer;">All time</button>
+          <button onclick="_setAcqWindow('30d')" id="audw-30" style="font-size:11px;padding:3px 10px;border:1px solid var(--card-border);border-radius:5px;background:var(--card);color:var(--text-muted);cursor:pointer;">Last 30 days</button>
+          <button onclick="_setAcqWindow('60d')" id="audw-60" style="font-size:11px;padding:3px 10px;border:1px solid var(--card-border);border-radius:5px;background:var(--card);color:var(--text-muted);cursor:pointer;">Last 60 days</button>
+          <button onclick="_setAcqWindow('90d')" id="audw-90" style="font-size:11px;padding:3px 10px;border:1px solid var(--card-border);border-radius:5px;background:var(--card);color:var(--text-muted);cursor:pointer;">Last 90 days</button>
+        </div>
+      </div>
+      <div class="tbl-wrap"><table class="dash-table" id="aud-acq-table">
+        <thead><tr>
+          <th>Source</th><th>Subscribers</th><th>% of Total</th><th>Clickers</th><th>Clicker Rate</th>
+          <th>Clicks</th><th>Avg Clicks / Subscriber</th>
+          <th title="Subscribers from this source who unsubscribed within 30 days of joining, as a % of the source cohort">30-Day Churn</th>
+          <th title="Subscribers from this source who unsubscribed within 90 days of joining, as a % of the source cohort">90-Day Churn</th>
+          <th title="Sponsor / affiliate links — needs a `Campaigns_Clicks` ↔ `articles_clicks` join key. Affiliate isn't tracked accurately yet.">Avg Sponsor Click / Sub</th>
+          <th title="No per-subscriber open data yet — column reserved.">Open Rate %</th>
+        </tr></thead>
+        <tbody id="aud-acq-tbody"></tbody>
+      </table></div>
     </div>
   `;
   // Acquisition source pie
@@ -1643,6 +1650,56 @@ function renderAudience(M) {
     ]},
     options: { responsive:true, maintainAspectRatio:false, indexAxis:'y', plugins:{legend:{position:'bottom',labels:{font:{size:11}}}}, scales:{x:{beginAtZero:true}} }
   });
+  // Acquisition-Quality table — defaults to all-time. Stashes the source
+  // payload on window so _setAcqWindow can re-render without re-fetching.
+  window._acqSource = (M.acquisition_quality && M.acquisition_quality.utm_source) || {};
+  _setAcqWindow('all');
+}
+
+/* Render the Acquisition Quality table for one of the time windows the
+ * lambda emits (`rows_all`, `rows_30d`, `rows_60d`, `rows_90d`). Falls back
+ * to the legacy `rows` array when the windowed variants aren't present
+ * yet (i.e. lambda hasn't run since the schema change). */
+function _setAcqWindow(win) {
+  const src = window._acqSource || {};
+  const map = { all: src.rows_all || src.rows || [],
+                '30d': src.rows_30d || [],
+                '60d': src.rows_60d || [],
+                '90d': src.rows_90d || [] };
+  const rows = map[win] || [];
+  ['audw-all','audw-30','audw-60','audw-90'].forEach(id => {
+    const btn = document.getElementById(id);
+    if (!btn) return;
+    const want = id.split('-')[1]; // all / 30 / 60 / 90
+    const wantKey = want === 'all' ? 'all' : (want + 'd');
+    const active = wantKey === win;
+    btn.style.background = active ? 'var(--accent)' : 'var(--card)';
+    btn.style.color = active ? '#fff' : 'var(--text-muted)';
+  });
+  const badge = document.getElementById('aud-window-badge');
+  if (badge) badge.textContent = win === 'all'
+    ? '— all time'
+    : `— subscribers joined in last ${win.replace('d','')} days, clicks made in that window`;
+  const tbody = document.getElementById('aud-acq-tbody');
+  if (!tbody) return;
+  if (!rows.length) {
+    tbody.innerHTML = `<tr><td colspan="11" style="text-align:center;color:var(--text-muted);padding:14px;">No data in this window yet — re-run the metrics lambda to populate.</td></tr>`;
+    return;
+  }
+  const total = rows.reduce((s, r) => s + (Number(r.subscribers) || 0), 0);
+  tbody.innerHTML = rows.map(r => {
+    const subs = Number(r.subscribers) || 0;
+    const pct  = total ? (subs / total * 100).toFixed(1) + '%' : '—';
+    const clk  = r.clicker_rate != null ? (typeof r.clicker_rate === 'string' ? r.clicker_rate : Number(r.clicker_rate).toFixed(1) + '%') : '—';
+    const apc  = (r.avg_clicks_per_subscriber != null ? r.avg_clicks_per_subscriber : r.avg_unique_clicks_per_subscriber);
+    const apcS = (apc != null && !Number.isNaN(Number(apc))) ? Number(apc).toFixed(2) : '—';
+    const clicks = r.clicks != null ? r.clicks : r.unique_clicks;
+    const c30  = (r.churned_30d_rate != null) ? `${Number(r.churned_30d_rate).toFixed(1)}% <span style="color:var(--text-muted);">(${fmt(r.churned_30d)})</span>` : '—';
+    const c90  = (r.churned_90d_rate != null) ? `${Number(r.churned_90d_rate).toFixed(1)}% <span style="color:var(--text-muted);">(${fmt(r.churned_90d)})</span>` : '—';
+    const spo  = (r.sponsor_clicks_per_subscriber != null) ? Number(r.sponsor_clicks_per_subscriber).toFixed(2) : '<span style="color:var(--text-dim);" title="Needs a Campaigns_Clicks ↔ articles_clicks join key — affiliates aren\'t tracked accurately yet.">—</span>';
+    const opn  = (r.open_rate != null) ? Number(r.open_rate).toFixed(1) + '%' : '<span style="color:var(--text-dim);" title="No per-subscriber open data yet.">—</span>';
+    return `<tr><td>${utmLabel(r.label)}</td><td>${fmt(subs)}</td><td>${pct}</td><td>${fmt(r.clickers)}</td><td>${clk}</td><td>${fmt(clicks)}</td><td>${apcS}</td><td>${c30}</td><td>${c90}</td><td>${spo}</td><td>${opn}</td></tr>`;
+  }).join('');
 }
 
 /* ═══════════════════════════════════════

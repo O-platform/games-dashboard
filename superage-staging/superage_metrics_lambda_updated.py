@@ -669,46 +669,75 @@ def lambda_handler(event, context):
         # ─────────────────────────────────────────────────────
         # 4. Acquisition quality — utm_source only
         # ─────────────────────────────────────────────────────
-        def fetch_acquisition_rows(label_expr: str, fallback_label: str, limit: int = 12):
-            # label_expr is the SQL expression(s) to coalesce *before* the
-            # fallback label, e.g. "NULLIF(TRIM(utm_source),''), NULLIF(TRIM(source),''))".
+        # Rebuilt to support a time-window selector (All / 30d / 60d / 90d) on
+        # the Audience tab and to surface 30-day / 90-day churn rates per
+        # source. Click stats are now sourced from the raw `Campaigns_Clicks`
+        # events table (joined to subscribers by lowercased email) so the
+        # window filter actually scopes click activity — the old query used
+        # the date-less `subscriber_clicks` rollup and couldn't be windowed.
+        def fetch_acquisition_rows(label_expr: str, fallback_label: str,
+                                   since_days=None, limit: int = 12):
+            sub_filter = ""
+            click_filter = ""
+            if since_days is not None:
+                sub_filter   = f"AND date_joined::date >= CURRENT_DATE - INTERVAL '{int(since_days)} days'"
+                click_filter = f"AND cc.\"Date\"::date >= CURRENT_DATE - INTERVAL '{int(since_days)} days'"
             cur.execute(f"""
                 WITH s AS (
                     SELECT
-                        LOWER(TRIM(email)) AS email,
-                        COALESCE({label_expr}, %s) AS label
+                        LOWER(TRIM(email))                  AS email,
+                        COALESCE({label_expr}, %s)          AS label,
+                        state,
+                        date_joined::date                   AS joined,
+                        date_unsubscribed::date             AS unsubbed
                     FROM {S}.subscribers
                     WHERE email IS NOT NULL AND TRIM(email) != ''
                       AND date_joined::date < CURRENT_DATE
-                ), sc AS (
+                      {sub_filter}
+                ),
+                cc AS (
                     SELECT
-                        LOWER(TRIM(email_address)) AS email,
-                        SUM(unique_clicks)     AS unique_clicks,
-                        SUM(non_unique_clicks) AS non_unique_clicks
-                    FROM {S}.subscriber_clicks
-                    WHERE email_address IS NOT NULL AND TRIM(email_address) != ''
+                        LOWER(TRIM(cc."email_address")) AS email,
+                        COUNT(*)                        AS clicks
+                    FROM {S}."Campaigns_Clicks" cc
+                    WHERE cc."Date" IS NOT NULL
+                      AND cc."email_address" IS NOT NULL
+                      AND TRIM(cc."email_address") != ''
+                      {click_filter}
                     GROUP BY 1
                 )
                 SELECT
                     s.label,
-                    COUNT(*) AS subscribers,
-                    COUNT(sc.email) AS clickers,
-                    COALESCE(SUM(sc.unique_clicks), 0)     AS unique_clicks,
-                    COALESCE(SUM(sc.non_unique_clicks), 0) AS non_unique_clicks,
-                    ROUND(COALESCE(SUM(sc.unique_clicks), 0)::numeric / NULLIF(COUNT(*), 0), 2) AS avg_unique_clicks_per_subscriber,
-                    ROUND(COUNT(sc.email)::numeric / NULLIF(COUNT(*), 0) * 100, 1) AS clicker_rate
-                FROM s LEFT JOIN sc ON s.email = sc.email
+                    COUNT(*)                                        AS subscribers,
+                    COUNT(cc.email)                                 AS clickers,
+                    COALESCE(SUM(cc.clicks), 0)                     AS clicks,
+                    ROUND(COALESCE(SUM(cc.clicks), 0)::numeric
+                          / NULLIF(COUNT(*), 0), 2)                 AS avg_clicks_per_subscriber,
+                    ROUND(COUNT(cc.email)::numeric
+                          / NULLIF(COUNT(*), 0) * 100, 1)           AS clicker_rate,
+                    COUNT(*) FILTER (
+                        WHERE s.state = 'Unsubscribed'
+                          AND s.unsubbed IS NOT NULL AND s.joined IS NOT NULL
+                          AND (s.unsubbed - s.joined) <= 30
+                    )                                               AS churned_30d,
+                    COUNT(*) FILTER (
+                        WHERE s.state = 'Unsubscribed'
+                          AND s.unsubbed IS NOT NULL AND s.joined IS NOT NULL
+                          AND (s.unsubbed - s.joined) <= 90
+                    )                                               AS churned_90d
+                FROM s LEFT JOIN cc ON s.email = cc.email
                 GROUP BY 1
-                ORDER BY unique_clicks DESC NULLS LAST, subscribers DESC
+                ORDER BY subscribers DESC NULLS LAST
                 LIMIT {int(limit)}
             """, (fallback_label,))
             return cur.fetchall()
 
         # Acquisition source label: utm_source → source → 'Organic'
-        acquisition_utm_rows = fetch_acquisition_rows(
-            "NULLIF(TRIM(utm_source),''), NULLIF(TRIM(source),'')",
-            "Organic",
-        )
+        _label_expr = "NULLIF(TRIM(utm_source),''), NULLIF(TRIM(source),'')"
+        acquisition_utm_rows     = fetch_acquisition_rows(_label_expr, "Organic")
+        acquisition_utm_rows_30  = fetch_acquisition_rows(_label_expr, "Organic", since_days=30)
+        acquisition_utm_rows_60  = fetch_acquisition_rows(_label_expr, "Organic", since_days=60)
+        acquisition_utm_rows_90  = fetch_acquisition_rows(_label_expr, "Organic", since_days=90)
 
         # ─────────────────────────────────────────────────────
         # 5. UTM source subscriber click performance
@@ -1426,32 +1455,63 @@ def lambda_handler(event, context):
         "colors": ["#4f8cff", "#34d399", "#a78bfa", "#fbbf24", "#f87171"],
     }
 
-    # Acquisition quality — utm_source only
-    def acquisition_payload(rows):
+    # Acquisition quality — per-source metrics with optional time window.
+    # Returns the per-source rows plus 30d/90d churn fields. Backwards-
+    # compatible aliases (`unique_clicks` etc.) are kept on each row so older
+    # HTML reading the legacy field names doesn't break.
+    def _row(r):
+        subs = safe_int(r["subscribers"])
+        c30  = safe_int(r["churned_30d"])
+        c90  = safe_int(r["churned_90d"])
+        clicks = safe_int(r["clicks"])
         return {
-            "labels":     [r["label"] for r in rows],
-            "subscribers":[safe_int(r["subscribers"]) for r in rows],
-            "clickers":   [safe_int(r["clickers"]) for r in rows],
-            "unique_clicks":    [safe_int(r["unique_clicks"]) for r in rows],
-            "non_unique_clicks":[safe_int(r["non_unique_clicks"]) for r in rows],
-            "avg_unique_clicks_per_subscriber": [safe_float(r["avg_unique_clicks_per_subscriber"]) for r in rows],
-            "clicker_rate": [safe_float(r["clicker_rate"]) for r in rows],
-            "rows": [
-                {
-                    "label":        r["label"],
-                    "subscribers":  safe_int(r["subscribers"]),
-                    "clickers":     safe_int(r["clickers"]),
-                    "unique_clicks":     safe_int(r["unique_clicks"]),
-                    "non_unique_clicks": safe_int(r["non_unique_clicks"]),
-                    "avg_unique_clicks_per_subscriber": safe_float(r["avg_unique_clicks_per_subscriber"]),
-                    "clicker_rate": f"{safe_float(r['clicker_rate']):.1f}%",
-                }
-                for r in rows
-            ],
+            "label":        r["label"],
+            "subscribers":  subs,
+            "clickers":     safe_int(r["clickers"]),
+            "clicks":       clicks,
+            # Legacy aliases for older HTML — both point at the windowed click
+            # count now (raw events). The data model used to distinguish
+            # unique vs non-unique via the pre-aggregated subscriber_clicks
+            # rollup; that table no longer participates here.
+            "unique_clicks":     clicks,
+            "non_unique_clicks": clicks,
+            "avg_clicks_per_subscriber":        safe_float(r["avg_clicks_per_subscriber"]),
+            "avg_unique_clicks_per_subscriber": safe_float(r["avg_clicks_per_subscriber"]),
+            "clicker_rate":   f"{safe_float(r['clicker_rate']) or 0:.1f}%",
+            "churned_30d":      c30,
+            "churned_30d_rate": round((c30 / subs * 100), 1) if subs else 0.0,
+            "churned_90d":      c90,
+            "churned_90d_rate": round((c90 / subs * 100), 1) if subs else 0.0,
+            # Placeholders for columns we can't compute yet — see FEEDBACK_REPLIES.md.
+            "sponsor_clicks_per_subscriber": None,   # needs Campaigns_Clicks→articles_clicks join key
+            "open_rate":                     None,   # no per-subscriber open data yet
+        }
+
+    def acquisition_payload(rows_all, rows_30, rows_60, rows_90):
+        return {
+            # Top-level arrays + `rows` are kept for backwards compatibility
+            # with HTML that hasn't been updated yet — they mirror rows_all.
+            "labels":           [r["label"]       for r in rows_all],
+            "subscribers":      [safe_int(r["subscribers"]) for r in rows_all],
+            "clickers":         [safe_int(r["clickers"])    for r in rows_all],
+            "unique_clicks":    [safe_int(r["clicks"])      for r in rows_all],
+            "non_unique_clicks":[safe_int(r["clicks"])      for r in rows_all],
+            "avg_unique_clicks_per_subscriber": [safe_float(r["avg_clicks_per_subscriber"]) for r in rows_all],
+            "clicker_rate":     [safe_float(r["clicker_rate"]) for r in rows_all],
+            "rows":     [_row(r) for r in rows_all],
+            "rows_all": [_row(r) for r in rows_all],
+            "rows_30d": [_row(r) for r in rows_30],
+            "rows_60d": [_row(r) for r in rows_60],
+            "rows_90d": [_row(r) for r in rows_90],
         }
 
     M["acquisition_quality"] = {
-        "utm_source": acquisition_payload(acquisition_utm_rows),
+        "utm_source": acquisition_payload(
+            acquisition_utm_rows,
+            acquisition_utm_rows_30,
+            acquisition_utm_rows_60,
+            acquisition_utm_rows_90,
+        ),
     }
 
     # UTM source subscriber click performance

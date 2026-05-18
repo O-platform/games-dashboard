@@ -707,39 +707,81 @@ SELECT
 FROM superage.subscriber_clicks;
 ```
 
-## Q19 — Audience: Acquisition Quality by UTM Source (Engagement Table)
+## Q19 — Audience: Acquisition Quality by Source (Engagement Table)
+
+The "Acquisition Quality by Source" table on the Audience tab supports a
+time-window selector (All / 30d / 60d / 90d). The lambda runs this query
+**four times** — once with no date filter and once for each rolling window
+— and ships the results as `rows_all`, `rows_30d`, `rows_60d`, `rows_90d`
+inside `M.acquisition_quality.utm_source`. The dashboard's window buttons
+just pick which array to render.
+
+Click stats now come from the **raw `Campaigns_Clicks` events** (joined to
+subscribers by lowercased `email_address`) so the date filter actually
+scopes click activity. The old query joined the date-less
+`subscriber_clicks` rollup and couldn't be windowed.
 
 ```sql
+-- For each window, `since_days` is None / 30 / 60 / 90. The two date
+-- filters (`AND date_joined::date >= …` on subscribers, `AND cc."Date"::date >= …`
+-- on click events) are dropped for the all-time variant.
 WITH s AS (
     SELECT
-        LOWER(TRIM(email)) AS email,
-        COALESCE(NULLIF(TRIM(utm_source), ''), NULLIF(TRIM(source), ''), 'Organic') AS label
+        LOWER(TRIM(email))                  AS email,
+        COALESCE(NULLIF(TRIM(utm_source), ''), NULLIF(TRIM(source), ''), 'Organic') AS label,
+        state,
+        date_joined::date                   AS joined,
+        date_unsubscribed::date             AS unsubbed
     FROM superage.subscribers
     WHERE email IS NOT NULL AND TRIM(email) != ''
       AND date_joined::date < CURRENT_DATE
-), sc AS (
+      -- AND date_joined::date >= CURRENT_DATE - INTERVAL '<N> days'
+),
+cc AS (
     SELECT
-        LOWER(TRIM(email_address)) AS email,
-        SUM(unique_clicks)     AS unique_clicks,
-        SUM(non_unique_clicks) AS non_unique_clicks
-    FROM superage.subscriber_clicks
-    WHERE email_address IS NOT NULL AND TRIM(email_address) != ''
+        LOWER(TRIM(cc."email_address")) AS email,
+        COUNT(*)                        AS clicks
+    FROM superage."Campaigns_Clicks" cc
+    WHERE cc."Date" IS NOT NULL
+      AND cc."email_address" IS NOT NULL
+      AND TRIM(cc."email_address") != ''
+      -- AND cc."Date"::date >= CURRENT_DATE - INTERVAL '<N> days'
     GROUP BY 1
 )
 SELECT
     s.label,
-    COUNT(*) AS subscribers,
-    COUNT(sc.email) AS clickers,
-    COALESCE(SUM(sc.unique_clicks), 0)     AS unique_clicks,
-    COALESCE(SUM(sc.non_unique_clicks), 0) AS non_unique_clicks,
-    ROUND(COALESCE(SUM(sc.unique_clicks), 0)::numeric
-          / NULLIF(COUNT(*), 0), 2) AS avg_unique_clicks_per_subscriber,
-    ROUND(COUNT(sc.email)::numeric / NULLIF(COUNT(*), 0) * 100, 1) AS clicker_rate
-FROM s LEFT JOIN sc ON s.email = sc.email
+    COUNT(*)                                        AS subscribers,
+    COUNT(cc.email)                                 AS clickers,
+    COALESCE(SUM(cc.clicks), 0)                     AS clicks,
+    ROUND(COALESCE(SUM(cc.clicks), 0)::numeric
+          / NULLIF(COUNT(*), 0), 2)                 AS avg_clicks_per_subscriber,
+    ROUND(COUNT(cc.email)::numeric
+          / NULLIF(COUNT(*), 0) * 100, 1)           AS clicker_rate,
+    COUNT(*) FILTER (
+        WHERE s.state = 'Unsubscribed'
+          AND s.unsubbed IS NOT NULL AND s.joined IS NOT NULL
+          AND (s.unsubbed - s.joined) <= 30
+    )                                               AS churned_30d,
+    COUNT(*) FILTER (
+        WHERE s.state = 'Unsubscribed'
+          AND s.unsubbed IS NOT NULL AND s.joined IS NOT NULL
+          AND (s.unsubbed - s.joined) <= 90
+    )                                               AS churned_90d
+FROM s LEFT JOIN cc ON s.email = cc.email
 GROUP BY 1
-ORDER BY unique_clicks DESC NULLS LAST, subscribers DESC
+ORDER BY subscribers DESC NULLS LAST
 LIMIT 12;
 ```
+
+**JSON output** (`M.acquisition_quality.utm_source`):
+
+- `rows_all`, `rows_30d`, `rows_60d`, `rows_90d` — per-window arrays of `{label, subscribers, clickers, clicks, avg_clicks_per_subscriber, clicker_rate, churned_30d, churned_30d_rate, churned_90d, churned_90d_rate, sponsor_clicks_per_subscriber, open_rate}`. `sponsor_clicks_per_subscriber` and `open_rate` ship as `null` placeholders — they're rendered as `—` in the dashboard until the schema supports them (see "Open Rate" and "Sponsor click attribution" notes in the FEEDBACK_REPLIES).
+- `rows` — alias of `rows_all` for backwards compatibility with the older HTML.
+- `labels[]`, `subscribers[]`, `clickers[]`, `unique_clicks[]`, `non_unique_clicks[]`, `avg_unique_clicks_per_subscriber[]`, `clicker_rate[]` — top-level legacy arrays kept so the existing Audience pie chart keeps working without changes.
+
+> **Caveats**
+> - `clicks` is a count of **raw click events** within the window. The legacy "unique_clicks / non_unique_clicks" distinction came from the pre-aggregated `subscriber_clicks` rollup, which no longer participates in this query; both legacy fields now mirror the windowed event count.
+> - For a 30-day cohort the 90-day-churn column is "not fully observable" — those subscribers haven't been around for 90 days. The number is still meaningful (it's the % who churned within 30 days of joining, capped by however long they've been around), but it tends to under-report for short windows.
 
 ## Q20 — Audience: UTM Source Subscriber Click Activity
 
@@ -1270,3 +1312,6 @@ LIMIT 12;
 30. **Click Analysis cleanup — duplicates removed**: The "Clicks by Category", "Clicks by Author", and "Tag / Topic Performance" blocks were removed from the Click Analysis tab; the same breakdowns already live on the Content Reference tab (Top Categories / Top Tags charts + Author filter + Sleeper Hits insight). The lambda still emits `category_performance`, `author_performance`, and `tag_performance` for backwards compatibility, but the dashboard no longer renders them on Click Analysis.
 31. **Top Articles simplified to top-10 all-time**: The All / 7d / 15d / 30d / 90d window selector on the "Top Articles by Unique Clicks" table was removed (only "All" had data). The table now renders the **top 10** rows of `M.top_articles` (already sorted by `unique_clicks` DESC in Q13). The lambda still emits `top_articles_windowed` for backwards compat, but the dashboard no longer consumes it.
 32. **Same Weekday switched to campaign-send view**: The "Same Weekday" chart in Click Analysis Section 2 was rewritten to bucket **campaign sends** (from `M.campaign_table`) by the weekday of `sent_date`, then plot each campaign's **total clicks** as a bar (replacing the click-event-date view sourced from `raw_clicks_by_weekday`). For each weekday it shows the last 2 / 3 / 5 campaigns (window buttons re-labelled "2 weeks / 3 weeks / 5 weeks"). Each bar is colour-coded **green** if total clicks ≥ that weekday's average and **red** if below; campaigns sent within the last 2 days render in pale grey ("in progress") and are excluded from the average so their incomplete totals don't drag the baseline. The tooltip surfaces the campaign name, send date, total clicks, and the ± % vs that weekday's average. The Sunday Spotlight toggle still applies (matched by `name`). `raw_clicks_by_weekday` / `raw_clicks_same_weekday` are no longer consumed by this chart but stay in the JSON for backwards-compat.
+33. **Position Category bars switched to avg-per-article**: "Unique Clicks by Position Category" renamed to "Clicks by Position Category" and its bars now plot **avg unique** / **avg total** clicks per article for each High / Medium / Low bucket (1 d.p.). Article count drawn above each green bar via an inline plugin; tooltip lists the absolute totals + article count.
+34. **Top Categories / Top Tags bars switched to avg-per-article**: bars now plot `Avg Unique Clicks / Article` and `Avg Total Clicks / Article` (integer round); top 10 re-sorted by avg unique DESC. The inline label at each bar's right edge switched from `avg N/article` to `N articles` so the volume backing each average is visible.
+35. **Acquisition Quality by Source — time window + churn columns + naming**: Audience tab table renamed (UTM → Source) and given a time-window selector (All / 30d / 60d / 90d). The lambda runs Q19 four times (one per window) and ships `rows_all`, `rows_30d`, `rows_60d`, `rows_90d` inside `M.acquisition_quality.utm_source`. Click stats are now sourced from raw `Campaigns_Clicks` joined to `subscribers.email`, so the date filter scopes click activity. New columns: 30-Day Churn % and 90-Day Churn % (cohort-style — % of source cohort who unsubscribed within N days of joining). Two placeholder columns are reserved: Avg Sponsor Click / Subscriber (renders `—`, waiting on a `Campaigns_Clicks` ↔ `articles_clicks` join key — affiliate not separately tracked) and Open Rate % (renders `—`, no per-subscriber open data yet). CAC is intentionally skipped (no spend data in the schema).

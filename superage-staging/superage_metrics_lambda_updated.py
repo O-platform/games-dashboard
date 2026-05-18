@@ -697,12 +697,12 @@ def lambda_handler(event, context):
                 ),
                 cc AS (
                     SELECT
-                        LOWER(TRIM(cc."email_address")) AS email,
-                        COUNT(*)                        AS clicks
+                        LOWER(TRIM(cc."EmailAddress ")) AS email,
+                        COUNT(*)                         AS clicks
                     FROM {S}."Campaigns_Clicks" cc
                     WHERE cc."Date" IS NOT NULL
-                      AND cc."email_address" IS NOT NULL
-                      AND TRIM(cc."email_address") != ''
+                      AND cc."EmailAddress " IS NOT NULL
+                      AND TRIM(cc."EmailAddress ") != ''
                       {click_filter}
                     GROUP BY 1
                 )

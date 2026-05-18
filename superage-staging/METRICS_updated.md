@@ -738,13 +738,14 @@ WITH s AS (
       -- AND date_joined::date >= CURRENT_DATE - INTERVAL '<N> days'
 ),
 cc AS (
+    -- "EmailAddress " has CamelCase + trailing space in the source table.
     SELECT
-        LOWER(TRIM(cc."email_address")) AS email,
-        COUNT(*)                        AS clicks
+        LOWER(TRIM(cc."EmailAddress ")) AS email,
+        COUNT(*)                         AS clicks
     FROM superage."Campaigns_Clicks" cc
     WHERE cc."Date" IS NOT NULL
-      AND cc."email_address" IS NOT NULL
-      AND TRIM(cc."email_address") != ''
+      AND cc."EmailAddress " IS NOT NULL
+      AND TRIM(cc."EmailAddress ") != ''
       -- AND cc."Date"::date >= CURRENT_DATE - INTERVAL '<N> days'
     GROUP BY 1
 )

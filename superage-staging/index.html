@@ -1065,7 +1065,7 @@ function _refreshClicksTab() {
 function renderContent(M) {
   document.getElementById('content').innerHTML = `
     <div class="section-context-banner">
-      <strong>Click Analysis</strong> — Engagement with SuperAge website articles. Tracks unique and total clicks per article, category, and author. Data starts December 2025.
+      <strong>Click Analysis</strong> — Engagement with SuperAge website articles. Tracks unique and total clicks per article, category, and author. <strong>Click-event data (Section 2: Same Weekday / Weekly / Monthly raw events + per-article click totals) starts December 2025.</strong> Section 1 campaign-aggregate metrics come from the CreateSend <em>Campaigns</em> table and reflect the full send history.
     </div>
     <div class="kpi-row" style="grid-template-columns:repeat(auto-fit,minmax(140px,1fr));">
       <div class="kpi-card accent"><div class="label">Total Clicks</div><div class="value">${fmt(M.total_article_clicks)}</div><div class="sub">All tracked articles</div></div>
@@ -1666,7 +1666,7 @@ function renderAudience(M) {
   document.getElementById('audience').innerHTML = `
     <div class="section-context-banner">
       <strong>Audience Intelligence</strong> — Where subscribers come from and how engaged they are. Acquisition quality metrics help identify which sources deliver the highest-value contacts.
-      Data starts December 2025.
+      <span style="display:inline-block;margin-left:6px;padding:1px 8px;border-radius:10px;background:var(--card-2);border:1px solid var(--card-border);color:var(--text);font-weight:600;">Click columns (Clickers, Clicker Rate, Clicks, Avg Clicks/Sub) start December 2025 — Subscriber counts, % of Total, and 30/90-Day Churn are full history.</span>
     </div>
     <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:12px;">
       <div style="font-size:12px;color:var(--text-muted);">
@@ -2061,7 +2061,7 @@ function renderRetention(M) {
           </tr>`;
         }).join('')}</tbody>
       </table></div>
-      <div class="insight"><strong>Active Now</strong> = state = 'Active' AND engagement_segment NOT IN (Ghosts, Zombies, Dormant). Buckets: <strong>AH CPL</strong> (allhealthy/AHCPL1), <strong>Ageist CPL</strong> (theageist), <strong>Share</strong> (referral/share), <strong>Meta</strong> (facebook/fb/ig/meta), <strong>IFCPL</strong> (if/ifcpl1), <strong>Google</strong>, <strong>Direct</strong> (organic / no UTM). LTV is computed only across churned subscribers (avg / median days from join to unsub).</div>
+      <div class="insight"><strong>Active Now</strong> = state = 'Active' AND engagement_segment NOT IN (Ghosts, Zombies, Dormant). Buckets: <strong>AH CPL</strong> (allhealthy/AHCPL1), <strong>Ageist CPL</strong> (theageist), <strong>Share</strong> (referral/share), <strong>Meta</strong> (facebook/fb/ig/meta), <strong>IFCPL</strong> (if/ifcpl1), <strong>Google</strong>, <strong>Direct</strong> (organic / no UTM). LTV is computed only across churned subscribers (avg / median days from join to unsub). <em>Clicker / Unique Clicks / Clicks per Clicker columns reflect click events from December 2025 onwards; the Subscribers / Active / Churned / LTV columns use full history.</em></div>
     </div>
   `;
 

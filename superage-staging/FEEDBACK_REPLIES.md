@@ -337,11 +337,6 @@ data starts arriving later), but the dashboard ignores it.
   same count.
 - **30-Day Churn** and **90-Day Churn** columns added — `COUNT(*) FILTER (state='Unsubscribed' AND unsubbed - joined <= N)` divided by the source cohort. Each cell shows the percentage and the raw count, e.g. `4.2% (1,234)`.
 
-- **Click Rate** (renamed from "Clicker Rate") — same field
-  (`clickers / subscribers`), just a clearer label. The tooltip on the
-  header spells out the formula so it's not confused with CreateSend's
-  campaign-level `UClickRate`.
-
 **Skipped this round** *(removed from the table entirely — neither column
 ships in the JSON or renders in the HTML; both will come back the moment
 the underlying data exists):*

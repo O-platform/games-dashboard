@@ -465,3 +465,36 @@ Implementation details:
   ≥ N articles"* if the filter empties the set.
 - Threshold isn't persisted across reloads — defaults back to `1`. Easy
   to move to `localStorage` if you want it to stick; ping me.
+
+### Audience tab — unified time-window filter for KPIs + charts + table
+
+> "This needs a filter, they will probably want to filter by time and see
+> the recent acquisition channels rather than the overall numbers."
+
+**✓ shipped.** The Acquisition Quality table's `All time / 30d / 60d / 90d`
+toggle was lifted to the top of the **Audience** tab so it now governs the
+entire tab in one shot. Switching window:
+
+- **KPI cards** — Total Subscribers flips to "New Subscribers — Joined in
+  last N days"; Top Source + Top Source % recompute from the windowed
+  cohort. Active Rate intentionally stays global (it isn't source-scoped,
+  so a per-window value wouldn't be meaningful) — the sublabel was
+  changed to "Currently active (global)" to make that clear.
+- **Acquisition by Source doughnut** — slices reflect subscribers who
+  *joined* in the window.
+- **Source Clicks Performance bar chart** — for *All time* it keeps using
+  the high-fidelity `utm_clicks_performance` series (Q20, proper unique
+  vs total split). For 30 / 60 / 90 days it derives from `Q19.rows_<win>`,
+  where unique == total because Q19 counts raw `Campaigns_Clicks` events
+  rather than the pre-aggregated `subscriber_clicks` rollup. The chart
+  still shows the two paired bars in both modes so the shape is
+  consistent — the windowed view's two bars are just equal heights.
+- **Acquisition Quality table** — same data path as before, just sourced
+  via the unified driver. The badge next to the toolbar now reads
+  "subscribers joined in last N days, clicks made in that window".
+
+Implementation: a single `_setAcqWindow(win)` in `index.html` reads from
+`window._acqSource` (= `M.acquisition_quality.utm_source`) plus
+`window._acqBarAllTime` (= `M.utm_clicks_performance`) and updates the
+KPI elements, both Chart.js charts, and the table tbody in one pass.
+State doesn't persist across reloads — defaults back to **All time**.

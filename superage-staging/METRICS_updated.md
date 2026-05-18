@@ -174,19 +174,31 @@ The "Include Sunday Spotlight" toggle simply filters out `campaign_table` rows w
 
 ## 4. Audience
 
+### Time window selector
+
+The whole Audience tab is governed by a single **time window** toggle at the top: `All time / Last 30 days / Last 60 days / Last 90 days`. Picking a window re-renders, in one shot:
+
+- The **Total / New Subscribers** KPI card (label flips between "Total Subscribers" + "All-time base" and "New Subscribers" + "Joined in last N days").
+- The **Top Source** and **Top Source %** KPI cards (leader within the windowed cohort).
+- The **Acquisition by Source** doughnut (subscribers per source within the window).
+- The **Source Clicks Performance** bar chart (clicks per source — see note in Q20 on the all-time vs windowed data source).
+- The **Acquisition Quality by Source** table (`rows_30d / rows_60d / rows_90d` from Q19).
+
+The **Active Rate** card stays global ("Currently active (global)") — it's not source-scoped, so a per-window value wouldn't be meaningful. The toggle state is held in `_setAcqWindow()` and isn't persisted across reloads.
+
 ### Subscriber KPIs
 
-Total subscribers, active, unsubscribed, bounced, and high-engagement (60-day window).
+Total subscribers (or in-window cohort), active rate, top source, top source share.
 
 ### Acquisition by Source
 
-The dashboard label is **Source** (UTM is treated as an internal term in the SQL only). Grouped by the fallback `COALESCE(NULLIF(TRIM(utm_source),''), NULLIF(TRIM(source),''), 'Organic')` — `utm_source` wins, then the legacy `source` column, then the literal `Organic`. The pie chart and table consume `M.acquisition_quality.utm_source.rows` (plus the per-window arrays `rows_30d` / `rows_60d` / `rows_90d`; see Q19).
+The dashboard label is **Source** (UTM is treated as an internal term in the SQL only). Grouped by the fallback `COALESCE(NULLIF(TRIM(utm_source),''), NULLIF(TRIM(source),''), 'Organic')` — `utm_source` wins, then the legacy `source` column, then the literal `Organic`. Both the pie chart and the table consume `M.acquisition_quality.utm_source.rows_all / rows_30d / rows_60d / rows_90d` (Q19).
 
-The Audience tab table renders these columns per source: **Subscribers**, **% of Total**, **Clickers**, **Clicker Rate**, **Clicks**, **Avg Clicks / Subscriber**, **30-Day Churn**, **90-Day Churn**, plus two reserved-but-blank columns (Avg Sponsor Click / Sub, Open Rate %).
+The Audience tab table renders these columns per source: **Subscribers**, **% of Total**, **Clickers**, **Clicker Rate**, **Clicks**, **Avg Clicks / Subscriber**, **30-Day Churn**, **90-Day Churn**. (Avg Sponsor Click / Sub and Open Rate % were removed — see `FEEDBACK_REPLIES.md`.)
 
 ### Source Clicks Performance
 
-Joins `subscriber_clicks` to `subscribers` to show which acquisition source drives the most article click activity. See Q20.
+For the **All time** window, the bar chart uses `M.utm_clicks_performance` (Q20 — `subscriber_clicks` rollup with separate unique vs total counts). For **30 / 60 / 90-day windows**, it falls back to the per-source rows from Q19 (raw `Campaigns_Clicks` events scoped to the window). Q19 only carries one click count per row (events), so the windowed view's Unique-Clicks and Total-Clicks bars are identical heights — a known trade-off documented in the lambda.
 
 ---
 
@@ -1274,3 +1286,4 @@ ORDER BY c.cohort_month;
 38. **Monthly Revenue chart restyled to match Monthly Campaign Clicks**: the Revenue tab's headline chart was changed from a red-future-bars + dashed-line-split + "Future →" separator layout to a single solid bar series styled like the Monthly Campaign Clicks chart on the Click Analysis tab. Bars are green (`#1a7f37`); current and any not-yet-closed months render at 40% alpha with a 2 px solid border (same `color + '66'` pattern used by `_clickTrendChart`). The dashed vertical separator and the "Future →" plugin label were removed. The deals line is now a single continuous overlay (no past/future split, no second "Deals (future)" dataset). Insight text under the chart reads: *"Bars = revenue (left axis). Line = number of deals (right axis). Faded bars are the current (in-progress) or not-yet-closed months."*
 39. **Click Analysis: missing `.h240` CSS rule added**: the raw Weekly / Monthly cards on the Click Analysis tab used `class="chart-container h240"` but `.chart-container.h240` had no `height` rule in the style block (the CSS only defined `h220 / h260 / h300 / h340 / h380 / h420`). That collapsed those canvases to 0 px tall — the headers, range buttons and insight strings rendered but the bars were invisible. Added `.chart-container.h240 { height: 240px; }` to match the rest of the size scale.
 40. **Top Tags "Tag appears in ≥ N articles" filter (2026-05)**: a five-button group (`1 / 3 / 5 / 7 / 10`) was added above the Top Tags chart on the Content Reference tab. The filter drops tags whose article count is below the threshold **before** the top-10 ranking is computed by avg unique clicks per article, so single-article tags can't dominate the ranking. The threshold is stored in `window._crTagMin` (default `1`, no filter) and is layered on top of the existing scope filters (Position Cat / Author / Category / Tag / Title search). `_crSetTagMin(n)` is the toolbar handler; it re-renders only the Tags chart — Top Categories is intentionally **not** filtered the same way. Insight text below the chart appends *"(showing tags that appear in ≥ N articles)"* when N > 1; if the filter empties the set, the insight switches to *"No tag in scope appears in ≥ N articles"*. Threshold resets to `1` on page reload.
+41. **Audience tab: unified time-window selector (2026-05)**: a single `All time / Last 30 / 60 / 90 days` toggle was lifted out of the Acquisition Quality table header and placed at the top of the Audience tab. The toggle now drives every component on the tab in one render — the four KPI cards (Total Subscribers flips to "New Subscribers" + "Joined in last N days" when filtered; Top Source + Top Source % recompute from the windowed cohort), the Acquisition by Source doughnut, the Source Clicks Performance bar chart, and the Acquisition Quality table — via `_setAcqWindow(win)`. The pie / table read `acquisition_quality.utm_source.rows_<win>` (Q19). The bar chart uses `utm_clicks_performance` (Q20, with the proper unique-vs-total split) for the all-time view, and falls back to Q19 rows for the windowed views (where unique == total because Q19 counts raw `Campaigns_Clicks` events). The Active Rate KPI stays global and is labelled "Currently active (global)" so it's clear it isn't window-scoped. State isn't persisted to localStorage.

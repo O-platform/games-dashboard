@@ -1635,11 +1635,23 @@ function renderAudience(M) {
       <strong>Audience Intelligence</strong> — Where subscribers come from and how engaged they are. Acquisition quality metrics help identify which sources deliver the highest-value contacts.
       Data starts December 2025.
     </div>
+    <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:12px;">
+      <div style="font-size:12px;color:var(--text-muted);">
+        <strong style="color:var(--text);">Time window</strong>
+        <span id="aud-window-badge"> — all time</span>
+      </div>
+      <div style="display:flex;gap:4px;" id="aud-window-btns">
+        <button onclick="_setAcqWindow('all')" id="audw-all" style="font-size:11px;padding:3px 10px;border:1px solid var(--card-border);border-radius:5px;background:var(--accent);color:#fff;cursor:pointer;">All time</button>
+        <button onclick="_setAcqWindow('30d')" id="audw-30" style="font-size:11px;padding:3px 10px;border:1px solid var(--card-border);border-radius:5px;background:var(--card);color:var(--text-muted);cursor:pointer;">Last 30 days</button>
+        <button onclick="_setAcqWindow('60d')" id="audw-60" style="font-size:11px;padding:3px 10px;border:1px solid var(--card-border);border-radius:5px;background:var(--card);color:var(--text-muted);cursor:pointer;">Last 60 days</button>
+        <button onclick="_setAcqWindow('90d')" id="audw-90" style="font-size:11px;padding:3px 10px;border:1px solid var(--card-border);border-radius:5px;background:var(--card);color:var(--text-muted);cursor:pointer;">Last 90 days</button>
+      </div>
+    </div>
     <div class="kpi-row">
-      <div class="kpi-card accent"><div class="label">Total Subscribers</div><div class="value">${fmt(M.total_subscribers)}</div><div class="sub">All-time base</div></div>
-      <div class="kpi-card green"><div class="label">Active Rate</div><div class="value">${M.active_rate||'—'}</div><div class="sub">Currently active</div></div>
-      <div class="kpi-card blue"><div class="label">Top Source</div><div class="value" style="font-size:14px;">${utmLabel((M.acquisition_quality&&M.acquisition_quality.utm_source&&M.acquisition_quality.utm_source.rows&&M.acquisition_quality.utm_source.rows[0]&&M.acquisition_quality.utm_source.rows[0].label)||'')}</div><div class="sub">Largest acquisition channel</div></div>
-      <div class="kpi-card orange"><div class="label">Top Source %</div><div class="value">${(()=>{const r=M.acquisition_quality&&M.acquisition_quality.utm_source&&M.acquisition_quality.utm_source.rows||[];const total=r.reduce((s,x)=>s+(x.subscribers||x.count||0),0);const top=r[0]?(r[0].subscribers||r[0].count||0):0;return top&&total?(top/total*100).toFixed(1)+'%':'—';})()}</div><div class="sub">Share of categorised subscribers</div></div>
+      <div class="kpi-card accent"><div class="label" id="kpi-aud-subs-label">Total Subscribers</div><div class="value" id="kpi-aud-subs">${fmt(M.total_subscribers)}</div><div class="sub" id="kpi-aud-subs-sub">All-time base</div></div>
+      <div class="kpi-card green"><div class="label">Active Rate</div><div class="value">${M.active_rate||'—'}</div><div class="sub">Currently active (global)</div></div>
+      <div class="kpi-card blue"><div class="label">Top Source</div><div class="value" style="font-size:14px;" id="kpi-top-source">—</div><div class="sub">Largest acquisition channel</div></div>
+      <div class="kpi-card orange"><div class="label">Top Source %</div><div class="value" id="kpi-top-source-pct">—</div><div class="sub">Share of categorised subscribers</div></div>
     </div>
     <div class="grid-2">
       <div class="chart-card">
@@ -1652,15 +1664,7 @@ function renderAudience(M) {
       </div>
     </div>
     <div class="chart-card">
-      <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;margin-bottom:10px;flex-wrap:wrap;">
-        <h3 style="margin:0;">Acquisition Quality by Source <span class="badge-inline" id="aud-window-badge">— all time</span></h3>
-        <div style="display:flex;gap:4px;" id="aud-window-btns">
-          <button onclick="_setAcqWindow('all')" id="audw-all" style="font-size:11px;padding:3px 10px;border:1px solid var(--card-border);border-radius:5px;background:var(--accent);color:#fff;cursor:pointer;">All time</button>
-          <button onclick="_setAcqWindow('30d')" id="audw-30" style="font-size:11px;padding:3px 10px;border:1px solid var(--card-border);border-radius:5px;background:var(--card);color:var(--text-muted);cursor:pointer;">Last 30 days</button>
-          <button onclick="_setAcqWindow('60d')" id="audw-60" style="font-size:11px;padding:3px 10px;border:1px solid var(--card-border);border-radius:5px;background:var(--card);color:var(--text-muted);cursor:pointer;">Last 60 days</button>
-          <button onclick="_setAcqWindow('90d')" id="audw-90" style="font-size:11px;padding:3px 10px;border:1px solid var(--card-border);border-radius:5px;background:var(--card);color:var(--text-muted);cursor:pointer;">Last 90 days</button>
-        </div>
-      </div>
+      <h3 style="margin:0 0 10px;">Acquisition Quality by Source</h3>
       <div class="tbl-wrap"><table class="dash-table" id="aud-acq-table">
         <thead><tr>
           <th>Source</th><th>Subscribers</th><th>% of Total</th><th>Clickers</th><th>Clicker Rate</th>
@@ -1672,35 +1676,38 @@ function renderAudience(M) {
       </table></div>
     </div>
   `;
-  // Acquisition source pie
-  const aq = M.acquisition_quality&&M.acquisition_quality.utm_source||{rows:[]};
-  const pieLabels = (aq.rows||[]).map(r=>utmLabel(r.label));
-  const pieData   = (aq.rows||[]).map(r=>(r.subscribers!=null?r.subscribers:(r.count||0)));
-  new Chart(document.getElementById('aud-source-pie'), {
+  // Build pie + bar with empty data; _setAcqWindow fills them.
+  window._audPieChart = new Chart(document.getElementById('aud-source-pie'), {
     type: 'doughnut',
-    data: { labels: pieLabels, datasets: [{ data: pieData, backgroundColor: ['#0969da','#1a7f37','#cf222e','#9a6700','#8250df','#bf3989','#1b7c83','#7d4e00','#58a6ff','#3fb950'] }] },
+    data: { labels: [], datasets: [{ data: [], backgroundColor: ['#0969da','#1a7f37','#cf222e','#9a6700','#8250df','#bf3989','#1b7c83','#7d4e00','#58a6ff','#3fb950'] }] },
     options: { responsive:true, maintainAspectRatio:false, plugins:{ legend:{position:'bottom',labels:{font:{size:11},padding:6}} } }
   });
-  // UTM clicks performance bar
-  const uc = M.utm_clicks_performance || {labels:[],unique_clicks:[],total_clicks:[]};
-  new Chart(document.getElementById('aud-utm-clicks'), {
+  window._audBarChart = new Chart(document.getElementById('aud-utm-clicks'), {
     type: 'bar',
-    data: { labels: (uc.labels||[]).map(utmLabel), datasets: [
-      { label: 'Unique Clicks', data: uc.unique_clicks, backgroundColor: '#0969da' },
-      { label: 'Total Clicks',  data: uc.total_clicks,  backgroundColor: '#1a7f37' }
+    data: { labels: [], datasets: [
+      { label: 'Unique Clicks', data: [], backgroundColor: '#0969da' },
+      { label: 'Total Clicks',  data: [], backgroundColor: '#1a7f37' }
     ]},
     options: { responsive:true, maintainAspectRatio:false, indexAxis:'y', plugins:{legend:{position:'bottom',labels:{font:{size:11}}}}, scales:{x:{beginAtZero:true}} }
   });
-  // Acquisition-Quality table — defaults to all-time. Stashes the source
-  // payload on window so _setAcqWindow can re-render without re-fetching.
+  // Stash data for _setAcqWindow + remember the all-time bar series so we
+  // can still show the proper Unique-vs-Total split when window === 'all'
+  // (Q20's utm_clicks_performance has separate counts; Q19's per-window
+  // rows just have raw click events, so unique == total there).
   window._acqSource = (M.acquisition_quality && M.acquisition_quality.utm_source) || {};
+  window._acqBarAllTime = M.utm_clicks_performance || null;
+  window._M_total_subscribers = M.total_subscribers || 0;
   _setAcqWindow('all');
 }
 
-/* Render the Acquisition Quality table for one of the time windows the
- * lambda emits (`rows_all`, `rows_30d`, `rows_60d`, `rows_90d`). Falls back
- * to the legacy `rows` array when the windowed variants aren't present
- * yet (i.e. lambda hasn't run since the schema change). */
+/* Single shared time-window driver for the whole Audience tab.
+ * Updates: the four KPI cards (Total Subscribers / Top Source / Top Source %),
+ * the Acquisition-by-Source doughnut, the Source Clicks Performance bar
+ * chart, and the Acquisition Quality table. Reads windowed cohorts from
+ * `M.acquisition_quality.utm_source.rows_all / rows_30d / rows_60d / rows_90d`
+ * (Q19), and — for the "All time" view of the bar chart only — falls back
+ * to `M.utm_clicks_performance` (Q20) so the Unique-vs-Total split is
+ * preserved at that scale. */
 function _setAcqWindow(win) {
   const src = window._acqSource || {};
   const map = { all: src.rows_all || src.rows || [],
@@ -1708,6 +1715,8 @@ function _setAcqWindow(win) {
                 '60d': src.rows_60d || [],
                 '90d': src.rows_90d || [] };
   const rows = map[win] || [];
+
+  // Toggle button styles
   ['audw-all','audw-30','audw-60','audw-90'].forEach(id => {
     const btn = document.getElementById(id);
     if (!btn) return;
@@ -1715,19 +1724,70 @@ function _setAcqWindow(win) {
     const wantKey = want === 'all' ? 'all' : (want + 'd');
     const active = wantKey === win;
     btn.style.background = active ? 'var(--accent)' : 'var(--card)';
-    btn.style.color = active ? '#fff' : 'var(--text-muted)';
+    btn.style.color      = active ? '#fff'          : 'var(--text-muted)';
   });
   const badge = document.getElementById('aud-window-badge');
   if (badge) badge.textContent = win === 'all'
-    ? '— all time'
-    : `— subscribers joined in last ${win.replace('d','')} days, clicks made in that window`;
+    ? ' — all time'
+    : ` — subscribers joined in last ${win.replace('d','')} days, clicks made in that window`;
+
+  // KPI cards — Total Subscribers, Top Source, Top Source %.
+  // "Total Subscribers" is the source-table total (= subscribers with an
+  // attribution row); for the all-time view that's smaller than M.total_subscribers
+  // because organic / blank-utm fall into a single bucket. We still show
+  // M.total_subscribers for the all-time view so the headline number matches
+  // the Overview KPI; for windowed views we show the in-window cohort total.
+  const total = rows.reduce((s, r) => s + (Number(r.subscribers) || 0), 0);
+  const top   = rows[0] || {};
+  const topName = top.label ? utmLabel(top.label) : '—';
+  const topPct  = (total && top.subscribers) ? (top.subscribers / total * 100).toFixed(1) + '%' : '—';
+
+  const subsEl    = document.getElementById('kpi-aud-subs');
+  const subsLbl   = document.getElementById('kpi-aud-subs-sub');
+  const subsLabel = document.getElementById('kpi-aud-subs-label');
+  if (subsEl)    subsEl.textContent    = win === 'all'
+                                          ? Number(window._M_total_subscribers || total).toLocaleString()
+                                          : total.toLocaleString();
+  if (subsLbl)   subsLbl.textContent   = win === 'all' ? 'All-time base' : `Joined in last ${win.replace('d','')} days`;
+  if (subsLabel) subsLabel.textContent = win === 'all' ? 'Total Subscribers' : 'New Subscribers';
+  const topSrcEl = document.getElementById('kpi-top-source');
+  const topPctEl = document.getElementById('kpi-top-source-pct');
+  if (topSrcEl) topSrcEl.textContent = topName;
+  if (topPctEl) topPctEl.textContent = topPct;
+
+  // Pie — Acquisition by Source
+  if (window._audPieChart) {
+    window._audPieChart.data.labels = rows.map(r => utmLabel(r.label));
+    window._audPieChart.data.datasets[0].data = rows.map(r => Number(r.subscribers) || 0);
+    window._audPieChart.update();
+  }
+
+  // Bar — Source Clicks Performance.
+  // All-time: use utm_clicks_performance (proper unique vs total split).
+  // Windowed: derive from the per-source rows where unique == total (raw
+  // event count from Campaigns_Clicks). For the windowed view we still show
+  // both series (with equal heights) so the chart shape is consistent.
+  if (window._audBarChart) {
+    if (win === 'all' && window._acqBarAllTime && (window._acqBarAllTime.labels||[]).length) {
+      const uc = window._acqBarAllTime;
+      window._audBarChart.data.labels = (uc.labels || []).map(utmLabel);
+      window._audBarChart.data.datasets[0].data = uc.unique_clicks || [];
+      window._audBarChart.data.datasets[1].data = uc.total_clicks  || [];
+    } else {
+      window._audBarChart.data.labels = rows.map(r => utmLabel(r.label));
+      window._audBarChart.data.datasets[0].data = rows.map(r => Number(r.unique_clicks != null ? r.unique_clicks : r.clicks) || 0);
+      window._audBarChart.data.datasets[1].data = rows.map(r => Number(r.non_unique_clicks != null ? r.non_unique_clicks : r.clicks) || 0);
+    }
+    window._audBarChart.update();
+  }
+
+  // Table
   const tbody = document.getElementById('aud-acq-tbody');
   if (!tbody) return;
   if (!rows.length) {
     tbody.innerHTML = `<tr><td colspan="9" style="text-align:center;color:var(--text-muted);padding:14px;">No data in this window yet — re-run the metrics lambda to populate.</td></tr>`;
     return;
   }
-  const total = rows.reduce((s, r) => s + (Number(r.subscribers) || 0), 0);
   tbody.innerHTML = rows.map(r => {
     const subs = Number(r.subscribers) || 0;
     const pct  = total ? (subs / total * 100).toFixed(1) + '%' : '—';

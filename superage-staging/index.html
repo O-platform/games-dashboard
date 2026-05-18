@@ -1241,7 +1241,19 @@ function renderContentRef(M) {
         <div class="insight" id="cr-cat-insight"></div>
       </div>
       <div class="chart-card">
-        <h3>Top Tags <span class="badge-inline">— avg clicks per article (top 10 by avg unique), in scope</span></h3>
+        <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px;flex-wrap:wrap;margin-bottom:6px;">
+          <h3 style="margin:0;">Top Tags <span class="badge-inline">— avg clicks per article (top 10 by avg unique), in scope</span></h3>
+          <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;">
+            <span style="font-size:11px;color:var(--text-muted);text-transform:uppercase;letter-spacing:.3px;">Min articles</span>
+            <div style="display:flex;gap:4px;" id="cr-tag-min-btns">
+              <button onclick="_crSetTagMin(1)"  id="crtm-1"  style="font-size:11px;padding:3px 9px;border:1px solid var(--card-border);border-radius:5px;background:var(--accent);color:#fff;cursor:pointer;">1+</button>
+              <button onclick="_crSetTagMin(3)"  id="crtm-3"  style="font-size:11px;padding:3px 9px;border:1px solid var(--card-border);border-radius:5px;background:var(--card);color:var(--text-muted);cursor:pointer;">3+</button>
+              <button onclick="_crSetTagMin(5)"  id="crtm-5"  style="font-size:11px;padding:3px 9px;border:1px solid var(--card-border);border-radius:5px;background:var(--card);color:var(--text-muted);cursor:pointer;">5+</button>
+              <button onclick="_crSetTagMin(7)"  id="crtm-7"  style="font-size:11px;padding:3px 9px;border:1px solid var(--card-border);border-radius:5px;background:var(--card);color:var(--text-muted);cursor:pointer;">7+</button>
+              <button onclick="_crSetTagMin(10)" id="crtm-10" style="font-size:11px;padding:3px 9px;border:1px solid var(--card-border);border-radius:5px;background:var(--card);color:var(--text-muted);cursor:pointer;">10+</button>
+            </div>
+          </div>
+        </div>
         <div class="chart-container h340"><canvas id="cr-tag-bar"></canvas></div>
         <div class="insight" id="cr-tag-insight"></div>
       </div>
@@ -1306,7 +1318,11 @@ function _crFilter() {
   _crRenderPosCatChart(rows);
   _crRenderSleepers(rows);
   _crRenderTopBar('cr-cat-bar', 'cr-cat-insight', '_crCatBarChart', rows, _crCategory, 'category');
-  _crRenderTopBar('cr-tag-bar', 'cr-tag-insight', '_crTagBarChart', rows, _crTags,     'tag');
+  // Top Tags honours a "minimum articles per tag" threshold so the average
+  // isn't dominated by tags that appear on a single article. Default 1 = no
+  // filter; the toolbar buttons (1/3/5/7/10) flip window._crTagMin and
+  // re-call _crRenderTopBar via _crSetTagMin().
+  _crRenderTopBar('cr-tag-bar', 'cr-tag-insight', '_crTagBarChart', rows, _crTags,     'tag', window._crTagMin || 1);
   _crRenderPage();
 
   const filtered = posCat || pos !== '' || author || cat || tag || q;
@@ -1328,11 +1344,15 @@ function _crRenderKpis(rows) {
   set('cr-kpi-avg',      avg ? avg.toFixed(1) : '—');
 }
 
-function _crAggregateBySplit(rows, accessor) {
+function _crAggregateBySplit(rows, accessor, minCount) {
   // Accumulate unique/total clicks + article count per split label
   // (categories/tags are comma-separated in WordPress). Pre-compute the
   // per-article averages so the Top Categories / Top Tags charts can plot
-  // them directly without re-deriving on every render.
+  // them directly without re-deriving on every render. `minCount` (default 1)
+  // drops labels whose article count is below the threshold — used by the
+  // Top Tags "Min articles" filter so tags that only appear on one article
+  // don't dominate the avg-clicks ranking.
+  const threshold = Math.max(1, Number(minCount) || 1);
   const acc = {};
   rows.forEach(r => {
     _crSplit(accessor(r)).forEach(label => {
@@ -1343,6 +1363,7 @@ function _crAggregateBySplit(rows, accessor) {
     });
   });
   return Object.entries(acc)
+    .filter(([, v]) => v.count >= threshold)
     .map(([label, v]) => ({
       label,
       unique:    v.unique,
@@ -1355,8 +1376,21 @@ function _crAggregateBySplit(rows, accessor) {
     .slice(0, 10);
 }
 
-function _crRenderTopBar(canvasId, insightId, chartKey, rows, accessor, noun) {
-  const data = _crAggregateBySplit(rows, accessor);
+function _crSetTagMin(n) {
+  window._crTagMin = Math.max(1, Number(n) || 1);
+  [1, 3, 5, 7, 10].forEach(v => {
+    const btn = document.getElementById('crtm-' + v);
+    if (!btn) return;
+    const active = v === window._crTagMin;
+    btn.style.background = active ? 'var(--accent)' : 'var(--card)';
+    btn.style.color      = active ? '#fff'          : 'var(--text-muted)';
+  });
+  const rows = window._crFiltered || [];
+  _crRenderTopBar('cr-tag-bar', 'cr-tag-insight', '_crTagBarChart', rows, _crTags, 'tag', window._crTagMin);
+}
+
+function _crRenderTopBar(canvasId, insightId, chartKey, rows, accessor, noun, minCount) {
+  const data = _crAggregateBySplit(rows, accessor, minCount);
   const ctx = document.getElementById(canvasId);
   if (!ctx) return;
   if (window[chartKey]) window[chartKey].destroy();
@@ -1408,11 +1442,17 @@ function _crRenderTopBar(canvasId, insightId, chartKey, rows, accessor, noun) {
   });
   const ins = document.getElementById(insightId);
   if (ins) {
+    const threshold = Math.max(1, Number(minCount) || 1);
+    const minNote = threshold > 1
+      ? ` <span style="color:var(--text-muted);">(showing ${noun}s that appear in ≥ ${threshold} articles)</span>`
+      : '';
     if (!data.length) {
-      ins.textContent = `No ${noun} in scope.`;
+      ins.innerHTML = threshold > 1
+        ? `No ${noun} in scope appears in ≥ ${threshold} articles.`
+        : `No ${noun} in scope.`;
     } else {
       const top = data[0];
-      ins.innerHTML = `Top ${noun} by avg: <strong>${esc(top.label)}</strong> — avg ${fmt(top.avgUnique)} unique / ${fmt(top.avgTotal)} total clicks per article (${fmt(top.count)} article${top.count===1?'':'s'}, ${fmt(top.unique)} unique / ${fmt(top.total)} total clicks).`;
+      ins.innerHTML = `Top ${noun} by avg: <strong>${esc(top.label)}</strong> — avg ${fmt(top.avgUnique)} unique / ${fmt(top.avgTotal)} total clicks per article (${fmt(top.count)} article${top.count===1?'':'s'}, ${fmt(top.unique)} unique / ${fmt(top.total)} total clicks).${minNote}`;
     }
   }
 }

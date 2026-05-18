@@ -110,6 +110,10 @@
   .chart-card { background: var(--card); border: 1px solid var(--card-border); border-radius: 10px; padding: 18px 20px; margin-bottom: 18px; }
   .chart-card h3 { font-size: 14px; font-weight: 600; color: var(--text); margin-bottom: 12px; }
   .chart-container { position: relative; }
+  /* Anchor the canvas to the chart-container so Chart.js (with responsive:true,
+     maintainAspectRatio:false) can never shrink below the container's height —
+     fixes the "chart becomes half size after toggling a filter" symptom. */
+  .chart-container > canvas { position: absolute; inset: 0; width: 100% !important; height: 100% !important; }
   .chart-container.h220 { height: 220px; }
   .chart-container.h260 { height: 260px; }
   .chart-container.h300 { height: 300px; }
@@ -652,18 +656,31 @@ function _clickTrendInsight(series, metric, unit, fmtVal) {
   const f = fmtVal || (v => fmt(v));
   return `<strong style="color:${clr}">${dir} ${Math.abs(pct).toFixed(1)}%</strong> vs previous (${f(cur)} vs ${f(prev)} ${unit})`;
 }
-/* Replace a canvas element with a fresh clone so Chart.js re-measures the
- * parent container instead of inheriting the old chart's inline width/height
- * styling. Fixes the "chart shrinks after toggle" bug on the Click Analysis tab. */
+/* Properly tear down the old Chart instance, reset any inline sizing the
+ * previous render left on the canvas, then hand a clean canvas back. Without
+ * destroy() the old chart's ResizeObserver keeps firing on the old (detached)
+ * canvas; without clearing style/width/height attrs Chart.js sometimes reads
+ * the old size instead of the container, which is why the chart looked half-
+ * size after toggling the Sunday Spotlight filter. */
 function _resetCanvas(id) {
   const old = document.getElementById(id);
   if (!old) return null;
+  if (old._chart) { try { old._chart.destroy(); } catch (e) {} old._chart = null; }
   const fresh = old.cloneNode(false);
   fresh.removeAttribute('style');
   fresh.removeAttribute('width');
   fresh.removeAttribute('height');
   old.parentNode.replaceChild(fresh, old);
   return fresh;
+}
+
+/* Create a chart and then force a resize on the next animation frame so it
+ * recomputes against the parent container after layout settles. Belt-and-
+ * braces against the "chart shrinks after toggle" Chart.js bug. */
+function _newChart(ctx, cfg) {
+  const c = new Chart(ctx, cfg);
+  requestAnimationFrame(() => { try { c.resize(); } catch (e) {} });
+  return c;
 }
 
 function _clickTrendChart(canvasId, series, metric, color, label, tickFormat) {
@@ -676,7 +693,7 @@ function _clickTrendChart(canvasId, series, metric, color, label, tickFormat) {
   const border = data.map((_,i) => cur[i] ? color : 'transparent');
   const ctx = _resetCanvas(canvasId);
   if (!ctx) return;
-  ctx._chart = new Chart(ctx, {
+  ctx._chart = _newChart(ctx, {
     type: 'bar',
     data: { labels, datasets: [{
       label,
@@ -916,7 +933,7 @@ function _setWeekdayWindow(n) {
 
   const ctx = _resetCanvas('cnt-raw-weekday-bar');
   if (!ctx) return;
-  ctx._chart = new Chart(ctx, {
+  ctx._chart = _newChart(ctx, {
     type: 'bar',
     data: { labels: dows.map(d => _weekdayLong[d]||d), datasets },
     options: {

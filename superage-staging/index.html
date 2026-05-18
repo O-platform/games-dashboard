@@ -376,11 +376,11 @@ function renderOverview(M) {
 
     <div class="grid-2">
       <div class="chart-card">
-        <h3>Current Subscriber Engagement Mix <span class="badge-inline">— subscribers we still hold</span></h3>
+        <h3>Current Subscriber Mix <span class="badge-inline">— all users by state + engagement</span></h3>
         <div class="chart-container h260"><canvas id="ov-state-donut"></canvas></div>
         <div id="ov-state-pct-table" style="margin-top:8px;font-size:12px;"></div>
         <div class="insight">
-          Of the subscribers still on our list, <strong>${M.send_to_rate}</strong> are reachable (Send-To: state='Active' AND engagement_segment NOT IN Ghosts/Zombies/Dormant). The rest split into the <strong>Dormant/Ghost/Zombie</strong> cohort (still on the list but not engaging) and <strong>Bounced</strong> (delivery failing). Unsubscribed and Deleted subscribers are excluded — they've left the list.
+          Whole pie = every subscriber record. The Active cohort is split into <strong>Send-To</strong> (engagement_segment NOT IN Ghosts/Zombies/Dormant) and <strong>Dormant/Ghost/Zombie</strong> (state='Active' but flagged dormant); <strong>Unsubscribed</strong>, <strong>Bounced</strong>, and <strong>Deleted</strong> show how the rest of the list has churned out.
         </div>
       </div>
       <div class="chart-card">

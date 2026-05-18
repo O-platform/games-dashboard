@@ -358,20 +358,24 @@ WHERE date_joined::date < CURRENT_DATE;
 
 Exposed as `M.send_to_active`; `send_to_rate = send_to_active / total_subscribers` (active base). **Every other "Active" count in this doc — retention KPI (Q35), cohort table (Q40), per-source retention (Q35b), 90-day source retention (Q41) — uses the same two-condition rule.**
 
-## Q2 — Overview: Current Subscriber Engagement Mix (Donut Chart)
+## Q2 — Overview: Current Subscriber Mix (Donut Chart)
 
-The Overview donut answers **"of the subscribers we still hold, how many can we actually reach today?"**. The denominator is the **current list** — only subscribers we still hold (CreateSend state `Active` or `Bounced`); Unsubscribed and Deleted records are excluded because they've left the list and dilute the engagement picture.
+The Overview donut covers **every subscriber record** (denominator = all rows in `superage.subscribers`, every CreateSend state). The Active state is split into Send-To vs Dormant/Ghost/Zombie so the chart shows in one view both **how much of the list is still reachable** and **how much has churned out**.
 
-Three slices, all derived from variables already populated by Q1:
+Five slices, all derived from variables already populated by Q1 / Q1b:
 
 | Slice | Formula (existing lambda vars) | Colour |
 |---|---|---|
 | **Send-To** | `send_to_active` *(state='Active' AND engagement_segment NOT IN ('Ghosts','Zombies','Dormant'))* | green `#1a7f37` |
 | **Dormant / Ghost / Zombie** | `total_subscribers - send_to_active` *(state='Active' AND engagement_segment IN ('Ghosts','Zombies','Dormant'))* | amber `#9a6700` |
+| **Unsubscribed** | `unsubscribed_count` *(state='Unsubscribed')* | blue `#58a6ff` |
 | **Bounced** | `bounced_count` *(state='Bounced')* | red `#cf222e` |
+| **Deleted** | `deleted_count` *(state='Deleted')* | grey `#9ca3af` |
+
+The Send-To / Dormant slices use related green and amber tones so they read as children of the "Active" parent; the three exit states (Unsubscribed / Bounced / Deleted) use blue, red, and grey.
 
 ```sql
--- (no dedicated query — all three counts come from Q1 / Q1b above)
+-- (no dedicated query — all five counts come from Q1 / Q1b above)
 SELECT
     COUNT(*) FILTER (
         WHERE state = 'Active'
@@ -381,7 +385,9 @@ SELECT
         WHERE state = 'Active'
           AND engagement_segment IN ('Ghosts','Zombies','Dormant')
     )                                                        AS dormant_cohort,
-    COUNT(*) FILTER (WHERE state = 'Bounced')                AS bounced
+    COUNT(*) FILTER (WHERE state = 'Unsubscribed')           AS unsubscribed,
+    COUNT(*) FILTER (WHERE state = 'Bounced')                AS bounced,
+    COUNT(*) FILTER (WHERE state = 'Deleted')                AS deleted
 FROM superage.subscribers
 WHERE date_joined::date < CURRENT_DATE;
 ```
@@ -390,9 +396,9 @@ Emitted as:
 
 ```json
 M.subscriber_engagement_mix = {
-  "labels": ["Send-To", "Dormant / Ghost / Zombie", "Bounced"],
-  "data":   [<send_to>, <dormant_cohort>, <bounced>],
-  "colors": ["#1a7f37", "#9a6700", "#cf222e"]
+  "labels": ["Send-To", "Dormant / Ghost / Zombie", "Unsubscribed", "Bounced", "Deleted"],
+  "data":   [<send_to>, <dormant_cohort>, <unsubscribed>, <bounced>, <deleted>],
+  "colors": ["#1a7f37", "#9a6700", "#58a6ff", "#cf222e", "#9ca3af"]
 }
 ```
 
@@ -1107,7 +1113,10 @@ mapped AS (
         s.*,
         -- _canon(col) is the canonical-label helper from §4. 'organic' /
         -- 'direct' / '' still need to be coerced to 'Direct' explicitly
-        -- because _canon_source falls back to the raw value.
+        -- because _canon_source falls back to the raw value. After this
+        -- step bucket carries the same canonical labels the Audience tab
+        -- shows (Meta, AllHealthy, TrueDemocracy, IFCPL, RecommendedReads,
+        -- NNCPL, ISCPL, TheAgeist, Refind, SuperAge, AI, …) plus Direct.
         CASE
             WHEN LOWER(source_raw) IN ('organic', 'direct', '') THEN 'Direct'
             ELSE COALESCE(_canon(source_raw), 'Direct')

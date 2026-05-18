@@ -795,10 +795,10 @@ def lambda_handler(event, context):
                 SELECT
                     CASE
                         WHEN LOWER(COALESCE(NULLIF(TRIM(utm_source),''),
-                                            NULLIF(TRIM(source),''), '')) IN ('organic','direct','') THEN 'Organic'
+                                            NULLIF(TRIM(source),''), '')) IN ('organic','direct','') THEN 'Direct'
                         ELSE COALESCE(
                             {_canon_source("COALESCE(NULLIF(TRIM(utm_source),''), NULLIF(TRIM(source),''))")},
-                            'Organic'
+                            'Direct'
                         )
                     END AS bucket,
                     EXTRACT(EPOCH FROM (date_unsubscribed - date_joined)) / 86400 AS days_to_unsub
@@ -856,12 +856,12 @@ def lambda_handler(event, context):
                 SELECT
                     s.*,
                     -- Use the canonical source-label mapping (Source label
-                    -- canonicalisation in §4 of METRICS_updated.md). 'organic'
-                    -- and empty values still need to be coerced to 'Organic'
-                    -- because _canon_source falls back to the raw value.
+                    -- canonicalisation in §4 of METRICS_updated.md). Coerce
+                    -- 'organic' / 'direct' / '' to 'Direct' so they share a
+                    -- single bucket; everything else goes through _canon_source.
                     CASE
-                        WHEN LOWER(source_raw) IN ('organic', 'direct', '') THEN 'Organic'
-                        ELSE COALESCE({_canon_source('source_raw')}, 'Organic')
+                        WHEN LOWER(source_raw) IN ('organic', 'direct', '') THEN 'Direct'
+                        ELSE COALESCE({_canon_source('source_raw')}, 'Direct')
                     END AS bucket,
                     CASE WHEN unsubbed IS NOT NULL THEN (unsubbed - joined) END        AS lifespan_days
                 FROM s
@@ -894,9 +894,17 @@ def lambda_handler(event, context):
                 COUNT(c.email)                                        AS clickers
             FROM mapped m
             LEFT JOIN clicks c ON c.email = m.email
-            WHERE m.bucket IN ('AH CPL', 'Ageist CPL', 'Share', 'Meta', 'Google', 'Direct')
+            -- WHERE filter was previously restricting to the old fixed bucket
+            -- list ('AH CPL', 'Ageist CPL', 'Share', 'Meta', 'Google', 'Direct').
+            -- That filter dropped every canonical bucket name except 'Meta'
+            -- when Q35b was refactored to use _canon_source — so the table
+            -- silently shrank to one row. Replaced with a HAVING threshold
+            -- so the table now lists every canonical bucket with a non-tiny
+            -- cohort (min 100 subscribers), top 15 by size.
             GROUP BY m.bucket
+            HAVING COUNT(*) >= 100
             ORDER BY subscribers DESC
+            LIMIT 15
         """)
         retention_by_source_rows = cur.fetchall()
 
@@ -1058,21 +1066,22 @@ def lambda_handler(event, context):
         "colors": [state_colors.get(r["state"], "#a78bfa") for r in state_rows],
     }
 
-    # New Overview donut — "Current Subscriber Engagement Mix".
-    # Denominator = subscribers we still **have** on the list (state='Active'
-    # in any engagement segment, plus state='Bounced'). Subscribers who left
-    # (Unsubscribed / Deleted) are excluded so the donut answers "of the
-    # people we still hold, how many are we actually reaching today?".
-    #
-    # Three slices:
+    # Current Subscriber Mix donut — denominator is **every row** in
+    # `subscribers` (all CreateSend states), broken into five slices so the
+    # Active cohort is split between truly-reachable and dormant:
     #   • Send-To  = state='Active' AND engagement_segment NOT IN dormant set
     #   • Dormant / Ghost / Zombie = state='Active' AND engagement_segment IN dormant set
-    #   • Bounced  = state='Bounced'  (delivery is failing — list-holding but unreachable)
+    #   • Unsubscribed = state='Unsubscribed'
+    #   • Bounced  = state='Bounced'
+    #   • Deleted  = state='Deleted'
+    # Send-To and Dormant use related green/amber tones so they read as
+    # children of the "Active" parent; the three exit states use blue / red
+    # / grey.
     dormant_cohort = max(total_subscribers - send_to_active, 0)
     M["subscriber_engagement_mix"] = {
-        "labels": ["Send-To", "Dormant / Ghost / Zombie", "Bounced"],
-        "data":   [send_to_active, dormant_cohort, bounced_count],
-        "colors": ["#1a7f37", "#9a6700", "#cf222e"],
+        "labels": ["Send-To", "Dormant / Ghost / Zombie", "Unsubscribed", "Bounced", "Deleted"],
+        "data":   [send_to_active, dormant_cohort, unsubscribed_count, bounced_count, deleted_count],
+        "colors": ["#1a7f37", "#9a6700", "#58a6ff", "#cf222e", "#9ca3af"],
     }
 
     # Overview subscriber growth chart — sourced from growth_history table

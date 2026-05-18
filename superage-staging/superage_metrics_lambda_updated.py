@@ -5,7 +5,7 @@ Queries SuperAge dashboard tables, computes metrics, and commits
 superage-staging/superage-metrics.json to GitHub.
 
 Changes in this version:
-  - Campaigns filter: requires Recipients > 1000 (removes test/small sends).
+  - Campaigns filter: requires Recipients > 95 (removes test/small sends).
   - Acquisition quality grouped by utm_source only (o_event and sub_source removed).
   - New utm_clicks_performance section: which utm_source drives the most article
     clicks and unique clicks from subscriber_clicks joined to subscribers.
@@ -314,12 +314,12 @@ def lambda_handler(event, context):
         us_based_count = safe_int((cur.fetchone() or {}).get("n"))
 
         # ─────────────────────────────────────────────────────
-        # 2. Campaigns — filter: Recipients > 1000
+        # 2. Campaigns — filter: Recipients > 95
         # ─────────────────────────────────────────────────────
         camp_filter = """
             "Sent Date " IS NOT NULL
             AND "Sent Date "::date < CURRENT_DATE
-            AND "Recipients" > 1000
+            AND "Recipients" > 95
         """
 
         cur.execute(f"""
@@ -650,8 +650,6 @@ def lambda_handler(event, context):
         """)
         content_drill_rows = cur.fetchall()
 
-        low_position_rows = []  # Hidden Gems section removed
-
         # Subscriber click distribution
         cur.execute(f"""
             SELECT
@@ -763,21 +761,21 @@ def lambda_handler(event, context):
         # ─────────────────────────────────────────────────────
         # 6. Longevity quiz
         # ─────────────────────────────────────────────────────
+        # `avg_score` / `max_score` / `min_score` and the score-bucket
+        # distribution query that used to live here were dropped when the
+        # "Audience Persona" tab stopped surfacing longevity-score visuals.
+        # `WHERE longevity_score IS NOT NULL` is kept as a completed-quiz
+        # gate so `quiz_count` matches the previous semantics.
         cur.execute(f"""
             SELECT
-                COUNT(*) AS n,
-                ROUND(AVG(longevity_score)::numeric, 1) AS avg_score,
-                ROUND(MIN(longevity_score)::numeric, 1) AS min_score,
-                ROUND(MAX(longevity_score)::numeric, 1) AS max_score,
-                ROUND(AVG(age)::numeric, 1) AS avg_age
+                COUNT(*)                     AS n,
+                ROUND(AVG(age)::numeric, 1)  AS avg_age
             FROM {S}.subscriber_quiz
             WHERE longevity_score IS NOT NULL
         """)
         qs = cur.fetchone() or {}
         quiz_count   = safe_int(qs.get("n"))
-        avg_score    = safe_float(qs.get("avg_score"))
         avg_age_quiz = safe_float(qs.get("avg_age"))
-        max_score    = safe_float(qs.get("max_score"))
 
         cur.execute(f"""
             SELECT
@@ -802,18 +800,6 @@ def lambda_handler(event, context):
             GROUP BY 1 ORDER BY 2 DESC
         """)
         quiz_gender_rows = cur.fetchall()
-
-        cur.execute(f"""
-            SELECT
-                COUNT(*) FILTER (WHERE longevity_score < 60) AS s_under60,
-                COUNT(*) FILTER (WHERE longevity_score BETWEEN 60 AND 69.99) AS s_60_70,
-                COUNT(*) FILTER (WHERE longevity_score BETWEEN 70 AND 79.99) AS s_70_80,
-                COUNT(*) FILTER (WHERE longevity_score BETWEEN 80 AND 89.99) AS s_80_90,
-                COUNT(*) FILTER (WHERE longevity_score >= 90) AS s_90plus
-            FROM {S}.subscriber_quiz
-            WHERE longevity_score IS NOT NULL
-        """)
-        score_dist = cur.fetchone() or {}
 
         cur.execute(f"""
             SELECT
@@ -1139,7 +1125,7 @@ def lambda_handler(event, context):
                 FROM {S}."Campaigns"
                 WHERE "Sent Date " IS NOT NULL
                   AND "Sent Date "::date < CURRENT_DATE
-                  AND "Recipients" > 1000
+                  AND "Recipients" > 95
                 GROUP BY 1
             )
             SELECT
@@ -1211,7 +1197,7 @@ def lambda_handler(event, context):
     M["active_rate"]         = pct(active_subscribers, total_all_states)  # active / all states
     M["send_to_rate"]        = pct(send_to_active,    total_subscribers)  # send-to / active base
 
-    # Campaign KPIs (Recipients > 1000)
+    # Campaign KPIs (Recipients > 95)
     M["total_campaigns"]    = total_campaigns
     M["total_recipients"]   = total_recipients
     M["total_unique_opens"] = total_unique_opens
@@ -1240,15 +1226,13 @@ def lambda_handler(event, context):
     M["total_sponsor_deals"]= total_sponsor_deals
     M["avg_ecpm"]           = f"${avg_ecpm:.2f}"
 
-    # Quiz KPIs
-    M["quiz_count"]          = quiz_count
-    M["avg_longevity_score"] = avg_score
-    M["avg_age_quiz"]        = avg_age_quiz
+    # Audience-Persona KPIs (longevity-score fields were removed when the
+    # tab stopped surfacing score visuals).
+    M["quiz_count"]   = quiz_count
+    M["avg_age_quiz"] = avg_age_quiz
     M["quiz_kpis"] = {
         "total_takers":        quiz_count,
-        "avg_score":           avg_score,
         "avg_age":             avg_age_quiz,
-        "max_score":           max_score,
         "fitness_quiz_takers": fitness_quiz_takers,
         "menu_quiz_takers":    menu_quiz_takers,
     }
@@ -1427,20 +1411,6 @@ def lambda_handler(event, context):
         }
         for r in content_drill_rows
     ]
-    M["low_position_winners"] = [
-        {
-            "title":             str(r["article_title"] or "Unknown"),
-            "issue":             str(r["issue_name"] or ""),
-            "type":              str(r["type"] or "unknown").title(),
-            "story_position":    safe_int(r["story_position"]),
-            "position_category": str(r["position_category"] or ""),
-            "unique_clicks":     safe_int(r["unique_clicks"]),
-            "total_clicks":      safe_int(r["non_unique_clicks"]),
-            "categories":        str(r["categories"] or ""),
-            "tags":              str(r["tags"] or ""),
-        }
-        for r in low_position_rows
-    ]
 
     # Click distribution
     M["click_distribution"] = {
@@ -1534,17 +1504,6 @@ def lambda_handler(event, context):
         "labels": [r["gender"] for r in quiz_gender_rows],
         "data":   [safe_int(r["cnt"]) for r in quiz_gender_rows],
         "colors": [gender_colors.get(r["gender"], "#a78bfa") for r in quiz_gender_rows],
-    }
-    M["quiz_score_dist"] = {
-        "labels": ["< 60", "60–70", "70–80", "80–90", "90+"],
-        "data": [
-            safe_int(score_dist.get("s_under60")),
-            safe_int(score_dist.get("s_60_70")),
-            safe_int(score_dist.get("s_70_80")),
-            safe_int(score_dist.get("s_80_90")),
-            safe_int(score_dist.get("s_90plus")),
-        ],
-        "colors": ["#f87171", "#fbbf24", "#34d399", "#4f8cff", "#a78bfa"],
     }
     M["quiz_exercise_dist"] = {
         "labels": [r["freq"] for r in exercise_rows],

@@ -24,10 +24,10 @@ All queries apply these filters:
 ```sql
 \"Sent Date \" IS NOT NULL
 AND \"Sent Date \"::date <= CURRENT_DATE - INTERVAL '2 days'
-AND \"Recipients\" > 1000
+AND \"Recipients\" > 95
 ```
 
-- `> 1000 recipients` — excludes test sends and internal mailings
+- `> 95 recipients` — excludes test sends and internal mailings
 - `<= today - 2 days` — requires campaigns to have had at least 2 days for opens/clicks to accumulate before comparison
 
 ---
@@ -62,7 +62,7 @@ SELECT
 FROM superage.\"Campaigns\"
 WHERE \"Sent Date \" IS NOT NULL
   AND \"Sent Date \"::date <= CURRENT_DATE - INTERVAL '2 days'
-  AND \"Recipients\" > 1000
+  AND \"Recipients\" > 95
   AND \"Sent Date \"::date BETWEEN :cur_week_monday AND :cur_week_sunday;
 
 -- Previous week: same query with BETWEEN :prev_week_monday AND :prev_week_sunday
@@ -102,7 +102,7 @@ SELECT
 FROM superage.\"Campaigns\"
 WHERE \"Sent Date \" IS NOT NULL
   AND \"Sent Date \"::date <= CURRENT_DATE - INTERVAL '2 days'
-  AND \"Recipients\" > 1000
+  AND \"Recipients\" > 95
   AND \"Sent Date \"::date BETWEEN :week_monday AND :week_sunday
 ORDER BY \"Sent Date \"::date ASC;
 ```
@@ -146,7 +146,7 @@ SELECT
 FROM superage.\"Campaigns\"
 WHERE \"Sent Date \" IS NOT NULL
   AND \"Sent Date \"::date <= CURRENT_DATE - INTERVAL '2 days'
-  AND \"Recipients\" > 1000
+  AND \"Recipients\" > 95
   AND \"Sent Date \"::date >= :twelve_weeks_ago
 GROUP BY 1
 ORDER BY 1 ASC;
@@ -212,7 +212,7 @@ SELECT COUNT(*) AS qualifying_campaigns
 FROM superage.\"Campaigns\"
 WHERE \"Sent Date \" IS NOT NULL
   AND \"Sent Date \"::date <= CURRENT_DATE - INTERVAL '2 days'
-  AND \"Recipients\" > 1000;
+  AND \"Recipients\" > 95;
 
 -- 2. Current week campaigns (replace dates as needed)
 SELECT \"Campaign Name\", \"Sent Date \"::date, \"Recipients\", \"UOpenRate\", \"UClickRate\"
@@ -221,14 +221,14 @@ WHERE \"Sent Date \"::date BETWEEN
     DATE_TRUNC('week', (
         SELECT MAX(\"Sent Date \"::date) FROM superage.\"Campaigns\"
         WHERE \"Sent Date \"::date <= CURRENT_DATE - INTERVAL '2 days'
-          AND \"Recipients\" > 1000
+          AND \"Recipients\" > 95
     ))::date
     AND DATE_TRUNC('week', (
         SELECT MAX(\"Sent Date \"::date) FROM superage.\"Campaigns\"
         WHERE \"Sent Date \"::date <= CURRENT_DATE - INTERVAL '2 days'
-          AND \"Recipients\" > 1000
+          AND \"Recipients\" > 95
     ))::date + INTERVAL '6 days'
-  AND \"Recipients\" > 1000
+  AND \"Recipients\" > 95
 ORDER BY \"Sent Date \"::date;
 
 -- 3. Previous week campaigns
@@ -238,14 +238,14 @@ WHERE \"Sent Date \"::date BETWEEN
     DATE_TRUNC('week', (
         SELECT MAX(\"Sent Date \"::date) FROM superage.\"Campaigns\"
         WHERE \"Sent Date \"::date <= CURRENT_DATE - INTERVAL '2 days'
-          AND \"Recipients\" > 1000
+          AND \"Recipients\" > 95
     ))::date - INTERVAL '7 days'
     AND DATE_TRUNC('week', (
         SELECT MAX(\"Sent Date \"::date) FROM superage.\"Campaigns\"
         WHERE \"Sent Date \"::date <= CURRENT_DATE - INTERVAL '2 days'
-          AND \"Recipients\" > 1000
+          AND \"Recipients\" > 95
     ))::date - INTERVAL '1 day'
-  AND \"Recipients\" > 1000
+  AND \"Recipients\" > 95
 ORDER BY \"Sent Date \"::date;
 
 -- 4. Week-over-week avg open rate delta
@@ -256,7 +256,7 @@ WITH weeks AS (
     FROM superage.\"Campaigns\"
     WHERE \"Sent Date \" IS NOT NULL
       AND \"Sent Date \"::date <= CURRENT_DATE - INTERVAL '2 days'
-      AND \"Recipients\" > 1000
+      AND \"Recipients\" > 95
     GROUP BY 1
     ORDER BY 1 DESC
     LIMIT 2
@@ -281,7 +281,7 @@ FROM superage.\"Campaigns\"
 WHERE \"Sent Date \"::date BETWEEN
     DATE_TRUNC('week', CURRENT_DATE)::date - INTERVAL '7 days'
     AND DATE_TRUNC('week', CURRENT_DATE)::date + INTERVAL '13 days'
-  AND \"Recipients\" > 1000
+  AND \"Recipients\" > 95
   AND \"Sent Date \"::date <= CURRENT_DATE - INTERVAL '2 days'
 ORDER BY \"Sent Date \"::date;
 
@@ -296,7 +296,7 @@ SELECT
 FROM superage.\"Campaigns\"
 WHERE \"Sent Date \" IS NOT NULL
   AND \"Sent Date \"::date <= CURRENT_DATE - INTERVAL '2 days'
-  AND \"Recipients\" > 1000
+  AND \"Recipients\" > 95
   AND \"Sent Date \"::date >= CURRENT_DATE - INTERVAL '84 days'  -- 12 weeks
 GROUP BY 1
 ORDER BY 1 ASC;
@@ -305,7 +305,7 @@ ORDER BY 1 ASC;
 SELECT \"Campaign Name\", \"URL\"
 FROM superage.\"Campaigns\"
 WHERE \"URL\" IS NOT NULL AND \"URL\" != ''
-  AND \"Recipients\" > 1000
+  AND \"Recipients\" > 95
 ORDER BY \"Sent Date \" DESC
 LIMIT 10;
 ```
@@ -362,7 +362,7 @@ agg AS (
     FROM superage."Campaigns"
     WHERE "Sent Date " IS NOT NULL
       AND "Sent Date "::date < CURRENT_DATE
-      AND "Recipients" > 1000
+      AND "Recipients" > 95
       AND "Sent Date "::date >= DATE_TRUNC('week', CURRENT_DATE)::date - INTERVAL '7 weeks'
     GROUP BY 1
 )
@@ -399,7 +399,7 @@ agg AS (
     FROM superage."Campaigns"
     WHERE "Sent Date " IS NOT NULL
       AND "Sent Date "::date < CURRENT_DATE
-      AND "Recipients" > 1000
+      AND "Recipients" > 95
       AND "Sent Date "::date >= DATE_TRUNC('month', CURRENT_DATE)::date - INTERVAL '5 months'
     GROUP BY 1
 )
@@ -437,7 +437,7 @@ SELECT
 FROM d
 LEFT JOIN superage."Campaigns" c
   ON c."Sent Date "::date = d.day
- AND c."Recipients" > 1000
+ AND c."Recipients" > 95
 GROUP BY d.day
 ORDER BY d.day;
 ```
@@ -470,7 +470,7 @@ SELECT
 FROM d
 LEFT JOIN superage."Campaigns" c
   ON c."Sent Date "::date = d.day
- AND c."Recipients" > 1000
+ AND c."Recipients" > 95
 GROUP BY d.day
 ORDER BY d.day;
 ```

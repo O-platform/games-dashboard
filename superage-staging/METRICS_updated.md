@@ -51,13 +51,13 @@ For every table that has a reliable date column, the dashboard **excludes today 
 All campaign queries apply two filters:
 
 - `"Sent Date "::date < CURRENT_DATE` — excludes unsent / future campaigns
-- `"Recipients" > 1000` — excludes test sends and low-volume internal mailings
+- `"Recipients" > 95` — excludes test sends and low-volume internal mailings
 
 In the lambda this is stored as:
 ```sql
 "Sent Date " IS NOT NULL
 AND "Sent Date "::date < CURRENT_DATE
-AND "Recipients" > 1000
+AND "Recipients" > 95
 ```
 
 ---
@@ -95,7 +95,7 @@ The overview tab surfaces the most important headline numbers across all section
 
 ## 2. Campaigns
 
-All campaign metrics use the filter: `Recipients > 1000 AND Sent Date < today`.
+All campaign metrics use the filter: `Recipients > 95 AND Sent Date < today`.
 
 ### KPIs
 
@@ -192,12 +192,11 @@ How many articles each subscriber has clicked: 1 / 2–5 / 6–10 / 11–20 / 20
 
 ---
 
-## 5. Longevity Quiz
+## 5. Audience Persona
 
 | Metric | What it measures |
 |---|---|
 | Quiz Takers | Subscribers with a completed longevity quiz |
-| Avg Longevity Score | Average score out of 100 |
 | Avg Age | Average age of quiz takers |
 | Fitness Quiz | Subscribers who completed the fitness assessment |
 | Menu Quiz | Subscribers who completed the nutrition quiz |
@@ -390,7 +389,7 @@ SELECT
 FROM superage."Campaigns"
 WHERE "Sent Date " IS NOT NULL
   AND "Sent Date "::date < CURRENT_DATE
-  AND "Recipients" > 1000;
+  AND "Recipients" > 95;
 ```
 
 ## Q9 — Campaigns: All Campaigns Table + Open Rate Trend + Scatter Chart
@@ -405,7 +404,7 @@ SELECT
 FROM superage."Campaigns"
 WHERE "Sent Date " IS NOT NULL
   AND "Sent Date "::date < CURRENT_DATE
-  AND "Recipients" > 1000
+  AND "Recipients" > 95
 ORDER BY "Sent Date " ASC;
 ```
 
@@ -422,7 +421,7 @@ SELECT
 FROM superage."Campaigns"
 WHERE "Sent Date " IS NOT NULL
   AND "Sent Date "::date < CURRENT_DATE
-  AND "Recipients" > 1000
+  AND "Recipients" > 95
 ORDER BY "UOpenRate" DESC NULLS LAST
 LIMIT 15;
 ```
@@ -660,40 +659,6 @@ LIMIT 300;
 
 ---
 
-## Q17 — ~~Hidden Gems~~ *(Section removed from dashboard)*
-
-```sql
-WITH ac AS (
-    SELECT
-        article_title, issue_name, url, type,
-        story_position, position_category,
-        unique_clicks, non_unique_clicks,
-        REGEXP_REPLACE(LOWER(TRIM(BOTH '/' FROM SPLIT_PART(url, '?', 1))),
-                       '^https?://(www[.])?', '') AS norm_url
-    FROM superage.articles_clicks
-    WHERE LOWER(COALESCE(position_category, '')) IN ('low', 'medium')
-), wa AS (
-    SELECT DISTINCT ON (REGEXP_REPLACE(LOWER(TRIM(BOTH '/' FROM SPLIT_PART(article_url, '?', 1))),
-                                       '^https?://(www[.])?', ''))
-        article_url, categories, tags,
-        REGEXP_REPLACE(LOWER(TRIM(BOTH '/' FROM SPLIT_PART(article_url, '?', 1))),
-                       '^https?://(www[.])?', '') AS norm_url
-    FROM superage.wordpress_articles
-    WHERE (published_date IS NULL OR published_date::date < CURRENT_DATE)
-    ORDER BY REGEXP_REPLACE(LOWER(TRIM(BOTH '/' FROM SPLIT_PART(article_url, '?', 1))),
-                             '^https?://(www[.])?', ''),
-             modified_date DESC NULLS LAST
-)
-SELECT
-    ac.article_title, ac.issue_name, ac.type,
-    ac.story_position, ac.position_category,
-    ac.unique_clicks, ac.non_unique_clicks,
-    wa.categories, wa.tags
-FROM ac LEFT JOIN wa ON ac.norm_url = wa.norm_url
-ORDER BY ac.unique_clicks DESC NULLS LAST
-LIMIT 25;
-```
-
 ## Q18 — Audience: Subscriber Click Distribution (1 / 2–5 / 6–10 / 11–20 / 20+)
 
 ```sql
@@ -802,20 +767,23 @@ ORDER BY unique_clicks DESC NULLS LAST
 LIMIT 12;
 ```
 
-## Q21 — Longevity Quiz: Quiz KPIs
+## Q21 — Audience Persona: Quiz KPIs
 
 ```sql
 SELECT
-    COUNT(*) AS n,
-    ROUND(AVG(longevity_score)::numeric, 1) AS avg_score,
-    ROUND(MIN(longevity_score)::numeric, 1) AS min_score,
-    ROUND(MAX(longevity_score)::numeric, 1) AS max_score,
-    ROUND(AVG(age)::numeric, 1) AS avg_age
+    COUNT(*)                       AS n,
+    ROUND(AVG(age)::numeric, 1)    AS avg_age
 FROM superage.subscriber_quiz
 WHERE longevity_score IS NOT NULL;
 ```
 
-## Q22 — Longevity Quiz: Age Distribution
+> The previous version of this query also returned `avg_score` / `min_score` /
+> `max_score`. Those columns were dropped when the "Audience Persona" tab
+> stopped surfacing longevity-score visuals (see the FEEDBACK_REPLIES entry
+> on "Audience Persona"). The `WHERE longevity_score IS NOT NULL` clause is
+> kept as a completed-quiz gate.
+
+## Q22 — Audience Persona: Age Distribution
 
 ```sql
 SELECT
@@ -833,7 +801,7 @@ WHERE age IS NOT NULL
 GROUP BY 1 ORDER BY MIN(age);
 ```
 
-## Q23 — Longevity Quiz: Gender Distribution
+## Q23 — Audience Persona: Gender Distribution
 
 ```sql
 SELECT COALESCE(NULLIF(gender, ''), 'Unknown') AS gender, COUNT(*) AS cnt
@@ -841,20 +809,7 @@ FROM superage.subscriber_quiz
 GROUP BY 1 ORDER BY 2 DESC;
 ```
 
-## Q24 — Longevity Quiz: Longevity Score Buckets
-
-```sql
-SELECT
-    COUNT(*) FILTER (WHERE longevity_score < 60)                    AS s_under60,
-    COUNT(*) FILTER (WHERE longevity_score BETWEEN 60 AND 69.99)    AS s_60_70,
-    COUNT(*) FILTER (WHERE longevity_score BETWEEN 70 AND 79.99)    AS s_70_80,
-    COUNT(*) FILTER (WHERE longevity_score BETWEEN 80 AND 89.99)    AS s_80_90,
-    COUNT(*) FILTER (WHERE longevity_score >= 90)                   AS s_90plus
-FROM superage.subscriber_quiz
-WHERE longevity_score IS NOT NULL;
-```
-
-## Q25 — Longevity Quiz: Exercise Frequency
+## Q25 — Audience Persona: Exercise Frequency
 
 ```sql
 SELECT
@@ -869,7 +824,7 @@ FROM superage.subscriber_quiz
 GROUP BY 1 ORDER BY 2 DESC LIMIT 8;
 ```
 
-## Q26 — Longevity Quiz: Sleep Hours
+## Q26 — Audience Persona: Sleep Hours
 
 ```sql
 SELECT COALESCE(NULLIF(sleep_hours, ''), 'Unknown') AS sleep, COUNT(*) AS cnt
@@ -877,7 +832,7 @@ FROM superage.subscriber_quiz
 GROUP BY 1 ORDER BY 2 DESC;
 ```
 
-## Q27 — Longevity Quiz: Education Level
+## Q27 — Audience Persona: Education Level
 
 ```sql
 SELECT COALESCE(NULLIF(education_level, ''), 'Unknown') AS label, COUNT(*) AS cnt
@@ -885,7 +840,7 @@ FROM superage.subscriber_quiz
 GROUP BY 1 ORDER BY 2 DESC LIMIT 12;
 ```
 
-## Q28 — Longevity Quiz: Marital Status
+## Q28 — Audience Persona: Marital Status
 
 ```sql
 SELECT COALESCE(NULLIF(marital_status, ''), 'Unknown') AS label, COUNT(*) AS cnt
@@ -893,7 +848,7 @@ FROM superage.subscriber_quiz
 GROUP BY 1 ORDER BY 2 DESC LIMIT 12;
 ```
 
-## Q29 — Longevity Quiz: Body Weight Profile
+## Q29 — Audience Persona: Body Weight Profile
 
 ```sql
 SELECT
@@ -1201,7 +1156,7 @@ camps AS (
     FROM superage."Campaigns"
     WHERE "Sent Date " IS NOT NULL
       AND "Sent Date "::date < CURRENT_DATE
-      AND "Recipients" > 1000
+      AND "Recipients" > 95
     GROUP BY 1
 )
 SELECT
@@ -1281,7 +1236,7 @@ LIMIT 12;
 
 ## Key Implementation Notes
 
-1. **Campaign filter**: All campaign queries require `"Recipients" > 1000` to exclude test and low-volume sends.
+1. **Campaign filter**: All campaign queries require `"Recipients" > 95` to exclude test and low-volume sends.
 2. **Acquisition quality**: Only `utm_source` is used. `o_event` and `sub_source` groupings have been removed.
 3. **UTM click performance**: `utm_clicks_performance` joins `subscriber_clicks` to `subscribers` to show which source drives the most article click activity (unique and total).
 4. **Marital status**: Column is `marital_status` in `subscriber_quiz`.
@@ -1295,11 +1250,11 @@ LIMIT 12;
 12. **Revenue monthly grouping**: `DATE_TRUNC('month', issue_date::date)` + `TO_CHAR(..., 'Mon YYYY')` prevents one bar per deal date.
 13. **Dashboard logo**: `svg-sa.svg` in `superage-staging/`. CSS `filter: brightness(0) invert(1)` renders it white on the green badge.
 14. **Dark mode default**: `<body class="dark">` on load; Chart.js initialised with dark palette.
-15. **Cohort campaigns-per-month**: Joined from `superage."Campaigns"` by matching `DATE_TRUNC('month', "Sent Date "::date)` to the cohort join month. Only campaigns with `Recipients > 1000` counted.
+15. **Cohort campaigns-per-month**: Joined from `superage."Campaigns"` by matching `DATE_TRUNC('month', "Sent Date "::date)` to the cohort join month. Only campaigns with `Recipients > 95` counted.
 16. **articles_clicks date filter removed**: No `created_at` filter on any `articles_clicks` query. All rows included regardless of date.
 17. **games/waitlist exclusion**: `LOWER(COALESCE(type,'')) NOT IN ('games','waitlist')` applied to content type, category, and tag breakdown queries.
 18. **CTOR removed from Revenue**: Avg Issue CTOR and Avg Sponsor CTOR KPI cards removed. `avg_ctor` column removed from Top Sponsors table. Q34 now only computes `avg_ecpm`.
-19. **Hidden Gems removed**: Section and query no longer used in dashboard (Q17 kept for reference only).
+19. **Hidden Gems removed**: Section, query, and the `low_position_winners` JSON field are all gone (Q17 deleted from this doc).
 20. **Overview sponsor revenue removed**: Sponsor Revenue KPI card removed from Overview tab (still available in Revenue & Sponsors tab).
 21. **Logo background**: `.sa-logo` badge background changed to `#000` (black).
 22. **Dashboard title**: `SuperAge — Brand Pulse Dashboard`.

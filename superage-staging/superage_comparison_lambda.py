@@ -261,7 +261,7 @@ def lambda_handler(event, context):
                 FROM {S}."Campaigns"
                 WHERE "Sent Date " IS NOT NULL
                   AND "Sent Date "::date <= %s
-                  AND "Recipients" > 1000
+                  AND "Recipients" > 95
                 ORDER BY "Sent Date "::date ASC
             """, (launch_cutoff,))
             all_rows = cur.fetchall()
@@ -294,7 +294,7 @@ def lambda_handler(event, context):
                     FROM {S}."Campaigns"
                     WHERE "Sent Date " IS NOT NULL
                       AND "Sent Date "::date < CURRENT_DATE
-                      AND "Recipients" > 1000
+                      AND "Recipients" > 95
                       AND "Sent Date "::date >= DATE_TRUNC('week', CURRENT_DATE)::date - INTERVAL '7 weeks'
                     GROUP BY 1
                 )
@@ -329,7 +329,7 @@ def lambda_handler(event, context):
                     FROM {S}."Campaigns"
                     WHERE "Sent Date " IS NOT NULL
                       AND "Sent Date "::date < CURRENT_DATE
-                      AND "Recipients" > 1000
+                      AND "Recipients" > 95
                       AND "Sent Date "::date >= DATE_TRUNC('month', CURRENT_DATE)::date - INTERVAL '5 months'
                     GROUP BY 1
                 )
@@ -365,7 +365,7 @@ def lambda_handler(event, context):
                 FROM d
                 LEFT JOIN {S}."Campaigns" c
                   ON c."Sent Date "::date = d.day
-                 AND c."Recipients" > 1000
+                 AND c."Recipients" > 95
                 GROUP BY d.day
                 ORDER BY d.day
             """)
@@ -396,7 +396,7 @@ def lambda_handler(event, context):
                 FROM d
                 LEFT JOIN {S}."Campaigns" c
                   ON c."Sent Date "::date = d.day
-                 AND c."Recipients" > 1000
+                 AND c."Recipients" > 95
                 GROUP BY d.day
                 ORDER BY d.day
             """)

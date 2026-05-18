@@ -671,7 +671,6 @@ def lambda_handler(event, context):
                 MAX(NULLIF("$_line_amount", '')::numeric) AS max_deal
             FROM {S}.sa_airtable_sales
             WHERE "$_line_amount" IS NOT NULL AND "$_line_amount" != ''
-              AND (issue_date IS NULL OR issue_date::date <= CURRENT_DATE)
         """)
         rs = cur.fetchone() or {}
         total_revenue    = safe_float(rs.get("total_revenue"))
@@ -687,7 +686,6 @@ def lambda_handler(event, context):
             FROM {S}.sa_airtable_sales
             WHERE issue_date IS NOT NULL
               AND TRIM(CAST(issue_date AS TEXT)) != ''
-              AND issue_date::date <= CURRENT_DATE
               AND "$_line_amount" IS NOT NULL AND "$_line_amount" != ''
             GROUP BY 1, 2
             ORDER BY 1
@@ -701,7 +699,6 @@ def lambda_handler(event, context):
                 SUM(NULLIF("$_line_amount", '')::numeric) AS revenue
             FROM {S}.sa_airtable_sales
             WHERE "$_line_amount" IS NOT NULL AND "$_line_amount" != ''
-              AND (issue_date IS NULL OR issue_date::date <= CURRENT_DATE)
             GROUP BY 1 ORDER BY 3 DESC NULLS LAST LIMIT 10
         """)
         sponsor_rows = cur.fetchall()
@@ -709,7 +706,6 @@ def lambda_handler(event, context):
         cur.execute(f"""
             SELECT COALESCE(NULLIF(sponsor_type, ''), 'Unknown') AS stype, COUNT(*) AS cnt
             FROM {S}.sa_airtable_sales
-            WHERE (issue_date IS NULL OR issue_date::date <= CURRENT_DATE)
             GROUP BY 1 ORDER BY 2 DESC
         """)
         sponsor_type_rows = cur.fetchall()

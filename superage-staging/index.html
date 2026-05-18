@@ -1914,7 +1914,7 @@ function renderRevenue(M) {
   const topName = ts[0] ? ts[0].name : '—';
   document.getElementById('revenue').innerHTML = `
     <div class="section-context-banner">
-      <strong>Revenue &amp; Sponsors</strong> — Advertising and sponsorship performance. Tracks total revenue, deal volume, and sponsor-level breakdown. Future-dated rows in <code>sa_airtable_sales</code> are excluded — totals reflect deals booked on or before today.
+      <strong>Revenue &amp; Sponsors</strong> — Advertising and sponsorship performance. Tracks total revenue, deal volume, and sponsor-level breakdown. The Monthly Revenue chart includes future-dated rows from <code>sa_airtable_sales</code> (booked but not yet run); the current month and any not-yet-closed months render as faded bars.
     </div>
     <div class="kpi-row">
       <div class="kpi-card gold"><div class="label">Total Revenue</div><div class="value">${esc(M.total_revenue_fmt||'—')}</div><div class="sub">All sponsors combined</div></div>

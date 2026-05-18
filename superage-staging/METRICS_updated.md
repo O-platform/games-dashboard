@@ -492,9 +492,74 @@ ORDER BY article_count DESC, label
 LIMIT 15;
 ```
 
-## Q15 — Website Content: Unique Clicks by Category (Bar Chart)
+## Q15 — Website Content: Top Categories (avg clicks per article)
+
+> **Where this chart's numbers actually come from**
+> The "Top Categories" bar chart on the **Content Reference** tab is **not**
+> populated by a dedicated category SQL query. It's computed **client-side**
+> from `M.content_drill_table` (the article-level table produced by Q16b),
+> by splitting each article's comma-separated `categories` field and
+> counting / summing per label.
+>
+> The old per-category SQL below (`article_category_clicks`) still runs in
+> the lambda but its output isn't consumed by the dashboard — it's a
+> reporting query you can run ad-hoc in pgAdmin. Because Q16b's
+> `content_drill_table` uses **`INNER JOIN`** to `wordpress_articles` and
+> caps at the **top 300 articles by unique clicks**, while the legacy SQL
+> uses **`LEFT JOIN`** (so unmatched URLs fall through to "Uncategorized")
+> and has no per-article cap, the two queries report different article
+> counts. Click totals match because the same `articles_clicks` rows back
+> both. **The dashboard is the reference.**
+
+### What the dashboard plots (client-side logic)
+
+```text
+for each article in M.content_drill_table:
+    for each label in split(article.categories, ","):
+        bucket[label].unique += article.unique_clicks
+        bucket[label].total  += article.total_clicks
+        bucket[label].count  += 1
+        bucket[label].avgUnique = round(bucket[label].unique / bucket[label].count)
+        bucket[label].avgTotal  = round(bucket[label].total  / bucket[label].count)
+
+sort by avgUnique DESC, take top 10
+```
+
+The article-level rows behind `content_drill_table` come from Q16b:
 
 ```sql
+-- Q16b (excerpt): INNER JOIN articles_clicks → wordpress_articles on
+-- normalized URL, LIMIT 300 by unique clicks. Full query is in the
+-- "Q16b — Content Reference: Article Drill-Down Table" section.
+WITH ac AS (...articles_clicks rows, excluding type IN ('games','waitlist')...),
+     wa AS (...wordpress_articles with COALESCE(categories,'Uncategorized')...)
+SELECT ac.article_title, ac.url, ac.unique_clicks, ac.non_unique_clicks,
+       ac.story_position, ac.position_category,
+       wa.categories, wa.tags, wa.written_by
+FROM ac
+INNER JOIN wa ON ac.norm_url = wa.norm_url
+ORDER BY ac.unique_clicks DESC NULLS LAST
+LIMIT 300;
+```
+
+### Example dashboard output (snapshot — May 2026)
+
+| label        | articles | avg_unique | avg_total | total_unique | total_total |
+|--------------|---------:|-----------:|----------:|-------------:|------------:|
+| Fitness      |       63 |      5,915 |     6,683 |      372,615 |     421,027 |
+| Longevity    |      103 |      4,966 |     5,657 |      511,526 |     582,747 |
+| Nutrition    |       76 |      4,569 |     5,029 |      347,262 |     382,198 |
+| Focus        |       53 |      1,624 |     1,817 |       86,073 |      96,323 |
+| Wealthspan   |       20 |      1,141 |     1,244 |       22,824 |      24,873 |
+| Uncategorized|        1 |        ... |       ... |          ... |         ... |
+
+### Legacy ad-hoc category SQL (deprecated — output unused by dashboard)
+
+```sql
+-- Returns a different article-count basis than the dashboard:
+--   • LEFT JOIN puts unmatched articles_clicks rows in "Uncategorized"
+--   • No LIMIT 300, so it includes the full long-tail of clicked URLs
+-- Useful for spot-checks, NOT for matching the chart on the page.
 WITH ac AS (
     SELECT
         article_title, url, unique_clicks, non_unique_clicks,
@@ -539,7 +604,157 @@ ORDER BY unique_clicks DESC, label
 LIMIT 15;
 ```
 
-## Q16 — Website Content: Top Tags by Unique Clicks + Tag Performance Table
+Example output of the legacy query (note the **Uncategorized = 123**
+inflation from URL-mismatch articles — that's the gap with the dashboard):
+
+| label        | article_count | unique_clicks | non_unique_clicks | avg_unique_clicks |
+|--------------|--------------:|--------------:|------------------:|------------------:|
+| Longevity    |            70 |       511,526 |           582,747 |           7,307.5 |
+| Fitness      |            35 |       372,615 |           421,027 |          10,646.1 |
+| Nutrition    |            61 |       347,262 |           382,198 |           5,692.8 |
+| Uncategorized|           123 |       158,602 |           171,924 |           1,289.4 |
+| Focus        |            33 |        86,073 |            96,323 |           2,608.3 |
+| Wealthspan   |            19 |        22,824 |            24,873 |           1,201.3 |
+
+---
+
+## Q15b — URL normalization helper (debugging join mismatches)
+
+`articles_clicks` and `wordpress_articles` store the same article under
+slightly different URL spellings:
+
+```text
+wordpress_articles.article_url  →  https://superage.com/do-pets-actually-help-you-live-longer/
+articles_clicks.url             →  https://superage.com/do-pets-actually-help-you-live-longer
+```
+
+Trailing slash, `www.` prefix, query string and protocol case all vary
+between the two systems. Every join in this lambda runs both columns
+through the same normalizer before matching:
+
+```sql
+REGEXP_REPLACE(
+    LOWER(
+        TRIM(BOTH '/' FROM SPLIT_PART(<url-column>, '?', 1))
+    ),
+    '^https?://(www[.])?', ''
+) AS norm_url
+```
+
+It (a) strips the query string after `?`, (b) lowercases, (c) trims any
+leading/trailing slashes, and (d) removes the scheme + optional `www.`
+prefix. So both example URLs collapse to:
+
+```text
+superage.com/do-pets-actually-help-you-live-longer
+```
+
+### Find an article by URL pattern (both tables)
+
+Useful when you have a slug and want to see how it appears on each side:
+
+```sql
+-- Find every articles_clicks row for a URL pattern
+SELECT id, issue_name, type, story_position, position_category,
+       url, unique_clicks, non_unique_clicks
+FROM superage.articles_clicks
+WHERE LOWER(url) LIKE '%superage.com/do-pets-actually-help-you-live-longer%'
+ORDER BY unique_clicks DESC;
+
+-- Find the matching wordpress_articles row(s)
+SELECT article_url, categories, tags, written_by,
+       published_date, modified_date
+FROM superage.wordpress_articles
+WHERE LOWER(article_url) LIKE '%superage.com/do-pets-actually-help-you-live-longer%'
+ORDER BY modified_date DESC NULLS LAST;
+```
+
+Generic version (replace `<slug>`):
+
+```sql
+SELECT 'articles_clicks' AS source, url AS article_url, NULL::text AS categories
+FROM superage.articles_clicks
+WHERE LOWER(url) LIKE '%superage.com/' || LOWER('<slug>') || '%'
+UNION ALL
+SELECT 'wordpress_articles' AS source, article_url, categories
+FROM superage.wordpress_articles
+WHERE LOWER(article_url) LIKE '%superage.com/' || LOWER('<slug>') || '%';
+```
+
+### Articles in WordPress but never clicked (no matching `articles_clicks` row)
+
+```sql
+WITH wa AS (
+    SELECT
+        article_url,
+        categories,
+        published_date,
+        REGEXP_REPLACE(LOWER(TRIM(BOTH '/' FROM SPLIT_PART(article_url, '?', 1))),
+                       '^https?://(www[.])?', '') AS norm_url
+    FROM superage.wordpress_articles
+    WHERE (published_date IS NULL OR published_date::date < CURRENT_DATE)
+), ac AS (
+    SELECT DISTINCT
+        REGEXP_REPLACE(LOWER(TRIM(BOTH '/' FROM SPLIT_PART(url, '?', 1))),
+                       '^https?://(www[.])?', '') AS norm_url
+    FROM superage.articles_clicks
+)
+SELECT wa.article_url, wa.categories, wa.published_date
+FROM wa
+LEFT JOIN ac ON wa.norm_url = ac.norm_url
+WHERE ac.norm_url IS NULL
+ORDER BY wa.published_date DESC NULLS LAST;
+```
+
+### `articles_clicks` rows with no matching WordPress article (orphan clicks)
+
+These end up as the "Uncategorized" bucket in the legacy Q15 query and
+are excluded from the dashboard because Q16b uses `INNER JOIN`. Run this
+when you want to see what's leaking through:
+
+```sql
+WITH ac AS (
+    SELECT
+        url, article_title, type, unique_clicks, non_unique_clicks,
+        REGEXP_REPLACE(LOWER(TRIM(BOTH '/' FROM SPLIT_PART(url, '?', 1))),
+                       '^https?://(www[.])?', '') AS norm_url
+    FROM superage.articles_clicks
+    WHERE LOWER(COALESCE(type,'')) NOT IN ('games','waitlist')
+), wa AS (
+    SELECT DISTINCT
+        REGEXP_REPLACE(LOWER(TRIM(BOTH '/' FROM SPLIT_PART(article_url, '?', 1))),
+                       '^https?://(www[.])?', '') AS norm_url
+    FROM superage.wordpress_articles
+)
+SELECT
+    ac.url, ac.article_title, ac.type,
+    ac.unique_clicks, ac.non_unique_clicks
+FROM ac
+LEFT JOIN wa ON ac.norm_url = wa.norm_url
+WHERE wa.norm_url IS NULL
+ORDER BY ac.unique_clicks DESC NULLS LAST
+LIMIT 100;
+```
+
+Common reasons a row shows up here:
+
+- Sponsored or affiliate placements whose URL doesn't live on `superage.com`.
+- Articles deleted or renamed in WordPress (the slug changed but
+  `articles_clicks` still has the old send-time URL).
+- Tracking-parameter remnants that survive the `SPLIT_PART(url,'?',1)` step
+  (e.g. fragment-encoded suffixes `#…`).
+- `type='games'` / `type='waitlist'` placements — explicitly excluded
+  upstream but worth eyeballing if the count looks high.
+
+---
+
+## Q16 — Website Content: Top Tags (avg clicks per article)
+
+Same situation as Q15: the **Top Tags** chart on the Content Reference
+tab is computed **client-side** from `M.content_drill_table` (splitting
+each row's comma-separated `tags`). The ad-hoc SQL below still runs in
+the lambda but its output isn't consumed by the dashboard — keep it for
+spot-checking.
 
 ```sql
 WITH ac AS (

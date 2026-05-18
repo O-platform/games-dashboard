@@ -2007,7 +2007,7 @@ function renderRetention(M) {
 
   document.getElementById('retention').innerHTML = `
     <div class="section-context-banner">
-      <strong>Subscriber Retention</strong> — How long subscribers stay engaged after joining, aggregated across all subscribers. Curves show the % still active at 30 / 60 / 90 / 180 / 365 days. "Active" = state = 'Active' AND engagement_segment NOT IN (Ghosts, Zombies, Dormant).
+      <strong>Subscriber Retention</strong> — How long subscribers stay engaged after joining. The Survival Curve overlays the all-subscriber baseline with one line per major acquisition source so you can compare churn shapes; curves show the % still active at 30 / 60 / 90 / 180 / 365 days. "Active" = state = 'Active' AND engagement_segment NOT IN (Ghosts, Zombies, Dormant). Source buckets use the canonical mapping from §4 of METRICS_updated.md.
     </div>
     <div class="kpi-row">
       <div class="kpi-card green"><div class="label">30-Day Retention</div><div class="value">${pct(findRate('Day 30'))}</div><div class="sub">Still active at day 30</div></div>
@@ -2017,9 +2017,9 @@ function renderRetention(M) {
       <div class="kpi-card purple"><div class="label">Active Rate</div><div class="value">${esc(rt.active_rate||'—')}</div><div class="sub">${fmt(rt.active)} of ${fmt(rt.total)} subscribers</div></div>
     </div>
     <div class="chart-card">
-      <h3>Survival Curve <span class="badge-inline">— all subscribers</span></h3>
+      <h3>Survival Curve <span class="badge-inline">— all subscribers + top acquisition sources</span></h3>
       <div class="chart-container h340"><canvas id="ret-curve"></canvas></div>
-      <div class="insight">30-day: <strong>${pct(findRate('Day 30'))}</strong> &middot; 60-day: <strong>${pct(findRate('Day 60'))}</strong> &middot; 90-day: <strong>${pct(findRate('Day 90'))}</strong>.</div>
+      <div class="insight">Overall — 30-day: <strong>${pct(findRate('Day 30'))}</strong> &middot; 60-day: <strong>${pct(findRate('Day 60'))}</strong> &middot; 90-day: <strong>${pct(findRate('Day 90'))}</strong>. Each thin line is one source bucket (canonicalised, ≥ 500 subscribers, top 8 by cohort size); the thicker green line is the all-subscriber baseline. Hover a series for the per-source breakdown.</div>
     </div>
     <div class="grid-2">
       <div class="chart-card">
@@ -2061,17 +2061,34 @@ function renderRetention(M) {
           </tr>`;
         }).join('')}</tbody>
       </table></div>
-      <div class="insight"><strong>Active Now</strong> = state = 'Active' AND engagement_segment NOT IN (Ghosts, Zombies, Dormant). Buckets: <strong>AH CPL</strong> (allhealthy/AHCPL1), <strong>Ageist CPL</strong> (theageist), <strong>Share</strong> (referral/share), <strong>Meta</strong> (facebook/fb/ig/meta), <strong>IFCPL</strong> (if/ifcpl1), <strong>Google</strong>, <strong>Direct</strong> (organic / no UTM). LTV is computed only across churned subscribers (avg / median days from join to unsub). <em>Clicker / Unique Clicks / Clicks per Clicker columns reflect click events from December 2025 onwards; the Subscribers / Active / Churned / LTV columns use full history.</em></div>
+      <div class="insight"><strong>Active Now</strong> = state = 'Active' AND engagement_segment NOT IN (Ghosts, Zombies, Dormant). Source buckets use the canonical source-label mapping shared with the Audience tab — see METRICS_updated.md §4 "Source label canonicalisation". <strong>Direct</strong> rolls up <code>organic</code>, <code>direct</code> and empty UTM. LTV is computed only across churned subscribers (avg / median days from join to unsub). <em>Clicker / Unique Clicks / Clicks per Clicker columns reflect click events from December 2025 onwards; the Subscribers / Active / Churned / LTV columns use full history.</em></div>
     </div>
   `;
 
+  // Overlay chart: the overall "all subscribers" line (filled, thick green)
+  // plus one thin line per acquisition-source bucket from
+  // M.survival_curve_by_source.series. Legend at the bottom drives toggling.
+  const sourcePalette = ['#0969da','#cf222e','#8250df','#9a6700','#bf3989','#1b7c83','#58a6ff','#3fb950'];
+  const bySource = (M.survival_curve_by_source && M.survival_curve_by_source.series) || [];
+  const overlayLabels = (M.survival_curve_by_source && M.survival_curve_by_source.labels) || sc.labels || [];
+  const datasets = [
+    { label: 'All subscribers', data: sc.rates || [],
+      borderColor: '#1a7f37', backgroundColor: 'rgba(26,127,55,.10)',
+      tension:.3, fill:true, pointRadius:4, borderWidth:3, order:99 }
+  ].concat(bySource.map((s, i) => ({
+    label: `${s.label} (${(s.total||0).toLocaleString()})`,
+    data: s.rates || [],
+    borderColor: sourcePalette[i % sourcePalette.length],
+    backgroundColor: 'transparent',
+    tension: .3, fill: false, pointRadius: 3, borderWidth: 2, order: i
+  })));
   new Chart(document.getElementById('ret-curve'), {
     type: 'line',
-    data: { labels: sc.labels||[], datasets: [
-      { label: 'Retention %', data: sc.rates||[], borderColor: '#1a7f37', backgroundColor: 'rgba(26,127,55,.1)', tension:.3, fill:true, pointRadius:4 }
-    ]},
+    data: { labels: overlayLabels, datasets },
     options: { responsive:true, maintainAspectRatio:false,
-      plugins:{ legend:{ display:false } },
+      plugins:{ legend:{ position:'bottom', labels:{ font:{ size:11 }, padding:6, boxWidth:12 } },
+                tooltip:{ callbacks:{ label: c => `${c.dataset.label}: ${Number(c.parsed.y).toFixed(1)}%` } } },
+      interaction: { mode:'index', intersect:false },
       scales:{ y:{ min:0, max:100, ticks:{ callback: v => v+'%' } } } }
   });
 

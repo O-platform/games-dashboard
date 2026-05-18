@@ -785,6 +785,43 @@ def lambda_handler(event, context):
         """)
         survival_row = cur.fetchone() or {}
 
+        # Survival curves split by acquisition source bucket — overlays one
+        # line per major source on the Retention tab so churn shapes can be
+        # compared. Uses the same canonical source mapping as Q35b (Direct
+        # rolls up organic / direct / empty); minimum cohort of 500 to keep
+        # noisy tail sources out of the chart, top 8 by total.
+        cur.execute(f"""
+            WITH s AS (
+                SELECT
+                    CASE
+                        WHEN LOWER(COALESCE(NULLIF(TRIM(utm_source),''),
+                                            NULLIF(TRIM(source),''), '')) IN ('organic','direct','') THEN 'Organic'
+                        ELSE COALESCE(
+                            {_canon_source("COALESCE(NULLIF(TRIM(utm_source),''), NULLIF(TRIM(source),''))")},
+                            'Organic'
+                        )
+                    END AS bucket,
+                    EXTRACT(EPOCH FROM (date_unsubscribed - date_joined)) / 86400 AS days_to_unsub
+                FROM {S}.subscribers
+                WHERE date_joined IS NOT NULL AND date_joined::date < CURRENT_DATE
+                  AND (date_unsubscribed IS NULL OR date_unsubscribed::date < CURRENT_DATE)
+            )
+            SELECT
+                bucket,
+                COUNT(*)                                                                AS total,
+                COUNT(*) FILTER (WHERE days_to_unsub IS NULL OR days_to_unsub > 30)     AS alive_30,
+                COUNT(*) FILTER (WHERE days_to_unsub IS NULL OR days_to_unsub > 60)     AS alive_60,
+                COUNT(*) FILTER (WHERE days_to_unsub IS NULL OR days_to_unsub > 90)     AS alive_90,
+                COUNT(*) FILTER (WHERE days_to_unsub IS NULL OR days_to_unsub > 180)    AS alive_180,
+                COUNT(*) FILTER (WHERE days_to_unsub IS NULL OR days_to_unsub > 365)    AS alive_365
+            FROM s
+            GROUP BY 1
+            HAVING COUNT(*) >= 500
+            ORDER BY total DESC
+            LIMIT 8
+        """)
+        survival_by_source_rows = cur.fetchall()
+
         cur.execute(f"""
             SELECT
                 DATE_TRUNC('month', date_unsubscribed)::date AS month,
@@ -818,16 +855,14 @@ def lambda_handler(event, context):
             mapped AS (
                 SELECT
                     s.*,
+                    -- Use the canonical source-label mapping (Source label
+                    -- canonicalisation in §4 of METRICS_updated.md). 'organic'
+                    -- and empty values still need to be coerced to 'Organic'
+                    -- because _canon_source falls back to the raw value.
                     CASE
-                        WHEN LOWER(source_raw) IN ('ahcpl1', 'allhealthy')         THEN 'AH CPL'
-                        WHEN LOWER(source_raw) IN ('theageist', 'ageist')          THEN 'Ageist CPL'
-                        WHEN LOWER(source_raw) IN ('share', 'referral')            THEN 'Share'
-                        WHEN LOWER(source_raw) IN ('meta', 'facebook', 'fb', 'ig') THEN 'Meta'
-                        WHEN LOWER(source_raw) IN ('if', 'ifcpl1')                 THEN 'IFCPL'
-                        WHEN LOWER(source_raw) = 'google'                          THEN 'Google'
-                        WHEN LOWER(source_raw) IN ('organic', 'direct', '')        THEN 'Direct'
-                        ELSE source_raw
-                    END                                                                AS bucket,
+                        WHEN LOWER(source_raw) IN ('organic', 'direct', '') THEN 'Organic'
+                        ELSE COALESCE({_canon_source('source_raw')}, 'Organic')
+                    END AS bucket,
                     CASE WHEN unsubbed IS NOT NULL THEN (unsubbed - joined) END        AS lifespan_days
                 FROM s
             ),
@@ -1248,6 +1283,29 @@ def lambda_handler(event, context):
             round(safe_int(sv.get("alive_90"))  / sv_total * 100, 1),
             round(safe_int(sv.get("alive_180")) / sv_total * 100, 1),
             round(safe_int(sv.get("alive_365")) / sv_total * 100, 1),
+        ],
+    }
+
+    # Per-source overlay: one rates[] per acquisition source bucket (top 8
+    # by cohort size, minimum 500 subscribers). Same Day 0/30/60/90/180/365
+    # labels as the overall curve so the dashboard can overlay them on one
+    # chart with a legend.
+    M["survival_curve_by_source"] = {
+        "labels": ["Day 0", "Day 30", "Day 60", "Day 90", "Day 180", "Day 365"],
+        "series": [
+            {
+                "label":  str(r["bucket"]),
+                "total":  safe_int(r["total"]),
+                "rates":  [
+                    100.0,
+                    round(safe_int(r["alive_30"])  / max(safe_int(r["total"]), 1) * 100, 1),
+                    round(safe_int(r["alive_60"])  / max(safe_int(r["total"]), 1) * 100, 1),
+                    round(safe_int(r["alive_90"])  / max(safe_int(r["total"]), 1) * 100, 1),
+                    round(safe_int(r["alive_180"]) / max(safe_int(r["total"]), 1) * 100, 1),
+                    round(safe_int(r["alive_365"]) / max(safe_int(r["total"]), 1) * 100, 1),
+                ],
+            }
+            for r in survival_by_source_rows
         ],
     }
 

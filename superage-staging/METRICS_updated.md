@@ -1042,10 +1042,14 @@ WHERE date_joined::date < CURRENT_DATE;
 
 ## Q35b — Subscriber Retention: Retention by Acquisition Source
 
-Buckets every subscriber's source into the six product-relevant labels, then
-computes LTV (avg + median lifespan), early-unsub counts at 15 / 30 days, and
-click activity from `subscriber_clicks`. `active_now` uses the canonical
-Active rule.
+Buckets every subscriber by the **canonical source label** (§4 → "Source label
+canonicalisation"), then computes LTV (avg + median lifespan), early-unsub
+counts at 15 / 30 days, and click activity from `subscriber_clicks`.
+`active_now` uses the canonical Active rule. The previous fixed six-bucket
+list (`AH CPL` / `Ageist CPL` / `Share` / `Meta` / `IFCPL` / `Google` /
+`Direct`) was replaced — buckets now match the Audience tab exactly, with
+`'organic' / 'direct' / ''` still forced to **Direct** rather than being
+returned as raw values.
 
 ```sql
 WITH s AS (
@@ -1062,14 +1066,12 @@ WITH s AS (
 mapped AS (
     SELECT
         s.*,
+        -- _canon(col) is the canonical-label helper from §4. 'organic' /
+        -- 'direct' / '' still need to be coerced to 'Direct' explicitly
+        -- because _canon_source falls back to the raw value.
         CASE
-            WHEN LOWER(source_raw) IN ('ahcpl1', 'allhealthy')         THEN 'AH CPL'
-            WHEN LOWER(source_raw) IN ('theageist', 'ageist')          THEN 'Ageist CPL'
-            WHEN LOWER(source_raw) IN ('share', 'referral')            THEN 'Share'
-            WHEN LOWER(source_raw) IN ('meta', 'facebook', 'fb', 'if') THEN 'Meta'
-            WHEN LOWER(source_raw) = 'google'                          THEN 'Google'
-            WHEN LOWER(source_raw) IN ('organic', 'direct', '')        THEN 'Direct'
-            ELSE source_raw
+            WHEN LOWER(source_raw) IN ('organic', 'direct', '') THEN 'Direct'
+            ELSE COALESCE(_canon(source_raw), 'Direct')
         END                                                                AS bucket,
         CASE WHEN unsubbed IS NOT NULL THEN (unsubbed - joined) END        AS lifespan_days
     FROM s
@@ -1153,6 +1155,50 @@ FROM (
 ```
 
 Exposed as `M.survival_curve = { labels: ['Day 0','Day 30',...], rates: [100, %, ...] }` — single series.
+
+## Q37b — Subscriber Retention: Survival Curve per Acquisition Source
+
+Same Day 0/30/60/90/180/365 shape as Q37 but split by acquisition-source bucket. Powers the new overlay on the Retention tab: the all-subscriber baseline (filled green, Q37) plus one thin line per source. Source buckets use the **canonical mapping** (§4 → "Source label canonicalisation") so labels here match the Audience tab and Q35b. Minimum cohort 500 subscribers; top 8 by cohort size.
+
+```sql
+WITH s AS (
+    SELECT
+        CASE
+            WHEN LOWER(COALESCE(NULLIF(TRIM(utm_source),''),
+                                NULLIF(TRIM(source),''), '')) IN ('organic','direct','') THEN 'Organic'
+            ELSE COALESCE(_canon(COALESCE(NULLIF(TRIM(utm_source),''), NULLIF(TRIM(source),''))), 'Organic')
+        END                                                                   AS bucket,
+        EXTRACT(EPOCH FROM (date_unsubscribed - date_joined)) / 86400         AS days_to_unsub
+    FROM superage.subscribers
+    WHERE date_joined IS NOT NULL AND date_joined::date < CURRENT_DATE
+      AND (date_unsubscribed IS NULL OR date_unsubscribed::date < CURRENT_DATE)
+)
+SELECT
+    bucket,
+    COUNT(*)                                                                  AS total,
+    COUNT(*) FILTER (WHERE days_to_unsub IS NULL OR days_to_unsub > 30)       AS alive_30,
+    COUNT(*) FILTER (WHERE days_to_unsub IS NULL OR days_to_unsub > 60)       AS alive_60,
+    COUNT(*) FILTER (WHERE days_to_unsub IS NULL OR days_to_unsub > 90)       AS alive_90,
+    COUNT(*) FILTER (WHERE days_to_unsub IS NULL OR days_to_unsub > 180)      AS alive_180,
+    COUNT(*) FILTER (WHERE days_to_unsub IS NULL OR days_to_unsub > 365)      AS alive_365
+FROM s
+GROUP BY 1
+HAVING COUNT(*) >= 500
+ORDER BY total DESC
+LIMIT 8;
+```
+
+Exposed as:
+
+```json
+M.survival_curve_by_source = {
+  "labels": ["Day 0","Day 30","Day 60","Day 90","Day 180","Day 365"],
+  "series": [
+    { "label": "<Source>", "total": <int>, "rates": [100.0, %30, %60, %90, %180, %365] },
+    …
+  ]
+}
+```
 
 ## Q38 — Subscriber Retention: Monthly Churn Volume (all subscribers)
 
@@ -1334,3 +1380,4 @@ ORDER BY c.cohort_month;
 41. **Audience tab: unified time-window selector (2026-05)**: a single `All time / Last 30 / 60 / 90 days` toggle was lifted out of the Acquisition Quality table header and placed at the top of the Audience tab. The toggle now drives every component on the tab in one render — the four KPI cards (Total Subscribers flips to "New Subscribers" + "Joined in last N days" when filtered; Top Source + Top Source % recompute from the windowed cohort), the Acquisition by Source doughnut, the Source Clicks Performance bar chart, and the Acquisition Quality table — via `_setAcqWindow(win)`. The pie / table read `acquisition_quality.utm_source.rows_<win>` (Q19). The bar chart uses `utm_clicks_performance` (Q20, with the proper unique-vs-total split) for the all-time view, and falls back to Q19 rows for the windowed views (where unique == total because Q19 counts raw `Campaigns_Clicks` events). The Active Rate KPI stays global and is labelled "Currently active (global)" so it's clear it isn't window-scoped. State isn't persisted to localStorage.
 42. **Source-label canonicalisation moved server-side (2026-05)**: `utmLabel()` in `index.html` is now mirrored by an SQL helper `_canon_source(col)` in `superage_metrics_lambda_updated.py` that runs **before** the `GROUP BY` in Q19 / Q20 / Q35b, collapsing aliases (raw `meta` / `facebook` / `fb` / `ig` → one `Meta` row; `taboola`/`Taboola`/`TABOOLA` → one `Taboola`, etc.) in the rollup rather than at display time. The duplicate display rows that used to appear when the rollup was on the raw `utm_source` value (most visibly the "two Meta rows" issue) are gone. **Full mapping table is documented in §4 → "Source label canonicalisation (source of truth)" above** — that table is the single source of truth; when adding a new branch update both `_canon_source` and `utmLabel` in lockstep.
 43. **Source-canonicalisation expansion (2026-05, follow-ups)**: the canonicaliser was extended in three passes after the initial move-to-SQL — (a) split `IFCPL` (`if`/`ifcpl1`) out of `Meta` into its own bucket; (b) absorbed every TrueDemocracy CPL2 batch via `LIKE 'td_cpl2%'`, every TheAgeist sample/request issue via `LIKE 'ageist_%'`/`LIKE 'ageistrequest%'`, and every RecommendedReads CPL1 suffix via `LIKE 'rrcpl1%'` so the brand families don't fragment by date or A/B suffix; (c) added new top-level labels — `NNCPL` (NNCPL1 + NN_CPL2_* + NN1_CPL2oneclick), `ISCPL` (IS + ISCPL1), `AI` (chatgpt.com + perplexity + nbot.ai), plus standalone `Refind` and `SuperAge` (kept distinct from `SuperAge Quiz`). The matching `CASE` in Q35b was updated alongside (a) so the Retention-by-Acquisition-Source buckets stay consistent — its insight string in `renderRetention()` now lists `Meta (facebook/fb/ig/meta), IFCPL (if/ifcpl1), Google, Direct`.
+44. **Survival curve overlay per acquisition source (2026-05)**: the Retention tab's Survival Curve was upgraded from a single all-subscriber line into an overlay chart — the all-subscriber baseline (filled green, Q37) plus one thin line per source bucket from the new Q37b. Source buckets use the canonical mapping from §4 ("Source label canonicalisation"), with `'organic' / 'direct' / ''` collapsed into a **Direct** bucket. Top 8 sources by cohort size; minimum cohort 500 subscribers to keep noisy tail sources out of the chart. Tooltip uses `mode:'index'` so hovering a day shows every series' retention at once; legend is at the bottom and each entry includes the cohort size. Q35b was retrofitted in the same pass to use the canonical mapping instead of its previous hand-coded six-bucket list — the Retention-by-Acquisition-Source table now shows the same source labels as the Audience tab. JSON shape: `M.survival_curve_by_source = { labels: [...], series: [{label, total, rates}] }`.

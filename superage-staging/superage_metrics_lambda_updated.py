@@ -259,22 +259,6 @@ def lambda_handler(event, context):
         """)
         state_rows = cur.fetchall()
 
-        cur.execute(f"""
-            SELECT DATE_TRUNC('month', date_joined)::date AS month, COUNT(*) AS cnt
-            FROM {S}.subscribers
-            WHERE date_joined IS NOT NULL AND date_joined::date < CURRENT_DATE
-            GROUP BY 1 ORDER BY 1
-        """)
-        growth_rows = cur.fetchall()
-
-        cur.execute(f"""
-            SELECT DATE_TRUNC('month', date_unsubscribed)::date AS month, COUNT(*) AS cnt
-            FROM {S}.subscribers
-            WHERE date_unsubscribed IS NOT NULL AND date_unsubscribed::date < CURRENT_DATE
-            GROUP BY 1 ORDER BY 1
-        """)
-        unsub_rows = cur.fetchall()
-
         # Growth history table — used for Overview subscriber growth chart
         cur.execute(f"""
             SELECT
@@ -288,30 +272,6 @@ def lambda_handler(event, context):
             ORDER BY 1
         """)
         growth_history_rows = cur.fetchall()
-
-        cur.execute(f"""
-            SELECT COALESCE(NULLIF(sub_level, ''), 'Unknown') AS level, COUNT(*) AS cnt
-            FROM {S}.subscribers
-            WHERE date_joined::date < CURRENT_DATE
-            GROUP BY 1 ORDER BY 2 DESC
-        """)
-        level_rows = cur.fetchall()
-
-        cur.execute(f"""
-            SELECT COALESCE(NULLIF(sub_source, ''), 'Direct/Unknown') AS source, COUNT(*) AS cnt
-            FROM {S}.subscribers
-            WHERE date_joined::date < CURRENT_DATE
-            GROUP BY 1 ORDER BY 2 DESC LIMIT 10
-        """)
-        source_rows = cur.fetchall()
-
-        cur.execute(f"""
-            SELECT COUNT(*) AS n
-            FROM {S}.subscribers
-            WHERE us_based_notification = 'Yes'
-              AND date_joined::date < CURRENT_DATE
-        """)
-        us_based_count = safe_int((cur.fetchone() or {}).get("n"))
 
         # ─────────────────────────────────────────────────────
         # 2. Campaigns — filter: Recipients > 95
@@ -363,18 +323,6 @@ def lambda_handler(event, context):
         """)
         camp_rows = cur.fetchall()
 
-        cur.execute(f"""
-            SELECT
-                "Campaign Name", "Sent Date ", "Recipients", "UniqueOpened",
-                "Clicks", "Unsubscribed", "UOpenRate", "UClickRate",
-                COALESCE("URL", '') AS "URL"
-            FROM {S}."Campaigns"
-            WHERE {camp_filter}
-            ORDER BY "UOpenRate" DESC NULLS LAST
-            LIMIT 15
-        """)
-        top_open_rows = cur.fetchall()
-
         # ─────────────────────────────────────────────────────
         # 3. Content: articles_clicks + wordpress_articles
         # ─────────────────────────────────────────────────────
@@ -393,20 +341,6 @@ def lambda_handler(event, context):
 
         cur.execute(f"""
             SELECT
-                COALESCE(NULLIF(type, ''), 'unknown') AS content_type,
-                COUNT(*) AS placements,
-                COALESCE(SUM(unique_clicks), 0) AS unique_clicks,
-                COALESCE(SUM(non_unique_clicks), 0) AS non_unique_clicks,
-                ROUND(COALESCE(SUM(unique_clicks), 0)::numeric / NULLIF(COUNT(*), 0), 1) AS avg_unique_clicks
-            FROM {S}.articles_clicks ac
-            WHERE {ac_type_excl}
-            GROUP BY 1
-            ORDER BY unique_clicks DESC NULLS LAST
-        """)
-        content_type_rows = cur.fetchall()
-
-        cur.execute(f"""
-            SELECT
                 article_title, issue_name, url, type,
                 story_position, position_category,
                 unique_clicks, non_unique_clicks
@@ -421,195 +355,6 @@ def lambda_handler(event, context):
             FROM {S}.articles_clicks ac
         """)
         total_article_clicks = safe_int((cur.fetchone() or {}).get("n"))
-
-        # Windowed article clicks — 7d, 15d, 30d, 90d using issue_date
-        def _fetch_windowed_articles(days):
-            cur.execute(f"""
-                SELECT
-                    article_title, url,
-                    MAX(type) AS type,
-                    MAX(story_position) AS story_position,
-                    MAX(position_category) AS position_category,
-                    SUM(unique_clicks) AS unique_clicks,
-                    SUM(non_unique_clicks) AS non_unique_clicks
-                FROM {S}.articles_clicks
-                WHERE {ac_type_excl}
-                  AND issue_date >= CURRENT_DATE - INTERVAL '{days} days'
-                GROUP BY article_title, url
-                ORDER BY unique_clicks DESC NULLS LAST
-                LIMIT 40
-            """)
-            return cur.fetchall()
-
-        windowed_articles = {
-            "7d":  _fetch_windowed_articles(7),
-            "15d": _fetch_windowed_articles(15),
-            "30d": _fetch_windowed_articles(30),
-            "90d": _fetch_windowed_articles(90),
-        }
-
-        # Article click comparison: this week vs prev week, this month vs last month
-        cur.execute(f"""
-            SELECT
-                COALESCE(SUM(unique_clicks) FILTER (
-                    WHERE issue_date >= DATE_TRUNC('week', CURRENT_DATE)
-                      AND issue_date < CURRENT_DATE
-                ), 0) AS this_week_clicks,
-                COALESCE(SUM(unique_clicks) FILTER (
-                    WHERE issue_date >= DATE_TRUNC('week', CURRENT_DATE) - INTERVAL '7 days'
-                      AND issue_date < DATE_TRUNC('week', CURRENT_DATE)
-                ), 0) AS prev_week_clicks,
-                COALESCE(SUM(unique_clicks) FILTER (
-                    WHERE issue_date >= DATE_TRUNC('month', CURRENT_DATE)
-                      AND issue_date < CURRENT_DATE
-                ), 0) AS this_month_clicks,
-                COALESCE(SUM(unique_clicks) FILTER (
-                    WHERE issue_date >= DATE_TRUNC('month', CURRENT_DATE) - INTERVAL '1 month'
-                      AND issue_date < DATE_TRUNC('month', CURRENT_DATE)
-                ), 0) AS prev_month_clicks
-            FROM {S}.articles_clicks
-            WHERE {ac_type_excl}
-        """)
-        click_comparison = cur.fetchone() or {}
-
-
-        # WordPress category counts
-        cur.execute(f"""
-            WITH wa AS (
-                SELECT
-                    article_url,
-                    categories,
-                    REGEXP_REPLACE(LOWER(TRIM(BOTH '/' FROM SPLIT_PART(article_url, '?', 1))), '^https?://(www[.])?', '') AS norm_url
-                FROM {S}.wordpress_articles
-                WHERE {wp_filter}
-            ), cats AS (
-                SELECT
-                    NULLIF(TRIM(cat), '') AS label,
-                    COUNT(DISTINCT article_url) AS article_count
-                FROM wa
-                CROSS JOIN LATERAL regexp_split_to_table(
-                    COALESCE(NULLIF(categories, ''), 'Uncategorized'), '\\\\s*,\\\\s*'
-                ) AS cat
-                WHERE NULLIF(TRIM(cat), '') IS NOT NULL
-                GROUP BY 1
-            )
-            SELECT label, article_count FROM cats
-            ORDER BY article_count DESC, label
-            LIMIT 15
-        """)
-        wp_category_count_rows = cur.fetchall()
-
-        # WordPress category clicks (articles_clicks joined to wordpress_articles)
-        cur.execute(f"""
-            WITH ac AS (
-                SELECT
-                    article_title, url, unique_clicks, non_unique_clicks,
-                    REGEXP_REPLACE(LOWER(TRIM(BOTH '/' FROM SPLIT_PART(url, '?', 1))), '^https?://(www[.])?', '') AS norm_url
-                FROM {S}.articles_clicks ac
-                WHERE {ac_type_excl}
-            ), wa AS (
-                SELECT DISTINCT ON (REGEXP_REPLACE(LOWER(TRIM(BOTH '/' FROM SPLIT_PART(article_url, '?', 1))), '^https?://(www[.])?', ''))
-                    article_url, categories,
-                    REGEXP_REPLACE(LOWER(TRIM(BOTH '/' FROM SPLIT_PART(article_url, '?', 1))), '^https?://(www[.])?', '') AS norm_url
-                FROM {S}.wordpress_articles
-                WHERE {wp_filter}
-                ORDER BY REGEXP_REPLACE(LOWER(TRIM(BOTH '/' FROM SPLIT_PART(article_url, '?', 1))), '^https?://(www[.])?', ''), modified_date DESC NULLS LAST
-            ), joined AS (
-                SELECT
-                    COALESCE(NULLIF(ac.norm_url, ''), ac.article_title) AS article_key,
-                    ac.unique_clicks, ac.non_unique_clicks, wa.categories
-                FROM ac LEFT JOIN wa ON ac.norm_url = wa.norm_url
-            ), cats AS (
-                SELECT
-                    NULLIF(TRIM(cat), '') AS label,
-                    COUNT(DISTINCT article_key) AS article_count,
-                    COALESCE(SUM(unique_clicks), 0) AS unique_clicks,
-                    COALESCE(SUM(non_unique_clicks), 0) AS non_unique_clicks,
-                    ROUND(COALESCE(SUM(unique_clicks), 0)::numeric / NULLIF(COUNT(DISTINCT article_key), 0), 1) AS avg_unique_clicks
-                FROM joined
-                CROSS JOIN LATERAL regexp_split_to_table(
-                    COALESCE(NULLIF(categories, ''), 'Uncategorized'), '\\\\s*,\\\\s*'
-                ) AS cat
-                WHERE NULLIF(TRIM(cat), '') IS NOT NULL
-                GROUP BY 1
-            )
-            SELECT label, article_count, unique_clicks, non_unique_clicks, avg_unique_clicks
-            FROM cats
-            ORDER BY unique_clicks DESC, label
-            LIMIT 15
-        """)
-        wp_category_click_rows = cur.fetchall()
-
-        # WordPress tag clicks
-        cur.execute(f"""
-            WITH ac AS (
-                SELECT
-                    article_title, url, unique_clicks, non_unique_clicks,
-                    REGEXP_REPLACE(LOWER(TRIM(BOTH '/' FROM SPLIT_PART(url, '?', 1))), '^https?://(www[.])?', '') AS norm_url
-                FROM {S}.articles_clicks ac
-                WHERE {ac_type_excl}
-            ), wa AS (
-                SELECT DISTINCT ON (REGEXP_REPLACE(LOWER(TRIM(BOTH '/' FROM SPLIT_PART(article_url, '?', 1))), '^https?://(www[.])?', ''))
-                    article_url, tags,
-                    REGEXP_REPLACE(LOWER(TRIM(BOTH '/' FROM SPLIT_PART(article_url, '?', 1))), '^https?://(www[.])?', '') AS norm_url
-                FROM {S}.wordpress_articles
-                WHERE {wp_filter}
-                ORDER BY REGEXP_REPLACE(LOWER(TRIM(BOTH '/' FROM SPLIT_PART(article_url, '?', 1))), '^https?://(www[.])?', ''), modified_date DESC NULLS LAST
-            ), joined AS (
-                SELECT
-                    COALESCE(NULLIF(ac.norm_url, ''), ac.article_title) AS article_key,
-                    ac.unique_clicks, ac.non_unique_clicks, wa.tags
-                FROM ac LEFT JOIN wa ON ac.norm_url = wa.norm_url
-            ), tag_rows AS (
-                SELECT
-                    NULLIF(TRIM(tag), '') AS label,
-                    COUNT(DISTINCT article_key) AS article_count,
-                    COALESCE(SUM(unique_clicks), 0) AS unique_clicks,
-                    COALESCE(SUM(non_unique_clicks), 0) AS non_unique_clicks,
-                    ROUND(COALESCE(SUM(unique_clicks), 0)::numeric / NULLIF(COUNT(DISTINCT article_key), 0), 1) AS avg_unique_clicks
-                FROM joined
-                CROSS JOIN LATERAL regexp_split_to_table(
-                    COALESCE(NULLIF(tags, ''), 'Untagged'), '\\\\s*,\\\\s*'
-                ) AS tag
-                WHERE NULLIF(TRIM(tag), '') IS NOT NULL
-                GROUP BY 1
-            )
-            SELECT label, article_count, unique_clicks, non_unique_clicks, avg_unique_clicks
-            FROM tag_rows
-            ORDER BY unique_clicks DESC, label
-            LIMIT 20
-        """)
-        wp_tag_click_rows = cur.fetchall()
-
-        # Writer clicks (grouped by written_by)
-        cur.execute(f"""
-            WITH ac AS (
-                SELECT
-                    url, unique_clicks, non_unique_clicks,
-                    REGEXP_REPLACE(LOWER(TRIM(BOTH '/' FROM SPLIT_PART(url, '?', 1))), '^https?://(www[.])?', '') AS norm_url
-                FROM {S}.articles_clicks
-                WHERE {ac_type_excl}
-            ), wa AS (
-                SELECT DISTINCT ON (REGEXP_REPLACE(LOWER(TRIM(BOTH '/' FROM SPLIT_PART(article_url, '?', 1))), '^https?://(www[.])?', ''))
-                    COALESCE(NULLIF(TRIM(written_by), ''), 'Unknown') AS written_by,
-                    REGEXP_REPLACE(LOWER(TRIM(BOTH '/' FROM SPLIT_PART(article_url, '?', 1))), '^https?://(www[.])?', '') AS norm_url
-                FROM {S}.wordpress_articles
-                WHERE {wp_filter}
-                ORDER BY REGEXP_REPLACE(LOWER(TRIM(BOTH '/' FROM SPLIT_PART(article_url, '?', 1))), '^https?://(www[.])?', ''), modified_date DESC NULLS LAST
-            )
-            SELECT
-                COALESCE(wa.written_by, 'Unknown') AS label,
-                COUNT(DISTINCT ac.norm_url) AS article_count,
-                COALESCE(SUM(ac.unique_clicks), 0) AS unique_clicks,
-                COALESCE(SUM(ac.non_unique_clicks), 0) AS non_unique_clicks,
-                ROUND(COALESCE(SUM(ac.unique_clicks), 0)::numeric / NULLIF(COUNT(DISTINCT ac.norm_url), 0), 1) AS avg_unique_clicks
-            FROM ac
-            LEFT JOIN wa ON ac.norm_url = wa.norm_url
-            GROUP BY 1
-            ORDER BY unique_clicks DESC
-            LIMIT 20
-        """)
-        wp_writer_click_rows = cur.fetchall()
 
         # Content drill table (article-level, all metadata for client-side filtering)
         # INNER JOIN to wordpress_articles — articles_clicks also tracks sponsor
@@ -650,19 +395,15 @@ def lambda_handler(event, context):
         """)
         content_drill_rows = cur.fetchall()
 
-        # Subscriber click distribution
+        # Total distinct article clickers (feeds the "Unique Clickers" KPI).
+        # Earlier this query also produced the 1 / 2–5 / 6–10 / 11–20 / 20+
+        # click-distribution buckets, but that chart was never wired up on the
+        # dashboard so the bucket counts were dropped.
         cur.execute(f"""
-            SELECT
-                COUNT(*) FILTER (WHERE unique_clicks = 1)              AS c1,
-                COUNT(*) FILTER (WHERE unique_clicks BETWEEN 2 AND 5)  AS c2_5,
-                COUNT(*) FILTER (WHERE unique_clicks BETWEEN 6 AND 10) AS c6_10,
-                COUNT(*) FILTER (WHERE unique_clicks BETWEEN 11 AND 20) AS c11_20,
-                COUNT(*) FILTER (WHERE unique_clicks > 20)             AS c20plus,
-                COUNT(*) AS total_clickers
+            SELECT COUNT(*) AS total_clickers
             FROM {S}.subscriber_clicks
         """)
-        click_dist = cur.fetchone() or {}
-        total_article_clickers = safe_int(click_dist.get("total_clickers"))
+        total_article_clickers = safe_int((cur.fetchone() or {}).get("total_clickers"))
 
         # ─────────────────────────────────────────────────────
         # 4. Acquisition quality — utm_source only
@@ -1140,34 +881,6 @@ def lambda_handler(event, context):
         """)
         cohort_table_rows = cur.fetchall()
 
-        # UTM source retention: avg 90-day retention rate per acquisition source.
-        # "Active" = state='Active' AND engagement_segment NOT IN (Ghosts/Zombies/Dormant).
-        cur.execute(f"""
-            SELECT
-                COALESCE(NULLIF(TRIM(utm_source),''), NULLIF(TRIM(source),''), 'Organic') AS source,
-                COUNT(*) AS total,
-                COUNT(*) FILTER (
-                    WHERE state = 'Active'
-                      AND engagement_segment NOT IN ('Ghosts', 'Zombies', 'Dormant')
-                ) AS active_now,
-                ROUND(
-                    COUNT(*) FILTER (WHERE
-                        (state = 'Active'
-                         AND engagement_segment NOT IN ('Ghosts', 'Zombies', 'Dormant'))
-                        OR (state = 'Unsubscribed'
-                            AND date_unsubscribed IS NOT NULL
-                            AND date_unsubscribed::date > date_joined::date + 90)
-                    )::numeric / NULLIF(COUNT(*),0) * 100, 1
-                ) AS retention_90d_pct
-            FROM {S}.subscribers
-            WHERE date_joined IS NOT NULL AND date_joined::date < CURRENT_DATE
-            GROUP BY 1
-            HAVING COUNT(*) >= 100
-            ORDER BY 4 DESC
-            LIMIT 12
-        """)
-        cohort_utm_rows = cur.fetchall()
-
     finally:
         cur.close()
         conn.close()
@@ -1184,26 +897,18 @@ def lambda_handler(event, context):
     # used as the denominator for state-mix ratios (unsub % of base, bounce
     # % of base, etc.) so those percentages still sum to 100.
     M["total_subscribers"]   = total_subscribers          # = active state count
-    M["total_all_states"]    = total_all_states           # every row in subscribers
-    M["active_subscribers"]  = active_subscribers         # legacy alias
     M["send_to_active"]      = send_to_active             # state='Active' AND engagement_segment NOT IN (Ghost/Zombie/Dormant)
     M["unsubscribed_count"]  = unsubscribed_count
     M["bounced_count"]       = bounced_count
-    M["deleted_count"]       = deleted_count
     M["quiz_takers"]         = quiz_takers
     M["quiz_takers_pct"]     = round(100.0 * quiz_takers / total_subscribers, 1) if total_subscribers else 0
     M["high_engagement_60d"] = high_engagement_60d
-    M["us_based_count"]      = us_based_count
     M["active_rate"]         = pct(active_subscribers, total_all_states)  # active / all states
     M["send_to_rate"]        = pct(send_to_active,    total_subscribers)  # send-to / active base
 
     # Campaign KPIs (Recipients > 95)
     M["total_campaigns"]    = total_campaigns
     M["total_recipients"]   = total_recipients
-    M["total_unique_opens"] = total_unique_opens
-    M["total_camp_clicks"]  = total_camp_clicks
-    M["total_unsubs_camp"]  = total_unsubs_camp
-    M["total_bounced_camp"] = total_bounced_camp
     M["avg_open_rate"]      = f"{avg_open_rate:.2f}%"
     M["avg_click_rate"]     = f"{avg_click_rate:.2f}%"
     M["best_open_rate"]     = f"{best_open_rate:.2f}%"
@@ -1228,8 +933,6 @@ def lambda_handler(event, context):
 
     # Audience-Persona KPIs (longevity-score fields were removed when the
     # tab stopped surfacing score visuals).
-    M["quiz_count"]   = quiz_count
-    M["avg_age_quiz"] = avg_age_quiz
     M["quiz_kpis"] = {
         "total_takers":        quiz_count,
         "avg_age":             avg_age_quiz,
@@ -1248,33 +951,12 @@ def lambda_handler(event, context):
         "colors": [state_colors.get(r["state"], "#a78bfa") for r in state_rows],
     }
 
-    # Subscriber growth
-    cumulative, running = [], 0
-    for r in growth_rows:
-        running += safe_int(r["cnt"])
-        cumulative.append(running)
-    M["subscriber_growth"] = {
-        "labels":     [r["month"].strftime("%b %Y") for r in growth_rows],
-        "data":       [safe_int(r["cnt"]) for r in growth_rows],
-        "cumulative": cumulative,
-    }
-
     # Overview subscriber growth chart — sourced from growth_history table
     M["subscriber_monthly"] = {
         "labels":       [str(r["month_label"]) for r in growth_history_rows],
         "new_subs":     [safe_int(r["gained"]) for r in growth_history_rows],
         "unsubs":       [safe_int(r["lost"]) for r in growth_history_rows],
         "active_count": [safe_int(r["total_active"]) for r in growth_history_rows],
-    }
-
-    M["sub_level_dist"] = {
-        "labels": [r["level"] for r in level_rows],
-        "data":   [safe_int(r["cnt"]) for r in level_rows],
-        "colors": color_list(len(level_rows)),
-    }
-    M["source_dist"] = {
-        "labels": [r["source"] for r in source_rows],
-        "data":   [safe_int(r["cnt"]) for r in source_rows],
     }
 
     # Campaign trend (last 30)
@@ -1305,43 +987,6 @@ def lambda_handler(event, context):
     camp_table.sort(key=lambda x: x["sent_date"], reverse=True)
     M["campaign_table"] = camp_table
 
-    max_open = max((safe_float(r["UOpenRate"]) for r in top_open_rows), default=1) or 1
-    M["top_campaigns"] = [
-        {
-            "name":      str(r["Campaign Name"] or "")[:50],
-            "sent_date": str(r["Sent Date "])[:10] if r["Sent Date "] else "",
-            "recipients":safe_int(r["Recipients"]),
-            "open_rate": f"{safe_float(r['UOpenRate']):.2f}%",
-            "click_rate":f"{safe_float(r['UClickRate']):.2f}%",
-            "bar_width": f"{round(safe_float(r['UOpenRate']) / max_open * 100)}%",
-            "url":       str(r.get("URL") or ""),
-        }
-        for r in top_open_rows
-    ]
-
-    # Content
-    content_type_labels = [str(r["content_type"] or "unknown").title() for r in content_type_rows]
-    M["content_type"] = {
-        "labels":           content_type_labels,
-        "placements":       [safe_int(r["placements"]) for r in content_type_rows],
-        "article_counts":   [safe_int(r.get("unique_articles", 0)) for r in content_type_rows],
-        "unique_clicks":    [safe_int(r["unique_clicks"]) for r in content_type_rows],
-        "non_unique_clicks":[safe_int(r["non_unique_clicks"]) for r in content_type_rows],
-        "avg_unique_clicks":[safe_float(r["avg_unique_clicks"]) for r in content_type_rows],
-        "colors":           color_list(len(content_type_rows)),
-    }
-    M["content_type_table"] = [
-        {
-            "type":              str(r["content_type"] or "unknown").title(),
-            "placements":        safe_int(r["placements"]),
-            "unique_articles":   safe_int(r.get("unique_articles", 0)),
-            "unique_clicks":     safe_int(r["unique_clicks"]),
-            "non_unique_clicks": safe_int(r["non_unique_clicks"]),
-            "avg_unique_clicks": safe_float(r["avg_unique_clicks"]),
-        }
-        for r in content_type_rows
-    ]
-
     def _art_rows(rows):
         mx = max((safe_int(r["unique_clicks"]) for r in rows), default=1) or 1
         return [
@@ -1360,43 +1005,7 @@ def lambda_handler(event, context):
             for i, r in enumerate(rows)
         ]
 
-    max_art = max((safe_int(r["unique_clicks"]) for r in article_rows), default=1) or 1
     M["top_articles"] = _art_rows(article_rows)
-    M["top_articles_windowed"] = {
-        window: _art_rows(rows)
-        for window, rows in windowed_articles.items()
-    }
-    M["article_click_comparison"] = {
-        "this_week":    safe_int(click_comparison.get("this_week_clicks")),
-        "prev_week":    safe_int(click_comparison.get("prev_week_clicks")),
-        "this_month":   safe_int(click_comparison.get("this_month_clicks")),
-        "prev_month":   safe_int(click_comparison.get("prev_month_clicks")),
-    }
-    M["article_category_counts"] = {
-        "labels": [r["label"] for r in wp_category_count_rows],
-        "data":   [safe_int(r["article_count"]) for r in wp_category_count_rows],
-    }
-    M["article_category_clicks"] = {
-        "labels":           [r["label"] for r in wp_category_click_rows],
-        "unique_clicks":    [safe_int(r["unique_clicks"]) for r in wp_category_click_rows],
-        "non_unique_clicks":[safe_int(r["non_unique_clicks"]) for r in wp_category_click_rows],
-        "article_counts":   [safe_int(r["article_count"]) for r in wp_category_click_rows],
-        "avg_unique_clicks":[safe_float(r["avg_unique_clicks"]) for r in wp_category_click_rows],
-    }
-    M["article_tag_clicks"] = {
-        "labels":           [r["label"] for r in wp_tag_click_rows],
-        "unique_clicks":    [safe_int(r["unique_clicks"]) for r in wp_tag_click_rows],
-        "non_unique_clicks":[safe_int(r["non_unique_clicks"]) for r in wp_tag_click_rows],
-        "article_counts":   [safe_int(r["article_count"]) for r in wp_tag_click_rows],
-        "avg_unique_clicks":[safe_float(r["avg_unique_clicks"]) for r in wp_tag_click_rows],
-    }
-    M["article_writer_clicks"] = {
-        "labels":           [r["label"] for r in wp_writer_click_rows],
-        "unique_clicks":    [safe_int(r["unique_clicks"]) for r in wp_writer_click_rows],
-        "non_unique_clicks":[safe_int(r["non_unique_clicks"]) for r in wp_writer_click_rows],
-        "article_counts":   [safe_int(r["article_count"]) for r in wp_writer_click_rows],
-        "avg_unique_clicks":[safe_float(r["avg_unique_clicks"]) for r in wp_writer_click_rows],
-    }
     M["content_drill_table"] = [
         {
             "title":            str(r["title"] or "Unknown"),
@@ -1411,19 +1020,6 @@ def lambda_handler(event, context):
         }
         for r in content_drill_rows
     ]
-
-    # Click distribution
-    M["click_distribution"] = {
-        "labels": ["1 click", "2–5 clicks", "6–10 clicks", "11–20 clicks", "20+ clicks"],
-        "data": [
-            safe_int(click_dist.get("c1")),
-            safe_int(click_dist.get("c2_5")),
-            safe_int(click_dist.get("c6_10")),
-            safe_int(click_dist.get("c11_20")),
-            safe_int(click_dist.get("c20plus")),
-        ],
-        "colors": ["#4f8cff", "#34d399", "#a78bfa", "#fbbf24", "#f87171"],
-    }
 
     # Acquisition quality — per-source metrics with optional time window.
     # Returns the per-source rows plus 30d/90d churn fields. Backwards-
@@ -1667,18 +1263,6 @@ def lambda_handler(event, context):
         "worst_cohort_label": worst_cohort["cohort"] if worst_cohort else "—",
         "worst_cohort_m3":    f"{worst_cohort['m3']:.1f}%" if worst_cohort else "—",
     }
-
-    # ── UTM source retention ──
-    M["cohort_utm_retention"] = [
-        {
-            "source":          str(r["source"]),
-            "total":           safe_int(r["total"]),
-            "active_now":      safe_int(r["active_now"]),
-            "retention_90d":   f"{safe_float(r['retention_90d_pct']):.1f}%",
-            "retention_90d_v": safe_float(r["retention_90d_pct"]),
-        }
-        for r in cohort_utm_rows
-    ]
 
     body = json.dumps(M, indent=2, default=str)
     commit_to_github(body)

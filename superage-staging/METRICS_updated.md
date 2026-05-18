@@ -71,9 +71,9 @@ The overview tab surfaces the most important headline numbers across all section
 | Metric | What it measures |
 |---|---|
 | Active (Send-to) | Subscribers we actually send to (`state='Active' AND engagement_segment NOT IN Ghosts/Zombies/Dormant`) |
-| Avg Open Rate | Average unique open rate across campaigns (≥ 1,000 recipients) |
+| Avg Open Rate | Average unique open rate across campaigns (≥ 95 recipients) |
 | Avg Click Rate | Average click rate across campaigns |
-| Campaigns Sent | Count of campaigns with ≥ 1,000 recipients sent before today |
+| Campaigns Sent | Count of campaigns with ≥ 95 recipients sent before today |
 
 **KPI cards — secondary row** (4 cards, less critical):
 
@@ -115,7 +115,7 @@ KPIs are surfaced by the lambda as the aggregate values below (Q8) and are **als
 
 ### Charts
 
-- **Top 15 Campaigns by Open Rate** — Horizontal bar, ranked by `UOpenRate`. Lambda emits `top_campaigns` (Q10); the dashboard re-ranks the in-scope set when Sunday Spotlight is toggled off.
+- **Top 15 Campaigns by Open Rate** — Horizontal bar, ranked by `UOpenRate`. Computed **client-side** from `M.campaign_table` (sourced from Q9). The lambda no longer ships a dedicated `top_campaigns` array — the dashboard re-ranks the in-scope set whenever Sunday Spotlight is toggled.
 - **Open Rate vs Click Rate** — Scatter plot; each point is one campaign in the current scope.
 
 ### Campaign Table
@@ -178,17 +178,15 @@ The "Include Sunday Spotlight" toggle simply filters out `campaign_table` rows w
 
 Total subscribers, active, unsubscribed, bounced, and high-engagement (60-day window).
 
-### Acquisition by UTM Source
+### Acquisition by Source
 
-Grouped by the fallback label `COALESCE(NULLIF(TRIM(utm_source),''), NULLIF(TRIM(source),''), 'Organic')` — `utm_source` wins, then the legacy `source` column, then the literal string `Organic`. The dashboard's pie and table consume the rows of `M.acquisition_quality.utm_source.rows`; each row carries `label`, `subscribers`, `clickers`, `unique_clicks`, `non_unique_clicks`, `avg_unique_clicks_per_subscriber`, `clicker_rate`. The Audience tab displays Subscribers, % of Total, Clickers, Clicker Rate, Unique Clicks and Avg Clicks / Subscriber per source.
+The dashboard label is **Source** (UTM is treated as an internal term in the SQL only). Grouped by the fallback `COALESCE(NULLIF(TRIM(utm_source),''), NULLIF(TRIM(source),''), 'Organic')` — `utm_source` wins, then the legacy `source` column, then the literal `Organic`. The pie chart and table consume `M.acquisition_quality.utm_source.rows` (plus the per-window arrays `rows_30d` / `rows_60d` / `rows_90d`; see Q19).
 
-### UTM Source Subscriber Click Activity
+The Audience tab table renders these columns per source: **Subscribers**, **% of Total**, **Clickers**, **Clicker Rate**, **Clicks**, **Avg Clicks / Subscriber**, **30-Day Churn**, **90-Day Churn**, plus two reserved-but-blank columns (Avg Sponsor Click / Sub, Open Rate %).
 
-Joins `subscriber_clicks` to `subscribers` to show which acquisition source drives the most article click activity.
+### Source Clicks Performance
 
-### Click Distribution
-
-How many articles each subscriber has clicked: 1 / 2–5 / 6–10 / 11–20 / 20+.
+Joins `subscriber_clicks` to `subscribers` to show which acquisition source drives the most article click activity. See Q20.
 
 ---
 
@@ -201,7 +199,7 @@ How many articles each subscriber has clicked: 1 / 2–5 / 6–10 / 11–20 / 20
 | Fitness Quiz | Subscribers who completed the fitness assessment |
 | Menu Quiz | Subscribers who completed the nutrition quiz |
 
-Demographics: age distribution, gender, marital status, longevity score buckets, exercise frequency, sleep hours, education level, body weight profile.
+Demographics: age distribution, gender, marital status, exercise frequency, sleep hours, education level, body weight profile. (Longevity-score buckets were removed when the tab was renamed from "Longevity Quiz" to "Audience Persona".)
 
 ---
 
@@ -250,7 +248,7 @@ Groups subscribers by join month and tracks % still active at M+1 through M+12.
 | Avg 90-Day Retention | Average M+3 retention across all cohorts with ≥ 20 subscribers |
 | Best / Worst Cohort | Highest / lowest M+3 retention rate |
 
-Charts: Retention Heatmap, 90-Day Churn Rate by Acquisition Source, 90-Day Retention by UTM Source.
+Charts: Retention Heatmap, 90-Day Churn Rate by Acquisition Source. (The legacy "90-Day Retention by UTM Source" chart was removed; the UTM-cohort SQL no longer runs.)
 
 Cohort Performance Table columns: Cohort, Size, Still Active, Retention Rate, Churn Rate, Early Churn (90d), Campaigns That Month. **"Active Now" / "Retention %"** use the canonical Active rule.
 
@@ -344,32 +342,7 @@ JSON exposed as `M.subscriber_monthly` with keys:
 
 The dashboard derives `net change` client-side as `new_subs[i] - unsubs[i]` and renders it as a blue line on the left axis. `MAX(total_active)` captures the end-of-month snapshot when the table has daily rows.
 
-## Q5 — Audience: Subscription Level Distribution
-
-```sql
-SELECT COALESCE(NULLIF(sub_level, ''), 'Unknown') AS level, COUNT(*) AS cnt
-FROM superage.subscribers
-WHERE date_joined::date < CURRENT_DATE
-GROUP BY 1 ORDER BY 2 DESC;
-```
-
-## Q6 — Audience: Top Acquisition Sources by Volume
-
-```sql
-SELECT COALESCE(NULLIF(sub_source, ''), 'Direct/Unknown') AS source, COUNT(*) AS cnt
-FROM superage.subscribers
-WHERE date_joined::date < CURRENT_DATE
-GROUP BY 1 ORDER BY 2 DESC LIMIT 10;
-```
-
-## Q7 — Audience: US-Based Subscriber Count
-
-```sql
-SELECT COUNT(*) AS n
-FROM superage.subscribers
-WHERE us_based_notification = 'Yes'
-  AND date_joined::date < CURRENT_DATE;
-```
+> **Q5 — Subscription Level Distribution**, **Q6 — Top Acquisition Sources by Volume**, and **Q7 — US-Based Subscriber Count** were retired from the lambda. Their JSON outputs (`sub_level_dist`, `source_dist`, `us_based_count`) were never consumed by the dashboard.
 
 ## Q8 — Campaigns: Campaign Aggregate KPIs
 
@@ -411,22 +384,7 @@ ORDER BY "Sent Date " ASC;
 Feeds `campaign_table` (dashboard list, scatter chart) and `campaign_trend` (line chart).
 `URL` becomes the click-through link on the campaign name in the dashboard table.
 
-## Q10 — Campaigns: Top 15 Campaigns by Open Rate (Bar Chart)
-
-```sql
-SELECT
-    "Campaign Name", "Sent Date ", "Recipients", "UniqueOpened",
-    "Clicks", "Unsubscribed", "UOpenRate", "UClickRate",
-    COALESCE("URL", '') AS "URL"
-FROM superage."Campaigns"
-WHERE "Sent Date " IS NOT NULL
-  AND "Sent Date "::date < CURRENT_DATE
-  AND "Recipients" > 95
-ORDER BY "UOpenRate" DESC NULLS LAST
-LIMIT 15;
-```
-
-Feeds `M.top_campaigns[]` which is consumed by the Campaigns tab "Top 15 by Open Rate" bar chart. `recipients` is emitted as a raw integer (not a pre-formatted string). (The Overview tab now shows a **Recent Campaigns Metrics** table instead — last 10 rows of `M.campaign_table` reversed to most-recent-first; no separate query needed.)
+> **Q10 — Top 15 Campaigns by Open Rate** was retired from the lambda. The bar chart on the Campaigns tab is now built **client-side** from `M.campaign_table` (Q9): the dashboard sorts the in-scope rows by `UOpenRate DESC` and slices to 15 whenever the Sunday Spotlight toggle changes. The Overview tab's "Recent Campaigns Metrics" table is likewise sourced from `M.campaign_table` (most-recent 10 by `sent_date`).
 
 ## Q11 — Website Content: Article Placements KPIs
 
@@ -438,20 +396,7 @@ SELECT
 FROM superage.articles_clicks ac;
 ```
 
-## Q12 — Website Content: Content Type Performance Table
-
-```sql
-SELECT
-    COALESCE(NULLIF(type, ''), 'unknown') AS content_type,
-    COUNT(*) AS placements,
-    COALESCE(SUM(unique_clicks), 0) AS unique_clicks,
-    COALESCE(SUM(non_unique_clicks), 0) AS non_unique_clicks,
-    ROUND(COALESCE(SUM(unique_clicks), 0)::numeric / NULLIF(COUNT(*), 0), 1) AS avg_unique_clicks
-FROM superage.articles_clicks ac
-WHERE LOWER(COALESCE(type,'')) NOT IN ('games','waitlist')
-GROUP BY 1
-ORDER BY unique_clicks DESC NULLS LAST;
-```
+> **Q12 — Content Type Performance Table** was retired from the lambda. Its JSON outputs (`content_type`, `content_type_table`) weren't consumed by the dashboard — the Content Reference tab's Content Type breakdown is now derived **client-side** from `M.content_drill_table` (Q16b), splitting on `type`.
 
 ## Q13 — Website Content: Top Articles by Reader Engagement (Table)
 
@@ -465,32 +410,7 @@ ORDER BY unique_clicks DESC NULLS LAST
 LIMIT 40;
 ```
 
-## Q14 — Website Content: Articles Published per Category (Bar Chart)
-
-```sql
-WITH wa AS (
-    SELECT
-        article_url,
-        categories,
-        REGEXP_REPLACE(LOWER(TRIM(BOTH '/' FROM SPLIT_PART(article_url, '?', 1))),
-                       '^https?://(www[.])?', '') AS norm_url
-    FROM superage.wordpress_articles
-    WHERE (published_date IS NULL OR published_date::date < CURRENT_DATE)
-), cats AS (
-    SELECT
-        NULLIF(TRIM(cat), '') AS label,
-        COUNT(DISTINCT article_url) AS article_count
-    FROM wa
-    CROSS JOIN LATERAL regexp_split_to_table(
-        COALESCE(NULLIF(categories, ''), 'Uncategorized'), '\s*,\s*'
-    ) AS cat
-    WHERE NULLIF(TRIM(cat), '') IS NOT NULL
-    GROUP BY 1
-)
-SELECT label, article_count FROM cats
-ORDER BY article_count DESC, label
-LIMIT 15;
-```
+> **Q14 — Articles Published per Category** was retired from the lambda. Its `article_category_counts` JSON wasn't consumed by the dashboard — Top Categories on the Content Reference tab is derived from `M.content_drill_table` (Q16b).
 
 ## Q15 — Website Content: Top Categories (avg clicks per article)
 
@@ -553,68 +473,7 @@ LIMIT 300;
 | Wealthspan   |       20 |      1,141 |     1,244 |       22,824 |      24,873 |
 | Uncategorized|        1 |        ... |       ... |          ... |         ... |
 
-### Legacy ad-hoc category SQL (deprecated — output unused by dashboard)
-
-```sql
--- Returns a different article-count basis than the dashboard:
---   • LEFT JOIN puts unmatched articles_clicks rows in "Uncategorized"
---   • No LIMIT 300, so it includes the full long-tail of clicked URLs
--- Useful for spot-checks, NOT for matching the chart on the page.
-WITH ac AS (
-    SELECT
-        article_title, url, unique_clicks, non_unique_clicks,
-        REGEXP_REPLACE(LOWER(TRIM(BOTH '/' FROM SPLIT_PART(url, '?', 1))),
-                       '^https?://(www[.])?', '') AS norm_url
-    FROM superage.articles_clicks
-    WHERE LOWER(COALESCE(type,'')) NOT IN ('games','waitlist')
-), wa AS (
-    SELECT DISTINCT ON (REGEXP_REPLACE(LOWER(TRIM(BOTH '/' FROM SPLIT_PART(article_url, '?', 1))),
-                                       '^https?://(www[.])?', ''))
-        article_url, categories,
-        REGEXP_REPLACE(LOWER(TRIM(BOTH '/' FROM SPLIT_PART(article_url, '?', 1))),
-                       '^https?://(www[.])?', '') AS norm_url
-    FROM superage.wordpress_articles
-    WHERE (published_date IS NULL OR published_date::date < CURRENT_DATE)
-    ORDER BY REGEXP_REPLACE(LOWER(TRIM(BOTH '/' FROM SPLIT_PART(article_url, '?', 1))),
-                             '^https?://(www[.])?', ''),
-             modified_date DESC NULLS LAST
-), joined AS (
-    SELECT
-        COALESCE(NULLIF(ac.norm_url, ''), ac.article_title) AS article_key,
-        ac.unique_clicks, ac.non_unique_clicks, wa.categories
-    FROM ac LEFT JOIN wa ON ac.norm_url = wa.norm_url
-), cats AS (
-    SELECT
-        NULLIF(TRIM(cat), '') AS label,
-        COUNT(DISTINCT article_key)             AS article_count,
-        COALESCE(SUM(unique_clicks), 0)         AS unique_clicks,
-        COALESCE(SUM(non_unique_clicks), 0)     AS non_unique_clicks,
-        ROUND(COALESCE(SUM(unique_clicks), 0)::numeric
-              / NULLIF(COUNT(DISTINCT article_key), 0), 1) AS avg_unique_clicks
-    FROM joined
-    CROSS JOIN LATERAL regexp_split_to_table(
-        COALESCE(NULLIF(categories, ''), 'Uncategorized'), '\s*,\s*'
-    ) AS cat
-    WHERE NULLIF(TRIM(cat), '') IS NOT NULL
-    GROUP BY 1
-)
-SELECT label, article_count, unique_clicks, non_unique_clicks, avg_unique_clicks
-FROM cats
-ORDER BY unique_clicks DESC, label
-LIMIT 15;
-```
-
-Example output of the legacy query (note the **Uncategorized = 123**
-inflation from URL-mismatch articles — that's the gap with the dashboard):
-
-| label        | article_count | unique_clicks | non_unique_clicks | avg_unique_clicks |
-|--------------|--------------:|--------------:|------------------:|------------------:|
-| Longevity    |            70 |       511,526 |           582,747 |           7,307.5 |
-| Fitness      |            35 |       372,615 |           421,027 |          10,646.1 |
-| Nutrition    |            61 |       347,262 |           382,198 |           5,692.8 |
-| Uncategorized|           123 |       158,602 |           171,924 |           1,289.4 |
-| Focus        |            33 |        86,073 |            96,323 |           2,608.3 |
-| Wealthspan   |            19 |        22,824 |            24,873 |           1,201.3 |
+> **The legacy `LEFT JOIN` category-roll-up SQL that used to live here has been retired** from the lambda along with its `article_category_clicks` JSON output. If you need to spot-check the long-tail (the rows that fell into the "Uncategorized" bucket because `articles_clicks.url` had no WordPress match), use the orphan-clicks query in **Q15b** below — it surfaces the same set without pre-rolling them into a category.
 
 ---
 
@@ -750,56 +609,7 @@ Common reasons a row shows up here:
 
 ## Q16 — Website Content: Top Tags (avg clicks per article)
 
-Same situation as Q15: the **Top Tags** chart on the Content Reference
-tab is computed **client-side** from `M.content_drill_table` (splitting
-each row's comma-separated `tags`). The ad-hoc SQL below still runs in
-the lambda but its output isn't consumed by the dashboard — keep it for
-spot-checking.
-
-```sql
-WITH ac AS (
-    SELECT
-        article_title, url, unique_clicks, non_unique_clicks,
-        REGEXP_REPLACE(LOWER(TRIM(BOTH '/' FROM SPLIT_PART(url, '?', 1))),
-                       '^https?://(www[.])?', '') AS norm_url
-    FROM superage.articles_clicks
-    WHERE LOWER(COALESCE(type,'')) NOT IN ('games','waitlist')
-), wa AS (
-    SELECT DISTINCT ON (REGEXP_REPLACE(LOWER(TRIM(BOTH '/' FROM SPLIT_PART(article_url, '?', 1))),
-                                       '^https?://(www[.])?', ''))
-        article_url, tags,
-        REGEXP_REPLACE(LOWER(TRIM(BOTH '/' FROM SPLIT_PART(article_url, '?', 1))),
-                       '^https?://(www[.])?', '') AS norm_url
-    FROM superage.wordpress_articles
-    WHERE (published_date IS NULL OR published_date::date < CURRENT_DATE)
-    ORDER BY REGEXP_REPLACE(LOWER(TRIM(BOTH '/' FROM SPLIT_PART(article_url, '?', 1))),
-                             '^https?://(www[.])?', ''),
-             modified_date DESC NULLS LAST
-), joined AS (
-    SELECT
-        COALESCE(NULLIF(ac.norm_url, ''), ac.article_title) AS article_key,
-        ac.unique_clicks, ac.non_unique_clicks, wa.tags
-    FROM ac LEFT JOIN wa ON ac.norm_url = wa.norm_url
-), tag_rows AS (
-    SELECT
-        NULLIF(TRIM(tag), '') AS label,
-        COUNT(DISTINCT article_key)             AS article_count,
-        COALESCE(SUM(unique_clicks), 0)         AS unique_clicks,
-        COALESCE(SUM(non_unique_clicks), 0)     AS non_unique_clicks,
-        ROUND(COALESCE(SUM(unique_clicks), 0)::numeric
-              / NULLIF(COUNT(DISTINCT article_key), 0), 1) AS avg_unique_clicks
-    FROM joined
-    CROSS JOIN LATERAL regexp_split_to_table(
-        COALESCE(NULLIF(tags, ''), 'Untagged'), '\s*,\s*'
-    ) AS tag
-    WHERE NULLIF(TRIM(tag), '') IS NOT NULL
-    GROUP BY 1
-)
-SELECT label, article_count, unique_clicks, non_unique_clicks, avg_unique_clicks
-FROM tag_rows
-ORDER BY unique_clicks DESC, label
-LIMIT 20;
-```
+Same situation as Q15: the **Top Tags** chart on the Content Reference tab is computed **client-side** from `M.content_drill_table` (splitting each row's comma-separated `tags`). The legacy `LEFT JOIN` tag-roll-up SQL (`article_tag_clicks`) has been retired from the lambda. There's also a retired `article_writer_clicks` query that did the same thing for `written_by`; the **Top Authors** chart on the Content Reference tab is similarly derived client-side from `content_drill_table`.
 
 ## Q16c–Q16i — Click Analysis trend queries (MOVED)
 
@@ -874,18 +684,16 @@ LIMIT 300;
 
 ---
 
-## Q18 — Audience: Subscriber Click Distribution (1 / 2–5 / 6–10 / 11–20 / 20+)
+## Q18 — Audience: Total Article Clickers
+
+The full bucketed click-distribution query (1 / 2–5 / 6–10 / 11–20 / 20+) was retired because the dashboard never plotted those buckets. The lambda now only runs the simple total to feed the "Unique Clickers" KPI on the Click Analysis tab:
 
 ```sql
-SELECT
-    COUNT(*) FILTER (WHERE unique_clicks = 1)               AS c1,
-    COUNT(*) FILTER (WHERE unique_clicks BETWEEN 2 AND 5)   AS c2_5,
-    COUNT(*) FILTER (WHERE unique_clicks BETWEEN 6 AND 10)  AS c6_10,
-    COUNT(*) FILTER (WHERE unique_clicks BETWEEN 11 AND 20) AS c11_20,
-    COUNT(*) FILTER (WHERE unique_clicks > 20)              AS c20plus,
-    COUNT(*) AS total_clickers
+SELECT COUNT(*) AS total_clickers
 FROM superage.subscriber_clicks;
 ```
+
+Feeds `M.total_article_clickers`.
 
 ## Q19 — Audience: Acquisition Quality by Source (Engagement Table)
 
@@ -964,7 +772,7 @@ LIMIT 12;
 > - `clicks` is a count of **raw click events** within the window. The legacy "unique_clicks / non_unique_clicks" distinction came from the pre-aggregated `subscriber_clicks` rollup, which no longer participates in this query; both legacy fields now mirror the windowed event count.
 > - For a 30-day cohort the 90-day-churn column is "not fully observable" — those subscribers haven't been around for 90 days. The number is still meaningful (it's the % who churned within 30 days of joining, capped by however long they've been around), but it tends to under-report for short windows.
 
-## Q20 — Audience: UTM Source Subscriber Click Activity
+## Q20 — Audience: Source Clicks Performance
 
 ```sql
 SELECT
@@ -1389,34 +1197,7 @@ LEFT JOIN camps k ON k.camp_month = c.cohort_month
 ORDER BY c.cohort_month;
 ```
 
-## Q41 — Cohort Analysis: 90-Day Retention Rate by Acquisition Source + 90-Day Churn Rate Chart
-
-```sql
-SELECT
-    COALESCE(NULLIF(TRIM(utm_source),''), NULLIF(TRIM(source),''), 'Organic') AS source,
-    COUNT(*) AS total,
-    COUNT(*) FILTER (
-        WHERE state = 'Active'
-          AND engagement_segment NOT IN ('Ghosts', 'Zombies', 'Dormant')
-    ) AS active_now,
-    ROUND(
-        COUNT(*) FILTER (WHERE
-            (state = 'Active'
-             AND engagement_segment NOT IN ('Ghosts', 'Zombies', 'Dormant'))
-            OR (state = 'Unsubscribed'
-                AND date_unsubscribed IS NOT NULL
-                AND date_unsubscribed::date > date_joined::date + 90)
-        )::numeric / NULLIF(COUNT(*),0) * 100, 1
-    ) AS retention_90d_pct
-FROM superage.subscribers
-WHERE date_joined IS NOT NULL AND date_joined::date < CURRENT_DATE
-GROUP BY 1
-HAVING COUNT(*) >= 100
-ORDER BY 4 DESC
-LIMIT 12;
-```
-
-> `utm_source = NULL` rows are bucketed as `Organic` (no campaign attribution) and **kept** in the chart — they represent direct/organic subscribers, not missing data.
+> **Q41 — Cohort Analysis: 90-Day Retention Rate by Acquisition Source** was retired from the lambda. The `cohort_utm_retention` JSON it emitted was never consumed by the dashboard (the per-source 90-day rate the Cohort tab actually plots comes from the Retention by Acquisition Source table — see Q35b).
 
 ---
 
@@ -1480,9 +1261,10 @@ LIMIT 12;
 27. **Sent Date column nowrap**: A `.nowrap` utility class (`white-space: nowrap`) is applied to the Sent Date `<td>` cells in both the Campaigns paginated table and the Overview Recent Campaigns Metrics table so the date stays on one line even on narrow columns.
 28. **Header restyle (pill + iOS dark switch)**: Top header on the right now shows a `Daily updates` pill (blue accent) followed by the `data_as_of` date (large), with a `SuperAge — Brand Pulse · Last updated` muted subtitle below. The dark-mode control is an iOS-style switch with a `DARK` label, replacing the old `Dark mode` button. State persists in `localStorage['sa-dark']` and is synced back to the checkbox on load via a small init block in the `DARK MODE` script section.
 29. **Click Analysis filter + per-campaign default + completed-period comparison**: Click Analysis tab gets an "Include Sunday Spotlight" toggle (default OFF) plus a Section 1 metric dropdown (Total clicks / Clicks per campaign / Click-to-Open %) defaulting to **Clicks per campaign** so an uneven send count between months doesn't distort the visual. Section 1 charts re-aggregate from `M.campaign_table` client-side so the toggle and metric work without a lambda re-run. Section 2 (raw click events) reads new `clicks_no_ss` arrays added to `raw_clicks_same_weekday`, `raw_clicks_by_weekday`, `raw_clicks_weekly`, and `raw_clicks_monthly` — each computed via `COUNT(*) FILTER (WHERE issue_name NOT ILIKE '%sunday spotlight%')` in `superage_comparison_lambda.py`. WoW / MoM insight text now compares the last two **completed** periods (`is_current[i]` skipped) so an in-progress week/month no longer triggers a misleading drop percentage.
-30. **Click Analysis cleanup — duplicates removed**: The "Clicks by Category", "Clicks by Author", and "Tag / Topic Performance" blocks were removed from the Click Analysis tab; the same breakdowns already live on the Content Reference tab (Top Categories / Top Tags charts + Author filter + Sleeper Hits insight). The lambda still emits `category_performance`, `author_performance`, and `tag_performance` for backwards compatibility, but the dashboard no longer renders them on Click Analysis.
-31. **Top Articles simplified to top-10 all-time**: The All / 7d / 15d / 30d / 90d window selector on the "Top Articles by Unique Clicks" table was removed (only "All" had data). The table now renders the **top 10** rows of `M.top_articles` (already sorted by `unique_clicks` DESC in Q13). The lambda still emits `top_articles_windowed` for backwards compat, but the dashboard no longer consumes it.
+30. **Click Analysis cleanup — duplicates removed**: The "Clicks by Category", "Clicks by Author", and "Tag / Topic Performance" blocks were removed from the Click Analysis tab; the same breakdowns already live on the Content Reference tab (Top Categories / Top Tags charts + Author filter + Sleeper Hits insight). The duplicate per-category / per-author / per-tag aggregation queries (`article_category_clicks`, `article_writer_clicks`, `article_tag_clicks`) were retired from the lambda in the same cleanup pass — see note 36.
+31. **Top Articles simplified to top-10 all-time**: The All / 7d / 15d / 30d / 90d window selector on the "Top Articles by Unique Clicks" table was removed (only "All" had data). The table now renders the **top 10** rows of `M.top_articles` (sorted by `unique_clicks` DESC in Q13). The `top_articles_windowed` JSON field and its underlying 4× per-window SQL block were retired from the lambda.
 32. **Same Weekday switched to campaign-send view**: The "Same Weekday" chart in Click Analysis Section 2 was rewritten to bucket **campaign sends** (from `M.campaign_table`) by the weekday of `sent_date`, then plot each campaign's **total clicks** as a bar (replacing the click-event-date view sourced from `raw_clicks_by_weekday`). For each weekday it shows the last 2 / 3 / 5 campaigns (window buttons re-labelled "2 weeks / 3 weeks / 5 weeks"). Each bar is colour-coded **green** if total clicks ≥ that weekday's average and **red** if below; campaigns sent within the last 2 days render in pale grey ("in progress") and are excluded from the average so their incomplete totals don't drag the baseline. The tooltip surfaces the campaign name, send date, total clicks, and the ± % vs that weekday's average. The Sunday Spotlight toggle still applies (matched by `name`). `raw_clicks_by_weekday` / `raw_clicks_same_weekday` are no longer consumed by this chart but stay in the JSON for backwards-compat.
 33. **Position Category bars switched to avg-per-article**: "Unique Clicks by Position Category" renamed to "Clicks by Position Category" and its bars now plot **avg unique** / **avg total** clicks per article for each High / Medium / Low bucket (1 d.p.). Article count drawn above each green bar via an inline plugin; tooltip lists the absolute totals + article count.
 34. **Top Categories / Top Tags bars switched to avg-per-article**: bars now plot `Avg Unique Clicks / Article` and `Avg Total Clicks / Article` (integer round); top 10 re-sorted by avg unique DESC. The inline label at each bar's right edge switched from `avg N/article` to `N articles` so the volume backing each average is visible.
 35. **Acquisition Quality by Source — time window + churn columns + naming**: Audience tab table renamed (UTM → Source) and given a time-window selector (All / 30d / 60d / 90d). The lambda runs Q19 four times (one per window) and ships `rows_all`, `rows_30d`, `rows_60d`, `rows_90d` inside `M.acquisition_quality.utm_source`. Click stats are now sourced from raw `Campaigns_Clicks` joined to `subscribers.email`, so the date filter scopes click activity. New columns: 30-Day Churn % and 90-Day Churn % (cohort-style — % of source cohort who unsubscribed within N days of joining). Two placeholder columns are reserved: Avg Sponsor Click / Subscriber (renders `—`, waiting on a `Campaigns_Clicks` ↔ `articles_clicks` join key — affiliate not separately tracked) and Open Rate % (renders `—`, no per-subscriber open data yet). CAC is intentionally skipped (no spend data in the schema).
+36. **Dead-query sweep (2026-05)**: All `cur.execute(...)` blocks whose output the dashboard never consumed were removed from `superage_metrics_lambda_updated.py`. Retired queries / JSON fields (with their old query numbers): Q3-old `subscriber_growth`, Q5 `sub_level_dist`, Q6 `source_dist`, Q7 `us_based_count`, Q10 `top_campaigns`, Q12 `content_type` / `content_type_table`, Q14 `article_category_counts`, Q15-legacy `article_category_clicks`, Q16-legacy `article_tag_clicks` + `article_writer_clicks`, Q18-bucketed `click_distribution` (only `total_clickers` kept), Q41-style `cohort_utm_retention`, plus `top_articles_windowed`, `article_click_comparison`, `total_all_states`, `active_subscribers`, `deleted_count`, `quiz_count`, `avg_age_quiz`, and the four `total_*_camp` campaign-aggregate dead totals. Lambda now ships only fields the dashboard reads. The renamed sections (Longevity Quiz → Audience Persona, UTM Source → Source, etc.) are reflected in the Q21–Q29 section titles and the Q19 / Q20 docs.

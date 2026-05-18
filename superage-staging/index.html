@@ -1244,14 +1244,15 @@ function renderContentRef(M) {
         <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px;flex-wrap:wrap;margin-bottom:6px;">
           <h3 style="margin:0;">Top Tags <span class="badge-inline">— avg clicks per article (top 10 by avg unique), in scope</span></h3>
           <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;">
-            <span style="font-size:11px;color:var(--text-muted);text-transform:uppercase;letter-spacing:.3px;">Min articles</span>
+            <span style="font-size:11px;color:var(--text-muted);text-transform:uppercase;letter-spacing:.3px;" title="Drops tags that appear in fewer than this many articles, so one-off tags can't dominate the average.">Tag appears in ≥</span>
             <div style="display:flex;gap:4px;" id="cr-tag-min-btns">
-              <button onclick="_crSetTagMin(1)"  id="crtm-1"  style="font-size:11px;padding:3px 9px;border:1px solid var(--card-border);border-radius:5px;background:var(--accent);color:#fff;cursor:pointer;">1+</button>
-              <button onclick="_crSetTagMin(3)"  id="crtm-3"  style="font-size:11px;padding:3px 9px;border:1px solid var(--card-border);border-radius:5px;background:var(--card);color:var(--text-muted);cursor:pointer;">3+</button>
-              <button onclick="_crSetTagMin(5)"  id="crtm-5"  style="font-size:11px;padding:3px 9px;border:1px solid var(--card-border);border-radius:5px;background:var(--card);color:var(--text-muted);cursor:pointer;">5+</button>
-              <button onclick="_crSetTagMin(7)"  id="crtm-7"  style="font-size:11px;padding:3px 9px;border:1px solid var(--card-border);border-radius:5px;background:var(--card);color:var(--text-muted);cursor:pointer;">7+</button>
-              <button onclick="_crSetTagMin(10)" id="crtm-10" style="font-size:11px;padding:3px 9px;border:1px solid var(--card-border);border-radius:5px;background:var(--card);color:var(--text-muted);cursor:pointer;">10+</button>
+              <button onclick="_crSetTagMin(1)"  id="crtm-1"  style="font-size:11px;padding:3px 9px;border:1px solid var(--card-border);border-radius:5px;background:var(--accent);color:#fff;cursor:pointer;" title="No filter — every tag is eligible.">1</button>
+              <button onclick="_crSetTagMin(3)"  id="crtm-3"  style="font-size:11px;padding:3px 9px;border:1px solid var(--card-border);border-radius:5px;background:var(--card);color:var(--text-muted);cursor:pointer;" title="Keep tags that appear in 3+ articles">3</button>
+              <button onclick="_crSetTagMin(5)"  id="crtm-5"  style="font-size:11px;padding:3px 9px;border:1px solid var(--card-border);border-radius:5px;background:var(--card);color:var(--text-muted);cursor:pointer;" title="Keep tags that appear in 5+ articles">5</button>
+              <button onclick="_crSetTagMin(7)"  id="crtm-7"  style="font-size:11px;padding:3px 9px;border:1px solid var(--card-border);border-radius:5px;background:var(--card);color:var(--text-muted);cursor:pointer;" title="Keep tags that appear in 7+ articles">7</button>
+              <button onclick="_crSetTagMin(10)" id="crtm-10" style="font-size:11px;padding:3px 9px;border:1px solid var(--card-border);border-radius:5px;background:var(--card);color:var(--text-muted);cursor:pointer;" title="Keep tags that appear in 10+ articles">10</button>
             </div>
+            <span style="font-size:11px;color:var(--text-muted);">articles</span>
           </div>
         </div>
         <div class="chart-container h340"><canvas id="cr-tag-bar"></canvas></div>

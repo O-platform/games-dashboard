@@ -419,3 +419,41 @@ strip below the chart now shows both averages alongside the bucket name.
 The `raw_clicks_by_weekday` and `raw_clicks_same_weekday` series stay in
 the comparison-lambda JSON for backwards-compat but are no longer consumed
 by this chart.
+
+### Top Tags "Tag appears in ≥ N articles" filter
+
+> "in the top tags in content reference section, i want to add a filter
+> because the avg gets all data that has one tag which is resonable. what
+> i want is to have a filter like show the numbers where the tag at least
+> appeared in 1,3,5,7 .... articles. so if i gave 5 for example i will get
+> analysis on the tags that appeared in 5 articles at least."
+>
+> Follow-up: "not with articles, with tags meaning that tag apeeared in
+> ... articles not that article has ... of tags. focus on this visual only."
+
+**✓ shipped.** A five-button toolbar (`1 / 3 / 5 / 7 / 10`) was added to the
+Top Tags chart header on the **Content Reference** tab. The label spells
+out the semantic explicitly: **"Tag appears in ≥ \[N\] articles"** — the
+threshold is over how many articles contain each tag, **not** over how
+many tags each article has.
+
+Implementation details:
+
+- Threshold is read from `window._crTagMin` (default `1` = no filter).
+- Inside `_crAggregateBySplit(rows, accessor, minCount)` the
+  per-tag bucket already carries an article counter (`acc[label].count`
+  is incremented once per `(article, tag)` pair), so the new behaviour
+  is just `.filter(([, v]) => v.count >= threshold)` before the
+  `sort by avgUnique DESC → slice(0, 10)` step.
+- The filter composes with the rest of the Content Reference scope
+  (Position Cat / Author / Category / Tag / Title search) — it operates
+  on whatever row set those filters produce.
+- **Only Top Tags is filtered** — Top Categories was intentionally left
+  unchanged because the small fixed category set (Fitness / Longevity /
+  Nutrition / Focus / Wealthspan / Uncategorized) doesn't suffer from
+  the same single-article-tag dominance problem.
+- Insight text below the chart appends *"(showing tags that appear in ≥
+  N articles)"* when N > 1, and switches to *"No tag in scope appears in
+  ≥ N articles"* if the filter empties the set.
+- Threshold isn't persisted across reloads — defaults back to `1`. Easy
+  to move to `localStorage` if you want it to stick; ping me.

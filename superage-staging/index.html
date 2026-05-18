@@ -1350,6 +1350,29 @@ function _crRenderTopBar(canvasId, insightId, chartKey, rows, accessor, noun) {
   const ctx = document.getElementById(canvasId);
   if (!ctx) return;
   if (window[chartKey]) window[chartKey].destroy();
+  // Inline plugin: draw "avg N/article" at the end of each Unique-Clicks bar
+  // so the per-article average is visible without leaving the chart.
+  const avgLabelPlugin = {
+    id: 'avgLabels-' + chartKey,
+    afterDatasetsDraw(chart) {
+      const meta = chart.getDatasetMeta(0);
+      if (!meta || !meta.data) return;
+      const c = chart.ctx;
+      const isDark = document.body.classList.contains('dark');
+      c.save();
+      c.font = '10px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
+      c.fillStyle = isDark ? '#8b949e' : '#57606a';
+      c.textAlign = 'left';
+      c.textBaseline = 'middle';
+      meta.data.forEach((bar, i) => {
+        if (i >= data.length) return;
+        const d = data[i];
+        const avg = d.count ? Math.round(d.unique / d.count) : 0;
+        c.fillText(`avg ${avg.toLocaleString()}/article`, bar.x + 6, bar.y);
+      });
+      c.restore();
+    }
+  };
   window[chartKey] = new Chart(ctx, {
     type: 'bar',
     data: {
@@ -1360,9 +1383,17 @@ function _crRenderTopBar(canvasId, insightId, chartKey, rows, accessor, noun) {
       ],
     },
     options: { responsive:true, maintainAspectRatio:false, indexAxis:'y',
+      // Leave room on the right for the avg text the plugin draws.
+      layout: { padding: { right: 110 } },
       plugins:{ legend:{ position:'bottom', labels:{ font:{ size:11 } } },
-                tooltip:{ callbacks:{ afterLabel: ctx => `Articles: ${data[ctx.dataIndex].count}` } } },
-      scales:{ x:{ beginAtZero:true, ticks:{ callback: v => v.toLocaleString() } } } }
+                tooltip:{ callbacks:{ afterLabel: ctx => {
+                  const d = data[ctx.dataIndex];
+                  if (!d) return '';
+                  const avg = d.count ? Math.round(d.unique / d.count) : 0;
+                  return [`Articles: ${d.count}`, `Avg ${avg.toLocaleString()} unique clicks/article`];
+                } } } },
+      scales:{ x:{ beginAtZero:true, ticks:{ callback: v => v.toLocaleString() } } } },
+    plugins: [avgLabelPlugin]
   });
   const ins = document.getElementById(insightId);
   if (ins) {

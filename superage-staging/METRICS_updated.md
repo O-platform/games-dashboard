@@ -654,7 +654,7 @@ LIMIT 300;
 
 **Sleeper Hits** insight: top 10 rows with `position_category = 'low'` ordered by `unique_clicks DESC` — surfaces articles placed near the bottom of an issue that nonetheless drew strong engagement.
 
-**Top Categories / Top Tags charts** (client-side, no extra SQL): the dashboard takes the current filter-scoped row set, splits each row's `categories` / `tags` string on comma, and sums `unique_clicks` and `total_clicks` per label. The horizontal bar charts show the **top 10 labels by unique clicks** with paired bars for unique vs total. Both charts re-render on every filter change via `_crRenderTopBar()` and replaced the prior **Top Position Cat** KPI card (which has been removed — its information is already covered by the position-category filter and chart).
+**Top Categories / Top Tags charts** (client-side, no extra SQL): the dashboard takes the current filter-scoped row set, splits each row's `categories` / `tags` string on comma, and sums `unique_clicks` and `total_clicks` per label. The horizontal bar charts show the **top 10 labels by unique clicks** with paired bars for unique vs total. Each bar is also annotated inline with `avg N/article` at its right end (drawn by an inline Chart.js plugin) so the per-article average is visible without leaving the chart; the tooltip also surfaces it as a separate line. Both charts re-render on every filter change via `_crRenderTopBar()` and replaced the prior **Top Position Cat** KPI card (which has been removed — its information is already covered by the position-category filter and chart).
 
 ---
 

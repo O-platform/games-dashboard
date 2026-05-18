@@ -307,6 +307,15 @@ selector and the `_setArtWindow` plumbing were removed. The lambda still
 emits `top_articles_windowed` for backwards-compat (in case the windowed
 data starts arriving later), but the dashboard ignores it.
 
+### "Show the average clicks in the visual" — Top Categories / Top Tags
+
+**✓ shipped.** Each horizontal bar in the **Top Categories** and **Top Tags**
+charts now has `avg N/article` printed at its right end (rendered by an
+inline Chart.js plugin, `avgLabels-…`). The tooltip also lists the average
+as its own line beneath the existing article count. The chart's right-side
+padding was bumped to leave room for the text. Average is computed as
+`round(unique_clicks / article_count)` for the visible label.
+
 ### Same Weekday → campaign-send view, above/below-average colours, in-progress fade
 
 > "It seems to be looking at click dates, rather than campaign dates. I want

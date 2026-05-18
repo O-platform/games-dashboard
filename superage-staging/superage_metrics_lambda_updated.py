@@ -417,29 +417,45 @@ def lambda_handler(event, context):
 
         # Canonical source-label mapping — mirror of the `utmLabel()` JS
         # function in `index.html`. Applied **before** GROUP BY so aliases
-        # like `meta` / `facebook` / `fb` / `ig` / `if` collapse into a
-        # single "Meta" row (was producing two Meta rows in the table).
-        # KEEP THIS LIST IN SYNC WITH `utmLabel()` IN index.html.
+        # collapse into a single row in the rollup. KEEP THIS LIST IN SYNC
+        # WITH `utmLabel()` IN index.html. Pattern matches (LIKE) handle
+        # date-stamped batches like TD_CPL2_20241102 and A/B suffixes like
+        # RRCPL1002525 without needing one CASE branch per variant.
         def _canon_source(col_sql: str) -> str:
+            lc = f"LOWER(TRIM({col_sql}))"
             return f"""
-            CASE LOWER(TRIM({col_sql}))
-                WHEN 'ahcpl1'         THEN 'AllHealthy'
-                WHEN 'allhealthy'     THEN 'AllHealthy'
-                WHEN 'tdcpl1'         THEN 'TrueDemocracy'
-                WHEN 'lscpl1'         THEN 'LivingSimply'
-                WHEN 'livingsimply'   THEN 'LivingSimply'
-                WHEN 'dpcpl1'         THEN 'DailyPuzzle'
-                WHEN 'hfcpl1'         THEN 'HealthFirst'
-                WHEN 'fccpl1'         THEN 'FitConnect'
-                WHEN 'facebook'       THEN 'Meta'
-                WHEN 'meta'           THEN 'Meta'
-                WHEN 'fb'             THEN 'Meta'
-                WHEN 'ig'             THEN 'Meta'
-                WHEN 'if'             THEN 'Meta'
-                WHEN 'taboola'        THEN 'Taboola'
-                WHEN 'healthbrief'    THEN 'HealthBrief'
-                WHEN 'superagequiz'   THEN 'SuperAge Quiz'
-                WHEN 'longevity_quiz' THEN 'SuperAge Quiz'
+            CASE
+                -- AllHealthy
+                WHEN {lc} IN ('ahcpl1', 'allhealthy', 'allhealthy.com') THEN 'AllHealthy'
+                -- TrueDemocracy: TDCPL1, TDCPL2, and every TD_CPL2_YYYYMMDD batch
+                WHEN {lc} = 'tdcpl1'                                    THEN 'TrueDemocracy'
+                WHEN {lc} = 'tdcpl2'                                    THEN 'TrueDemocracy'
+                WHEN {lc} LIKE 'td_cpl2%'                               THEN 'TrueDemocracy'
+                -- LivingSimply: CPL1, CPL2 and the .com variant
+                WHEN {lc} IN ('lscpl1', 'lscpl2', 'ls_cpl2', 'livingsimply', 'livingsimply.com') THEN 'LivingSimply'
+                -- DailyPuzzle
+                WHEN {lc} IN ('dpcpl1', 'dp_cpl2')                      THEN 'DailyPuzzle'
+                -- HealthFirst / FitConnect
+                WHEN {lc} = 'hfcpl1'                                    THEN 'HealthFirst'
+                WHEN {lc} = 'fccpl1'                                    THEN 'FitConnect'
+                -- Meta: facebook, instagram, IF/IG short codes, IFCPL1
+                WHEN {lc} IN ('facebook', 'meta', 'fb', 'ig', 'if', 'ifcpl1') THEN 'Meta'
+                -- Taboola (LOWER handles taboola/Taboola/TABOOLA)
+                WHEN {lc} = 'taboola'                                   THEN 'Taboola'
+                -- HealthBrief / SuperAge Quiz
+                WHEN {lc} = 'healthbrief'                               THEN 'HealthBrief'
+                WHEN {lc} IN ('superagequiz', 'longevity_quiz')         THEN 'SuperAge Quiz'
+                -- TheAgeist + every sample/request/etc. issue
+                WHEN {lc} IN ('theageist', 'theageist001', 'ageist')    THEN 'TheAgeist'
+                WHEN {lc} LIKE 'ageist_%'                               THEN 'TheAgeist'
+                WHEN {lc} LIKE 'ageistrequest%'                         THEN 'TheAgeist'
+                -- RecommendedReads (new canonical label)
+                WHEN {lc} IN ('recommendedreads.com', 'rr_cpl2')        THEN 'RecommendedReads'
+                WHEN {lc} LIKE 'rrcpl1%'                                THEN 'RecommendedReads'
+                -- Campaign Monitor (case-only collapse)
+                WHEN {lc} = 'campaign_monitor'                          THEN 'Campaign Monitor'
+                -- Welcome Flow (URL-encoded variant)
+                WHEN {lc} IN ('welcome flow', 'welcome+flow')           THEN 'Welcome Flow'
                 ELSE NULLIF(TRIM({col_sql}), '')
             END
             """

@@ -275,21 +275,37 @@ function utmLabel(raw) {
   // Canonicalises a raw utm_source / source value to a display label.
   // **Mirror of `_canon_source()` in superage_metrics_lambda_updated.py.**
   // KEEP BOTH LISTS IN SYNC — the SQL applies this same mapping before
-  // GROUP BY so aliases (meta / facebook / fb / ig / if → Meta) collapse
-  // into a single row in the JSON; this JS function is the fallback for
-  // any raw values that still slip through.
+  // GROUP BY so aliases collapse into a single row in the JSON; this JS
+  // function is the fallback for any raw values that still slip through.
   if (!raw) return '—';
   const s = String(raw).trim().toLowerCase();
-  if (s === 'ahcpl1' || s === 'allhealthy') return 'AllHealthy';
-  if (s === 'tdcpl1') return 'TrueDemocracy';
-  if (s === 'lscpl1' || s === 'livingsimply') return 'LivingSimply';
-  if (s === 'dpcpl1') return 'DailyPuzzle';
+  // AllHealthy
+  if (['ahcpl1', 'allhealthy', 'allhealthy.com'].includes(s)) return 'AllHealthy';
+  // TrueDemocracy: TDCPL1, TDCPL2, and every TD_CPL2_YYYYMMDD batch
+  if (s === 'tdcpl1' || s === 'tdcpl2' || s.startsWith('td_cpl2')) return 'TrueDemocracy';
+  // LivingSimply: CPL1, CPL2 and the .com variant
+  if (['lscpl1','lscpl2','ls_cpl2','livingsimply','livingsimply.com'].includes(s)) return 'LivingSimply';
+  // DailyPuzzle
+  if (s === 'dpcpl1' || s === 'dp_cpl2') return 'DailyPuzzle';
+  // HealthFirst / FitConnect
   if (s === 'hfcpl1') return 'HealthFirst';
   if (s === 'fccpl1') return 'FitConnect';
-  if (['facebook','meta','fb','ig','if'].includes(s)) return 'Meta';
+  // Meta: facebook + instagram + IF/IG short codes + IFCPL1
+  if (['facebook','meta','fb','ig','if','ifcpl1'].includes(s)) return 'Meta';
+  // Taboola
   if (s === 'taboola') return 'Taboola';
+  // HealthBrief / SuperAge Quiz
   if (s === 'healthbrief') return 'HealthBrief';
   if (s === 'superagequiz' || s === 'longevity_quiz') return 'SuperAge Quiz';
+  // TheAgeist
+  if (['theageist','theageist001','ageist'].includes(s)) return 'TheAgeist';
+  if (s.startsWith('ageist_') || s.startsWith('ageistrequest')) return 'TheAgeist';
+  // RecommendedReads
+  if (['recommendedreads.com','rr_cpl2'].includes(s)) return 'RecommendedReads';
+  if (s.startsWith('rrcpl1')) return 'RecommendedReads';
+  // Campaign Monitor / Welcome Flow (case + URL-encoded collapse)
+  if (s === 'campaign_monitor') return 'Campaign Monitor';
+  if (['welcome flow','welcome+flow'].includes(s)) return 'Welcome Flow';
   return raw;
 }
 

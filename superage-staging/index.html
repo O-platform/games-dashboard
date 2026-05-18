@@ -652,6 +652,20 @@ function _clickTrendInsight(series, metric, unit, fmtVal) {
   const f = fmtVal || (v => fmt(v));
   return `<strong style="color:${clr}">${dir} ${Math.abs(pct).toFixed(1)}%</strong> vs previous (${f(cur)} vs ${f(prev)} ${unit})`;
 }
+/* Replace a canvas element with a fresh clone so Chart.js re-measures the
+ * parent container instead of inheriting the old chart's inline width/height
+ * styling. Fixes the "chart shrinks after toggle" bug on the Click Analysis tab. */
+function _resetCanvas(id) {
+  const old = document.getElementById(id);
+  if (!old) return null;
+  const fresh = old.cloneNode(false);
+  fresh.removeAttribute('style');
+  fresh.removeAttribute('width');
+  fresh.removeAttribute('height');
+  old.parentNode.replaceChild(fresh, old);
+  return fresh;
+}
+
 function _clickTrendChart(canvasId, series, metric, color, label, tickFormat) {
   const labels = series.labels || [];
   const data   = series[metric] || [];
@@ -660,9 +674,8 @@ function _clickTrendChart(canvasId, series, metric, color, label, tickFormat) {
   const tickFn = tickFormat || (v => v.toLocaleString());
   const bg = data.map((_,i) => cur[i] ? color + '66' : color);
   const border = data.map((_,i) => cur[i] ? color : 'transparent');
-  const ctx = document.getElementById(canvasId);
+  const ctx = _resetCanvas(canvasId);
   if (!ctx) return;
-  if (ctx._chart) ctx._chart.destroy();
   ctx._chart = new Chart(ctx, {
     type: 'bar',
     data: { labels, datasets: [{
@@ -901,9 +914,8 @@ function _setWeekdayWindow(n) {
     });
   }
 
-  const ctx = document.getElementById('cnt-raw-weekday-bar');
+  const ctx = _resetCanvas('cnt-raw-weekday-bar');
   if (!ctx) return;
-  if (ctx._chart) ctx._chart.destroy();
   ctx._chart = new Chart(ctx, {
     type: 'bar',
     data: { labels: dows.map(d => _weekdayLong[d]||d), datasets },

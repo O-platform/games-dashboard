@@ -539,7 +539,7 @@ function renderDigest(M) {
   // Tile definitions: label, current/prior values, sparkline array, formatter,
   // "higher is better" hint for delta arrow colouring (null = neutral).
   const tiles = [
-    { label: 'Net New Subscribers',     value: num(wd.new_subs),       prior: prv(wd.new_subs),       spark: sparkOf('new_subs'),       fmt: v => v == null ? '—' : Number(v).toLocaleString(),                                higherIsBetter: true,  spark_color: '#1a7f37' },
+    { label: 'New Subscribers',         value: num(wd.new_subs),       prior: prv(wd.new_subs),       spark: sparkOf('new_subs'),       fmt: v => v == null ? '—' : Number(v).toLocaleString(),                                higherIsBetter: true,  spark_color: '#1a7f37' },
     { label: 'Send-To Base (end of week)', value: num(wd.active_eow),  prior: prv(wd.active_eow),     spark: sparkOf('active_eow'),     fmt: v => v == null ? '—' : Number(v).toLocaleString(),                                higherIsBetter: true,  spark_color: '#0969da' },
     { label: 'Churn % of Sends',         value: num(wd.churn_pct_of_sends), prior: prv(wd.churn_pct_of_sends), spark: sparkOf('churn_pct_of_sends'), fmt: v => v == null ? '—' : Number(v).toFixed(3) + '%',                       higherIsBetter: false, spark_color: '#cf222e' },
     { label: 'Campaigns Sent',           value: num(wd.campaigns_sent), prior: prv(wd.campaigns_sent), spark: sparkOf('campaigns_sent'), fmt: v => v == null ? '—' : Number(v).toLocaleString(),                                higherIsBetter: null,  spark_color: '#8250df' },
@@ -584,10 +584,14 @@ function renderDigest(M) {
       `).join('')}
     </div>
 
+    <!-- Slack-style summary block — mirrors the #weekly_automation
+         post format. Numbers come from the same wd payload as the tiles
+         above plus the last-completed-week's article-level rollup
+         (top_content_this_week / top_sponsors_this_week /
+         top_immersions_this_week). -->
     <div class="chart-card" style="margin-top:18px;">
-      <div class="label" style="font-size:12px;text-transform:uppercase;letter-spacing:.5px;color:var(--text-muted);">Top Acquisition Source — ${esc(lastLabel)}</div>
-      <div style="font-size:22px;font-weight:700;color:var(--text);margin-top:4px;">${esc(topSrc)}</div>
-      <div class="insight">Most-subscriber source bucket for new joiners during the last completed week. Canonical source labels (Audience tab → §4 mapping).</div>
+      <h3 style="margin:0 0 8px;">Weekly Summary — ${esc(lastLabel)}</h3>
+      ${_digestSummaryBody(wd, lastCompletedIdx, priorCompletedIdx)}
     </div>
   `;
 
@@ -616,6 +620,88 @@ function renderDigest(M) {
       }
     });
   });
+}
+
+/* Builds the Slack-style summary HTML block under the Weekly Digest
+ * tiles — Overall stats with WoW deltas, source breakdown, Top Content
+ * / Sponsor / Immersion lists. Pure string-templating; uses Number /
+ * Array primitives only so the digest can render even when one of the
+ * sub-arrays is empty (e.g. a quiet week with no sponsor sends). */
+function _digestSummaryBody(wd, lastIdx, priorIdx) {
+  const cur  = (key) => wd[key] && wd[key][lastIdx]  != null ? Number(wd[key][lastIdx])  : null;
+  const prev = (key) => wd[key] && priorIdx != null && wd[key][priorIdx] != null ? Number(wd[key][priorIdx]) : null;
+  const pp   = (a, b) => (a == null || b == null) ? null : (a - b);                  // percentage-point change (for rates)
+  const fmtN = v => v == null ? '—' : Number(v).toLocaleString();
+  const fmtP = (v, decimals = 2) => v == null ? '—' : Number(v).toFixed(decimals) + '%';
+  const arrow = d => d == null ? '' : d > 0 ? '▲' : d < 0 ? '▼' : '–';
+  const ppHTML = (deltaPP, higherIsBetter) => {
+    if (deltaPP == null) return '';
+    const good = higherIsBetter == null ? null : (deltaPP === 0 ? null : (deltaPP > 0) === higherIsBetter);
+    const colour = good == null ? 'var(--text-muted)' : good ? '#1a7f37' : '#cf222e';
+    return ` <span style="color:${colour};font-weight:600;">${arrow(deltaPP)} ${Math.abs(deltaPP).toFixed(2)} pp</span>`;
+  };
+
+  // ── Overall (campaigns sent this week)
+  const camps     = cur('campaigns_sent') || 0;
+  const totalSent = cur('total_sent')     || 0;
+  const openR     = cur('avg_open_rate');
+  const clickR    = cur('avg_click_rate');
+  const unsubR    = cur('churn_pct_of_sends');
+  const overall = `
+    <div style="font-size:13px;line-height:1.6;color:var(--text);margin-bottom:14px;">
+      <strong>Overall (${fmtN(camps)} campaign${camps === 1 ? '' : 's'})</strong>
+      &nbsp;${fmtN(totalSent)} sent · ${fmtP(openR)} open rate${ppHTML(pp(openR,  prev('avg_open_rate')),  true)}
+      &nbsp;· ${fmtP(clickR)} click rate${ppHTML(pp(clickR, prev('avg_click_rate')), true)}
+      &nbsp;· ${fmtP(unsubR, 3)} unsub${ppHTML(pp(unsubR, prev('churn_pct_of_sends')), false)}
+      <div style="font-size:11px;color:var(--text-muted);margin-top:4px;">
+        <code>Recipients</code> is not deduplicated — same subscriber receiving N emails counts N×.
+        Unsub rate = unsubs ÷ <code>total_sent</code> × 100.
+      </div>
+    </div>`;
+
+  // ── Source breakdown for new subscribers (last completed week)
+  const lastWeekStart = wd.week_starts && wd.week_starts[lastIdx];
+  const allSrc = (wd.top_sources_by_week || []).filter(r => r.week_start === lastWeekStart);
+  const totalNew = allSrc.reduce((a, r) => a + (Number(r.subs) || 0), 0);
+  const srcLine = (allSrc.length === 0)
+    ? `<div style="font-size:13px;color:var(--text-muted);margin-bottom:14px;">No new subscribers recorded this week.</div>`
+    : (() => {
+        const parts = allSrc.map(r => {
+          const pct = totalNew ? (Number(r.subs) / totalNew * 100).toFixed(2) : '0.00';
+          return `<strong>${fmtN(r.subs)}</strong> ${esc(utmLabel(r.bucket))} [${pct}%]`;
+        });
+        return `<div style="font-size:13px;line-height:1.6;color:var(--text);margin-bottom:14px;">
+          This week we had <strong>${fmtN(totalNew)}</strong> new subscribers (${parts.join(', ')}).
+        </div>`;
+      })();
+
+  // ── Three lists: Top Content / Sponsor Clicks / Immersion Clicks.
+  // Each shows top 5 by unique clicks for the last completed week.
+  const renderList = (heading, rows, max = 5) => {
+    if (!rows || !rows.length) {
+      return `<div style="margin-bottom:14px;">
+        <div style="font-size:12px;text-transform:uppercase;letter-spacing:.5px;color:var(--text-muted);margin-bottom:6px;">${esc(heading)}</div>
+        <div style="font-size:12px;color:var(--text-muted);font-style:italic;">No ${esc(heading.toLowerCase())} this week.</div>
+      </div>`;
+    }
+    const items = rows.slice(0, max).map(r => {
+      const titleCell = r.url
+        ? `<a href="${esc(r.url)}" target="_blank" rel="noopener">${esc(r.title || '(untitled)')}</a>`
+        : esc(r.title || '(untitled)');
+      const dateBit = r.issue_date ? `<span style="color:var(--text-muted);"> (${esc(String(r.issue_date).slice(5).replace('-', '/'))})</span>` : '';
+      return `<li style="margin-bottom:4px;">${titleCell}${dateBit} — <strong>${fmtN(r.unique_clicks)}</strong> unique / ${fmtN(r.total_clicks)} total</li>`;
+    }).join('');
+    return `<div style="margin-bottom:14px;">
+      <div style="font-size:12px;text-transform:uppercase;letter-spacing:.5px;color:var(--text-muted);margin-bottom:6px;">${esc(heading)}</div>
+      <ul style="margin:0;padding-left:18px;font-size:13px;line-height:1.5;">${items}</ul>
+    </div>`;
+  };
+
+  const content    = renderList('Top Content Hits',   wd.top_content_this_week);
+  const sponsors   = renderList('Sponsor Clicks',     wd.top_sponsors_this_week);
+  const immersions = renderList('Immersion Clicks',   wd.top_immersions_this_week);
+
+  return overall + srcLine + content + sponsors + immersions;
 }
 
 function renderCampaigns(M) {

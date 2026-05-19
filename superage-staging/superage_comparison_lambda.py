@@ -686,6 +686,39 @@ def lambda_handler(event, context):
             """)
             top_source_rows = cur.fetchall()
 
+            # (C2) Article-level activity for the **last completed Mon–Sun**
+            # ISO week, split by `articles_clicks.type` so the digest can list
+            # Top Content Hits, Sponsor Clicks, and Immersion Clicks separately
+            # (mirrors the Slack #weekly_automation format). One row per
+            # (type, article_title, url, issue_name, issue_date). We bucket by
+            # the campaign's `issue_date` rather than per-click event date
+            # because that's the column `articles_clicks` carries. `games` /
+            # `waitlist` placements are excluded — same rule as everywhere else.
+            cur.execute(f"""
+                WITH wk AS (
+                    SELECT
+                        DATE_TRUNC('week', CURRENT_DATE)::date - INTERVAL '1 week' AS wk_start,
+                        DATE_TRUNC('week', CURRENT_DATE)::date                       AS wk_end_excl
+                )
+                SELECT
+                    LOWER(COALESCE(NULLIF(TRIM(ac.type), ''), 'unknown')) AS atype,
+                    ac.article_title,
+                    ac.url,
+                    ac.issue_name,
+                    ac.issue_date::date                                  AS issue_date,
+                    SUM(ac.unique_clicks)                                AS unique_clicks,
+                    SUM(ac.non_unique_clicks)                            AS total_clicks
+                FROM {S}.articles_clicks ac, wk
+                WHERE ac.issue_date IS NOT NULL
+                  AND ac.issue_date::date >= wk.wk_start
+                  AND ac.issue_date::date <  wk.wk_end_excl
+                  AND LOWER(COALESCE(ac.type, '')) NOT IN ('games','waitlist')
+                GROUP BY 1, ac.article_title, ac.url, ac.issue_name, ac.issue_date::date
+                ORDER BY unique_clicks DESC NULLS LAST
+                LIMIT 200
+            """)
+            digest_articles_rows = cur.fetchall()
+
     if not all_rows:
         result = {"data_as_of": today.isoformat(), "error": "no qualifying campaigns found"}
         commit_to_github(json.dumps(result, indent=2, default=str))
@@ -840,6 +873,44 @@ def lambda_handler(event, context):
                  "bucket":     str(r["bucket"]),
                  "subs":       safe_int(r["subs"])}
                 for r in top_source_rows
+            ],
+            # Article-level breakdown for the **last completed Mon–Sun**.
+            # Split into three buckets by `articles_clicks.type`:
+            #   • sponsor    → "Sponsor Clicks" list
+            #   • immersion  → "Immersion Clicks" list
+            #   • <anything> → "Top Content Hits" (the catch-all — high /
+            #                  medium / low / article / null all roll here)
+            # Each list is sorted by unique_clicks DESC; client slices to
+            # top 5 per section.
+            "top_content_this_week": [
+                {"title":         str(r["article_title"] or ""),
+                 "url":           str(r["url"] or ""),
+                 "issue_name":    str(r["issue_name"] or ""),
+                 "issue_date":    str(r["issue_date"]),
+                 "unique_clicks": safe_int(r["unique_clicks"]),
+                 "total_clicks":  safe_int(r["total_clicks"])}
+                for r in digest_articles_rows
+                if (r["atype"] or "") not in ("sponsor", "immersion")
+            ],
+            "top_sponsors_this_week": [
+                {"title":         str(r["article_title"] or ""),
+                 "url":           str(r["url"] or ""),
+                 "issue_name":    str(r["issue_name"] or ""),
+                 "issue_date":    str(r["issue_date"]),
+                 "unique_clicks": safe_int(r["unique_clicks"]),
+                 "total_clicks":  safe_int(r["total_clicks"])}
+                for r in digest_articles_rows
+                if (r["atype"] or "") == "sponsor"
+            ],
+            "top_immersions_this_week": [
+                {"title":         str(r["article_title"] or ""),
+                 "url":           str(r["url"] or ""),
+                 "issue_name":    str(r["issue_name"] or ""),
+                 "issue_date":    str(r["issue_date"]),
+                 "unique_clicks": safe_int(r["unique_clicks"]),
+                 "total_clicks":  safe_int(r["total_clicks"])}
+                for r in digest_articles_rows
+                if (r["atype"] or "") == "immersion"
             ],
         },
     }

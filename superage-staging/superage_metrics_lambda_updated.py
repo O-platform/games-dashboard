@@ -236,17 +236,39 @@ def lambda_handler(event, context):
         deleted_count        = safe_int(sub.get("deleted"))
         quiz_takers          = safe_int(sub.get("quiz_takers"))
 
-        # Active (send-to): state='Active' AND engagement_segment NOT IN ('Ghosts','Zombies','Dormant').
+        # Active (send-to) + engagement-segment split inside state='Active'.
+        # The Overview donut renders five slices off this row: Send-To /
+        # Zombies / Ghosts / Dormant / Other. "Other" is anything that's
+        # still state='Active' but whose engagement_segment is NULL/empty
+        # or some segment outside the four canonical ones.
         cur.execute(f"""
             SELECT
                 COUNT(*) FILTER (
                     WHERE state = 'Active'
                       AND engagement_segment NOT IN ('Ghosts', 'Zombies', 'Dormant')
-                ) AS send_to_active
+                ) AS send_to_active,
+                COUNT(*) FILTER (WHERE state = 'Active' AND engagement_segment = 'Zombies') AS zombies,
+                COUNT(*) FILTER (WHERE state = 'Active' AND engagement_segment = 'Ghosts')  AS ghosts,
+                COUNT(*) FILTER (WHERE state = 'Active' AND engagement_segment = 'Dormant') AS dormant,
+                COUNT(*) FILTER (
+                    WHERE state = 'Active'
+                      AND (engagement_segment IS NULL OR engagement_segment = '')
+                ) AS other_segment
             FROM {S}.subscribers
             WHERE date_joined::date < CURRENT_DATE
         """)
-        send_to_active = safe_int((cur.fetchone() or {}).get("send_to_active"))
+        _eng = cur.fetchone() or {}
+        send_to_active = safe_int(_eng.get("send_to_active"))
+        zombies_count  = safe_int(_eng.get("zombies"))
+        ghosts_count   = safe_int(_eng.get("ghosts"))
+        dormant_count  = safe_int(_eng.get("dormant"))
+        # "Other" = state='Active' rows whose engagement_segment is NULL/empty
+        # OR an unrecognised label. Computed as a residual against the active
+        # base so any new segment we haven't named ends up here automatically.
+        other_segment_count = max(
+            total_subscribers - send_to_active - zombies_count - ghosts_count - dormant_count,
+            0,
+        )
         fitness_quiz_takers  = safe_int(sub.get("fitness_quiz_takers"))
         menu_quiz_takers     = safe_int(sub.get("menu_quiz_takers"))
         high_engagement_60d  = safe_int(sub.get("high_eng"))
@@ -1072,22 +1094,21 @@ def lambda_handler(event, context):
         "colors": [state_colors.get(r["state"], "#a78bfa") for r in state_rows],
     }
 
-    # Current Subscriber Mix donut — denominator is **every row** in
-    # `subscribers` (all CreateSend states), broken into five slices so the
-    # Active cohort is split between truly-reachable and dormant:
-    #   • Send-To  = state='Active' AND engagement_segment NOT IN dormant set
-    #   • Dormant / Ghost / Zombie = state='Active' AND engagement_segment IN dormant set
-    #   • Unsubscribed = state='Unsubscribed'
-    #   • Bounced  = state='Bounced'
-    #   • Deleted  = state='Deleted'
-    # Send-To and Dormant use related green/amber tones so they read as
-    # children of the "Active" parent; the three exit states use blue / red
-    # / grey.
-    dormant_cohort = max(total_subscribers - send_to_active, 0)
+    # Current Subscriber Mix donut — denominator is **current subscribers
+    # only** (state='Active'), split by engagement_segment. Five slices:
+    #   • Send-To  = engagement_segment NOT IN ('Ghosts','Zombies','Dormant')
+    #   • Zombies  = engagement_segment = 'Zombies'
+    #   • Ghosts   = engagement_segment = 'Ghosts'
+    #   • Dormant  = engagement_segment = 'Dormant'
+    #   • Other    = NULL / empty / unrecognised segment (residual so any
+    #                future-added segment label rolls up here automatically)
+    # Unsubscribed / Bounced / Deleted are NOT part of this view — they're
+    # not in state='Active' so they don't belong on a "current subscribers"
+    # breakdown.
     M["subscriber_engagement_mix"] = {
-        "labels": ["Send-To", "Dormant / Ghost / Zombie", "Unsubscribed", "Bounced", "Deleted"],
-        "data":   [send_to_active, dormant_cohort, unsubscribed_count, bounced_count, deleted_count],
-        "colors": ["#1a7f37", "#9a6700", "#58a6ff", "#cf222e", "#9ca3af"],
+        "labels": ["Send-To", "Zombies", "Ghosts", "Dormant", "Other"],
+        "data":   [send_to_active, zombies_count, ghosts_count, dormant_count, other_segment_count],
+        "colors": ["#1a7f37", "#cf222e", "#8250df", "#9a6700", "#9ca3af"],
     }
 
     # Overview subscriber growth chart — sourced from growth_history table

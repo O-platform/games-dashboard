@@ -85,7 +85,7 @@ The overview tab surfaces the most important headline numbers across all section
 | Quiz Takers | Subscribers who completed the longevity quiz |
 
 **Charts:**
-- **Current Subscriber Engagement Mix** — Donut chart over the **current list** (subscribers we still hold; Unsubscribed and Deleted are excluded). Three slices: **Send-To** (reachable engaged subscribers), **Dormant / Ghost / Zombie** (state='Active' but flagged dormant), **Bounced** (delivery failing). See Q2.
+- **Current Subscriber Mix** — Donut chart over **current subscribers only** (`state='Active'`), split by `engagement_segment`. Five slices: **Send-To** (reachable engaged), **Zombies**, **Ghosts**, **Dormant**, **Other** (null / empty / unrecognised segment). Unsubscribed / Bounced / Deleted are excluded — they're not in `state='Active'`. See Q2.
 - **Campaign Performance Trend** — Line chart of open rate and click rate across the last 30 campaigns, ordered by send date.
 - **Subscriber Growth Over Time** — Green bars = gained (new subscribers), red bars = lost (unsubscribes), blue line = total active subscribers at month end (right Y axis). 18-month sliding window.
 
@@ -363,34 +363,34 @@ Exposed as `M.send_to_active`; `send_to_rate = send_to_active / total_subscriber
 
 ## Q2 — Overview: Current Subscriber Mix (Donut Chart)
 
-The Overview donut covers **every subscriber record** (denominator = all rows in `superage.subscribers`, every CreateSend state). The Active state is split into Send-To vs Dormant/Ghost/Zombie so the chart shows in one view both **how much of the list is still reachable** and **how much has churned out**.
+The Overview donut covers **current subscribers only** (`state = 'Active'`), split by `engagement_segment` so the chart answers **"of the people we still call active, how engaged are they actually?"**. Unsubscribed / Bounced / Deleted records are excluded — they're not in `state='Active'`, so they don't belong on this view.
 
-Five slices, all derived from variables already populated by Q1 / Q1b:
+Five slices, all computed from a single `state='Active'` row scan:
 
-| Slice | Formula (existing lambda vars) | Colour |
+| Slice | Formula (state='Active' AND …) | Colour |
 |---|---|---|
-| **Send-To** | `send_to_active` *(state='Active' AND engagement_segment NOT IN ('Ghosts','Zombies','Dormant'))* | green `#1a7f37` |
-| **Dormant / Ghost / Zombie** | `total_subscribers - send_to_active` *(state='Active' AND engagement_segment IN ('Ghosts','Zombies','Dormant'))* | amber `#9a6700` |
-| **Unsubscribed** | `unsubscribed_count` *(state='Unsubscribed')* | blue `#58a6ff` |
-| **Bounced** | `bounced_count` *(state='Bounced')* | red `#cf222e` |
-| **Deleted** | `deleted_count` *(state='Deleted')* | grey `#9ca3af` |
+| **Send-To** | `engagement_segment NOT IN ('Ghosts','Zombies','Dormant')` | green `#1a7f37` |
+| **Zombies** | `engagement_segment = 'Zombies'` | red `#cf222e` |
+| **Ghosts** | `engagement_segment = 'Ghosts'` | purple `#8250df` |
+| **Dormant** | `engagement_segment = 'Dormant'` | amber `#9a6700` |
+| **Other** | `engagement_segment IS NULL OR engagement_segment = ''` (residual — also catches any unrecognised future segment label) | grey `#9ca3af` |
 
-The Send-To / Dormant slices use related green and amber tones so they read as children of the "Active" parent; the three exit states (Unsubscribed / Bounced / Deleted) use blue, red, and grey.
+The "Other" slice is computed as a **residual** against the active base (`total_subscribers − send_to_active − zombies − ghosts − dormant`) so any new `engagement_segment` value the data team adds rolls into it automatically rather than disappearing.
 
 ```sql
--- (no dedicated query — all five counts come from Q1 / Q1b above)
+-- All five counts come from a single scan against state='Active' rows.
 SELECT
     COUNT(*) FILTER (
         WHERE state = 'Active'
           AND engagement_segment NOT IN ('Ghosts','Zombies','Dormant')
-    )                                                        AS send_to,
+    )                                                                 AS send_to,
+    COUNT(*) FILTER (WHERE state = 'Active' AND engagement_segment = 'Zombies') AS zombies,
+    COUNT(*) FILTER (WHERE state = 'Active' AND engagement_segment = 'Ghosts')  AS ghosts,
+    COUNT(*) FILTER (WHERE state = 'Active' AND engagement_segment = 'Dormant') AS dormant,
     COUNT(*) FILTER (
         WHERE state = 'Active'
-          AND engagement_segment IN ('Ghosts','Zombies','Dormant')
-    )                                                        AS dormant_cohort,
-    COUNT(*) FILTER (WHERE state = 'Unsubscribed')           AS unsubscribed,
-    COUNT(*) FILTER (WHERE state = 'Bounced')                AS bounced,
-    COUNT(*) FILTER (WHERE state = 'Deleted')                AS deleted
+          AND (engagement_segment IS NULL OR engagement_segment = '')
+    )                                                                 AS other_segment
 FROM superage.subscribers
 WHERE date_joined::date < CURRENT_DATE;
 ```
@@ -399,9 +399,9 @@ Emitted as:
 
 ```json
 M.subscriber_engagement_mix = {
-  "labels": ["Send-To", "Dormant / Ghost / Zombie", "Unsubscribed", "Bounced", "Deleted"],
-  "data":   [<send_to>, <dormant_cohort>, <unsubscribed>, <bounced>, <deleted>],
-  "colors": ["#1a7f37", "#9a6700", "#58a6ff", "#cf222e", "#9ca3af"]
+  "labels": ["Send-To", "Zombies", "Ghosts", "Dormant", "Other"],
+  "data":   [<send_to>, <zombies>, <ghosts>, <dormant>, <other_residual>],
+  "colors": ["#1a7f37", "#cf222e", "#8250df", "#9a6700", "#9ca3af"]
 }
 ```
 
@@ -1448,3 +1448,4 @@ ORDER BY c.cohort_month;
 49. **LTV renamed to Lifespan (2026-05)**: the per-source Retention table column headers "Avg LTV (days)" / "Median LTV" were renamed to "Avg Lifespan (days)" / "Median Lifespan" (the underlying field names `avg_lifespan_days` / `median_lifespan_days` stay the same — the formula was never revenue-based, just `date_unsubscribed - date_joined` in days across churned subscribers). Banner copy + insight string + Section 7 KPI table updated; the calculation in Q35 / Q35b is unchanged.
 47. **Revenue & Sponsors: ECPM retired (2026-05)**: the "Avg ECPM" KPI card on the Revenue & Sponsors tab and the "Avg ECPM" column on the Top Sponsors table were removed. The dedicated `AVG(NULLIF(ecpm,'')::numeric)` SQL block was deleted from the lambda, along with the `AVG(NULLIF(ecpm,'')::numeric)` aggregate on the per-sponsor query. `M.avg_ecpm` no longer ships in the JSON, and `top_sponsors[].avg_ecpm` is gone. Q34 marked retired; Section 6 of METRICS_updated.md updated. Future-dated rows in `sa_airtable_sales` are intentionally **kept** — the Monthly Revenue chart shows them as faded bars (the `isInProgress(label)` helper in `index.html` flags any month ≥ current month and reduces its bar alpha), so booked-but-not-yet-run placements stay visible alongside historical revenue.
 48. **Cohort Performance Table reshaped — 2025+ only with three explicit cohort counts (2026-05)**: Q40 was restricted to cohorts with `date_joined >= '2025-01-01'` so the table focuses on recent acquisition quality (the heatmap above keeps its longer history). Columns rebuilt around three primary counts derived from the same scan: **Cohort Size** (subscribers who joined the month — `COUNT(*)`), **Total Subscribers** (still on the list today — `COUNT(*) FILTER (WHERE state IN ('Active','Bounced'))`), and **Total Active** (state='Active' AND engagement_segment NOT IN Ghosts/Zombies/Dormant). Derived rates: **Still on List %**, **Retention %**, **Churn %**, **Early Churn (90d)**. Existing **Campaigns Sent** column kept for context. Lambda now emits `cohort_table[].total_subscribers` + `cohort_table[].still_on_list_pct`; the dashboard table renders the new shape and tooltips document each column's formula.
+50. **Overview donut → engagement-segment split within state='Active' (2026-05)**: the Current Subscriber Mix donut was rescoped again — denominator is now **current subscribers only** (`state = 'Active'`) rather than every row in `subscribers`. Five slices now show how that active base breaks down by engagement segment: **Send-To** (the canonical reachable bucket — engagement_segment NOT IN Ghosts/Zombies/Dormant), **Zombies**, **Ghosts**, **Dormant**, **Other** (residual — null / empty / unrecognised segment). The SQL gained per-segment FILTER counts inside the existing Active-only query; the lambda still emits the unified `M.subscriber_engagement_mix = {labels, data, colors}` shape so the dashboard chart didn't need restructuring. Unsubscribed / Bounced / Deleted no longer appear in this donut — they're tracked elsewhere (subscriber-status KPIs, retention table). Banner copy + Q2 + Section 1 KPI bullet rewritten in lockstep.

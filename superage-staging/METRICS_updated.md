@@ -730,7 +730,8 @@ Source of the **Content Reference** tab. One row per `articles_clicks` placement
 ```sql
 WITH ac AS (
     SELECT
-        article_title, url, unique_clicks, non_unique_clicks,
+        article_title, url, issue_name, issue_date,
+        unique_clicks, non_unique_clicks,
         story_position, position_category,
         REGEXP_REPLACE(LOWER(TRIM(BOTH '/' FROM SPLIT_PART(url, '?', 1))),
                        '^https?://(www[.])?', '') AS norm_url
@@ -754,6 +755,8 @@ WITH ac AS (
 SELECT
     ac.article_title  AS title,
     ac.url,
+    ac.issue_name,
+    ac.issue_date,
     ac.unique_clicks,
     ac.non_unique_clicks,
     ac.story_position,
@@ -1506,3 +1509,4 @@ ORDER BY c.cohort_month;
     **Same `Recipients` dedup caveat** as Q38 applies: `total_sent` and the churn-% denominator count send impressions (one subscriber receiving N emails contributes N), not unique people reached — intentional for per-impression rate signals.
 58. **Weekly Digest: Slack-style summary block + article-level breakdowns (2026-05)**: the basic Weekly Digest tab now carries a second card below the tiles that mirrors the `#weekly_automation` Slack post format — an Overall line ("N campaigns · X sent · Y% open rate (delta pp) · Z% click rate (delta pp) · W% unsub (delta pp)"), a New Subscribers breakdown by canonical source ("This week we had N new subscribers (A SourceA [%], B SourceB [%], …)"), and three top-5 lists pulled from `articles_clicks` for the last completed Mon–Sun week, split by `type`: **Top Content Hits** (type NOT IN sponsor/immersion/games/waitlist), **Sponsor Clicks** (`type='sponsor'`), and **Immersion Clicks** (`type='immersion'`). A new SQL block in the comparison lambda returns one row per (type, article_title, url, issue_name, issue_date) for that week (LIMIT 200, ORDER BY unique_clicks DESC); Python then splits into three lists and ships them on `M.weekly_digest.top_content_this_week`, `top_sponsors_this_week`, `top_immersions_this_week`. **The "Net New Subscribers" tile was renamed to "New Subscribers"** because the count is gross (every `date_joined` row in the week regardless of subsequent unsubs), not the net-of-churn the old label implied. The numbers themselves didn't change — only the label.
 59. **Weekly Digest tweak: Net Change tile + editorial/sponsor/immersion lists only (2026-05)**: the "New Subscribers" tile was replaced with **Net Change** = `new_subs − unsubs` per week (computed client-side from the existing JSON arrays — no new lambda field needed). Sparkline + WoW delta both follow the netted series; values prefix `+` when positive so the sign reads at a glance. Article-level lists in the summary block were tightened to the three placement types the user actually wants — **Editorial Clicks** (`type='editorial'`), **Sponsor Clicks** (`type='sponsor'`), **Immersion Clicks** (`type='immersion'`); the previous catch-all "Top Content Hits" (which silently absorbed any non-sponsor/non-immersion type, including null) is gone. SQL filter in the comparison lambda changed from `LOWER(type) NOT IN ('games','waitlist')` to `LOWER(TRIM(type)) IN ('editorial','sponsor','immersion')`; JSON key renamed `top_content_this_week` → `top_editorial_this_week`. HTML reads the new key with a backwards-compat fallback to the old one until the lambda re-runs.
+60. **Content Reference: All Articles gains an "Issue" column (2026-05)**: Q16b's SELECT now also pulls `articles_clicks.issue_name` + `issue_date`, and the lambda emits `content_drill_table[].issue_name` + `content_drill_table[].issue_date` (YYYY-MM-DD slice). The HTML table on the Content Reference tab gained an Issue column between Title and Category — value is `<issue_name> (<issue_date>)` with a muted date subscript, falling back to an em-dash when the lambda hasn't been re-run yet. No new SQL block — just additions to the existing inner-join. Reminder: each `articles_clicks` row is one (article, issue) placement, so an article featured in N sends appears N times in this table (one per send) — the new Issue column makes which-send-this-row-belongs-to explicit.

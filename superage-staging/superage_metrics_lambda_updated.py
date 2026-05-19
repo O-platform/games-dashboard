@@ -384,7 +384,8 @@ def lambda_handler(event, context):
         cur.execute(f"""
             WITH ac AS (
                 SELECT
-                    article_title, url, unique_clicks, non_unique_clicks,
+                    article_title, url, issue_name, issue_date,
+                    unique_clicks, non_unique_clicks,
                     story_position, position_category,
                     REGEXP_REPLACE(LOWER(TRIM(BOTH '/' FROM SPLIT_PART(url, '?', 1))), '^https?://(www[.])?', '') AS norm_url
                 FROM {S}.articles_clicks
@@ -403,6 +404,8 @@ def lambda_handler(event, context):
             SELECT
                 ac.article_title AS title,
                 ac.url,
+                ac.issue_name,
+                ac.issue_date,
                 ac.unique_clicks,
                 ac.non_unique_clicks,
                 ac.story_position,
@@ -1232,6 +1235,11 @@ def lambda_handler(event, context):
         {
             "title":            str(r["title"] or "Unknown"),
             "url":              str(r["url"] or ""),
+            # Issue this row's clicks were recorded against — one row per
+            # (article, issue) placement, so the same article can appear
+            # multiple times in this table if it was placed in several sends.
+            "issue_name":       str(r["issue_name"] or ""),
+            "issue_date":       str(r["issue_date"]) if r.get("issue_date") else "",
             "unique_clicks":    safe_int(r["unique_clicks"]),
             "total_clicks":     safe_int(r["non_unique_clicks"]),
             "story_position":   safe_int(r["story_position"]),

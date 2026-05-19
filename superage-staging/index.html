@@ -1559,7 +1559,7 @@ function renderContentRef(M) {
       <h3 style="margin-bottom:10px;">All Articles</h3>
       <div id="cr-count" style="font-size:12px;color:var(--text-muted);margin-bottom:8px;"></div>
       <div class="tbl-wrap"><table class="dash-table" id="cr-table">
-        <thead><tr><th>Position</th><th>Pos Cat</th><th>Title</th><th>Category</th><th>Tags</th><th>Author</th><th>Unique Clicks</th><th>Total Clicks</th></tr></thead>
+        <thead><tr><th>Position</th><th>Pos Cat</th><th>Title</th><th title="The campaign / issue this article appeared in. One row per (article, issue) placement, so an article featured in multiple sends appears once per send.">Issue</th><th>Category</th><th>Tags</th><th>Author</th><th>Unique Clicks</th><th>Total Clicks</th></tr></thead>
         <tbody id="cr-tbody"></tbody>
       </table></div>
       <div id="cr-pager" style="display:flex;align-items:center;justify-content:space-between;gap:6px;margin-top:12px;font-size:12px;color:var(--text-muted);flex-wrap:wrap;"></div>
@@ -1881,10 +1881,17 @@ function _crRenderPage() {
       const titleCell = r.url
         ? `<a href="${esc(r.url)}" target="_blank" rel="noopener">${esc(r.title||'')}</a>`
         : esc(r.title||'');
+      // Issue column — appended just after Title. Empty when the lambda
+      // hasn't been re-run since `issue_name` was added to the JSON.
+      const issueDate = (r.issue_date || '').slice(0, 10);
+      const issueCell = r.issue_name
+        ? `${esc(r.issue_name)}${issueDate ? ` <span style="color:var(--text-muted);font-size:11px;">(${esc(issueDate)})</span>` : ''}`
+        : '<span style="color:var(--text-muted);">—</span>';
       return `<tr>
         <td>${posCell}</td>
         <td>${pcCell}</td>
         <td>${titleCell}</td>
+        <td>${issueCell}</td>
         <td>${esc(_crCategory(r))}</td>
         <td>${esc(_crTags(r))}</td>
         <td>${esc(_crAuthor(r))}</td>

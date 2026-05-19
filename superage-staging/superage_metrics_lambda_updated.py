@@ -851,7 +851,14 @@ def lambda_handler(event, context):
             FROM s
             GROUP BY 1
             HAVING COUNT(*) >= 100
-            ORDER BY total DESC
+            -- Sort by **365-day survival rate** so the dropdown lists the
+            -- best-retaining sources first (top of the curve). Tie-breaker
+            -- is cohort size DESC so larger sources surface over smaller
+            -- ones when the rate is identical.
+            ORDER BY
+                (COUNT(*) FILTER (WHERE days_to_unsub IS NULL OR days_to_unsub > 365)::numeric
+                 / NULLIF(COUNT(*), 0)) DESC NULLS LAST,
+                total DESC
         """)
         survival_by_source_rows = cur.fetchall()
 

@@ -85,7 +85,7 @@ The overview tab surfaces the most important headline numbers across all section
 | Quiz Takers | Subscribers who completed the longevity quiz |
 
 **Charts:**
-- **Current Subscriber Mix** — Donut chart over **current subscribers only** (`state='Active'`), split by `engagement_segment`. Five slices: **Send-To** (reachable engaged), **Zombies**, **Ghosts**, **Dormant**, **Other** (null / empty / unrecognised segment). Unsubscribed / Bounced / Deleted are excluded — they're not in `state='Active'`. See Q2.
+- **Current Subscriber Mix** — Donut chart over **current subscribers only** (`state='Active'`), split by `engagement_segment`. Three slices: **Send-To** (reachable engaged), **Dormant / Ghost / Zombie** (the three disengaged segments merged into one), **Other** (null / empty / unrecognised segment). Unsubscribed / Bounced / Deleted are excluded — they're not in `state='Active'`. See Q2.
 - **Campaign Performance Trend** — Line chart of open rate and click rate across the last 30 campaigns, ordered by send date.
 - **Subscriber Growth Over Time** — Green bars = gained (new subscribers), red bars = lost (unsubscribes), blue line = total active subscribers at month end (right Y axis). 18-month sliding window.
 
@@ -369,20 +369,20 @@ Exposed as `M.send_to_active`; `send_to_rate = send_to_active / total_subscriber
 
 The Overview donut covers **current subscribers only** (`state = 'Active'`), split by `engagement_segment` so the chart answers **"of the people we still call active, how engaged are they actually?"**. Unsubscribed / Bounced / Deleted records are excluded — they're not in `state='Active'`, so they don't belong on this view.
 
-Five slices, all computed from a single `state='Active'` row scan:
+Three slices, all computed from a single `state='Active'` row scan. The Zombies / Ghosts / Dormant segments are summed into one **Dormant / Ghost / Zombie** bucket on the donut — at the chart level they all mean the same thing ("on the list but disengaged"). The per-segment FILTER counts are still produced by the SQL so anything that needs the individual splits later can read them off the lambda row.
 
 | Slice | Formula (state='Active' AND …) | Colour |
 |---|---|---|
 | **Send-To** | `engagement_segment NOT IN ('Ghosts','Zombies','Dormant')` | green `#1a7f37` |
-| **Zombies** | `engagement_segment = 'Zombies'` | red `#cf222e` |
-| **Ghosts** | `engagement_segment = 'Ghosts'` | purple `#8250df` |
-| **Dormant** | `engagement_segment = 'Dormant'` | amber `#9a6700` |
-| **Other** | `engagement_segment IS NULL OR engagement_segment = ''` (residual — also catches any unrecognised future segment label) | grey `#9ca3af` |
+| **Dormant / Ghost / Zombie** | `engagement_segment IN ('Ghosts','Zombies','Dormant')` *(sum of the three per-segment counts)* | amber `#9a6700` |
+| **Other** | `engagement_segment IS NULL OR engagement_segment = ''` *(residual — also catches any unrecognised future segment label)* | grey `#9ca3af` |
 
 The "Other" slice is computed as a **residual** against the active base (`total_subscribers − send_to_active − zombies − ghosts − dormant`) so any new `engagement_segment` value the data team adds rolls into it automatically rather than disappearing.
 
 ```sql
 -- All five counts come from a single scan against state='Active' rows.
+-- The lambda then sums zombies + ghosts + dormant into one chart slice;
+-- the per-segment counts are retained internally for future use.
 SELECT
     COUNT(*) FILTER (
         WHERE state = 'Active'
@@ -403,9 +403,9 @@ Emitted as:
 
 ```json
 M.subscriber_engagement_mix = {
-  "labels": ["Send-To", "Zombies", "Ghosts", "Dormant", "Other"],
-  "data":   [<send_to>, <zombies>, <ghosts>, <dormant>, <other_residual>],
-  "colors": ["#1a7f37", "#cf222e", "#8250df", "#9a6700", "#9ca3af"]
+  "labels": ["Send-To", "Dormant / Ghost / Zombie", "Other"],
+  "data":   [<send_to>, <zombies + ghosts + dormant>, <other_residual>],
+  "colors": ["#1a7f37", "#9a6700", "#9ca3af"]
 }
 ```
 
@@ -1454,3 +1454,4 @@ ORDER BY c.cohort_month;
 51. **Revenue tab: sponsor_type filter + Line Amount relabel (2026-05)**: every query against `sa_airtable_sales` (totals KPIs, Monthly Line Amount chart, Top Sponsors aggregation, Sponsor Type donut) now requires `sponsor_type IS NOT NULL AND TRIM(sponsor_type) != ''` — rows missing a sponsor type previously inflated totals and contributed a phantom "Unknown" slice in the donut, both gone now. In the same pass the user-facing wording on the tab was changed from "Revenue" → "Line Amount" to match the underlying Airtable column name (`$_line_amount`): KPI card "Total Revenue" → "Total Line Amount", chart heading "Monthly Revenue & Deal Volume" → "Monthly Line Amount & Deal Volume", Top Sponsors columns "Revenue" + "Avg Rev / Deal" + "Revenue Share" → "Line Amount" + "Avg Line / Deal" + "Share of Total". JSON field names (`total_revenue`, `total_revenue_fmt`, `top_sponsors[].revenue`) stay untouched for backwards-compat.
 52. **Cohort table: "Still on List %" + "Retention %" → single "Active %" column (2026-05)**: the Cohort Performance Table previously carried two near-duplicate percentage columns — Still on List % (`total_subscribers / cohort_size`, where total_subscribers = state IN Active+Bounced) and Retention % (`active_now / cohort_size`). Consolidated into one column called **Active %** with formula `total_active / cohort_size` (canonical Active rule: state='Active' AND engagement_segment NOT IN Ghosts/Zombies/Dormant). The lambda now emits `cohort_table[].active_pct`; the HTML reads that field and falls back to the legacy `retention_pct` if the lambda hasn't re-run yet. The deprecated `still_on_list_pct` JSON field is no longer emitted.
 53. **Click Analysis: Sunday Spotlight toggle now drives the KPIs + moved above the cards (2026-05)**: the Click Analysis toolbar (Include Sunday Spotlight switch + Section 1 metric dropdown) was lifted to the top of the tab — sits **above** the four KPI cards now — and the KPIs themselves were rewired to react to it. The card set was rebuilt around campaign-level aggregates that can be filtered by name: **Campaigns Sent**, **Total Recipients**, **Total Clicks**, **Avg Clicks / Campaign**, all summed from `M.campaign_table` rows filtered with the same `name NOT ILIKE '%sunday spotlight%'` predicate the chart re-aggregators use. `_renderClickKpis()` (new) runs in `_refreshClicksTab()` and on initial render so the numbers stay in sync with the bars below. The legacy article-level KPI fields (`total_article_clicks` / `unique_article_clickers` / `articles_clicked_count` / `avg_clicks_per_article`) couldn't be filtered by Sunday Spotlight at the SQL layer (no campaign name on `articles_clicks`), so they're no longer surfaced on this tab; the JSON fields still ship as backwards-compat for any external consumer.
+54. **Overview donut: merge Dormant / Ghost / Zombie into one slice (2026-05)**: the Current Subscriber Mix donut on the Overview tab was reduced from five slices to **three** — the three disengaged segments (`Zombies`, `Ghosts`, `Dormant`) now sum into a single **Dormant / Ghost / Zombie** bucket. The SQL still produces per-segment FILTER counts (kept for future reuse), but `M.subscriber_engagement_mix.data` ships `[send_to, zombies + ghosts + dormant, other_residual]` and the chart's three slices are coloured green / amber / grey. Insight strip + Q2 docs + Section 1 KPI bullet updated to match.

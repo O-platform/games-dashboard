@@ -380,7 +380,7 @@ function renderOverview(M) {
         <div class="chart-container h260"><canvas id="ov-state-donut"></canvas></div>
         <div id="ov-state-pct-table" style="margin-top:8px;font-size:12px;"></div>
         <div class="insight">
-          Whole pie = subscribers we currently hold (<code>state = 'Active'</code>), split by engagement segment. <strong>Send-To</strong> are the reachable engaged ones; <strong>Zombies</strong>, <strong>Ghosts</strong>, and <strong>Dormant</strong> are still on the list but flagged as disengaged; <strong>Other</strong> covers any active row with a null / empty / unrecognised segment. Unsubscribed, Bounced, and Deleted subscribers are excluded — they're no longer in state='Active'.
+          Whole pie = subscribers we currently hold (<code>state = 'Active'</code>), split by engagement segment. <strong>Send-To</strong> are the reachable engaged ones; <strong>Dormant / Ghost / Zombie</strong> rolls up the three disengaged segments into one slice; <strong>Other</strong> covers any active row with a null / empty / unrecognised segment. Unsubscribed, Bounced, and Deleted subscribers are excluded — they're no longer in state='Active'.
         </div>
       </div>
       <div class="chart-card">

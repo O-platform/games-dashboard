@@ -1112,20 +1112,22 @@ def lambda_handler(event, context):
     }
 
     # Current Subscriber Mix donut — denominator is **current subscribers
-    # only** (state='Active'), split by engagement_segment. Five slices:
+    # only** (state='Active'), split by engagement_segment. Three slices:
     #   • Send-To  = engagement_segment NOT IN ('Ghosts','Zombies','Dormant')
-    #   • Zombies  = engagement_segment = 'Zombies'
-    #   • Ghosts   = engagement_segment = 'Ghosts'
-    #   • Dormant  = engagement_segment = 'Dormant'
+    #   • Dormant / Ghost / Zombie = engagement_segment IN ('Ghosts','Zombies','Dormant')
+    #     (the three are merged into a single "disengaged" bucket — see
+    #     `_eng` row for the per-segment split if you ever need to break
+    #     them apart again).
     #   • Other    = NULL / empty / unrecognised segment (residual so any
     #                future-added segment label rolls up here automatically)
     # Unsubscribed / Bounced / Deleted are NOT part of this view — they're
     # not in state='Active' so they don't belong on a "current subscribers"
     # breakdown.
+    dormant_bucket = zombies_count + ghosts_count + dormant_count
     M["subscriber_engagement_mix"] = {
-        "labels": ["Send-To", "Zombies", "Ghosts", "Dormant", "Other"],
-        "data":   [send_to_active, zombies_count, ghosts_count, dormant_count, other_segment_count],
-        "colors": ["#1a7f37", "#cf222e", "#8250df", "#9a6700", "#9ca3af"],
+        "labels": ["Send-To", "Dormant / Ghost / Zombie", "Other"],
+        "data":   [send_to_active, dormant_bucket, other_segment_count],
+        "colors": ["#1a7f37", "#9a6700", "#9ca3af"],
     }
 
     # Overview subscriber growth chart — sourced from growth_history table

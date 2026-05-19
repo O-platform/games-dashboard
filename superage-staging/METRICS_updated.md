@@ -254,14 +254,16 @@ Demographics: age distribution, gender, marital status, exercise frequency, slee
 
 ## 6. Revenue & Sponsors
 
-Source: `superage.sa_airtable_sales`. Future-dated rows are **kept** — the Monthly Revenue chart shows them as faded bars so booked-but-not-yet-run placements are visible alongside historical revenue.
+Source: `superage.sa_airtable_sales`. Every query in this section requires both **`$_line_amount IS NOT NULL`** and **`sponsor_type IS NOT NULL AND TRIM(sponsor_type) != ''`** so rows without a categorised sponsor type are excluded across the tab. Future-dated rows are **kept** — the Monthly Line Amount chart shows them as faded bars so booked-but-not-yet-run placements are visible alongside historical line amounts.
 
-| Metric | What it measures |
-|---|---|
-| Total Revenue | Sum of all closed deal amounts |
-| Total Deals | Count of sponsorship placements |
-| Avg Deal Size | Average revenue per placement |
-| Top Sponsor | Highest-revenue sponsor (by `$_line_amount` sum) |
+| Metric (dashboard label) | What it measures | JSON field |
+|---|---|---|
+| Total Line Amount | Sum of `$_line_amount` across the filtered rows | `total_revenue_fmt` |
+| Total Deals | Count of sponsorship placements | `total_sponsor_deals` |
+| Avg Deal Size | Average `$_line_amount` per placement | `avg_deal_size_fmt` |
+| Top Sponsor | Highest-line-amount sponsor | `top_sponsors[0].name` |
+
+> The Airtable column is `$_line_amount`, so the user-facing labels on the Revenue & Sponsors tab read **"Line Amount"** (not "Revenue") to match the source. The internal JSON fields stay named `total_revenue` / `total_revenue_fmt` for backwards-compat with anything downstream reading the metrics JSON — only the UI strings changed.
 
 > **ECPM retired (2026-05).** The `Avg ECPM` KPI card, the dedicated `avg_ecpm` SQL (old Q34), and the `Avg ECPM` column on the Top Sponsors table were all removed. The lambda no longer emits `M.avg_ecpm` or per-row `avg_ecpm` on `top_sponsors[]`.
 
@@ -1449,3 +1451,4 @@ ORDER BY c.cohort_month;
 47. **Revenue & Sponsors: ECPM retired (2026-05)**: the "Avg ECPM" KPI card on the Revenue & Sponsors tab and the "Avg ECPM" column on the Top Sponsors table were removed. The dedicated `AVG(NULLIF(ecpm,'')::numeric)` SQL block was deleted from the lambda, along with the `AVG(NULLIF(ecpm,'')::numeric)` aggregate on the per-sponsor query. `M.avg_ecpm` no longer ships in the JSON, and `top_sponsors[].avg_ecpm` is gone. Q34 marked retired; Section 6 of METRICS_updated.md updated. Future-dated rows in `sa_airtable_sales` are intentionally **kept** — the Monthly Revenue chart shows them as faded bars (the `isInProgress(label)` helper in `index.html` flags any month ≥ current month and reduces its bar alpha), so booked-but-not-yet-run placements stay visible alongside historical revenue.
 48. **Cohort Performance Table reshaped — 2025+ only with three explicit cohort counts (2026-05)**: Q40 was restricted to cohorts with `date_joined >= '2025-01-01'` so the table focuses on recent acquisition quality (the heatmap above keeps its longer history). Columns rebuilt around three primary counts derived from the same scan: **Cohort Size** (subscribers who joined the month — `COUNT(*)`), **Total Subscribers** (still on the list today — `COUNT(*) FILTER (WHERE state IN ('Active','Bounced'))`), and **Total Active** (state='Active' AND engagement_segment NOT IN Ghosts/Zombies/Dormant). Derived rates: **Still on List %**, **Retention %**, **Churn %**, **Early Churn (90d)**. Existing **Campaigns Sent** column kept for context. Lambda now emits `cohort_table[].total_subscribers` + `cohort_table[].still_on_list_pct`; the dashboard table renders the new shape and tooltips document each column's formula.
 50. **Overview donut → engagement-segment split within state='Active' (2026-05)**: the Current Subscriber Mix donut was rescoped again — denominator is now **current subscribers only** (`state = 'Active'`) rather than every row in `subscribers`. Five slices now show how that active base breaks down by engagement segment: **Send-To** (the canonical reachable bucket — engagement_segment NOT IN Ghosts/Zombies/Dormant), **Zombies**, **Ghosts**, **Dormant**, **Other** (residual — null / empty / unrecognised segment). The SQL gained per-segment FILTER counts inside the existing Active-only query; the lambda still emits the unified `M.subscriber_engagement_mix = {labels, data, colors}` shape so the dashboard chart didn't need restructuring. Unsubscribed / Bounced / Deleted no longer appear in this donut — they're tracked elsewhere (subscriber-status KPIs, retention table). Banner copy + Q2 + Section 1 KPI bullet rewritten in lockstep.
+51. **Revenue tab: sponsor_type filter + Line Amount relabel (2026-05)**: every query against `sa_airtable_sales` (totals KPIs, Monthly Line Amount chart, Top Sponsors aggregation, Sponsor Type donut) now requires `sponsor_type IS NOT NULL AND TRIM(sponsor_type) != ''` — rows missing a sponsor type previously inflated totals and contributed a phantom "Unknown" slice in the donut, both gone now. In the same pass the user-facing wording on the tab was changed from "Revenue" → "Line Amount" to match the underlying Airtable column name (`$_line_amount`): KPI card "Total Revenue" → "Total Line Amount", chart heading "Monthly Revenue & Deal Volume" → "Monthly Line Amount & Deal Volume", Top Sponsors columns "Revenue" + "Avg Rev / Deal" + "Revenue Share" → "Line Amount" + "Avg Line / Deal" + "Share of Total". JSON field names (`total_revenue`, `total_revenue_fmt`, `top_sponsors[].revenue`) stay untouched for backwards-compat.

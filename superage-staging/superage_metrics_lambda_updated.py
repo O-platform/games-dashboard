@@ -685,6 +685,18 @@ def lambda_handler(event, context):
         # ─────────────────────────────────────────────────────
         # 7. Revenue and sponsors
         # ─────────────────────────────────────────────────────
+        # Every query against sa_airtable_sales requires `sponsor_type IS NOT
+        # NULL AND TRIM(sponsor_type) != ''` so rows without a categorised
+        # sponsor type don't pollute totals, monthly chart, top sponsors, or
+        # the donut. Source-of-truth column is `$_line_amount` (Airtable's
+        # line-item dollar value); the public KPI is labelled "Total Line
+        # Amount" in the dashboard, but the JSON field stays `total_revenue`
+        # / `total_revenue_fmt` for backwards-compat with anything reading
+        # the metrics JSON directly.
+        _sponsor_filter = (
+            "\"$_line_amount\" IS NOT NULL AND \"$_line_amount\" != ''\n"
+            "              AND sponsor_type IS NOT NULL AND TRIM(sponsor_type) != ''"
+        )
         cur.execute(f"""
             SELECT
                 COUNT(*) AS n,
@@ -692,7 +704,7 @@ def lambda_handler(event, context):
                 AVG(NULLIF("$_line_amount", '')::numeric) AS avg_deal,
                 MAX(NULLIF("$_line_amount", '')::numeric) AS max_deal
             FROM {S}.sa_airtable_sales
-            WHERE "$_line_amount" IS NOT NULL AND "$_line_amount" != ''
+            WHERE {_sponsor_filter}
         """)
         rs = cur.fetchone() or {}
         total_revenue    = safe_float(rs.get("total_revenue"))
@@ -708,7 +720,7 @@ def lambda_handler(event, context):
             FROM {S}.sa_airtable_sales
             WHERE issue_date IS NOT NULL
               AND TRIM(CAST(issue_date AS TEXT)) != ''
-              AND "$_line_amount" IS NOT NULL AND "$_line_amount" != ''
+              AND {_sponsor_filter}
             GROUP BY 1, 2
             ORDER BY 1
         """)
@@ -720,14 +732,15 @@ def lambda_handler(event, context):
                 COUNT(*) AS deals,
                 SUM(NULLIF("$_line_amount", '')::numeric) AS revenue
             FROM {S}.sa_airtable_sales
-            WHERE "$_line_amount" IS NOT NULL AND "$_line_amount" != ''
+            WHERE {_sponsor_filter}
             GROUP BY 1 ORDER BY 3 DESC NULLS LAST LIMIT 10
         """)
         sponsor_rows = cur.fetchall()
 
         cur.execute(f"""
-            SELECT COALESCE(NULLIF(sponsor_type, ''), 'Unknown') AS stype, COUNT(*) AS cnt
+            SELECT NULLIF(TRIM(sponsor_type), '') AS stype, COUNT(*) AS cnt
             FROM {S}.sa_airtable_sales
+            WHERE sponsor_type IS NOT NULL AND TRIM(sponsor_type) != ''
             GROUP BY 1 ORDER BY 2 DESC
         """)
         sponsor_type_rows = cur.fetchall()

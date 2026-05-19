@@ -1914,30 +1914,30 @@ function renderRevenue(M) {
   const topName = ts[0] ? ts[0].name : '—';
   document.getElementById('revenue').innerHTML = `
     <div class="section-context-banner">
-      <strong>Revenue &amp; Sponsors</strong> — Advertising and sponsorship performance. Tracks total revenue, deal volume, and sponsor-level breakdown. The Monthly Revenue chart includes future-dated rows from <code>sa_airtable_sales</code> (booked but not yet run); the current month and any not-yet-closed months render as faded bars.
+      <strong>Revenue &amp; Sponsors</strong> — Advertising and sponsorship performance, sourced from <code>sa_airtable_sales</code> rows with a non-null <code>sponsor_type</code>. Headline numbers are sums of the <code>$_line_amount</code> Airtable column. The Monthly Line Amount chart includes future-dated rows (booked but not yet run); the current month and any not-yet-closed months render as faded bars.
     </div>
     <div class="kpi-row">
-      <div class="kpi-card gold"><div class="label">Total Revenue</div><div class="value">${esc(M.total_revenue_fmt||'—')}</div><div class="sub">All sponsors combined</div></div>
+      <div class="kpi-card gold"><div class="label">Total Line Amount</div><div class="value">${esc(M.total_revenue_fmt||'—')}</div><div class="sub">Sum of <code>$_line_amount</code></div></div>
       <div class="kpi-card green"><div class="label">Total Deals</div><div class="value">${fmt(M.total_sponsor_deals)}</div><div class="sub">Sponsorship placements</div></div>
-      <div class="kpi-card cyan"><div class="label">Avg Deal Size</div><div class="value">${esc(M.avg_deal_size_fmt||'—')}</div><div class="sub">Mean revenue per deal</div></div>
-      <div class="kpi-card orange"><div class="label">Top Sponsor</div><div class="value" style="font-size:14px;">${esc(topName)}</div><div class="sub">By revenue</div></div>
+      <div class="kpi-card cyan"><div class="label">Avg Deal Size</div><div class="value">${esc(M.avg_deal_size_fmt||'—')}</div><div class="sub">Mean line amount per deal</div></div>
+      <div class="kpi-card orange"><div class="label">Top Sponsor</div><div class="value" style="font-size:14px;">${esc(topName)}</div><div class="sub">By line amount</div></div>
     </div>
     <div class="grid-2">
       <div class="chart-card">
-        <h3>Monthly Revenue &amp; Deal Volume</h3>
+        <h3>Monthly Line Amount &amp; Deal Volume</h3>
         <div class="chart-container h340"><canvas id="rev-monthly"></canvas></div>
-        <div class="insight">Bars = revenue (left axis). Line = number of deals (right axis). Faded bars are the current (in-progress) or not-yet-closed months.</div>
+        <div class="insight">Bars = <code>$_line_amount</code> sum per month (left axis). Line = number of deals (right axis). Faded bars are the current (in-progress) or not-yet-closed months.</div>
       </div>
       <div class="chart-card">
         <h3>Sponsor Type Distribution</h3>
         <div class="chart-container h340"><canvas id="rev-stype"></canvas></div>
-        <div class="insight">Understanding the mix of sponsor types helps diversify revenue and manage dependency on any single category.</div>
+        <div class="insight">Mix of sponsor types across the booked deals. Rows without a sponsor type are excluded everywhere in this tab.</div>
       </div>
     </div>
     <div class="chart-card">
       <h3>Top Sponsors</h3>
       <div class="tbl-wrap"><table class="dash-table">
-        <thead><tr><th>#</th><th>Sponsor</th><th>Deals</th><th>Revenue</th><th>Avg Rev / Deal</th><th>Revenue Share</th></tr></thead>
+        <thead><tr><th>#</th><th>Sponsor</th><th>Deals</th><th>Line Amount</th><th>Avg Line / Deal</th><th>Share of Total</th></tr></thead>
         <tbody>${ts.map((s,i)=>{
           const rev = parseFloat((s.revenue||'').replace(/[$,]/g,'')) || 0;
           const deals = s.deals || 1;

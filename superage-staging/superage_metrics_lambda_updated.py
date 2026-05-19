@@ -855,22 +855,34 @@ def lambda_handler(event, context):
         """)
         survival_by_source_rows = cur.fetchall()
 
-        # Monthly churn volume + churn rate %. The bar chart counts
-        # subscribers who unsubscribed in each month; the new line series
-        # divides that by the **total emails sent that month** (sum of
-        # Recipients across every qualifying campaign send in the month —
-        # the same Recipients > 95 filter we use everywhere else).
+        # Monthly churn volume + two churn-rate flavours.
+        #
+        # The bar chart counts subscribers who unsubscribed in each month
+        # (`subscribers.date_unsubscribed`). On top of that we emit two
+        # different rate series so the Retention tab can show them in
+        # separate visuals (no overlay):
+        #
+        #   • `churn_pct`           = list-churn / sends
+        #                           = (subscribers.date_unsubscribed in month)
+        #                           ÷ SUM(Campaigns.Recipients) in month × 100
+        #     Counts ALL channels that took someone off the list (campaign
+        #     unsubs, hard bounces, manual deletions), so it's the "list
+        #     net-lost someone per email impression" rate.
+        #
+        #   • `campaign_unsub_pct`  = campaign-attributed unsubs / sends
+        #                           = SUM(Campaigns.Unsubscribed) in month
+        #                           ÷ SUM(Campaigns.Recipients) in month × 100
+        #     Both sides from the SAME table + window. Counts only
+        #     subscribers who clicked the unsub link in a campaign sent
+        #     that month — the email-marketing-narrow definition.
         #
         # IMPORTANT — Recipients is NOT deduplicated across campaigns.
         # The same subscriber appears in `Recipients` once per campaign
         # they received, so SUM(Recipients) is total email **send events
-        # / impressions**, not unique people reached. That's intentional
-        # here: we want a per-impression damage signal so a high-frequency
+        # / impressions**, not unique people reached. That's intentional:
+        # we want a per-impression damage signal so a high-frequency
         # month with many campaigns isn't artificially favoured over a
-        # low-frequency one. If you ever need unique reach you'd have to
-        # join `Campaigns_Clicks` or build a subscriber-level send table.
-        # A falling ratio while sends grow signals improving deliverability /
-        # creative fit.
+        # low-frequency one. Same caveat applies to both rate variants.
         cur.execute(f"""
             WITH unsubs AS (
                 SELECT
@@ -885,8 +897,9 @@ def lambda_handler(event, context):
             sends AS (
                 SELECT
                     DATE_TRUNC('month', "Sent Date "::date)::date AS month,
-                    SUM("Recipients") AS total_sent,
-                    COUNT(*)          AS campaigns
+                    SUM("Recipients")                              AS total_sent,
+                    COUNT(*)                                       AS campaigns,
+                    COALESCE(SUM("Unsubscribed"), 0)               AS campaign_unsubs
                 FROM {S}."Campaigns"
                 WHERE "Sent Date " IS NOT NULL
                   AND "Sent Date "::date < CURRENT_DATE
@@ -898,11 +911,17 @@ def lambda_handler(event, context):
                 COALESCE(u.churned, 0)                  AS churned,
                 COALESCE(s.total_sent, 0)               AS total_sent,
                 COALESCE(s.campaigns, 0)                AS campaigns,
+                COALESCE(s.campaign_unsubs, 0)          AS campaign_unsubs,
                 CASE
                     WHEN COALESCE(s.total_sent, 0) = 0 THEN NULL
                     ELSE ROUND(COALESCE(u.churned, 0)::numeric
                               / s.total_sent * 100, 4)
-                END                                     AS churn_pct
+                END                                     AS churn_pct,
+                CASE
+                    WHEN COALESCE(s.total_sent, 0) = 0 THEN NULL
+                    ELSE ROUND(COALESCE(s.campaign_unsubs, 0)::numeric
+                              / s.total_sent * 100, 4)
+                END                                     AS campaign_unsub_pct
             FROM unsubs u
             FULL OUTER JOIN sends s ON u.month = s.month
             ORDER BY 1
@@ -1441,10 +1460,18 @@ def lambda_handler(event, context):
         "total_sent": [safe_int(r["total_sent"]) for r in churn_monthly_rows],
         # Number of qualifying campaigns sent in the month.
         "campaigns":  [safe_int(r["campaigns"]) for r in churn_monthly_rows],
-        # Churn % per month = churned / total_sent * 100. None when no
+        # List churn / sends — subscribers.date_unsubscribed (ALL channels)
+        # divided by Campaigns.Recipients sum. None when no qualifying
         # campaign was sent in the month (avoids divide-by-zero confusion).
         "churn_pct":  [safe_float(r["churn_pct"]) if r.get("churn_pct") is not None else None
                        for r in churn_monthly_rows],
+        # Campaign-attributed unsubs (sum of Campaigns.Unsubscribed in the month).
+        "campaign_unsubs": [safe_int(r["campaign_unsubs"]) for r in churn_monthly_rows],
+        # Pure-Campaigns rate — both numerator and denominator from
+        # `Campaigns` (Unsubscribed / Recipients * 100). None when no
+        # qualifying send happened in the month.
+        "campaign_unsub_pct": [safe_float(r["campaign_unsub_pct"]) if r.get("campaign_unsub_pct") is not None else None
+                               for r in churn_monthly_rows],
     }
 
     # ── Retention by Acquisition Source ──

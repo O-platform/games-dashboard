@@ -547,7 +547,6 @@ function renderDigest(M) {
   // "higher is better" hint for delta arrow colouring (null = neutral).
   const tiles = [
     { label: 'Net Change',              value: numFromArr(netChange),  prior: prvFromArr(netChange),  spark: sparkNetChange,            fmt: v => v == null ? '—' : (v >= 0 ? '+' : '') + Number(v).toLocaleString(),         higherIsBetter: true,  spark_color: '#1a7f37' },
-    { label: 'Send-To Base (end of week)', value: num(wd.active_eow),  prior: prv(wd.active_eow),     spark: sparkOf('active_eow'),     fmt: v => v == null ? '—' : Number(v).toLocaleString(),                                higherIsBetter: true,  spark_color: '#0969da' },
     { label: 'Churn % of Sends',         value: num(wd.churn_pct_of_sends), prior: prv(wd.churn_pct_of_sends), spark: sparkOf('churn_pct_of_sends'), fmt: v => v == null ? '—' : Number(v).toFixed(3) + '%',                       higherIsBetter: false, spark_color: '#cf222e' },
     { label: 'Campaigns Sent',           value: num(wd.campaigns_sent), prior: prv(wd.campaigns_sent), spark: sparkOf('campaigns_sent'), fmt: v => v == null ? '—' : Number(v).toLocaleString(),                                higherIsBetter: null,  spark_color: '#8250df' },
     { label: 'Avg Open Rate',            value: num(wd.avg_open_rate),  prior: prv(wd.avg_open_rate),  spark: sparkOf('avg_open_rate'),  fmt: v => v == null ? '—' : Number(v).toFixed(2) + '%',                                higherIsBetter: true,  spark_color: '#1a7f37' },
@@ -627,17 +626,21 @@ function renderDigest(M) {
       }
     });
   });
+
+  // Doughnut + three horizontal-bar charts inside the summary block.
+  _initDigestCharts();
 }
 
-/* Builds the Slack-style summary HTML block under the Weekly Digest
- * tiles — Overall stats with WoW deltas, source breakdown, Top Content
- * / Sponsor / Immersion lists. Pure string-templating; uses Number /
- * Array primitives only so the digest can render even when one of the
- * sub-arrays is empty (e.g. a quiet week with no sponsor sends). */
+/* Builds the visual summary HTML block under the Weekly Digest tiles —
+ * one Overall stats strip (text, with WoW pp-deltas), a Sources doughnut,
+ * and three horizontal-bar charts (Editorial / Sponsor / Immersion). The
+ * function returns markup with canvas placeholders; _initDigestCharts()
+ * instantiates the Chart.js objects after the markup is injected so the
+ * canvases actually exist by the time we look them up. */
 function _digestSummaryBody(wd, lastIdx, priorIdx) {
   const cur  = (key) => wd[key] && wd[key][lastIdx]  != null ? Number(wd[key][lastIdx])  : null;
   const prev = (key) => wd[key] && priorIdx != null && wd[key][priorIdx] != null ? Number(wd[key][priorIdx]) : null;
-  const pp   = (a, b) => (a == null || b == null) ? null : (a - b);                  // percentage-point change (for rates)
+  const pp   = (a, b) => (a == null || b == null) ? null : (a - b);
   const fmtN = v => v == null ? '—' : Number(v).toLocaleString();
   const fmtP = (v, decimals = 2) => v == null ? '—' : Number(v).toFixed(decimals) + '%';
   const arrow = d => d == null ? '' : d > 0 ? '▲' : d < 0 ? '▼' : '–';
@@ -648,14 +651,14 @@ function _digestSummaryBody(wd, lastIdx, priorIdx) {
     return ` <span style="color:${colour};font-weight:600;">${arrow(deltaPP)} ${Math.abs(deltaPP).toFixed(2)} pp</span>`;
   };
 
-  // ── Overall (campaigns sent this week)
+  // ── Overall (campaigns sent this week) — single text strip, unchanged.
   const camps     = cur('campaigns_sent') || 0;
   const totalSent = cur('total_sent')     || 0;
   const openR     = cur('avg_open_rate');
   const clickR    = cur('avg_click_rate');
   const unsubR    = cur('churn_pct_of_sends');
   const overall = `
-    <div style="font-size:13px;line-height:1.6;color:var(--text);margin-bottom:14px;">
+    <div style="font-size:13px;line-height:1.6;color:var(--text);margin-bottom:18px;">
       <strong>Overall (${fmtN(camps)} campaign${camps === 1 ? '' : 's'})</strong>
       &nbsp;${fmtN(totalSent)} sent · ${fmtP(openR)} open rate${ppHTML(pp(openR,  prev('avg_open_rate')),  true)}
       &nbsp;· ${fmtP(clickR)} click rate${ppHTML(pp(clickR, prev('avg_click_rate')), true)}
@@ -666,53 +669,143 @@ function _digestSummaryBody(wd, lastIdx, priorIdx) {
       </div>
     </div>`;
 
-  // ── Source breakdown for new subscribers (last completed week)
+  // ── Source breakdown — was a text line, now a doughnut with the
+  // canonical labels + sub counts driving the slices. Cache the dataset
+  // on window so _initDigestCharts can read it after innerHTML.
   const lastWeekStart = wd.week_starts && wd.week_starts[lastIdx];
   const allSrc = (wd.top_sources_by_week || []).filter(r => r.week_start === lastWeekStart);
   const totalNew = allSrc.reduce((a, r) => a + (Number(r.subs) || 0), 0);
-  const srcLine = (allSrc.length === 0)
-    ? `<div style="font-size:13px;color:var(--text-muted);margin-bottom:14px;">No new subscribers recorded this week.</div>`
-    : (() => {
-        const parts = allSrc.map(r => {
-          const pct = totalNew ? (Number(r.subs) / totalNew * 100).toFixed(2) : '0.00';
-          return `<strong>${fmtN(r.subs)}</strong> ${esc(utmLabel(r.bucket))} [${pct}%]`;
-        });
-        return `<div style="font-size:13px;line-height:1.6;color:var(--text);margin-bottom:14px;">
-          This week we had <strong>${fmtN(totalNew)}</strong> new subscribers (${parts.join(', ')}).
-        </div>`;
-      })();
+  window._digSrcData = allSrc;
+  window._digSrcTotal = totalNew;
 
-  // ── Three lists: Top Content / Sponsor Clicks / Immersion Clicks.
-  // Each shows top 5 by unique clicks for the last completed week.
-  const renderList = (heading, rows, max = 5) => {
-    if (!rows || !rows.length) {
-      return `<div style="margin-bottom:14px;">
+  const sourceBlock = (allSrc.length === 0)
+    ? `<div style="font-size:13px;color:var(--text-muted);margin-bottom:18px;">No new subscribers recorded this week.</div>`
+    : `<div style="margin-bottom:18px;">
+        <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;margin-bottom:6px;flex-wrap:wrap;">
+          <div style="font-size:12px;text-transform:uppercase;letter-spacing:.5px;color:var(--text-muted);">New Subscribers by Source</div>
+          <div style="font-size:12px;color:var(--text-muted);">Total: <strong style="color:var(--text);">${fmtN(totalNew)}</strong></div>
+        </div>
+        <div class="chart-container" style="height:240px;position:relative;">
+          <canvas id="dig-src-pie"></canvas>
+        </div>
+      </div>`;
+
+  // ── Three article-section horizontal bars — Editorial / Sponsor /
+  // Immersion. Each canvas is sized to fit ~5 rows; rendered by
+  // _initDigestCharts. Empty sections collapse to a muted "none this
+  // week." note so the layout doesn't shift when there are no rows.
+  const sectionBlock = (heading, canvasId, rows) => {
+    const data = (rows || []).slice(0, 5);
+    if (!data.length) {
+      return `<div style="margin-bottom:18px;">
         <div style="font-size:12px;text-transform:uppercase;letter-spacing:.5px;color:var(--text-muted);margin-bottom:6px;">${esc(heading)}</div>
         <div style="font-size:12px;color:var(--text-muted);font-style:italic;">No ${esc(heading.toLowerCase())} this week.</div>
       </div>`;
     }
-    const items = rows.slice(0, max).map(r => {
-      const titleCell = r.url
-        ? `<a href="${esc(r.url)}" target="_blank" rel="noopener">${esc(r.title || '(untitled)')}</a>`
-        : esc(r.title || '(untitled)');
-      const dateBit = r.issue_date ? `<span style="color:var(--text-muted);"> (${esc(String(r.issue_date).slice(5).replace('-', '/'))})</span>` : '';
-      return `<li style="margin-bottom:4px;">${titleCell}${dateBit} — <strong>${fmtN(r.unique_clicks)}</strong> unique / ${fmtN(r.total_clicks)} total</li>`;
-    }).join('');
-    return `<div style="margin-bottom:14px;">
+    // Cache rows on window so _initDigestCharts can attach tooltips +
+    // click-through links.
+    window['_dig_' + canvasId] = data;
+    const height = Math.max(120, data.length * 36 + 24);
+    return `<div style="margin-bottom:18px;">
       <div style="font-size:12px;text-transform:uppercase;letter-spacing:.5px;color:var(--text-muted);margin-bottom:6px;">${esc(heading)}</div>
-      <ul style="margin:0;padding-left:18px;font-size:13px;line-height:1.5;">${items}</ul>
+      <div class="chart-container" style="height:${height}px;position:relative;">
+        <canvas id="${canvasId}"></canvas>
+      </div>
     </div>`;
   };
 
-  // Three sections, in the order: Editorial / Sponsor / Immersion. The
-  // `top_editorial_this_week` key replaced an older `top_content_this_week`
-  // (catch-all of every non-sponsor/immersion type) — fall back to the old
-  // key if the comparison lambda hasn't been redeployed yet.
-  const editorial  = renderList('Editorial Clicks', wd.top_editorial_this_week || wd.top_content_this_week);
-  const sponsors   = renderList('Sponsor Clicks',   wd.top_sponsors_this_week);
-  const immersions = renderList('Immersion Clicks', wd.top_immersions_this_week);
+  const editorial  = sectionBlock('Editorial Clicks', 'dig-art-edit', wd.top_editorial_this_week || wd.top_content_this_week);
+  const sponsors   = sectionBlock('Sponsor Clicks',   'dig-art-spon', wd.top_sponsors_this_week);
+  const immersions = sectionBlock('Immersion Clicks', 'dig-art-imm',  wd.top_immersions_this_week);
 
-  return overall + srcLine + editorial + sponsors + immersions;
+  return overall + sourceBlock + editorial + sponsors + immersions;
+}
+
+/* Instantiates the Chart.js charts inside the Weekly Digest summary block.
+ * Must run AFTER _digestSummaryBody's HTML is injected — `renderDigest`
+ * calls it at the end of its render pass. Reads its data from
+ * window._digSrcData / window._dig_<canvasId> stashed by the body fn. */
+function _initDigestCharts() {
+  const palette = ['#0969da','#cf222e','#8250df','#9a6700','#bf3989','#1b7c83','#1a7f37','#58a6ff','#3fb950','#fb8500','#fb6f92','#7d4e00','#4f8cff','#34d399','#a78bfa','#f87171','#fbbf24'];
+
+  // Sources doughnut
+  const srcCanvas = document.getElementById('dig-src-pie');
+  const allSrc = window._digSrcData || [];
+  const totalNew = window._digSrcTotal || 0;
+  if (srcCanvas && allSrc.length) {
+    new Chart(srcCanvas, {
+      type: 'doughnut',
+      data: {
+        labels: allSrc.map(r => utmLabel(r.bucket)),
+        datasets: [{ data: allSrc.map(r => Number(r.subs) || 0),
+                     backgroundColor: allSrc.map((_, i) => palette[i % palette.length]),
+                     borderWidth: 1 }]
+      },
+      options: {
+        responsive: true, maintainAspectRatio: false,
+        plugins: {
+          legend: { position: 'right', labels: { font: { size: 11 }, padding: 6, boxWidth: 12 } },
+          tooltip: { callbacks: { label: c => {
+            const pct = totalNew ? (c.parsed / totalNew * 100).toFixed(2) : '0.00';
+            return `${c.label}: ${Number(c.parsed).toLocaleString()} (${pct}%)`;
+          }}}
+        }
+      }
+    });
+  }
+
+  // Three article horizontal-bar charts
+  ['dig-art-edit', 'dig-art-spon', 'dig-art-imm'].forEach((id, idx) => {
+    const canvas = document.getElementById(id);
+    const rows = window['_dig_' + id] || [];
+    if (!canvas || !rows.length) return;
+    const colour = ['#1a7f37', '#cf222e', '#8250df'][idx];
+    // Truncate long titles for legibility (full title is on the tooltip).
+    const labels = rows.map(r => {
+      const t = String(r.title || '(untitled)');
+      return t.length > 60 ? t.slice(0, 57) + '…' : t;
+    });
+    new Chart(canvas, {
+      type: 'bar',
+      data: {
+        labels,
+        datasets: [
+          { label: 'Unique', data: rows.map(r => Number(r.unique_clicks) || 0), backgroundColor: colour,         borderRadius: 4 },
+          { label: 'Total',  data: rows.map(r => Number(r.total_clicks)  || 0), backgroundColor: colour + '55',  borderRadius: 4 }
+        ]
+      },
+      options: {
+        responsive: true, maintainAspectRatio: false, indexAxis: 'y',
+        plugins: {
+          legend: { position: 'bottom', labels: { font: { size: 10 } } },
+          tooltip: { callbacks: {
+            title: items => {
+              const i = items[0].dataIndex;
+              const r = rows[i];
+              return r ? (r.title || '(untitled)') : '';
+            },
+            afterBody: items => {
+              const i = items[0].dataIndex;
+              const r = rows[i];
+              if (!r) return '';
+              const issue = r.issue_name ? `Issue: ${r.issue_name}` : null;
+              const date  = r.issue_date ? `Sent: ${String(r.issue_date).slice(0,10)}` : null;
+              return [issue, date].filter(Boolean);
+            }
+          }}
+        },
+        onClick: (_e, els) => {
+          if (!els || !els.length) return;
+          const r = rows[els[0].index];
+          if (r && r.url) window.open(r.url, '_blank', 'noopener');
+        },
+        scales: {
+          x: { beginAtZero: true, ticks: { callback: v => Number(v).toLocaleString(), font: { size: 10 } } },
+          y: { ticks: { font: { size: 11 } } }
+        }
+      }
+    });
+  });
 }
 
 function renderCampaigns(M) {
@@ -2315,10 +2408,16 @@ function renderRetention(M) {
         <div class="insight">How many subscribers fall into each lifespan bucket.</div>
       </div>
       <div class="chart-card">
-        <h3>Monthly Churn Volume <span class="badge-inline">— volume + churn %</span></h3>
+        <h3>Monthly Churn Volume</h3>
         <div class="chart-container h300"><canvas id="ret-churn"></canvas></div>
-        <div class="insight">Red bars = subscribers who unsubscribed each month (left axis). Blue line = <strong>Churn % of sends</strong> = unsubscribes ÷ total emails sent that month × 100 (right axis). A falling line while the bars stay flat / grow signals improving deliverability — we're holding the same audience even as send volume scales. Months with no qualifying send (Recipients &gt; 95) show a bar but no point on the line. <em>Note: <code>Recipients</code> on <code>Campaigns</code> is per-send, <strong>not deduplicated across campaigns</strong> — a subscriber who receives 4 emails in a month counts 4× toward total sent, so the denominator is email impressions, not unique people reached. That's intentional: a per-impression damage signal so a high-cadence month isn't unfairly compared with a low-cadence one.</em></div>
+        <div class="insight">Count of subscribers whose state flipped to <code>Unsubscribed</code> each month (all channels — campaign-link clicks, hard bounces, manual deletions). The companion <strong>Campaign Unsubscribe Rate</strong> chart below tracks the pure per-send rate.</div>
       </div>
+    </div>
+
+    <div class="chart-card" style="margin-top:18px;">
+      <h3>Campaign Unsubscribe Rate <span class="badge-inline">— pure-Campaigns, both sides from <code>Campaigns</code></span></h3>
+      <div class="chart-container h300"><canvas id="ret-camp-unsub-rate"></canvas></div>
+      <div class="insight">Line = <strong>SUM(<code>Unsubscribed</code>) ÷ SUM(<code>Recipients</code>) × 100</strong> per month, both columns from <code>Campaigns</code> (filter <code>Recipients &gt; 95</code>). Counts only subscribers who clicked the unsub link in a campaign sent that month — distinct from the list-churn-per-send rate (which includes hard bounces and manual deletions). Months with no qualifying send show no point. <em>Note: <code>Recipients</code> is per-send and not deduplicated across campaigns — a subscriber receiving 4 emails contributes 4× to the denominator, so the rate is per-impression, not per-unique-person.</em></div>
     </div>
     <h2 style="font-size:14px;font-weight:600;color:var(--text);margin:22px 0 10px;">Retention by Acquisition Source <span class="badge-inline" style="text-transform:none;">utm_source → source → 'Organic', bucketed</span></h2>
     <div class="chart-card">
@@ -2416,41 +2515,25 @@ function renderRetention(M) {
   });
 
   // Mixed chart: red bars = monthly unsubscribe volume (left axis), blue
-  // line = churn % = unsubscribes / total emails sent that month * 100
-  // (right axis). The line only renders for months where the lambda
-  // shipped a non-null churn_pct (i.e. months with actual qualifying
-  // sends — Recipients > 95). Months with no qualifying send show the bar
-  // but no point on the rate line, avoiding divide-by-zero spikes.
-  const mc = M.monthly_churn || {labels:[],data:[],churn_pct:[],total_sent:[]};
+  // Monthly Churn Volume — bars only. The per-send churn-rate line that
+  // used to overlay this chart was moved to its own card below
+  // (Campaign Unsubscribe Rate), and the bar series here is now just the
+  // raw unsubscribe volume so the chart isn't trying to communicate two
+  // metrics at once.
+  const mc = M.monthly_churn || {labels:[],data:[],churn_pct:[],campaign_unsub_pct:[],total_sent:[],campaign_unsubs:[]};
   const labels    = mc.labels || [];
-  const churnPctR = (mc.churn_pct || []).map(v => v == null ? null : Number(v));
   const sends     = mc.total_sent || [];
-  const churnDatasets = [
-    { type: 'bar', label: 'Unsubscribes', data: mc.data || [],
-      backgroundColor: '#cf222e', borderRadius: 4, yAxisID: 'y',
-      order: 2 }
-  ];
-  // Only attach the line when at least one month has a rate
-  if (churnPctR.some(v => v != null)) {
-    churnDatasets.push({
-      type: 'line', label: 'Churn % of sends',
-      data: churnPctR,
-      borderColor: '#0969da', backgroundColor: 'transparent',
-      tension: 0.3, pointRadius: 3, borderWidth: 2,
-      yAxisID: 'y1', spanGaps: true, order: 1
-    });
-  }
   new Chart(document.getElementById('ret-churn'), {
-    data: { labels, datasets: churnDatasets },
+    type: 'bar',
+    data: { labels, datasets: [
+      { label: 'Unsubscribes', data: mc.data || [],
+        backgroundColor: '#cf222e', borderRadius: 4 }
+    ]},
     options: { responsive:true, maintainAspectRatio:false,
       plugins:{
-        legend:{ position:'top', labels:{ font:{ size:11 } } },
+        legend:{ display:false },
         tooltip:{ callbacks:{
           label: c => {
-            if (c.dataset.type === 'line') {
-              const v = c.parsed.y;
-              return `Churn rate: ${v == null ? '—' : v.toFixed(3) + '%'}`;
-            }
             const i = c.dataIndex;
             const sent = sends[i] || 0;
             return [
@@ -2460,13 +2543,48 @@ function renderRetention(M) {
           }
         }}
       },
-      scales:{
-        y:  { position:'left',  beginAtZero:true, title:{ display:true, text:'Unsubscribes' } },
-        y1: { position:'right', beginAtZero:true, grid:{ drawOnChartArea:false },
-              title:{ display:true, text:'Churn % of sends' },
-              ticks:{ callback: v => Number(v).toFixed(2) + '%' } }
-      } }
+      scales:{ y:{ beginAtZero:true, title:{ display:true, text:'Unsubscribes' } } }
+    }
   });
+
+  // Campaign Unsubscribe Rate — pure-Campaigns line: SUM(Unsubscribed) /
+  // SUM(Recipients) * 100 per month, both columns from `Campaigns`. Months
+  // with no qualifying send produce a null point (spanGaps keeps the line
+  // continuous either side). Empty array safe — chart still renders.
+  const campRate    = (mc.campaign_unsub_pct || []).map(v => v == null ? null : Number(v));
+  const campUnsubs  = mc.campaign_unsubs || [];
+  const campTarget = document.getElementById('ret-camp-unsub-rate');
+  if (campTarget) {
+    new Chart(campTarget, {
+      type: 'line',
+      data: { labels, datasets: [
+        { label: 'Campaign unsub rate', data: campRate,
+          borderColor: '#0969da', backgroundColor: 'rgba(9,105,218,.10)',
+          tension: 0.3, pointRadius: 3, borderWidth: 2, fill: true, spanGaps: true }
+      ]},
+      options: { responsive:true, maintainAspectRatio:false,
+        plugins:{
+          legend:{ display:false },
+          tooltip:{ callbacks:{
+            label: c => {
+              const v = c.parsed.y;
+              const i = c.dataIndex;
+              const u = campUnsubs[i] || 0;
+              const s = sends[i] || 0;
+              return [
+                `Rate: ${v == null ? '—' : v.toFixed(3) + '%'}`,
+                s ? `${u.toLocaleString()} campaign-link unsubs / ${s.toLocaleString()} sends` : 'No qualifying sends this month'
+              ];
+            }
+          }}
+        },
+        scales:{
+          y:{ beginAtZero:true, title:{ display:true, text:'Campaign unsub rate' },
+              ticks:{ callback: v => Number(v).toFixed(2) + '%' } }
+        }
+      }
+    });
+  }
 }
 
 /* "Filter sources" dropdown plumbing for the Retention survival overlay.

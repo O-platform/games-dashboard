@@ -23,44 +23,44 @@
       "best_click_rate": 2.37
     },
     "previous": {
-      "campaigns": 3,
-      "recipients": 2165900,
-      "unique_opens": 1102421,
-      "clicks": 32337,
+      "campaigns": 4,
+      "recipients": 2165997,
+      "unique_opens": 1102492,
+      "clicks": 32370,
       "unsubs": 4839,
       "bounced": 5786,
-      "avg_open_rate": 51.47,
-      "avg_click_rate": 1.53,
-      "best_open_rate": 56.0,
-      "best_click_rate": 2.16
+      "avg_open_rate": 56.9,
+      "avg_click_rate": 9.65,
+      "best_open_rate": 73.2,
+      "best_click_rate": 34.02
     },
     "delta": {
       "campaigns": {
-        "value": 0,
-        "pct_change": 0.0
+        "value": -1,
+        "pct_change": -25.0
       },
       "recipients": {
-        "value": -16300,
+        "value": -16397,
         "pct_change": -0.8
       },
       "unique_opens": {
-        "value": -151202,
+        "value": -151273,
         "pct_change": -13.7
       },
       "clicks": {
-        "value": 11268,
-        "pct_change": 34.8
+        "value": 11235,
+        "pct_change": 34.7
       },
       "unsubs": {
         "value": -1078,
         "pct_change": -22.3
       },
       "avg_open_rate": {
-        "value": -6.31,
+        "value": -11.74,
         "unit": "pp"
       },
       "avg_click_rate": {
-        "value": 0.47,
+        "value": -7.65,
         "unit": "pp"
       }
     }
@@ -175,11 +175,36 @@
       "previous_date": "2026-05-06",
       "comparison": {
         "current": null,
-        "previous": null,
+        "previous": {
+          "campaigns": 1,
+          "recipients": 97,
+          "unique_opens": 71,
+          "clicks": 33,
+          "unsubs": 0,
+          "bounced": 0,
+          "avg_open_rate": 73.2,
+          "avg_click_rate": 34.02,
+          "best_open_rate": 73.2,
+          "best_click_rate": 34.02
+        },
         "delta": {}
       },
       "current_campaigns": [],
-      "previous_campaigns": []
+      "previous_campaigns": [
+        {
+          "name": "SA_EA_20260506 (Super Age Games)",
+          "subject": "Welcome, Founding Athlete",
+          "sent_date": "2026-05-06",
+          "weekday": "Wednesday",
+          "recipients": 97,
+          "unique_opens": 71,
+          "clicks": 33,
+          "unsubs": 0,
+          "open_rate": 73.2,
+          "click_rate": 34.02,
+          "url": "http://createsend.com/t/y-F24F79A4AC358F292540EF23F30FEDED"
+        }
+      ]
     },
     {
       "weekday": "Thursday",
@@ -444,6 +469,19 @@
       "url": "http://createsend.com/t/y-52975ED75AACDBEB2540EF23F30FEDED"
     },
     {
+      "name": "SA_EA_20260506 (Super Age Games)",
+      "subject": "Welcome, Founding Athlete",
+      "sent_date": "2026-05-06",
+      "weekday": "Wednesday",
+      "recipients": 97,
+      "unique_opens": 71,
+      "clicks": 33,
+      "unsubs": 0,
+      "open_rate": 73.2,
+      "click_rate": 34.02,
+      "url": "http://createsend.com/t/y-F24F79A4AC358F292540EF23F30FEDED"
+    },
+    {
       "name": "SA_PF_20260507 (Sponsor: AG1)",
       "subject": "How Aggressive Are You, Naturally? Take The Test",
       "sent_date": "2026-05-07",
@@ -496,7 +534,7 @@
       3,
       5,
       5,
-      3,
+      4,
       3
     ],
     "avg_open_rate": [
@@ -510,7 +548,7 @@
       49.19,
       52.78,
       54.58,
-      51.47,
+      56.9,
       45.16
     ],
     "avg_click_rate": [
@@ -524,7 +562,7 @@
       2.54,
       6.02,
       2.47,
-      1.53,
+      9.65,
       2.0
     ],
     "recipients": [
@@ -538,7 +576,7 @@
       2304906,
       2544161,
       2297178,
-      2165900,
+      2165997,
       2149600
     ],
     "clicks": [
@@ -552,7 +590,7 @@
       58286,
       58456,
       61056,
-      32337,
+      32370,
       43605
     ]
   },
@@ -583,7 +621,7 @@
       58286,
       58456,
       61056,
-      32337,
+      32370,
       43605,
       16873
     ],
@@ -593,7 +631,7 @@
       1103968,
       1089245,
       1085416,
-      1102421,
+      1102492,
       951219,
       257312
     ],
@@ -603,7 +641,7 @@
       3,
       5,
       5,
-      3,
+      4,
       3,
       1
     ],
@@ -637,27 +675,27 @@
     ],
     "clicks": [
       224175,
-      233186,
+      233323,
       222695,
       270223,
       209140,
-      110469
+      110502
     ],
     "unique_opens": [
       5081387,
-      5437738,
+      5438383,
       4834284,
       5540886,
       4783582,
-      2701718
+      2701789
     ],
     "campaigns": [
       12,
-      13,
+      14,
       12,
       16,
       17,
-      9
+      10
     ],
     "is_current": [
       false,
@@ -1160,6 +1198,241 @@
       false,
       false,
       true
+    ]
+  },
+  "weekly_digest": {
+    "labels": [
+      "Mar 23",
+      "Mar 30",
+      "Apr 06",
+      "Apr 13",
+      "Apr 20",
+      "Apr 27",
+      "May 04",
+      "May 11",
+      "May 18"
+    ],
+    "week_starts": [
+      "2026-03-23",
+      "2026-03-30",
+      "2026-04-06",
+      "2026-04-13",
+      "2026-04-20",
+      "2026-04-27",
+      "2026-05-04",
+      "2026-05-11",
+      "2026-05-18"
+    ],
+    "is_current": [
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      true
+    ],
+    "new_subs": [
+      6877,
+      5780,
+      10629,
+      11047,
+      12890,
+      6985,
+      5786,
+      10199,
+      285
+    ],
+    "unsubs": [
+      5906,
+      5136,
+      6503,
+      6510,
+      6462,
+      5493,
+      5894,
+      5186,
+      1482
+    ],
+    "campaigns_sent": [
+      3,
+      4,
+      4,
+      3,
+      5,
+      5,
+      4,
+      3,
+      1
+    ],
+    "total_sent": [
+      2151304,
+      2175880,
+      2236787,
+      2304906,
+      2544161,
+      2297178,
+      2165997,
+      2149600,
+      817633
+    ],
+    "avg_open_rate": [
+      56.07,
+      57.54,
+      57.8,
+      49.19,
+      52.78,
+      54.58,
+      56.9,
+      45.16,
+      31.47
+    ],
+    "avg_click_rate": [
+      2.92,
+      1.45,
+      1.19,
+      2.54,
+      6.02,
+      2.47,
+      9.65,
+      2.0,
+      2.06
+    ],
+    "churn_pct_of_sends": [
+      0.2745,
+      0.236,
+      0.2907,
+      0.2824,
+      0.254,
+      0.2391,
+      0.2721,
+      0.2413,
+      0.1813
+    ],
+    "active_eow": [
+      1097606,
+      1097185,
+      1101093,
+      1104409,
+      1109875,
+      1110566,
+      1110496,
+      1114651,
+      null
+    ],
+    "top_sources_by_week": [
+      {
+        "week_start": "2026-05-11",
+        "bucket": "Meta",
+        "subs": 8271
+      },
+      {
+        "week_start": "2026-05-11",
+        "bucket": "Taboola",
+        "subs": 1312
+      },
+      {
+        "week_start": "2026-05-11",
+        "bucket": "website",
+        "subs": 417
+      },
+      {
+        "week_start": "2026-05-11",
+        "bucket": "AllHealthy",
+        "subs": 93
+      },
+      {
+        "week_start": "2026-05-11",
+        "bucket": "Campaign_monitor",
+        "subs": 49
+      },
+      {
+        "week_start": "2026-05-11",
+        "bucket": "superage",
+        "subs": 22
+      },
+      {
+        "week_start": "2026-05-11",
+        "bucket": "healthbrief",
+        "subs": 21
+      },
+      {
+        "week_start": "2026-05-11",
+        "bucket": "Direct",
+        "subs": 10
+      },
+      {
+        "week_start": "2026-05-11",
+        "bucket": "optimism",
+        "subs": 2
+      },
+      {
+        "week_start": "2026-05-11",
+        "bucket": "optimism_intelligence",
+        "subs": 1
+      },
+      {
+        "week_start": "2026-05-11",
+        "bucket": "HealthFirst",
+        "subs": 1
+      },
+      {
+        "week_start": "2026-05-04",
+        "bucket": "Taboola",
+        "subs": 3841
+      },
+      {
+        "week_start": "2026-05-04",
+        "bucket": "Meta",
+        "subs": 998
+      },
+      {
+        "week_start": "2026-05-04",
+        "bucket": "website",
+        "subs": 526
+      },
+      {
+        "week_start": "2026-05-04",
+        "bucket": "healthbrief",
+        "subs": 332
+      },
+      {
+        "week_start": "2026-05-04",
+        "bucket": "Campaign_monitor",
+        "subs": 37
+      },
+      {
+        "week_start": "2026-05-04",
+        "bucket": "superage",
+        "subs": 25
+      },
+      {
+        "week_start": "2026-05-04",
+        "bucket": "AllHealthy",
+        "subs": 12
+      },
+      {
+        "week_start": "2026-05-04",
+        "bucket": "optimism",
+        "subs": 12
+      },
+      {
+        "week_start": "2026-05-04",
+        "bucket": "substack",
+        "subs": 1
+      },
+      {
+        "week_start": "2026-05-04",
+        "bucket": "Direct",
+        "subs": 1
+      },
+      {
+        "week_start": "2026-05-04",
+        "bucket": "games_athletes",
+        "subs": 1
+      }
     ]
   }
 }

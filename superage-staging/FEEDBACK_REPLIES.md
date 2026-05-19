@@ -499,3 +499,56 @@ Implementation: a single `_setAcqWindow(win)` in `index.html` reads from
 `window._acqBarAllTime` (= `M.utm_clicks_performance`) and updates the
 KPI elements, both Chart.js charts, and the table tbody in one pass.
 State doesn't persist across reloads — defaults back to **All time**.
+
+### Monthly Churn Volume — add churn % of sends line + Cohort table active-column relabel
+
+> "Monthly Churn Volume — this is good, let's keep it, but can we also
+> add churn as a % out of total sends at the time? for example in Jan 2025,
+> we lost 2% of those we sent to at the time. … A good metric is % of
+> unsubscribe based on our sends. Meaning how many unsubscribes we got
+> out of the sends (for example in a given month: we sent 1M emails and
+> got 10K unsubscribes) then it's 10K/1M/100 %.
+>
+> The reason is: Some small dedicated sends are sent to 20K, they would
+> get 200 unsubscribe, hence we need to add all unsubscribes in a given
+> month, and divide by all sends in that given month.
+>
+> also in cohort performance make it active (send to ), and say the
+> active % (of cohort size)"
+
+**✓ shipped — Monthly Churn chart.** Q38 was extended into a mixed
+bar + line:
+
+- **Red bars** (left axis) — unsubscribes per month, unchanged.
+- **Blue line** (right axis, new) — `churn_pct = unsubscribes ÷ total
+  emails sent that month × 100`. `total_sent` is `SUM(Recipients)` over
+  every `Campaigns` row with `Recipients > 95` whose `Sent Date` falls
+  in the month.
+
+SQL is a `FULL OUTER JOIN` of an `unsubs` CTE (from `subscribers`) and a
+`sends` CTE (from `Campaigns`), so months with sends-but-no-unsubs and
+months with unsubs-but-no-sends both still appear. Months with no
+qualifying send render a bar but **no point on the line** (the lambda
+ships `null` for that month's `churn_pct`, the chart uses `spanGaps:
+true`) — avoids divide-by-zero spikes.
+
+The new JSON shape is `M.monthly_churn = { labels, data, total_sent,
+campaigns, churn_pct }` (the existing `data` array is unchanged so
+anything else reading it keeps working).
+
+> **Caveat noted on both the chart insight strip and the Q38 doc:**
+> `Recipients` on `Campaigns` is per-send, **not deduplicated across
+> campaigns**. A subscriber who receives 4 emails in a month contributes
+> 4× to `total_sent`, so the denominator is **email send events /
+> impressions**, not unique people reached. That's intentional for this
+> rate — we want damage per send-event so a high-cadence month isn't
+> unfairly favoured. If you ever want unique-reach instead, the alternative
+> is `COUNT(DISTINCT email)` from a per-subscriber send table joined
+> through `Campaigns_Clicks`.
+
+**✓ shipped — Cohort Performance Table.** The column previously labelled
+`Total Active` is now **`Active (Send-To)`** (matches the Send-To
+terminology used everywhere else); the percentage column previously
+labelled `Active %` is now **`Active % (of Cohort Size)`** so the
+denominator is explicit in the header itself. JSON field names
+(`active_now`, `active_pct`) are unchanged.

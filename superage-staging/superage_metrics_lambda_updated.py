@@ -852,14 +852,57 @@ def lambda_handler(event, context):
         """)
         survival_by_source_rows = cur.fetchall()
 
+        # Monthly churn volume + churn rate %. The bar chart counts
+        # subscribers who unsubscribed in each month; the new line series
+        # divides that by the **total emails sent that month** (sum of
+        # Recipients across every qualifying campaign send in the month —
+        # the same Recipients > 95 filter we use everywhere else).
+        #
+        # IMPORTANT — Recipients is NOT deduplicated across campaigns.
+        # The same subscriber appears in `Recipients` once per campaign
+        # they received, so SUM(Recipients) is total email **send events
+        # / impressions**, not unique people reached. That's intentional
+        # here: we want a per-impression damage signal so a high-frequency
+        # month with many campaigns isn't artificially favoured over a
+        # low-frequency one. If you ever need unique reach you'd have to
+        # join `Campaigns_Clicks` or build a subscriber-level send table.
+        # A falling ratio while sends grow signals improving deliverability /
+        # creative fit.
         cur.execute(f"""
+            WITH unsubs AS (
+                SELECT
+                    DATE_TRUNC('month', date_unsubscribed)::date AS month,
+                    COUNT(*) AS churned
+                FROM {S}.subscribers
+                WHERE state = 'Unsubscribed'
+                  AND date_unsubscribed IS NOT NULL
+                  AND date_unsubscribed::date < CURRENT_DATE
+                GROUP BY 1
+            ),
+            sends AS (
+                SELECT
+                    DATE_TRUNC('month', "Sent Date "::date)::date AS month,
+                    SUM("Recipients") AS total_sent,
+                    COUNT(*)          AS campaigns
+                FROM {S}."Campaigns"
+                WHERE "Sent Date " IS NOT NULL
+                  AND "Sent Date "::date < CURRENT_DATE
+                  AND "Recipients" > 95
+                GROUP BY 1
+            )
             SELECT
-                DATE_TRUNC('month', date_unsubscribed)::date AS month,
-                COUNT(*) AS churned
-            FROM {S}.subscribers
-            WHERE state = 'Unsubscribed'
-              AND date_unsubscribed IS NOT NULL AND date_unsubscribed::date < CURRENT_DATE
-            GROUP BY 1 ORDER BY 1
+                COALESCE(u.month, s.month)              AS month,
+                COALESCE(u.churned, 0)                  AS churned,
+                COALESCE(s.total_sent, 0)               AS total_sent,
+                COALESCE(s.campaigns, 0)                AS campaigns,
+                CASE
+                    WHEN COALESCE(s.total_sent, 0) = 0 THEN NULL
+                    ELSE ROUND(COALESCE(u.churned, 0)::numeric
+                              / s.total_sent * 100, 4)
+                END                                     AS churn_pct
+            FROM unsubs u
+            FULL OUTER JOIN sends s ON u.month = s.month
+            ORDER BY 1
         """)
         churn_monthly_rows = cur.fetchall()
 
@@ -1383,8 +1426,17 @@ def lambda_handler(event, context):
     }
 
     M["monthly_churn"] = {
-        "labels": [str(r["month"]) for r in churn_monthly_rows],
-        "data":   [safe_int(r["churned"]) for r in churn_monthly_rows],
+        "labels":     [str(r["month"]) for r in churn_monthly_rows],
+        "data":       [safe_int(r["churned"]) for r in churn_monthly_rows],
+        # Per-month send volume (sum of Recipients across campaigns with
+        # Recipients > 95). 0 when no qualifying send happened in the month.
+        "total_sent": [safe_int(r["total_sent"]) for r in churn_monthly_rows],
+        # Number of qualifying campaigns sent in the month.
+        "campaigns":  [safe_int(r["campaigns"]) for r in churn_monthly_rows],
+        # Churn % per month = churned / total_sent * 100. None when no
+        # campaign was sent in the month (avoids divide-by-zero confusion).
+        "churn_pct":  [safe_float(r["churn_pct"]) if r.get("churn_pct") is not None else None
+                       for r in churn_monthly_rows],
     }
 
     # ── Retention by Acquisition Source ──

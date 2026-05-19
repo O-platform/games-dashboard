@@ -2080,9 +2080,9 @@ function renderRetention(M) {
         <div class="insight">How many subscribers fall into each lifespan bucket.</div>
       </div>
       <div class="chart-card">
-        <h3>Monthly Churn Volume</h3>
+        <h3>Monthly Churn Volume <span class="badge-inline">— volume + churn %</span></h3>
         <div class="chart-container h300"><canvas id="ret-churn"></canvas></div>
-        <div class="insight">Count of subscribers who unsubscribed in each month.</div>
+        <div class="insight">Red bars = subscribers who unsubscribed each month (left axis). Blue line = <strong>Churn % of sends</strong> = unsubscribes ÷ total emails sent that month × 100 (right axis). A falling line while the bars stay flat / grow signals improving deliverability — we're holding the same audience even as send volume scales. Months with no qualifying send (Recipients &gt; 95) show a bar but no point on the line. <em>Note: <code>Recipients</code> on <code>Campaigns</code> is per-send, <strong>not deduplicated across campaigns</strong> — a subscriber who receives 4 emails in a month counts 4× toward total sent, so the denominator is email impressions, not unique people reached. That's intentional: a per-impression damage signal so a high-cadence month isn't unfairly compared with a low-cadence one.</em></div>
       </div>
     </div>
     <h2 style="font-size:14px;font-weight:600;color:var(--text);margin:22px 0 10px;">Retention by Acquisition Source <span class="badge-inline" style="text-transform:none;">utm_source → source → 'Organic', bucketed</span></h2>
@@ -2180,15 +2180,57 @@ function renderRetention(M) {
       scales:{ y:{ beginAtZero:true } } }
   });
 
-  const mc = M.monthly_churn || {labels:[],data:[]};
+  // Mixed chart: red bars = monthly unsubscribe volume (left axis), blue
+  // line = churn % = unsubscribes / total emails sent that month * 100
+  // (right axis). The line only renders for months where the lambda
+  // shipped a non-null churn_pct (i.e. months with actual qualifying
+  // sends — Recipients > 95). Months with no qualifying send show the bar
+  // but no point on the rate line, avoiding divide-by-zero spikes.
+  const mc = M.monthly_churn || {labels:[],data:[],churn_pct:[],total_sent:[]};
+  const labels    = mc.labels || [];
+  const churnPctR = (mc.churn_pct || []).map(v => v == null ? null : Number(v));
+  const sends     = mc.total_sent || [];
+  const churnDatasets = [
+    { type: 'bar', label: 'Unsubscribes', data: mc.data || [],
+      backgroundColor: '#cf222e', borderRadius: 4, yAxisID: 'y',
+      order: 2 }
+  ];
+  // Only attach the line when at least one month has a rate
+  if (churnPctR.some(v => v != null)) {
+    churnDatasets.push({
+      type: 'line', label: 'Churn % of sends',
+      data: churnPctR,
+      borderColor: '#0969da', backgroundColor: 'transparent',
+      tension: 0.3, pointRadius: 3, borderWidth: 2,
+      yAxisID: 'y1', spanGaps: true, order: 1
+    });
+  }
   new Chart(document.getElementById('ret-churn'), {
-    type: 'bar',
-    data: { labels: mc.labels||[], datasets: [
-      { label: 'Churn (unsubscribes)', data: mc.data||[], backgroundColor: '#cf222e', borderRadius: 4 }
-    ]},
+    data: { labels, datasets: churnDatasets },
     options: { responsive:true, maintainAspectRatio:false,
-      plugins:{ legend:{ display:false } },
-      scales:{ y:{ beginAtZero:true } } }
+      plugins:{
+        legend:{ position:'top', labels:{ font:{ size:11 } } },
+        tooltip:{ callbacks:{
+          label: c => {
+            if (c.dataset.type === 'line') {
+              const v = c.parsed.y;
+              return `Churn rate: ${v == null ? '—' : v.toFixed(3) + '%'}`;
+            }
+            const i = c.dataIndex;
+            const sent = sends[i] || 0;
+            return [
+              `Unsubscribes: ${Number(c.parsed.y).toLocaleString()}`,
+              sent ? `Total emails sent: ${sent.toLocaleString()}` : 'No qualifying sends this month'
+            ];
+          }
+        }}
+      },
+      scales:{
+        y:  { position:'left',  beginAtZero:true, title:{ display:true, text:'Unsubscribes' } },
+        y1: { position:'right', beginAtZero:true, grid:{ drawOnChartArea:false },
+              title:{ display:true, text:'Churn % of sends' },
+              ticks:{ callback: v => Number(v).toFixed(2) + '%' } }
+      } }
   });
 }
 
@@ -2290,8 +2332,8 @@ function renderCohort(M) {
           <th title="Join-month label">Cohort</th>
           <th title="Cohort size at join — total subscribers who joined in this month">Cohort Size</th>
           <th title="Still on the list today (state = Active or Bounced)">Total Subscribers</th>
-          <th title="Reachable engaged subscribers — state = 'Active' AND engagement_segment NOT IN Ghosts/Zombies/Dormant">Total Active</th>
-          <th title="Total Active / Cohort Size — canonical Active rule">Active %</th>
+          <th title="Reachable engaged subscribers — state = 'Active' AND engagement_segment NOT IN Ghosts/Zombies/Dormant">Active (Send-To)</th>
+          <th title="Active (Send-To) / Cohort Size — canonical Active rule">Active % (of Cohort Size)</th>
           <th title="Churned / Cohort Size">Churn %</th>
           <th title="Subscribers who unsubscribed within 90 days of joining, as % of cohort">Early Churn (90d)</th>
           <th title="Campaigns with > 95 recipients sent during this cohort's join month">Campaigns Sent</th>

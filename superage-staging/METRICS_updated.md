@@ -1246,19 +1246,61 @@ M.survival_curve_by_source = {
 }
 ```
 
-## Q38 — Subscriber Retention: Monthly Churn Volume (all subscribers)
+## Q38 — Subscriber Retention: Monthly Churn Volume + Churn % of Sends
+
+Bar chart (left axis) plots the count of subscribers who unsubscribed in each calendar month. A blue **Churn % of sends** line (right axis) overlays it, computed as **unsubscribes ÷ total emails sent that month × 100** — the share of the audience we lost per send-volume unit. A falling line while volume bars grow is the "healthy" signal: send volume is scaling without proportional unsubscribe damage. Months with no qualifying send (`Recipients > 95`) show a bar but no point on the line (avoids divide-by-zero).
 
 ```sql
+WITH unsubs AS (
+    SELECT
+        DATE_TRUNC('month', date_unsubscribed)::date AS month,
+        COUNT(*) AS churned
+    FROM superage.subscribers
+    WHERE state = 'Unsubscribed'
+      AND date_unsubscribed IS NOT NULL
+      AND date_unsubscribed::date < CURRENT_DATE
+    GROUP BY 1
+),
+sends AS (
+    SELECT
+        DATE_TRUNC('month', "Sent Date "::date)::date AS month,
+        SUM("Recipients") AS total_sent,
+        COUNT(*)          AS campaigns
+    FROM superage."Campaigns"
+    WHERE "Sent Date " IS NOT NULL
+      AND "Sent Date "::date < CURRENT_DATE
+      AND "Recipients" > 95
+    GROUP BY 1
+)
 SELECT
-    DATE_TRUNC('month', date_unsubscribed)::date AS month,
-    COUNT(*) AS churned
-FROM superage.subscribers
-WHERE state = 'Unsubscribed'
-  AND date_unsubscribed IS NOT NULL AND date_unsubscribed::date < CURRENT_DATE
-GROUP BY 1 ORDER BY 1;
+    COALESCE(u.month, s.month)                                      AS month,
+    COALESCE(u.churned, 0)                                          AS churned,
+    COALESCE(s.total_sent, 0)                                       AS total_sent,
+    COALESCE(s.campaigns, 0)                                        AS campaigns,
+    CASE
+        WHEN COALESCE(s.total_sent, 0) = 0 THEN NULL
+        ELSE ROUND(COALESCE(u.churned, 0)::numeric / s.total_sent * 100, 4)
+    END                                                             AS churn_pct
+FROM unsubs u
+FULL OUTER JOIN sends s ON u.month = s.month
+ORDER BY 1;
 ```
 
-Exposed as `M.monthly_churn = { labels: [...], data: [...] }`.
+Exposed as:
+
+```json
+M.monthly_churn = {
+  "labels":     ["YYYY-MM-01", ...],
+  "data":       [<churned per month>],
+  "total_sent": [<sum of Recipients per month, 0 if no qualifying send>],
+  "campaigns":  [<count of qualifying campaigns per month>],
+  "churn_pct":  [<churned / total_sent * 100, or null when no sends>]
+}
+```
+
+> **Why total_sent rather than total_subscribers?** A small dedicated 20K-recipient send can generate 200 unsubs (1%) while a 1M-recipient send can produce 10K unsubs (1%). Both should read as the same churn rate. Aggregating *all* unsubscribes and dividing by *all emails sent* in the month gives the per-impression damage signal regardless of how the month's volume was distributed across campaigns.
+>
+> **Caveat: `Recipients` on `Campaigns` is per-send, NOT deduplicated across campaigns.** The same subscriber appears in `Recipients` once per campaign they received, so `SUM(Recipients)` is a total of **email send events / impressions** — not unique people reached. Two campaigns each sent to the same 100K subscribers contributes 200K to the denominator, not 100K. That's intentional for this churn-rate signal: damage per email impression, so a high-cadence month with many campaigns isn't unfairly favoured over a low-cadence one. If you ever need unique-reach denominators instead you'd have to build a per-subscriber send table (e.g. join `Campaigns_Clicks` events back to `subscribers` and `COUNT(DISTINCT email)` per month).
 
 ## Q39 — Cohort Analysis: Retention Heatmap
 
@@ -1301,8 +1343,8 @@ Restricted to cohorts where `date_joined >= '2025-01-01'` so the table focuses o
 |---|---|---|
 | **Cohort Size** | Subscribers who joined this month | `COUNT(*)` over the cohort |
 | **Total Subscribers** | Still on the list today | `COUNT(*) FILTER (WHERE state IN ('Active','Bounced'))` |
-| **Total Active** | Reachable + engaged | `COUNT(*) FILTER (WHERE state = 'Active' AND engagement_segment NOT IN ('Ghosts','Zombies','Dormant'))` |
-| Active % | Total Active / Cohort Size — canonical Active rule | derived |
+| **Active (Send-To)** | Reachable + engaged | `COUNT(*) FILTER (WHERE state = 'Active' AND engagement_segment NOT IN ('Ghosts','Zombies','Dormant'))` |
+| Active % (of Cohort Size) | Active (Send-To) / Cohort Size — canonical Active rule | derived |
 | Churn % | Unsubscribed / Cohort Size | derived |
 | Early Churn (90d) | Unsubscribed within 90 days of joining / Cohort Size | derived |
 | Campaigns Sent | Qualifying campaigns sent during the cohort's join month | `Campaigns` table, `Recipients > 95` |
@@ -1455,3 +1497,5 @@ ORDER BY c.cohort_month;
 52. **Cohort table: "Still on List %" + "Retention %" → single "Active %" column (2026-05)**: the Cohort Performance Table previously carried two near-duplicate percentage columns — Still on List % (`total_subscribers / cohort_size`, where total_subscribers = state IN Active+Bounced) and Retention % (`active_now / cohort_size`). Consolidated into one column called **Active %** with formula `total_active / cohort_size` (canonical Active rule: state='Active' AND engagement_segment NOT IN Ghosts/Zombies/Dormant). The lambda now emits `cohort_table[].active_pct`; the HTML reads that field and falls back to the legacy `retention_pct` if the lambda hasn't re-run yet. The deprecated `still_on_list_pct` JSON field is no longer emitted.
 53. **Click Analysis: Sunday Spotlight toggle now drives the KPIs + moved above the cards (2026-05)**: the Click Analysis toolbar (Include Sunday Spotlight switch + Section 1 metric dropdown) was lifted to the top of the tab — sits **above** the four KPI cards now — and the KPIs themselves were rewired to react to it. The card set was rebuilt around campaign-level aggregates that can be filtered by name: **Campaigns Sent**, **Total Recipients**, **Total Clicks**, **Avg Clicks / Campaign**, all summed from `M.campaign_table` rows filtered with the same `name NOT ILIKE '%sunday spotlight%'` predicate the chart re-aggregators use. `_renderClickKpis()` (new) runs in `_refreshClicksTab()` and on initial render so the numbers stay in sync with the bars below. The legacy article-level KPI fields (`total_article_clicks` / `unique_article_clickers` / `articles_clicked_count` / `avg_clicks_per_article`) couldn't be filtered by Sunday Spotlight at the SQL layer (no campaign name on `articles_clicks`), so they're no longer surfaced on this tab; the JSON fields still ship as backwards-compat for any external consumer.
 54. **Overview donut: merge Dormant / Ghost / Zombie into one slice (2026-05)**: the Current Subscriber Mix donut on the Overview tab was reduced from five slices to **three** — the three disengaged segments (`Zombies`, `Ghosts`, `Dormant`) now sum into a single **Dormant / Ghost / Zombie** bucket. The SQL still produces per-segment FILTER counts (kept for future reuse), but `M.subscriber_engagement_mix.data` ships `[send_to, zombies + ghosts + dormant, other_residual]` and the chart's three slices are coloured green / amber / grey. Insight strip + Q2 docs + Section 1 KPI bullet updated to match.
+55. **Monthly Churn Volume: add churn % of sends line (2026-05)**: Q38 was extended to also compute `total_sent` (sum of `Recipients` for campaigns with `Recipients > 95` sent that month) and `churn_pct = churned / total_sent * 100`. The Retention tab's Monthly Churn chart switched from a single red bar series to a mixed bar + line — red bars stay on the left axis (unsubscribe volume), new blue line on the right axis (churn % of sends, with 3-decimal-place ticks). Months with no qualifying send (`Recipients > 95`) show a bar but no line point so the rate axis doesn't spike on divide-by-zero. JSON `M.monthly_churn` now also carries `total_sent`, `campaigns`, `churn_pct` arrays alongside the legacy `data` array. The signal: a falling churn-% line while send volume bars stay flat or grow is the "healthy" pattern — more reach without proportional damage to the list. **Caveat:** `Recipients` is per-send and not deduplicated across campaigns, so the denominator is total send events / impressions (a subscriber receiving 4 emails contributes 4× to `total_sent`). That's intentional — it gives a per-impression damage signal rather than per-unique-person; documented on the chart insight strip and in Q38.
+56. **Cohort table: relabel "Total Active" → "Active (Send-To)" + "Active %" → "Active % (of Cohort Size)" (2026-05)**: column headers + their `title=` tooltips updated on the Cohort Performance Table to match the canonical Send-To terminology used elsewhere on the dashboard. Underlying JSON field names (`active_now`, `active_pct`) unchanged.

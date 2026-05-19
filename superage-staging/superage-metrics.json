@@ -56,22 +56,16 @@
   "subscriber_engagement_mix": {
     "labels": [
       "Send-To",
-      "Zombies",
-      "Ghosts",
-      "Dormant",
+      "Dormant / Ghost / Zombie",
       "Other"
     ],
     "data": [
       709095,
-      83474,
-      104195,
-      109439,
+      297108,
       107049
     ],
     "colors": [
       "#1a7f37",
-      "#cf222e",
-      "#8250df",
       "#9a6700",
       "#9ca3af"
     ]
@@ -8629,11 +8623,11 @@
       "365d+"
     ],
     "data": [
-      249618,
-      182837,
-      205216,
-      319203,
-      847748
+      249595,
+      182821,
+      205280,
+      318906,
+      848053
     ]
   },
   "survival_curve": {

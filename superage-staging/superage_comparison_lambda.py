@@ -687,13 +687,12 @@ def lambda_handler(event, context):
             top_source_rows = cur.fetchall()
 
             # (C2) Article-level activity for the **last completed Mon–Sun**
-            # ISO week, split by `articles_clicks.type` so the digest can list
-            # Top Content Hits, Sponsor Clicks, and Immersion Clicks separately
-            # (mirrors the Slack #weekly_automation format). One row per
-            # (type, article_title, url, issue_name, issue_date). We bucket by
-            # the campaign's `issue_date` rather than per-click event date
-            # because that's the column `articles_clicks` carries. `games` /
-            # `waitlist` placements are excluded — same rule as everywhere else.
+            # ISO week, restricted to the three placement types the digest
+            # cares about: editorial, sponsor, immersion. The Slack
+            # #weekly_automation post uses the same three sections. One row
+            # per (type, article_title, url, issue_name, issue_date). We
+            # bucket by the campaign's `issue_date` because that's the column
+            # `articles_clicks` carries (no per-click event date here).
             cur.execute(f"""
                 WITH wk AS (
                     SELECT
@@ -701,7 +700,7 @@ def lambda_handler(event, context):
                         DATE_TRUNC('week', CURRENT_DATE)::date                       AS wk_end_excl
                 )
                 SELECT
-                    LOWER(COALESCE(NULLIF(TRIM(ac.type), ''), 'unknown')) AS atype,
+                    LOWER(TRIM(ac.type))                                 AS atype,
                     ac.article_title,
                     ac.url,
                     ac.issue_name,
@@ -712,7 +711,7 @@ def lambda_handler(event, context):
                 WHERE ac.issue_date IS NOT NULL
                   AND ac.issue_date::date >= wk.wk_start
                   AND ac.issue_date::date <  wk.wk_end_excl
-                  AND LOWER(COALESCE(ac.type, '')) NOT IN ('games','waitlist')
+                  AND LOWER(TRIM(ac.type)) IN ('editorial','sponsor','immersion')
                 GROUP BY 1, ac.article_title, ac.url, ac.issue_name, ac.issue_date::date
                 ORDER BY unique_clicks DESC NULLS LAST
                 LIMIT 200
@@ -874,15 +873,15 @@ def lambda_handler(event, context):
                  "subs":       safe_int(r["subs"])}
                 for r in top_source_rows
             ],
-            # Article-level breakdown for the **last completed Mon–Sun**.
-            # Split into three buckets by `articles_clicks.type`:
+            # Article-level breakdown for the **last completed Mon–Sun**,
+            # split into three buckets by `articles_clicks.type` — the only
+            # three the digest surfaces:
+            #   • editorial  → "Editorial Clicks" list
             #   • sponsor    → "Sponsor Clicks" list
             #   • immersion  → "Immersion Clicks" list
-            #   • <anything> → "Top Content Hits" (the catch-all — high /
-            #                  medium / low / article / null all roll here)
             # Each list is sorted by unique_clicks DESC; client slices to
             # top 5 per section.
-            "top_content_this_week": [
+            "top_editorial_this_week": [
                 {"title":         str(r["article_title"] or ""),
                  "url":           str(r["url"] or ""),
                  "issue_name":    str(r["issue_name"] or ""),
@@ -890,7 +889,7 @@ def lambda_handler(event, context):
                  "unique_clicks": safe_int(r["unique_clicks"]),
                  "total_clicks":  safe_int(r["total_clicks"])}
                 for r in digest_articles_rows
-                if (r["atype"] or "") not in ("sponsor", "immersion")
+                if (r["atype"] or "") == "editorial"
             ],
             "top_sponsors_this_week": [
                 {"title":         str(r["article_title"] or ""),

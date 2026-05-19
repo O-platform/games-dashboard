@@ -536,10 +536,17 @@ function renderDigest(M) {
   const sparkLabels = wd.labels.filter((_, i) => !wd.is_current[i]);
   const sparkOf = key => (wd[key] || []).filter((_, i) => !wd.is_current[i]);
 
+  // Net change per week = new_subs - unsubs. Computed client-side from
+  // the two arrays in the JSON so we don't need a new lambda field.
+  const netChange      = (wd.new_subs || []).map((n, i) => Number(n||0) - Number((wd.unsubs || [])[i] || 0));
+  const sparkNetChange = netChange.filter((_, i) => !wd.is_current[i]);
+  const numFromArr = (arr) => (arr && arr[lastCompletedIdx] != null ? Number(arr[lastCompletedIdx]) : null);
+  const prvFromArr = (arr) => (arr && priorCompletedIdx != null && arr[priorCompletedIdx] != null ? Number(arr[priorCompletedIdx]) : null);
+
   // Tile definitions: label, current/prior values, sparkline array, formatter,
   // "higher is better" hint for delta arrow colouring (null = neutral).
   const tiles = [
-    { label: 'New Subscribers',         value: num(wd.new_subs),       prior: prv(wd.new_subs),       spark: sparkOf('new_subs'),       fmt: v => v == null ? '—' : Number(v).toLocaleString(),                                higherIsBetter: true,  spark_color: '#1a7f37' },
+    { label: 'Net Change',              value: numFromArr(netChange),  prior: prvFromArr(netChange),  spark: sparkNetChange,            fmt: v => v == null ? '—' : (v >= 0 ? '+' : '') + Number(v).toLocaleString(),         higherIsBetter: true,  spark_color: '#1a7f37' },
     { label: 'Send-To Base (end of week)', value: num(wd.active_eow),  prior: prv(wd.active_eow),     spark: sparkOf('active_eow'),     fmt: v => v == null ? '—' : Number(v).toLocaleString(),                                higherIsBetter: true,  spark_color: '#0969da' },
     { label: 'Churn % of Sends',         value: num(wd.churn_pct_of_sends), prior: prv(wd.churn_pct_of_sends), spark: sparkOf('churn_pct_of_sends'), fmt: v => v == null ? '—' : Number(v).toFixed(3) + '%',                       higherIsBetter: false, spark_color: '#cf222e' },
     { label: 'Campaigns Sent',           value: num(wd.campaigns_sent), prior: prv(wd.campaigns_sent), spark: sparkOf('campaigns_sent'), fmt: v => v == null ? '—' : Number(v).toLocaleString(),                                higherIsBetter: null,  spark_color: '#8250df' },
@@ -697,11 +704,15 @@ function _digestSummaryBody(wd, lastIdx, priorIdx) {
     </div>`;
   };
 
-  const content    = renderList('Top Content Hits',   wd.top_content_this_week);
-  const sponsors   = renderList('Sponsor Clicks',     wd.top_sponsors_this_week);
-  const immersions = renderList('Immersion Clicks',   wd.top_immersions_this_week);
+  // Three sections, in the order: Editorial / Sponsor / Immersion. The
+  // `top_editorial_this_week` key replaced an older `top_content_this_week`
+  // (catch-all of every non-sponsor/immersion type) — fall back to the old
+  // key if the comparison lambda hasn't been redeployed yet.
+  const editorial  = renderList('Editorial Clicks', wd.top_editorial_this_week || wd.top_content_this_week);
+  const sponsors   = renderList('Sponsor Clicks',   wd.top_sponsors_this_week);
+  const immersions = renderList('Immersion Clicks', wd.top_immersions_this_week);
 
-  return overall + srcLine + content + sponsors + immersions;
+  return overall + srcLine + editorial + sponsors + immersions;
 }
 
 function renderCampaigns(M) {

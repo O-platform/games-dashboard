@@ -701,31 +701,14 @@ function _digestSummaryBody(wd, lastIdx, priorIdx, lastLabel) {
   // Immersion. Each canvas is sized to fit ~5 rows; rendered by
   // _initDigestCharts. Empty sections collapse to a muted "none this
   // week." note so the layout doesn't shift when there are no rows.
-  // ── Cards 3-5: Editorial / Sponsor / Immersion horizontal-bar charts.
-  // Each in its own chart-card so headings, padding, and borders match
-  // the rest of the dashboard. Empty sections still render a card with
-  // a muted "no X this week" note so the page rhythm is consistent.
-  const sectionBlock = (heading, canvasId, rows, badge) => {
-    const data = (rows || []).slice(0, 5);
-    if (!data.length) {
-      return `<div class="chart-card">
-        <h3>${esc(heading)}</h3>
-        <div class="insight" style="font-style:italic;">No ${esc(heading.toLowerCase())} this week.</div>
-      </div>`;
-    }
-    window['_dig_' + canvasId] = data;
-    const height = Math.max(160, data.length * 42 + 40);
-    const badgeHTML = badge ? ` <span class="badge-inline">${esc(badge)}</span>` : '';
-    return `<div class="chart-card">
-      <h3>${esc(heading)}${badgeHTML}</h3>
-      <div class="chart-container" style="height:${height}px;position:relative;">
-        <canvas id="${canvasId}"></canvas>
-      </div>
-      <div class="insight">Top 5 by unique clicks. Click a bar to open the article URL; tooltip shows the full title, issue name, and send date.</div>
-    </div>`;
-  };
-
-  // Text-row variant of sectionBlock for the Sponsor list — each row is
+  // ── Cards 3-5: Editorial / Sponsor / Immersion — all use the text-row
+  // helper below. Each row is its own bordered tile so the article URL is
+  // visible at-a-glance instead of being hidden behind a tooltip. (The
+  // earlier bar-chart variant — sectionBlock + per-canvas init in
+  // _initDigestCharts — was retired in favour of one consistent
+  // representation across all three categories.)
+  //
+  // Text-row block — each row is
   // its own bordered tile that shows the title (linked), the issue +
   // send date, the URL backing the row (small + monospace + clickable),
   // and the unique / total clicks. Used in place of the bar chart so the
@@ -771,13 +754,13 @@ function _digestSummaryBody(wd, lastIdx, priorIdx, lastLabel) {
     </div>`;
   };
 
-  const editorial  = sectionBlock('Editorial Clicks', 'dig-art-edit', wd.top_editorial_this_week || wd.top_content_this_week, 'type = editorial');
-  const sponsors   = textRowBlock('Sponsor Clicks', wd.top_sponsors_this_week, 'type = sponsor');
-  const immersions = sectionBlock('Immersion Clicks', 'dig-art-imm',  wd.top_immersions_this_week, 'type = immersion');
+  const editorial  = textRowBlock('Editorial Clicks', wd.top_editorial_this_week || wd.top_content_this_week, 'type = editorial');
+  const sponsors   = textRowBlock('Sponsor Clicks',   wd.top_sponsors_this_week, 'type = sponsor');
+  const immersions = textRowBlock('Immersion Clicks', wd.top_immersions_this_week, 'type = immersion');
 
-  // The three article cards now stack vertically (each its own row) so
-  // the Sponsor list can use its full width for URLs without crowding
-  // the chart cards on either side. Was previously inside a .grid-3.
+  // The three article cards stack vertically (each its own row), and all
+  // three now use the text-row format so the article URL is visible
+  // at-a-glance without needing a hover.
   return overall + sourceBlock + editorial + sponsors + immersions;
 }
 
@@ -814,69 +797,10 @@ function _initDigestCharts() {
     });
   }
 
-  // Three article horizontal-bar charts
-  ['dig-art-edit', 'dig-art-spon', 'dig-art-imm'].forEach((id, idx) => {
-    const canvas = document.getElementById(id);
-    const rows = window['_dig_' + id] || [];
-    if (!canvas || !rows.length) return;
-    // Editorial = green, Sponsor = gold (was red — clashed with the
-    // Monthly Churn red bars elsewhere on the dashboard), Immersion = purple.
-    const colour = ['#1a7f37', '#d4a017', '#8250df'][idx];
-    // Truncate long titles for legibility (full title is on the tooltip).
-    const labels = rows.map(r => {
-      const t = String(r.title || '(untitled)');
-      return t.length > 60 ? t.slice(0, 57) + '…' : t;
-    });
-    new Chart(canvas, {
-      type: 'bar',
-      data: {
-        labels,
-        datasets: [
-          { label: 'Unique', data: rows.map(r => Number(r.unique_clicks) || 0), backgroundColor: colour,         borderRadius: 4 },
-          { label: 'Total',  data: rows.map(r => Number(r.total_clicks)  || 0), backgroundColor: colour + '55',  borderRadius: 4 }
-        ]
-      },
-      options: {
-        responsive: true, maintainAspectRatio: false, indexAxis: 'y',
-        plugins: {
-          legend: { position: 'bottom', labels: { font: { size: 10 } } },
-          tooltip: { callbacks: {
-            title: items => {
-              const i = items[0].dataIndex;
-              const r = rows[i];
-              return r ? (r.title || '(untitled)') : '';
-            },
-            afterBody: items => {
-              const i = items[0].dataIndex;
-              const r = rows[i];
-              if (!r) return '';
-              const issue = r.issue_name ? `Issue: ${r.issue_name}` : null;
-              const date  = r.issue_date ? `Sent: ${String(r.issue_date).slice(0,10)}` : null;
-              // Show the URL backing this bar so the source of the data
-              // is visible at hover-time (not just the issue context).
-              // Trim long URLs at 80 chars so the tooltip doesn't wrap to
-              // a wall of text; full URL still opens on click via onClick.
-              let urlLine = null;
-              if (r.url) {
-                const u = String(r.url);
-                urlLine = `URL: ${u.length > 80 ? u.slice(0, 77) + '…' : u}`;
-              }
-              return [issue, date, urlLine].filter(Boolean);
-            }
-          }}
-        },
-        onClick: (_e, els) => {
-          if (!els || !els.length) return;
-          const r = rows[els[0].index];
-          if (r && r.url) window.open(r.url, '_blank', 'noopener');
-        },
-        scales: {
-          x: { beginAtZero: true, ticks: { callback: v => Number(v).toLocaleString(), font: { size: 10 } } },
-          y: { ticks: { font: { size: 11 } } }
-        }
-      }
-    });
-  });
+  // The per-article horizontal-bar charts that used to live here were
+  // retired when Editorial / Sponsor / Immersion all switched to the
+  // text-row representation. _initDigestCharts() now only handles the
+  // Sources doughnut.
 }
 
 function renderCampaigns(M) {

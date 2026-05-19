@@ -132,6 +132,12 @@
   table.dash-table td { padding: 7px 10px; border-bottom: 1px solid var(--row-border); vertical-align: top; }
   table.dash-table td.nowrap, table.dash-table th.nowrap { white-space: nowrap; }
   table.dash-table tr:hover td { background: var(--row-hover); }
+  /* Numeric column alignment + a compact density variant used by the
+     Retention by Acquisition Source table (12 columns — needs the room). */
+  table.dash-table td.num, table.dash-table th.num { text-align: right; font-variant-numeric: tabular-nums; }
+  table.dash-table--compact { font-size: 12px; }
+  table.dash-table--compact th { padding: 6px 6px; }
+  table.dash-table--compact td { padding: 5px 6px; }
   /* Misc */
   .badge-inline { font-size: 11px; font-weight: 500; color: var(--text-muted); }
   .insight { font-size: 12px; color: var(--text-muted); margin-top: 10px; line-height: 1.5; }
@@ -729,7 +735,11 @@ function _digestSummaryBody(wd, lastIdx, priorIdx, lastLabel) {
   const sponsors   = sectionBlock('Sponsor Clicks',   'dig-art-spon', wd.top_sponsors_this_week, 'type = sponsor');
   const immersions = sectionBlock('Immersion Clicks', 'dig-art-imm',  wd.top_immersions_this_week, 'type = immersion');
 
-  return overall + sourceBlock + editorial + sponsors + immersions;
+  // The three article cards live in a 3-column grid so they sit beside
+  // each other on wide screens (collapses to a single column under 860px
+  // via the @media rule on .grid-3).
+  const articleGrid = `<div class="grid-3">${editorial}${sponsors}${immersions}</div>`;
+  return overall + sourceBlock + articleGrid;
 }
 
 /* Instantiates the Chart.js charts inside the Weekly Digest summary block.
@@ -801,7 +811,16 @@ function _initDigestCharts() {
               if (!r) return '';
               const issue = r.issue_name ? `Issue: ${r.issue_name}` : null;
               const date  = r.issue_date ? `Sent: ${String(r.issue_date).slice(0,10)}` : null;
-              return [issue, date].filter(Boolean);
+              // Show the URL backing this bar so the source of the data
+              // is visible at hover-time (not just the issue context).
+              // Trim long URLs at 80 chars so the tooltip doesn't wrap to
+              // a wall of text; full URL still opens on click via onClick.
+              let urlLine = null;
+              if (r.url) {
+                const u = String(r.url);
+                urlLine = `URL: ${u.length > 80 ? u.slice(0, 77) + '…' : u}`;
+              }
+              return [issue, date, urlLine].filter(Boolean);
             }
           }}
         },
@@ -2432,29 +2451,37 @@ function renderRetention(M) {
     </div>
     <h2 style="font-size:14px;font-weight:600;color:var(--text);margin:22px 0 10px;">Retention by Acquisition Source <span class="badge-inline" style="text-transform:none;">utm_source → source → 'Organic', bucketed</span></h2>
     <div class="chart-card">
-      <div class="tbl-wrap"><table class="dash-table">
+      <div class="tbl-wrap"><table class="dash-table dash-table--compact">
         <thead><tr>
-          <th>Source</th><th>Subscribers</th><th>Active Now</th><th>Churned</th>
-          <th>Unsub ≤ 15 d</th><th>Unsub ≤ 30 d</th>
-          <th title="Average lifespan in days, across churned subscribers only">Avg Lifespan (days)</th><th title="Median lifespan in days, across churned subscribers only">Median Lifespan</th>
-          <th>Clickers</th><th>Clicker Rate</th><th>Unique Clicks</th><th>Clicks / Clicker</th>
+          <th>Source</th>
+          <th class="num" title="Total subscribers in this bucket">Subs</th>
+          <th class="num" title="state = 'Active' AND engagement_segment NOT IN Ghosts/Zombies/Dormant">Active</th>
+          <th class="num" title="state = 'Unsubscribed'">Churned</th>
+          <th class="num" title="Unsubscribed within 15 days of joining">Unsub ≤15d</th>
+          <th class="num" title="Unsubscribed within 30 days of joining">Unsub ≤30d</th>
+          <th class="num" title="Average lifespan in days, across churned subscribers only">Avg LS (d)</th>
+          <th class="num" title="Median lifespan in days, across churned subscribers only">Median LS</th>
+          <th class="num" title="Subscribers in this bucket who clicked ≥ 1 article (clicks dated Dec 2025 onwards)">Clickers</th>
+          <th class="num">Clicker %</th>
+          <th class="num" title="Sum of unique clicks across the bucket — click events from Dec 2025 onwards">Unique Clicks</th>
+          <th class="num" title="Avg unique clicks per clicker">Clicks / Clicker</th>
         </tr></thead>
         <tbody>${(M.retention_by_source||[]).map(r => {
           const u15 = `${fmt(r.unsub_15d)} <span style="color:var(--text-muted);">(${(r.unsub_15d_rate||0).toFixed(1)}%)</span>`;
           const u30 = `${fmt(r.unsub_30d)} <span style="color:var(--text-muted);">(${(r.unsub_30d_rate||0).toFixed(1)}%)</span>`;
           return `<tr>
             <td><strong>${esc(r.source||'')}</strong></td>
-            <td>${fmt(r.subscribers)}</td>
-            <td>${fmt(r.active_now)}</td>
-            <td>${fmt(r.churned)}</td>
-            <td>${u15}</td>
-            <td>${u30}</td>
-            <td>${r.avg_lifespan_days != null ? r.avg_lifespan_days : '—'}</td>
-            <td>${r.median_lifespan_days != null ? r.median_lifespan_days : '—'}</td>
-            <td>${fmt(r.clickers)}</td>
-            <td>${(r.clicker_rate||0).toFixed(1)}%</td>
-            <td>${fmt(r.total_unique_clicks)}</td>
-            <td>${r.avg_clicks_per_clicker != null ? Number(r.avg_clicks_per_clicker).toFixed(1) : '—'}</td>
+            <td class="num">${fmt(r.subscribers)}</td>
+            <td class="num">${fmt(r.active_now)}</td>
+            <td class="num">${fmt(r.churned)}</td>
+            <td class="num">${u15}</td>
+            <td class="num">${u30}</td>
+            <td class="num">${r.avg_lifespan_days != null ? r.avg_lifespan_days : '—'}</td>
+            <td class="num">${r.median_lifespan_days != null ? r.median_lifespan_days : '—'}</td>
+            <td class="num">${fmt(r.clickers)}</td>
+            <td class="num">${(r.clicker_rate||0).toFixed(1)}%</td>
+            <td class="num">${fmt(r.total_unique_clicks)}</td>
+            <td class="num">${r.avg_clicks_per_clicker != null ? Number(r.avg_clicks_per_clicker).toFixed(1) : '—'}</td>
           </tr>`;
         }).join('')}</tbody>
       </table></div>

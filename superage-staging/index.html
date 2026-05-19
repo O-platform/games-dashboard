@@ -2259,8 +2259,7 @@ function renderCohort(M) {
           <th title="Cohort size at join — total subscribers who joined in this month">Cohort Size</th>
           <th title="Still on the list today (state = Active or Bounced)">Total Subscribers</th>
           <th title="Reachable engaged subscribers — state = 'Active' AND engagement_segment NOT IN Ghosts/Zombies/Dormant">Total Active</th>
-          <th title="Total Subscribers / Cohort Size">Still on List %</th>
-          <th title="Total Active / Cohort Size — canonical Active rule">Retention %</th>
+          <th title="Total Active / Cohort Size — canonical Active rule">Active %</th>
           <th title="Churned / Cohort Size">Churn %</th>
           <th title="Subscribers who unsubscribed within 90 days of joining, as % of cohort">Early Churn (90d)</th>
           <th title="Campaigns with > 95 recipients sent during this cohort's join month">Campaigns Sent</th>
@@ -2270,8 +2269,7 @@ function renderCohort(M) {
           <td>${fmt(r.size)}</td>
           <td>${fmt(r.total_subscribers != null ? r.total_subscribers : (Number(r.size) - Number(r.churned||0)))}</td>
           <td>${fmt(r.active_now)}</td>
-          <td>${esc(r.still_on_list_pct||'—')}</td>
-          <td>${esc(r.retention_pct||'—')}</td>
+          <td>${esc(r.active_pct || r.retention_pct || '—')}</td>
           <td>${esc(r.churn_rate_pct||'—')}</td>
           <td>${esc(r.early_churn_pct||'—')}</td>
           <td>${fmt(r.campaigns_sent)}</td>

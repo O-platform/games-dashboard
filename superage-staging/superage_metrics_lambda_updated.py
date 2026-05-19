@@ -1025,8 +1025,12 @@ def lambda_handler(event, context):
             )
             SELECT
                 c.*,
-                ROUND(c.total_subscribers::numeric / NULLIF(c.total,0) * 100, 1) AS still_on_list_pct,
-                ROUND(c.active_now::numeric / NULLIF(c.total,0) * 100, 1) AS retention_pct,
+                -- Active % is Total Active / Cohort Size (canonical Active rule:
+                -- state='Active' AND engagement_segment NOT IN Ghosts/Zombies/Dormant).
+                -- Replaces the older "Still on List %" (which used state IN
+                -- Active+Bounced as the numerator) so the table has one
+                -- engagement-quality percentage instead of two near-duplicates.
+                ROUND(c.active_now::numeric / NULLIF(c.total,0) * 100, 1) AS active_pct,
                 ROUND(c.churned::numeric / NULLIF(c.total,0) * 100, 1) AS churn_rate_pct,
                 ROUND(c.churned_90d::numeric / NULLIF(c.total,0) * 100, 1) AS early_churn_pct,
                 COALESCE(k.campaigns_sent, 0) AS campaigns_sent
@@ -1435,8 +1439,7 @@ def lambda_handler(event, context):
             "total_subscribers":  safe_int(r["total_subscribers"]),
             "active_now":         safe_int(r["active_now"]),
             "churned":            safe_int(r["churned"]),
-            "still_on_list_pct":  f"{safe_float(r['still_on_list_pct']):.1f}%",
-            "retention_pct":      f"{safe_float(r['retention_pct']):.1f}%",
+            "active_pct":         f"{safe_float(r['active_pct']):.1f}%",
             "churn_rate_pct":     f"{safe_float(r['churn_rate_pct']):.1f}%",
             "early_churn_pct":    f"{safe_float(r['early_churn_pct']):.1f}%",
             "campaigns_sent":     safe_int(r["campaigns_sent"]),

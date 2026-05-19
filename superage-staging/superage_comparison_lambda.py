@@ -549,7 +549,11 @@ def lambda_handler(event, context):
             #   • new_subs   — count of subscribers.date_joined in week
             #   • unsubs     — count of subscribers.date_unsubscribed in week
             #   • campaigns_sent / total_sent — Campaigns rows with
-            #     Recipients > 95 whose Sent Date falls in week
+            #     **Recipients >= 200,000** whose Sent Date falls in week.
+            #     Tighter threshold than the dashboard-wide Recipients > 95
+            #     filter so the digest focuses on **mass sends** only — small
+            #     dedicated / segmented campaigns are excluded so their
+            #     atypical open / click rates don't drag the weekly averages.
             #   • avg_open_rate / avg_click_rate — AVG over those campaigns
             #   • churn_pct_of_sends — unsubs / total_sent * 100, NULL when
             #     total_sent = 0 to avoid divide-by-zero spikes
@@ -593,7 +597,7 @@ def lambda_handler(event, context):
                     FROM {S}."Campaigns"
                     WHERE "Sent Date " IS NOT NULL
                       AND "Sent Date "::date < CURRENT_DATE
-                      AND "Recipients" > 95
+                      AND "Recipients" >= 200000                              -- Weekly Digest: mass sends only
                       AND "Sent Date "::date >= DATE_TRUNC('week', CURRENT_DATE)::date - INTERVAL '8 weeks'
                     GROUP BY 1
                 ),

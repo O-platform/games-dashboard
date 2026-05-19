@@ -544,28 +544,38 @@ function renderDigest(M) {
   const prvFromArr = (arr) => (arr && priorCompletedIdx != null && arr[priorCompletedIdx] != null ? Number(arr[priorCompletedIdx]) : null);
 
   // Tile definitions: label, current/prior values, sparkline array, formatter,
-  // "higher is better" hint for delta arrow colouring (null = neutral).
+  // "higher is better" hint for delta arrow colouring (null = neutral),
+  // and an `isRate` flag so rate metrics render their delta in **pp**
+  // (percentage points, absolute difference) and count metrics render
+  // their delta as a plain integer diff. Relative-percent deltas are
+  // intentionally not used here — they overstate moves on small bases
+  // (e.g. click rate going 0.5% → 1% is +100% relative but only +0.5 pp).
   const tiles = [
-    { label: 'Net Change',              value: numFromArr(netChange),  prior: prvFromArr(netChange),  spark: sparkNetChange,            fmt: v => v == null ? '—' : (v >= 0 ? '+' : '') + Number(v).toLocaleString(),         higherIsBetter: true,  spark_color: '#1a7f37' },
-    { label: 'Churn % of Sends',         value: num(wd.churn_pct_of_sends), prior: prv(wd.churn_pct_of_sends), spark: sparkOf('churn_pct_of_sends'), fmt: v => v == null ? '—' : Number(v).toFixed(3) + '%',                       higherIsBetter: false, spark_color: '#cf222e' },
-    { label: 'Campaigns Sent',           value: num(wd.campaigns_sent), prior: prv(wd.campaigns_sent), spark: sparkOf('campaigns_sent'), fmt: v => v == null ? '—' : Number(v).toLocaleString(),                                higherIsBetter: null,  spark_color: '#8250df' },
-    { label: 'Avg Open Rate',            value: num(wd.avg_open_rate),  prior: prv(wd.avg_open_rate),  spark: sparkOf('avg_open_rate'),  fmt: v => v == null ? '—' : Number(v).toFixed(2) + '%',                                higherIsBetter: true,  spark_color: '#1a7f37' },
-    { label: 'Avg Click Rate',           value: num(wd.avg_click_rate), prior: prv(wd.avg_click_rate), spark: sparkOf('avg_click_rate'), fmt: v => v == null ? '—' : Number(v).toFixed(2) + '%',                                higherIsBetter: true,  spark_color: '#0969da' },
+    { label: 'Net Change',              value: numFromArr(netChange),  prior: prvFromArr(netChange),  spark: sparkNetChange,            fmt: v => v == null ? '—' : (v >= 0 ? '+' : '') + Number(v).toLocaleString(),         higherIsBetter: true,  spark_color: '#1a7f37', isRate: false },
+    { label: 'Churn % of Sends',         value: num(wd.churn_pct_of_sends), prior: prv(wd.churn_pct_of_sends), spark: sparkOf('churn_pct_of_sends'), fmt: v => v == null ? '—' : Number(v).toFixed(3) + '%',                       higherIsBetter: false, spark_color: '#cf222e', isRate: true  },
+    { label: 'Campaigns Sent',           value: num(wd.campaigns_sent), prior: prv(wd.campaigns_sent), spark: sparkOf('campaigns_sent'), fmt: v => v == null ? '—' : Number(v).toLocaleString(),                                higherIsBetter: null,  spark_color: '#8250df', isRate: false },
+    { label: 'Avg Open Rate',            value: num(wd.avg_open_rate),  prior: prv(wd.avg_open_rate),  spark: sparkOf('avg_open_rate'),  fmt: v => v == null ? '—' : Number(v).toFixed(2) + '%',                                higherIsBetter: true,  spark_color: '#1a7f37', isRate: true  },
+    { label: 'Avg Click Rate',           value: num(wd.avg_click_rate), prior: prv(wd.avg_click_rate), spark: sparkOf('avg_click_rate'), fmt: v => v == null ? '—' : Number(v).toFixed(2) + '%',                                higherIsBetter: true,  spark_color: '#0969da', isRate: true  },
   ];
 
+  // Delta always uses the **absolute** difference (current − prior):
+  //   • rate tiles render it as percentage points (`pp`),
+  //   • count tiles render it as a plain signed integer.
+  // Relative percent change is intentionally not surfaced — it inflates
+  // moves on small bases (e.g. a click rate going 0.5% → 1% is +100%
+  // relative but only +0.5 pp).
   const deltaHTML = (t) => {
     if (t.value == null || t.prior == null) {
       return `<span style="font-size:11px;color:var(--text-muted);">vs prior — no data</span>`;
     }
     const diff = t.value - t.prior;
-    const pct  = t.prior === 0 ? null : (diff / Math.abs(t.prior) * 100);
     const arrow = diff > 0 ? '▲' : diff < 0 ? '▼' : '–';
     const good  = t.higherIsBetter == null ? null
                 : (diff === 0 ? null : (diff > 0) === t.higherIsBetter);
     const color = good == null ? 'var(--text-muted)' : good ? '#1a7f37' : '#cf222e';
-    const txt   = pct == null ? `${arrow} ${diff.toLocaleString()}`
-                              : `${arrow} ${Math.abs(pct).toFixed(1)}%`;
-    return `<span style="font-size:12px;font-weight:600;color:${color};">${txt}</span>
+    const magnitude = t.isRate ? `${Math.abs(diff).toFixed(2)} pp`
+                                : `${Math.abs(diff).toLocaleString()}`;
+    return `<span style="font-size:12px;font-weight:600;color:${color};">${arrow} ${magnitude}</span>
             <span style="font-size:11px;color:var(--text-muted);"> vs prior week</span>`;
   };
 
@@ -574,7 +584,7 @@ function renderDigest(M) {
 
   root.innerHTML = `
     <div class="section-context-banner">
-      <strong>Weekly Digest</strong> — Headline metrics for <strong>${esc(lastLabel)}</strong> (last completed Mon–Sun), compared against <strong>${esc(priorLabel)}</strong>. Sparklines show the 8 prior completed weeks (excluding the in-progress current week).
+      <strong>Weekly Digest</strong> — Headline metrics for <strong>${esc(lastLabel)}</strong> (last completed Mon–Sun), compared against <strong>${esc(priorLabel)}</strong>. Sparklines show the 8 prior completed weeks (excluding the in-progress current week). <strong>Campaign aggregates count mass sends only — <code>Recipients ≥ 200,000</code></strong>; small dedicated / segmented sends are excluded so their atypical open / click rates don't drag the weekly averages.
     </div>
 
     <div class="kpi-row" style="grid-template-columns:repeat(auto-fit,minmax(220px,1fr));">
@@ -671,7 +681,8 @@ function _digestSummaryBody(wd, lastIdx, priorIdx, lastLabel) {
         &nbsp;· ${fmtP(unsubR, 3)} unsub${ppHTML(pp(unsubR, prev('churn_pct_of_sends')), false)}
       </div>
       <div class="insight">
-        <code>Recipients</code> is not deduplicated — same subscriber receiving N emails counts N×.
+        Aggregates over campaigns with <code>Recipients &ge; 200,000</code> only — mass sends. Small dedicated / segmented sends are excluded so their atypical open / click rates don't skew the weekly averages.
+        <code>Recipients</code> itself is not deduplicated — same subscriber receiving N emails counts N×.
         Unsub rate = unsubs ÷ <code>total_sent</code> × 100. Deltas vs prior completed week (pp = percentage points).
       </div>
     </div>`;

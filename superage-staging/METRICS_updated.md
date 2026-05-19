@@ -141,20 +141,22 @@ This section measures how SuperAge's website articles perform when featured in c
 | Total Clicks | All clicks including repeat visits |
 | Active Clickers | Subscribers who clicked at least one article |
 
-### Click Analysis tab — top KPIs
+### Click Analysis tab — toolbar + KPIs (both react to Sunday Spotlight)
 
-The "Click Analysis" tab displays four headline KPIs. They read the
-metrics JSON with the following fallback chain so they stay populated
-even when the dedicated fields are absent:
+A single **toolbar sits at the very top of the tab, above the KPI cards**. It exposes the **Include Sunday Spotlight** toggle (default OFF) and a **Section 1 metric** dropdown (Total clicks / Clicks / campaign / Click-to-Open %, defaulting to *Clicks / campaign* so the headline chart isn't biased by months with more sends). The toggle scopes **the KPI cards** *and* Section 1 (campaign aggregates) *and* Section 2 (raw click events); the metric dropdown only applies to Section 1.
 
-| KPI | Primary field | Fallback |
-|---|---|---|
-| Total Clicks | `total_article_clicks` | `content_summary.unique_clicks` |
-| Unique Clickers | `unique_article_clickers` | `total_article_clickers` |
-| Articles Clicked | `articles_clicked_count` | `content_summary.unique_articles` |
-| Avg Clicks / Article | `avg_clicks_per_article` | computed client-side as `total_article_clicks / articles_clicked_count` |
+The four headline KPIs are computed **client-side** from `M.campaign_table` filtered by the current Sunday Spotlight scope (rather than reading static lambda-time fields), so flipping the toggle visibly changes every number on the tab in one go. `_renderClickKpis()` is called by `_refreshClicksTab()` whenever the toggle flips.
 
-**Click Analysis tab toolbar:** a top toolbar exposes an **Include Sunday Spotlight** toggle (default OFF) and a **Section 1 metric** dropdown (Total clicks / Clicks / campaign / Click-to-Open %). The dropdown defaults to **Clicks / campaign** so the headline chart isn't biased by months with more sends. The toggle scopes both Section 1 (campaign aggregates) and Section 2 (raw click events); the metric dropdown only applies to Section 1.
+| KPI | Formula (over in-scope `campaign_table` rows) |
+|---|---|
+| Campaigns Sent | `COUNT(*)` |
+| Total Recipients | `SUM(Recipients)` |
+| Total Clicks | `SUM(Clicks)` |
+| Avg Clicks / Campaign | `round(Total Clicks / Campaigns Sent)` |
+
+In-scope filter: when **Include Sunday Spotlight** is OFF, rows whose `name` matches `sunday spotlight` (case-insensitive) are dropped; when ON, every row participates. Same predicate the Section 1 / Section 2 chart re-aggregators use, so all four cards always agree with the bars below.
+
+> The earlier article-level KPIs (`total_article_clicks` / `unique_article_clickers` / `articles_clicked_count` / `avg_clicks_per_article` from `articles_clicks`) couldn't be filtered by Sunday Spotlight at the SQL layer — there's no campaign-name column on `articles_clicks` — so the lambda fields are no longer surfaced on this tab. They're still emitted as JSON fallbacks for any external consumer.
 
 **Section 1 — Campaign-Level Aggregated** (charts: Weekly Campaign Clicks, Monthly Campaign Clicks) is rebuilt **client-side** from `M.campaign_table` (sourced from `superage."Campaigns"` via Q9). Each campaign is bucketed by ISO week (Mon–Sun) or calendar month based on its `sent_date`, then `clicks`, `unique_opens`, `recipients`, and campaign count are summed per period. The three metric modes are computed from these sums:
 
@@ -1451,3 +1453,4 @@ ORDER BY c.cohort_month;
 50. **Overview donut → engagement-segment split within state='Active' (2026-05)**: the Current Subscriber Mix donut was rescoped again — denominator is now **current subscribers only** (`state = 'Active'`) rather than every row in `subscribers`. Five slices now show how that active base breaks down by engagement segment: **Send-To** (the canonical reachable bucket — engagement_segment NOT IN Ghosts/Zombies/Dormant), **Zombies**, **Ghosts**, **Dormant**, **Other** (residual — null / empty / unrecognised segment). The SQL gained per-segment FILTER counts inside the existing Active-only query; the lambda still emits the unified `M.subscriber_engagement_mix = {labels, data, colors}` shape so the dashboard chart didn't need restructuring. Unsubscribed / Bounced / Deleted no longer appear in this donut — they're tracked elsewhere (subscriber-status KPIs, retention table). Banner copy + Q2 + Section 1 KPI bullet rewritten in lockstep.
 51. **Revenue tab: sponsor_type filter + Line Amount relabel (2026-05)**: every query against `sa_airtable_sales` (totals KPIs, Monthly Line Amount chart, Top Sponsors aggregation, Sponsor Type donut) now requires `sponsor_type IS NOT NULL AND TRIM(sponsor_type) != ''` — rows missing a sponsor type previously inflated totals and contributed a phantom "Unknown" slice in the donut, both gone now. In the same pass the user-facing wording on the tab was changed from "Revenue" → "Line Amount" to match the underlying Airtable column name (`$_line_amount`): KPI card "Total Revenue" → "Total Line Amount", chart heading "Monthly Revenue & Deal Volume" → "Monthly Line Amount & Deal Volume", Top Sponsors columns "Revenue" + "Avg Rev / Deal" + "Revenue Share" → "Line Amount" + "Avg Line / Deal" + "Share of Total". JSON field names (`total_revenue`, `total_revenue_fmt`, `top_sponsors[].revenue`) stay untouched for backwards-compat.
 52. **Cohort table: "Still on List %" + "Retention %" → single "Active %" column (2026-05)**: the Cohort Performance Table previously carried two near-duplicate percentage columns — Still on List % (`total_subscribers / cohort_size`, where total_subscribers = state IN Active+Bounced) and Retention % (`active_now / cohort_size`). Consolidated into one column called **Active %** with formula `total_active / cohort_size` (canonical Active rule: state='Active' AND engagement_segment NOT IN Ghosts/Zombies/Dormant). The lambda now emits `cohort_table[].active_pct`; the HTML reads that field and falls back to the legacy `retention_pct` if the lambda hasn't re-run yet. The deprecated `still_on_list_pct` JSON field is no longer emitted.
+53. **Click Analysis: Sunday Spotlight toggle now drives the KPIs + moved above the cards (2026-05)**: the Click Analysis toolbar (Include Sunday Spotlight switch + Section 1 metric dropdown) was lifted to the top of the tab — sits **above** the four KPI cards now — and the KPIs themselves were rewired to react to it. The card set was rebuilt around campaign-level aggregates that can be filtered by name: **Campaigns Sent**, **Total Recipients**, **Total Clicks**, **Avg Clicks / Campaign**, all summed from `M.campaign_table` rows filtered with the same `name NOT ILIKE '%sunday spotlight%'` predicate the chart re-aggregators use. `_renderClickKpis()` (new) runs in `_refreshClicksTab()` and on initial render so the numbers stay in sync with the bars below. The legacy article-level KPI fields (`total_article_clicks` / `unique_article_clickers` / `articles_clicked_count` / `avg_clicks_per_article`) couldn't be filtered by Sunday Spotlight at the SQL layer (no campaign name on `articles_clicks`), so they're no longer surfaced on this tab; the JSON fields still ship as backwards-compat for any external consumer.

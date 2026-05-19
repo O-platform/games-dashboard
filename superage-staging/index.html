@@ -1055,12 +1055,37 @@ function _renderRawMonthly() {
 }
 
 /* Re-render every chart on the Click Analysis tab. Called when the
- * "Include Sunday Spotlight" toggle flips. */
+ * "Include Sunday Spotlight" toggle flips — now also drives the four
+ * KPI cards above the charts so they share the same scope. */
 function _refreshClicksTab() {
+  _renderClickKpis();
   _renderClickSection1();
   _setWeekdayWindow(window._rawWeekdayN || 3);
   _setRawWeeklyWindow(window._rawWeeklyN || 8);
   _renderRawMonthly();
+}
+
+/* Click Analysis KPIs — campaigns sent / total recipients / total clicks /
+ * avg clicks per campaign, re-aggregated from M.campaign_table against the
+ * current Sunday Spotlight toggle so the headline numbers always match the
+ * Section 1 chart series below. */
+function _renderClickKpis() {
+  const includeSS = _ssOn();
+  const table = (_rawClicksData && _rawClicksData.campaign_table) || [];
+  const rows  = table.filter(c => includeSS ? true
+                                            : !((c.name||'').toLowerCase().includes('sunday spotlight')));
+  let camps = 0, recip = 0, clicks = 0;
+  rows.forEach(c => {
+    camps  += 1;
+    recip  += _campNum(c.recipients);
+    clicks += _campNum(c.clicks);
+  });
+  const avg = camps ? Math.round(clicks / camps) : 0;
+  const set = (id, txt) => { const el = document.getElementById(id); if (el) el.textContent = txt; };
+  set('ca-kpi-camps',  camps.toLocaleString());
+  set('ca-kpi-recip',  recip.toLocaleString());
+  set('ca-kpi-clicks', clicks.toLocaleString());
+  set('ca-kpi-avg',    camps ? avg.toLocaleString() : '—');
 }
 
 function renderContent(M) {
@@ -1068,14 +1093,9 @@ function renderContent(M) {
     <div class="section-context-banner">
       <strong>Click Analysis</strong> — Engagement with SuperAge website articles. Tracks unique and total clicks per article, category, and author. <strong>Click-event data (Section 2: Same Weekday / Weekly / Monthly raw events + per-article click totals) starts December 2025.</strong> Section 1 campaign-aggregate metrics come from the CreateSend <em>Campaigns</em> table and reflect the full send history.
     </div>
-    <div class="kpi-row" style="grid-template-columns:repeat(auto-fit,minmax(140px,1fr));">
-      <div class="kpi-card accent"><div class="label">Total Clicks</div><div class="value">${fmt(M.total_article_clicks)}</div><div class="sub">All tracked articles</div></div>
-      <div class="kpi-card green"><div class="label">Unique Clickers</div><div class="value">${fmt(M.unique_article_clickers != null ? M.unique_article_clickers : M.total_article_clickers)}</div><div class="sub">Distinct email addresses</div></div>
-      <div class="kpi-card blue"><div class="label">Articles Clicked</div><div class="value">${fmt(M.articles_clicked_count != null ? M.articles_clicked_count : (M.content_summary && M.content_summary.unique_articles))}</div><div class="sub">Distinct URLs tracked</div></div>
-      <div class="kpi-card orange"><div class="label">Avg Clicks/Article</div><div class="value">${(()=>{ if (M.avg_clicks_per_article) return M.avg_clicks_per_article; const tc=M.total_article_clicks||(M.content_summary&&M.content_summary.unique_clicks); const ua=M.articles_clicked_count!=null?M.articles_clicked_count:(M.content_summary&&M.content_summary.unique_articles); return (tc && ua) ? Math.round(tc/ua).toLocaleString() : '—'; })()}</div><div class="sub">Mean engagement depth</div></div>
-    </div>
-
-    <div class="camp-toolbar" style="margin: 18px 0 12px;">
+    <!-- Toolbar moved ABOVE the KPI cards so the Sunday Spotlight toggle
+         visibly governs the whole tab (KPIs, charts, table). -->
+    <div class="camp-toolbar" style="margin: 0 0 12px;">
       <div class="camp-toolbar-left">
         <label class="switch" for="clicksIncludeSS" title="Include Sunday Spotlight campaigns">
           <input type="checkbox" id="clicksIncludeSS" onchange="_refreshClicksTab()">
@@ -1094,6 +1114,17 @@ function renderContent(M) {
           <option value="ctor">Click-to-Open %</option>
         </select>
       </div>
+    </div>
+
+    <!-- Click Analysis KPIs are now campaign-level aggregates computed
+         client-side from M.campaign_table filtered by the toggle above, so
+         flipping Sunday Spotlight visibly changes every number on the tab.
+         Values are populated by _renderClickKpis() in _refreshClicksTab(). -->
+    <div class="kpi-row" style="grid-template-columns:repeat(auto-fit,minmax(140px,1fr));">
+      <div class="kpi-card accent"><div class="label">Campaigns Sent</div><div class="value" id="ca-kpi-camps">—</div><div class="sub">In scope (after toggle)</div></div>
+      <div class="kpi-card green"><div class="label">Total Recipients</div><div class="value" id="ca-kpi-recip">—</div><div class="sub">Sum of <code>Recipients</code></div></div>
+      <div class="kpi-card blue"><div class="label">Total Clicks</div><div class="value" id="ca-kpi-clicks">—</div><div class="sub">Sum of campaign <code>Clicks</code></div></div>
+      <div class="kpi-card orange"><div class="label">Avg Clicks / Campaign</div><div class="value" id="ca-kpi-avg">—</div><div class="sub">Mean per send (in scope)</div></div>
     </div>
 
     <h3 style="margin:18px 0 10px;font-size:13px;text-transform:uppercase;letter-spacing:.5px;color:var(--text-muted);">Section 1 — Campaign-Level Aggregated <span class="badge-inline" style="text-transform:none;">sourced from superage."Campaigns" — re-aggregated client-side per toggle</span></h3>
@@ -1159,6 +1190,7 @@ function renderContent(M) {
   // (Sunday Spotlight toggle, Section-1 metric dropdown) can re-render
   // without a fresh fetch.
   _rawClicksData = M;
+  _renderClickKpis();
   _renderClickSection1();
   _setWeekdayWindow(3);
   _setRawWeeklyWindow(8);

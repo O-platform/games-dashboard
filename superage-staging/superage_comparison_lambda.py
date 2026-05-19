@@ -543,6 +543,149 @@ def lambda_handler(event, context):
             """)
             raw_clicks_monthly_rows = cur.fetchall()
 
+            # (C) Weekly digest — 9 ISO weeks (8 completed + the in-progress
+            # current week) of headline metrics for the Weekly Digest tab.
+            # Each row produces values for one ISO Mon-Sun bucket:
+            #   • new_subs   — count of subscribers.date_joined in week
+            #   • unsubs     — count of subscribers.date_unsubscribed in week
+            #   • campaigns_sent / total_sent — Campaigns rows with
+            #     Recipients > 95 whose Sent Date falls in week
+            #   • avg_open_rate / avg_click_rate — AVG over those campaigns
+            #   • churn_pct_of_sends — unsubs / total_sent * 100, NULL when
+            #     total_sent = 0 to avoid divide-by-zero spikes
+            #   • active_eow — end-of-week Send-To base from growth_history
+            #     (MAX(total_active) within the week). May be NULL for the
+            #     in-progress week if the snapshot hasn't been written yet.
+            #   • is_current — true for the in-progress week (last row)
+            cur.execute(f"""
+                WITH weeks AS (
+                    SELECT generate_series(
+                        DATE_TRUNC('week', CURRENT_DATE)::date - INTERVAL '8 weeks',
+                        DATE_TRUNC('week', CURRENT_DATE)::date,
+                        INTERVAL '1 week'
+                    )::date AS week_start
+                ),
+                joins AS (
+                    SELECT DATE_TRUNC('week', date_joined::date)::date AS week_start,
+                           COUNT(*) AS n
+                    FROM {S}.subscribers
+                    WHERE date_joined IS NOT NULL
+                      AND date_joined::date < CURRENT_DATE
+                      AND date_joined::date >= DATE_TRUNC('week', CURRENT_DATE)::date - INTERVAL '8 weeks'
+                    GROUP BY 1
+                ),
+                unsubs AS (
+                    SELECT DATE_TRUNC('week', date_unsubscribed::date)::date AS week_start,
+                           COUNT(*) AS n
+                    FROM {S}.subscribers
+                    WHERE date_unsubscribed IS NOT NULL
+                      AND date_unsubscribed::date < CURRENT_DATE
+                      AND date_unsubscribed::date >= DATE_TRUNC('week', CURRENT_DATE)::date - INTERVAL '8 weeks'
+                    GROUP BY 1
+                ),
+                camps AS (
+                    SELECT
+                        DATE_TRUNC('week', "Sent Date "::date)::date AS week_start,
+                        COUNT(*)                                    AS campaigns_sent,
+                        COALESCE(SUM("Recipients"), 0)              AS total_sent,
+                        ROUND(AVG("UOpenRate")::numeric,  2)        AS avg_open_rate,
+                        ROUND(AVG("UClickRate")::numeric, 2)        AS avg_click_rate
+                    FROM {S}."Campaigns"
+                    WHERE "Sent Date " IS NOT NULL
+                      AND "Sent Date "::date < CURRENT_DATE
+                      AND "Recipients" > 95
+                      AND "Sent Date "::date >= DATE_TRUNC('week', CURRENT_DATE)::date - INTERVAL '8 weeks'
+                    GROUP BY 1
+                ),
+                gh AS (
+                    SELECT DATE_TRUNC('week', snapshot_date::date)::date AS week_start,
+                           MAX(total_active) AS active_eow
+                    FROM {S}.growth_history
+                    WHERE snapshot_date IS NOT NULL
+                      AND snapshot_date <= CURRENT_DATE
+                      AND snapshot_date >= DATE_TRUNC('week', CURRENT_DATE)::date - INTERVAL '8 weeks'
+                    GROUP BY 1
+                )
+                SELECT
+                    w.week_start,
+                    TO_CHAR(w.week_start, 'Mon DD')                          AS label,
+                    COALESCE(j.n, 0)                                         AS new_subs,
+                    COALESCE(u.n, 0)                                         AS unsubs,
+                    COALESCE(c.campaigns_sent, 0)                            AS campaigns_sent,
+                    COALESCE(c.total_sent, 0)                                AS total_sent,
+                    c.avg_open_rate                                          AS avg_open_rate,
+                    c.avg_click_rate                                         AS avg_click_rate,
+                    CASE
+                        WHEN COALESCE(c.total_sent, 0) = 0 THEN NULL
+                        ELSE ROUND(COALESCE(u.n, 0)::numeric / c.total_sent * 100, 4)
+                    END                                                      AS churn_pct_of_sends,
+                    g.active_eow                                             AS active_eow,
+                    (w.week_start = DATE_TRUNC('week', CURRENT_DATE)::date)  AS is_current
+                FROM weeks w
+                LEFT JOIN joins  j ON j.week_start = w.week_start
+                LEFT JOIN unsubs u ON u.week_start = w.week_start
+                LEFT JOIN camps  c ON c.week_start = w.week_start
+                LEFT JOIN gh     g ON g.week_start = w.week_start
+                ORDER BY w.week_start
+            """)
+            weekly_digest_rows = cur.fetchall()
+
+            # Top acquisition source for the last completed week + the prior
+            # one. Canonicalisation mirrors `_canon_source` in the metrics
+            # lambda — duplicated here so the comparison lambda stays
+            # self-contained. KEEP THIS BRANCH LIST IN SYNC WITH THE METRICS
+            # LAMBDA HELPER (`_canon_source`) AND `utmLabel()` in index.html.
+            cur.execute(f"""
+                WITH src AS (
+                    SELECT
+                        DATE_TRUNC('week', date_joined::date)::date AS week_start,
+                        CASE
+                            WHEN LOWER(COALESCE(NULLIF(TRIM(utm_source),''),
+                                                NULLIF(TRIM(source),''), '')) IN ('organic','direct','')
+                                THEN 'Direct'
+                            WHEN LOWER(TRIM(COALESCE(NULLIF(TRIM(utm_source),''), NULLIF(TRIM(source),''))))
+                                 IN ('ahcpl1','allhealthy','allhealthy.com')           THEN 'AllHealthy'
+                            WHEN LOWER(TRIM(COALESCE(NULLIF(TRIM(utm_source),''), NULLIF(TRIM(source),''))))
+                                 LIKE 'td_cpl2%%'                                       THEN 'TrueDemocracy'
+                            WHEN LOWER(TRIM(COALESCE(NULLIF(TRIM(utm_source),''), NULLIF(TRIM(source),''))))
+                                 IN ('tdcpl1','tdcpl2')                                 THEN 'TrueDemocracy'
+                            WHEN LOWER(TRIM(COALESCE(NULLIF(TRIM(utm_source),''), NULLIF(TRIM(source),''))))
+                                 IN ('lscpl1','lscpl2','ls_cpl2','livingsimply','livingsimply.com')
+                                                                                        THEN 'LivingSimply'
+                            WHEN LOWER(TRIM(COALESCE(NULLIF(TRIM(utm_source),''), NULLIF(TRIM(source),''))))
+                                 IN ('dpcpl1','dp_cpl2')                                THEN 'DailyPuzzle'
+                            WHEN LOWER(TRIM(COALESCE(NULLIF(TRIM(utm_source),''), NULLIF(TRIM(source),''))))
+                                 = 'hfcpl1'                                             THEN 'HealthFirst'
+                            WHEN LOWER(TRIM(COALESCE(NULLIF(TRIM(utm_source),''), NULLIF(TRIM(source),''))))
+                                 = 'fccpl1'                                             THEN 'FitConnect'
+                            WHEN LOWER(TRIM(COALESCE(NULLIF(TRIM(utm_source),''), NULLIF(TRIM(source),''))))
+                                 IN ('facebook','meta','fb','ig')                       THEN 'Meta'
+                            WHEN LOWER(TRIM(COALESCE(NULLIF(TRIM(utm_source),''), NULLIF(TRIM(source),''))))
+                                 IN ('if','ifcpl1')                                     THEN 'IFCPL'
+                            WHEN LOWER(TRIM(COALESCE(NULLIF(TRIM(utm_source),''), NULLIF(TRIM(source),''))))
+                                 = 'taboola'                                            THEN 'Taboola'
+                            WHEN LOWER(TRIM(COALESCE(NULLIF(TRIM(utm_source),''), NULLIF(TRIM(source),''))))
+                                 IN ('superagequiz','longevity_quiz')                   THEN 'SuperAge Quiz'
+                            WHEN LOWER(TRIM(COALESCE(NULLIF(TRIM(utm_source),''), NULLIF(TRIM(source),''))))
+                                 = 'refind'                                             THEN 'Refind'
+                            ELSE NULLIF(TRIM(COALESCE(NULLIF(TRIM(utm_source),''),
+                                                       NULLIF(TRIM(source),''))), '')
+                        END AS bucket
+                    FROM {S}.subscribers
+                    WHERE date_joined IS NOT NULL
+                      AND date_joined::date >= DATE_TRUNC('week', CURRENT_DATE)::date - INTERVAL '2 weeks'
+                      AND date_joined::date <  DATE_TRUNC('week', CURRENT_DATE)::date
+                )
+                SELECT
+                    week_start,
+                    COALESCE(bucket, 'Direct') AS bucket,
+                    COUNT(*)                   AS subs
+                FROM src
+                GROUP BY 1, 2
+                ORDER BY week_start DESC, subs DESC
+            """)
+            top_source_rows = cur.fetchall()
+
     if not all_rows:
         result = {"data_as_of": today.isoformat(), "error": "no qualifying campaigns found"}
         commit_to_github(json.dumps(result, indent=2, default=str))
@@ -671,6 +814,33 @@ def lambda_handler(event, context):
             "clicks":       [safe_int(r["clicks"])       for r in raw_clicks_monthly_rows],
             "clicks_no_ss": [safe_int(r["clicks_no_ss"]) for r in raw_clicks_monthly_rows],
             "is_current":   [bool(r["is_current"])       for r in raw_clicks_monthly_rows],
+        },
+        # Weekly Digest — feeds the new Weekly Digest tab. 9 ISO weeks
+        # (8 completed + the in-progress current week, flagged by
+        # `is_current`). Tile-level WoW deltas are computed client-side
+        # against last_completed vs prior_completed indices so the same
+        # source can drive both the headline numbers and the sparklines.
+        "weekly_digest": {
+            "labels":              [str(r["label"])         for r in weekly_digest_rows],
+            "week_starts":         [str(r["week_start"])    for r in weekly_digest_rows],
+            "is_current":          [bool(r["is_current"])   for r in weekly_digest_rows],
+            "new_subs":            [safe_int(r["new_subs"])       for r in weekly_digest_rows],
+            "unsubs":              [safe_int(r["unsubs"])         for r in weekly_digest_rows],
+            "campaigns_sent":      [safe_int(r["campaigns_sent"]) for r in weekly_digest_rows],
+            "total_sent":          [safe_int(r["total_sent"])     for r in weekly_digest_rows],
+            "avg_open_rate":       [safe_float(r["avg_open_rate"])  if r.get("avg_open_rate")  is not None else None for r in weekly_digest_rows],
+            "avg_click_rate":      [safe_float(r["avg_click_rate"]) if r.get("avg_click_rate") is not None else None for r in weekly_digest_rows],
+            "churn_pct_of_sends":  [safe_float(r["churn_pct_of_sends"]) if r.get("churn_pct_of_sends") is not None else None for r in weekly_digest_rows],
+            "active_eow":          [safe_int(r["active_eow"]) if r.get("active_eow") is not None else None for r in weekly_digest_rows],
+            # Top acquisition source per week: list of {week_start, bucket,
+            # subs} rows sorted by week DESC, then subs DESC. Client picks
+            # the top entry for the last completed week.
+            "top_sources_by_week": [
+                {"week_start": str(r["week_start"]),
+                 "bucket":     str(r["bucket"]),
+                 "subs":       safe_int(r["subs"])}
+                for r in top_source_rows
+            ],
         },
     }
 

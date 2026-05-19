@@ -552,3 +552,56 @@ terminology used everywhere else); the percentage column previously
 labelled `Active %` is now **`Active % (of Cohort Size)`** so the
 denominator is explicit in the header itself. JSON field names
 (`active_now`, `active_pct`) are unchanged.
+
+### "Weekly Digest" page — basic version
+
+> "We still need a 'weekly Digest' page that flags top important metrics
+> and keeps a close look on the overall progress of SuperAge."
+>
+> Direction: "don't add flags or exports for now, just make it basic
+> until we see the edits. Window yes as you said (last completed Mon-Sun
+> vs prior). Nothing pulled externally. Don't need sponsor line amount.
+> Set them now but add them in the comparison lambda. No need of sum of
+> recipients in campaigns sent."
+
+**✓ shipped — basic version.** New **Weekly Digest** tab sits between
+Overview and Campaigns. Six headline tiles, one Top Source readout,
+no flags, no exports.
+
+Window logic: the lambda emits 9 ISO Mon-Sun weeks (8 completed + the
+in-progress current week, flagged `is_current=true`). The dashboard
+shows the **last completed week** as the headline and compares against
+the **prior completed week**. Sparklines show the 8 prior completed
+weeks; the in-progress current week is excluded from both the delta math
+and the sparkline so partial-week data can't skew the read.
+
+**Tiles (per your scope)**:
+
+| Tile | Source | Higher is… |
+|---|---|---|
+| Net New Subscribers | `subscribers.date_joined` bucketed by ISO week | better |
+| Send-To Base (end of week) | `growth_history.total_active`, MAX per week | better |
+| Churn % of Sends | unsubs ÷ total_sent × 100 (same formula as Q38) | worse |
+| Campaigns Sent | `Campaigns` count, `Recipients > 95`. Count only, no recipients total per your note | neutral |
+| Avg Open Rate | `AVG(UOpenRate)` over qualifying sends | better |
+| Avg Click Rate | `AVG(UClickRate)` over qualifying sends | better |
+
+Plus a "Top Acquisition Source" card showing the canonical bucket with
+the most new joiners during the last completed week (uses the
+canonical source mapping, same as the Audience tab).
+
+**Where the SQL lives**: in `superage_comparison_lambda.py` (not the
+metrics lambda) as you requested — the comparison lambda refreshes more
+often (every 6 hours) so the digest stays fresh between metrics-lambda
+runs. JSON shape: `M.weekly_digest = {labels, week_starts, is_current,
+new_subs, unsubs, campaigns_sent, total_sent, avg_open_rate,
+avg_click_rate, churn_pct_of_sends, active_eow, top_sources_by_week}`.
+
+**Caveat carried forward**: `total_sent` (used by the Churn % of Sends
+tile) sums `Recipients` across campaigns and is NOT deduplicated — a
+subscriber receiving N emails contributes N. Per-impression damage
+signal, as documented on the Retention tab. Noted on the chart insight
+strip + Q38 doc.
+
+Next time round, ping me with which flags / thresholds you'd like and
+whether to wire PDF/email export.

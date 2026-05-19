@@ -211,6 +211,7 @@
 
 <nav class="tab-bar" id="tab-bar">
   <button class="tab active" onclick="showPage('overview',this)">Overview</button>
+  <button class="tab" onclick="showPage('digest',this)">Weekly Digest</button>
   <button class="tab" onclick="showPage('campaigns',this)">Campaigns</button>
   <button class="tab" onclick="showPage('content',this)">Click Analysis</button>
   <button class="tab" onclick="showPage('content-ref',this)">Content Reference</button>
@@ -222,6 +223,7 @@
 </nav>
 
 <div id="overview" class="page active"></div>
+<div id="digest" class="page"></div>
 <div id="campaigns" class="page"></div>
 <div id="content" class="page"></div>
 <div id="content-ref" class="page"></div>
@@ -332,6 +334,7 @@ Promise.all([
     const asOf = M.data_as_of || '—';
     document.getElementById('as-of-label').textContent = asOf;
     renderOverview(M);
+    renderDigest(M);
     renderCampaigns(M);
     renderContent(M);
     renderContentRef(M);
@@ -485,6 +488,134 @@ function _campPct(v) {
   if (typeof v === 'number') return v;
   const n = parseFloat(String(v).replace(/[%\s]/g,''));
   return isFinite(n) ? n : null;
+}
+
+/* ═══════════════════════════════════════
+   WEEKLY DIGEST
+═══════════════════════════════════════ */
+/* Reads M.weekly_digest (produced by the comparison lambda — 9 ISO weeks of
+ * headline metrics with the in-progress current week flagged). Compares the
+ * **last completed week** (the second-to-last entry — the last entry is the
+ * in-progress current week, which is excluded from deltas because it's
+ * partial) against the **prior completed week** (third-to-last entry).
+ * No flags, no exports yet — basic version. */
+function renderDigest(M) {
+  const wd = M.weekly_digest || null;
+  const root = document.getElementById('digest');
+  if (!root) return;
+  if (!wd || !(wd.labels && wd.labels.length)) {
+    root.innerHTML = `
+      <div class="section-context-banner">
+        <strong>Weekly Digest</strong> — Not populated yet. Re-run the comparison lambda to ship the <code>weekly_digest</code> payload.
+      </div>`;
+    return;
+  }
+  // Find the last-completed week (latest is_current = false). If every row
+  // is is_current = true (edge case: only the current week has data) we
+  // fall back to the last entry so the page at least renders something.
+  const lastCompletedIdx = (() => {
+    for (let i = wd.labels.length - 1; i >= 0; i--) {
+      if (!wd.is_current[i]) return i;
+    }
+    return wd.labels.length - 1;
+  })();
+  const priorCompletedIdx = lastCompletedIdx - 1 >= 0 ? lastCompletedIdx - 1 : null;
+
+  const num = arr => (arr && arr[lastCompletedIdx] != null ? Number(arr[lastCompletedIdx]) : null);
+  const prv = arr => (arr && priorCompletedIdx != null && arr[priorCompletedIdx] != null ? Number(arr[priorCompletedIdx]) : null);
+
+  // Top source for the last completed week — top_sources_by_week is sorted
+  // week_start DESC then subs DESC, so the first row matching the last
+  // completed week_start is the winner.
+  const lastWeekStart = wd.week_starts[lastCompletedIdx];
+  const topSrcRow = (wd.top_sources_by_week || []).find(r => r.week_start === lastWeekStart);
+  const topSrc = topSrcRow ? `${utmLabel(topSrcRow.bucket)} (${Number(topSrcRow.subs).toLocaleString()})` : '—';
+
+  // 8-week sparkline series for each metric. Pull every entry except the
+  // in-progress current one so the sparkline shows completed weeks only.
+  const sparkLabels = wd.labels.filter((_, i) => !wd.is_current[i]);
+  const sparkOf = key => (wd[key] || []).filter((_, i) => !wd.is_current[i]);
+
+  // Tile definitions: label, current/prior values, sparkline array, formatter,
+  // "higher is better" hint for delta arrow colouring (null = neutral).
+  const tiles = [
+    { label: 'Net New Subscribers',     value: num(wd.new_subs),       prior: prv(wd.new_subs),       spark: sparkOf('new_subs'),       fmt: v => v == null ? '—' : Number(v).toLocaleString(),                                higherIsBetter: true,  spark_color: '#1a7f37' },
+    { label: 'Send-To Base (end of week)', value: num(wd.active_eow),  prior: prv(wd.active_eow),     spark: sparkOf('active_eow'),     fmt: v => v == null ? '—' : Number(v).toLocaleString(),                                higherIsBetter: true,  spark_color: '#0969da' },
+    { label: 'Churn % of Sends',         value: num(wd.churn_pct_of_sends), prior: prv(wd.churn_pct_of_sends), spark: sparkOf('churn_pct_of_sends'), fmt: v => v == null ? '—' : Number(v).toFixed(3) + '%',                       higherIsBetter: false, spark_color: '#cf222e' },
+    { label: 'Campaigns Sent',           value: num(wd.campaigns_sent), prior: prv(wd.campaigns_sent), spark: sparkOf('campaigns_sent'), fmt: v => v == null ? '—' : Number(v).toLocaleString(),                                higherIsBetter: null,  spark_color: '#8250df' },
+    { label: 'Avg Open Rate',            value: num(wd.avg_open_rate),  prior: prv(wd.avg_open_rate),  spark: sparkOf('avg_open_rate'),  fmt: v => v == null ? '—' : Number(v).toFixed(2) + '%',                                higherIsBetter: true,  spark_color: '#1a7f37' },
+    { label: 'Avg Click Rate',           value: num(wd.avg_click_rate), prior: prv(wd.avg_click_rate), spark: sparkOf('avg_click_rate'), fmt: v => v == null ? '—' : Number(v).toFixed(2) + '%',                                higherIsBetter: true,  spark_color: '#0969da' },
+  ];
+
+  const deltaHTML = (t) => {
+    if (t.value == null || t.prior == null) {
+      return `<span style="font-size:11px;color:var(--text-muted);">vs prior — no data</span>`;
+    }
+    const diff = t.value - t.prior;
+    const pct  = t.prior === 0 ? null : (diff / Math.abs(t.prior) * 100);
+    const arrow = diff > 0 ? '▲' : diff < 0 ? '▼' : '–';
+    const good  = t.higherIsBetter == null ? null
+                : (diff === 0 ? null : (diff > 0) === t.higherIsBetter);
+    const color = good == null ? 'var(--text-muted)' : good ? '#1a7f37' : '#cf222e';
+    const txt   = pct == null ? `${arrow} ${diff.toLocaleString()}`
+                              : `${arrow} ${Math.abs(pct).toFixed(1)}%`;
+    return `<span style="font-size:12px;font-weight:600;color:${color};">${txt}</span>
+            <span style="font-size:11px;color:var(--text-muted);"> vs prior week</span>`;
+  };
+
+  const lastLabel  = wd.labels[lastCompletedIdx]  || '—';
+  const priorLabel = priorCompletedIdx != null ? wd.labels[priorCompletedIdx] : '—';
+
+  root.innerHTML = `
+    <div class="section-context-banner">
+      <strong>Weekly Digest</strong> — Headline metrics for <strong>${esc(lastLabel)}</strong> (last completed Mon–Sun), compared against <strong>${esc(priorLabel)}</strong>. Sparklines show the 8 prior completed weeks (excluding the in-progress current week).
+    </div>
+
+    <div class="kpi-row" style="grid-template-columns:repeat(auto-fit,minmax(220px,1fr));">
+      ${tiles.map((t, i) => `
+        <div class="kpi-card" style="display:flex;flex-direction:column;gap:6px;">
+          <div class="label">${esc(t.label)}</div>
+          <div class="value" style="font-size:24px;">${t.fmt(t.value)}</div>
+          <div>${deltaHTML(t)}</div>
+          <div class="chart-container" style="height:48px;position:relative;margin-top:4px;">
+            <canvas id="dig-spark-${i}"></canvas>
+          </div>
+        </div>
+      `).join('')}
+    </div>
+
+    <div class="chart-card" style="margin-top:18px;">
+      <div class="label" style="font-size:12px;text-transform:uppercase;letter-spacing:.5px;color:var(--text-muted);">Top Acquisition Source — ${esc(lastLabel)}</div>
+      <div style="font-size:22px;font-weight:700;color:var(--text);margin-top:4px;">${esc(topSrc)}</div>
+      <div class="insight">Most-subscriber source bucket for new joiners during the last completed week. Canonical source labels (Audience tab → §4 mapping).</div>
+    </div>
+  `;
+
+  // Sparklines — minimal Chart.js lines with axes hidden.
+  tiles.forEach((t, i) => {
+    const el = document.getElementById(`dig-spark-${i}`);
+    if (!el) return;
+    new Chart(el, {
+      type: 'line',
+      data: {
+        labels: sparkLabels,
+        datasets: [{
+          data: t.spark.map(v => v == null ? null : Number(v)),
+          borderColor: t.spark_color,
+          backgroundColor: t.spark_color + '22',
+          tension: 0.3, pointRadius: 0, borderWidth: 1.5, fill: true, spanGaps: true,
+        }]
+      },
+      options: {
+        responsive: true, maintainAspectRatio: false,
+        plugins: { legend: { display: false }, tooltip: {
+          callbacks: { label: c => `${t.label}: ${t.fmt(c.parsed.y)}` }
+        } },
+        scales: { x: { display: false }, y: { display: false } },
+        elements: { line: { borderJoinStyle: 'round' } },
+      }
+    });
+  });
 }
 
 function renderCampaigns(M) {

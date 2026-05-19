@@ -725,15 +725,60 @@ function _digestSummaryBody(wd, lastIdx, priorIdx, lastLabel) {
     </div>`;
   };
 
+  // Text-row variant of sectionBlock for the Sponsor list — each row is
+  // its own bordered tile that shows the title (linked), the issue +
+  // send date, the URL backing the row (small + monospace + clickable),
+  // and the unique / total clicks. Used in place of the bar chart so the
+  // URL is visible at-a-glance instead of hidden behind a tooltip.
+  const textRowBlock = (heading, rows, badge) => {
+    const data = (rows || []).slice(0, 5);
+    if (!data.length) {
+      return `<div class="chart-card">
+        <h3>${esc(heading)}</h3>
+        <div class="insight" style="font-style:italic;">No ${esc(heading.toLowerCase())} this week.</div>
+      </div>`;
+    }
+    const badgeHTML = badge ? ` <span class="badge-inline">${esc(badge)}</span>` : '';
+    const items = data.map(r => {
+      const titleLine = r.url
+        ? `<a href="${esc(r.url)}" target="_blank" rel="noopener" style="font-weight:600;color:var(--text);text-decoration:none;">${esc(r.title || '(untitled)')}</a>`
+        : `<span style="font-weight:600;color:var(--text);">${esc(r.title || '(untitled)')}</span>`;
+      const meta = [];
+      if (r.issue_name) meta.push(`<span>Issue: <strong>${esc(r.issue_name)}</strong></span>`);
+      if (r.issue_date) meta.push(`<span>Sent: <strong>${esc(String(r.issue_date).slice(0,10))}</strong></span>`);
+      const metaLine = meta.length
+        ? `<div style="font-size:11px;color:var(--text-muted);margin-top:2px;">${meta.join(' &middot; ')}</div>`
+        : '';
+      const urlLine = r.url
+        ? `<div style="font-size:11px;color:var(--text-muted);margin-top:2px;word-break:break-all;"><code>${esc(r.url)}</code></div>`
+        : '';
+      const stats = `<div style="font-size:12px;color:var(--text);white-space:nowrap;margin-left:14px;">
+        <strong>${fmtN(r.unique_clicks)}</strong> unique <span style="color:var(--text-muted);">&middot; ${fmtN(r.total_clicks)} total</span>
+      </div>`;
+      return `<div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px;padding:10px 0;border-bottom:1px solid var(--row-border);">
+        <div style="flex:1;min-width:0;">
+          <div style="font-size:13px;">${titleLine}</div>
+          ${metaLine}
+          ${urlLine}
+        </div>
+        ${stats}
+      </div>`;
+    }).join('');
+    return `<div class="chart-card">
+      <h3>${esc(heading)}${badgeHTML}</h3>
+      <div style="margin-top:6px;">${items}</div>
+      <div class="insight">Top 5 by unique clicks. Title and URL link out to the article in a new tab.</div>
+    </div>`;
+  };
+
   const editorial  = sectionBlock('Editorial Clicks', 'dig-art-edit', wd.top_editorial_this_week || wd.top_content_this_week, 'type = editorial');
-  const sponsors   = sectionBlock('Sponsor Clicks',   'dig-art-spon', wd.top_sponsors_this_week, 'type = sponsor');
+  const sponsors   = textRowBlock('Sponsor Clicks', wd.top_sponsors_this_week, 'type = sponsor');
   const immersions = sectionBlock('Immersion Clicks', 'dig-art-imm',  wd.top_immersions_this_week, 'type = immersion');
 
-  // The three article cards live in a 3-column grid so they sit beside
-  // each other on wide screens (collapses to a single column under 860px
-  // via the @media rule on .grid-3).
-  const articleGrid = `<div class="grid-3">${editorial}${sponsors}${immersions}</div>`;
-  return overall + sourceBlock + articleGrid;
+  // The three article cards now stack vertically (each its own row) so
+  // the Sponsor list can use its full width for URLs without crowding
+  // the chart cards on either side. Was previously inside a .grid-3.
+  return overall + sourceBlock + editorial + sponsors + immersions;
 }
 
 /* Instantiates the Chart.js charts inside the Weekly Digest summary block.

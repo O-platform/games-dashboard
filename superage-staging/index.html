@@ -595,10 +595,12 @@ function renderDigest(M) {
          above plus the last-completed-week's article-level rollup
          (top_content_this_week / top_sponsors_this_week /
          top_immersions_this_week). -->
-    <div class="chart-card" style="margin-top:18px;">
-      <h3 style="margin:0 0 8px;">Weekly Summary — ${esc(lastLabel)}</h3>
-      ${_digestSummaryBody(wd, lastCompletedIdx, priorCompletedIdx)}
-    </div>
+    <!-- One chart-card per section so each visual gets its own header,
+         padding, and border — matches the styling on every other tab.
+         The actual markup for each card comes from _digestSummaryBody(),
+         which returns five sibling .chart-card blocks rather than one
+         wrapper card with the summary glued inside. -->
+    ${_digestSummaryBody(wd, lastCompletedIdx, priorCompletedIdx, lastLabel)}
   `;
 
   // Sparklines — minimal Chart.js lines with axes hidden.
@@ -631,13 +633,14 @@ function renderDigest(M) {
   _initDigestCharts();
 }
 
-/* Builds the visual summary HTML block under the Weekly Digest tiles —
- * one Overall stats strip (text, with WoW pp-deltas), a Sources doughnut,
- * and three horizontal-bar charts (Editorial / Sponsor / Immersion). The
- * function returns markup with canvas placeholders; _initDigestCharts()
- * instantiates the Chart.js objects after the markup is injected so the
- * canvases actually exist by the time we look them up. */
-function _digestSummaryBody(wd, lastIdx, priorIdx) {
+/* Builds the visual summary block under the Weekly Digest tiles as a
+ * sequence of standalone chart-cards (Overall stats / Sources doughnut /
+ * Editorial / Sponsor / Immersion) so each section gets the same
+ * heading, padding, and border treatment as the rest of the dashboard.
+ * Returns markup with canvas placeholders; _initDigestCharts() is then
+ * called by renderDigest() to instantiate the Chart.js objects after the
+ * markup is injected. */
+function _digestSummaryBody(wd, lastIdx, priorIdx, lastLabel) {
   const cur  = (key) => wd[key] && wd[key][lastIdx]  != null ? Number(wd[key][lastIdx])  : null;
   const prev = (key) => wd[key] && priorIdx != null && wd[key][priorIdx] != null ? Number(wd[key][priorIdx]) : null;
   const pp   = (a, b) => (a == null || b == null) ? null : (a - b);
@@ -651,21 +654,25 @@ function _digestSummaryBody(wd, lastIdx, priorIdx) {
     return ` <span style="color:${colour};font-weight:600;">${arrow(deltaPP)} ${Math.abs(deltaPP).toFixed(2)} pp</span>`;
   };
 
-  // ── Overall (campaigns sent this week) — single text strip, unchanged.
+  // ── Card 1: Overall (text-only stats strip)
   const camps     = cur('campaigns_sent') || 0;
   const totalSent = cur('total_sent')     || 0;
   const openR     = cur('avg_open_rate');
   const clickR    = cur('avg_click_rate');
   const unsubR    = cur('churn_pct_of_sends');
   const overall = `
-    <div style="font-size:13px;line-height:1.6;color:var(--text);margin-bottom:18px;">
-      <strong>Overall (${fmtN(camps)} campaign${camps === 1 ? '' : 's'})</strong>
-      &nbsp;${fmtN(totalSent)} sent · ${fmtP(openR)} open rate${ppHTML(pp(openR,  prev('avg_open_rate')),  true)}
-      &nbsp;· ${fmtP(clickR)} click rate${ppHTML(pp(clickR, prev('avg_click_rate')), true)}
-      &nbsp;· ${fmtP(unsubR, 3)} unsub${ppHTML(pp(unsubR, prev('churn_pct_of_sends')), false)}
-      <div style="font-size:11px;color:var(--text-muted);margin-top:4px;">
+    <div class="chart-card" style="margin-top:18px;">
+      <h3>Overall — ${esc(lastLabel || '')} <span class="badge-inline">campaign aggregates</span></h3>
+      <div style="font-size:13px;line-height:1.6;color:var(--text);">
+        <strong>${fmtN(camps)} campaign${camps === 1 ? '' : 's'}</strong>
+        &nbsp;· ${fmtN(totalSent)} sent
+        &nbsp;· ${fmtP(openR)} open rate${ppHTML(pp(openR,  prev('avg_open_rate')),  true)}
+        &nbsp;· ${fmtP(clickR)} click rate${ppHTML(pp(clickR, prev('avg_click_rate')), true)}
+        &nbsp;· ${fmtP(unsubR, 3)} unsub${ppHTML(pp(unsubR, prev('churn_pct_of_sends')), false)}
+      </div>
+      <div class="insight">
         <code>Recipients</code> is not deduplicated — same subscriber receiving N emails counts N×.
-        Unsub rate = unsubs ÷ <code>total_sent</code> × 100.
+        Unsub rate = unsubs ÷ <code>total_sent</code> × 100. Deltas vs prior completed week (pp = percentage points).
       </div>
     </div>`;
 
@@ -678,45 +685,49 @@ function _digestSummaryBody(wd, lastIdx, priorIdx) {
   window._digSrcData = allSrc;
   window._digSrcTotal = totalNew;
 
+  // ── Card 2: Sources doughnut
   const sourceBlock = (allSrc.length === 0)
-    ? `<div style="font-size:13px;color:var(--text-muted);margin-bottom:18px;">No new subscribers recorded this week.</div>`
-    : `<div style="margin-bottom:18px;">
-        <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;margin-bottom:6px;flex-wrap:wrap;">
-          <div style="font-size:12px;text-transform:uppercase;letter-spacing:.5px;color:var(--text-muted);">New Subscribers by Source</div>
-          <div style="font-size:12px;color:var(--text-muted);">Total: <strong style="color:var(--text);">${fmtN(totalNew)}</strong></div>
-        </div>
-        <div class="chart-container" style="height:240px;position:relative;">
-          <canvas id="dig-src-pie"></canvas>
-        </div>
+    ? `<div class="chart-card">
+        <h3>New Subscribers by Source</h3>
+        <div class="insight" style="font-style:italic;">No new subscribers recorded this week.</div>
+      </div>`
+    : `<div class="chart-card">
+        <h3>New Subscribers by Source <span class="badge-inline">total: ${fmtN(totalNew)}</span></h3>
+        <div class="chart-container h300"><canvas id="dig-src-pie"></canvas></div>
+        <div class="insight">Canonical-source split of subscribers who joined during the last completed week. Click a legend entry to hide that slice.</div>
       </div>`;
 
   // ── Three article-section horizontal bars — Editorial / Sponsor /
   // Immersion. Each canvas is sized to fit ~5 rows; rendered by
   // _initDigestCharts. Empty sections collapse to a muted "none this
   // week." note so the layout doesn't shift when there are no rows.
-  const sectionBlock = (heading, canvasId, rows) => {
+  // ── Cards 3-5: Editorial / Sponsor / Immersion horizontal-bar charts.
+  // Each in its own chart-card so headings, padding, and borders match
+  // the rest of the dashboard. Empty sections still render a card with
+  // a muted "no X this week" note so the page rhythm is consistent.
+  const sectionBlock = (heading, canvasId, rows, badge) => {
     const data = (rows || []).slice(0, 5);
     if (!data.length) {
-      return `<div style="margin-bottom:18px;">
-        <div style="font-size:12px;text-transform:uppercase;letter-spacing:.5px;color:var(--text-muted);margin-bottom:6px;">${esc(heading)}</div>
-        <div style="font-size:12px;color:var(--text-muted);font-style:italic;">No ${esc(heading.toLowerCase())} this week.</div>
+      return `<div class="chart-card">
+        <h3>${esc(heading)}</h3>
+        <div class="insight" style="font-style:italic;">No ${esc(heading.toLowerCase())} this week.</div>
       </div>`;
     }
-    // Cache rows on window so _initDigestCharts can attach tooltips +
-    // click-through links.
     window['_dig_' + canvasId] = data;
-    const height = Math.max(120, data.length * 36 + 24);
-    return `<div style="margin-bottom:18px;">
-      <div style="font-size:12px;text-transform:uppercase;letter-spacing:.5px;color:var(--text-muted);margin-bottom:6px;">${esc(heading)}</div>
+    const height = Math.max(160, data.length * 42 + 40);
+    const badgeHTML = badge ? ` <span class="badge-inline">${esc(badge)}</span>` : '';
+    return `<div class="chart-card">
+      <h3>${esc(heading)}${badgeHTML}</h3>
       <div class="chart-container" style="height:${height}px;position:relative;">
         <canvas id="${canvasId}"></canvas>
       </div>
+      <div class="insight">Top 5 by unique clicks. Click a bar to open the article URL; tooltip shows the full title, issue name, and send date.</div>
     </div>`;
   };
 
-  const editorial  = sectionBlock('Editorial Clicks', 'dig-art-edit', wd.top_editorial_this_week || wd.top_content_this_week);
-  const sponsors   = sectionBlock('Sponsor Clicks',   'dig-art-spon', wd.top_sponsors_this_week);
-  const immersions = sectionBlock('Immersion Clicks', 'dig-art-imm',  wd.top_immersions_this_week);
+  const editorial  = sectionBlock('Editorial Clicks', 'dig-art-edit', wd.top_editorial_this_week || wd.top_content_this_week, 'type = editorial');
+  const sponsors   = sectionBlock('Sponsor Clicks',   'dig-art-spon', wd.top_sponsors_this_week, 'type = sponsor');
+  const immersions = sectionBlock('Immersion Clicks', 'dig-art-imm',  wd.top_immersions_this_week, 'type = immersion');
 
   return overall + sourceBlock + editorial + sponsors + immersions;
 }

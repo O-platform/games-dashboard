@@ -424,9 +424,21 @@ function renderOverview(M) {
     </div>
 
     <div class="chart-card" style="margin-bottom:18px;">
-      <h3>Subscriber Growth Over Time <span class="badge-inline">— MRR-style: gained ↑ / lost ↓ / net line</span></h3>
-      <p style="font-size:12px;color:var(--text-muted);margin-top:4px;margin-bottom:10px;">Green bars (gained) sit above zero; red bars (lost) sit below zero. The blue <strong>Net Gain / Loss</strong> line crosses through — a positive month sits above the zero gridline, a negative month dips below. Purple line on the right axis is the running Total Subscribers (Send-To base). Last 12 months.</p>
-      <div class="chart-container h300"><canvas id="ov-growth"></canvas></div>
+      <div style="display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:6px;">
+        <h3 style="margin:0;">Subscriber Growth Over Time <span class="badge-inline">— MRR-style: gained ↑ / lost ↓ / net line</span></h3>
+        <div style="display:flex;align-items:center;gap:6px;">
+          <span style="font-size:11px;color:var(--text-muted);text-transform:uppercase;letter-spacing:.3px;">Window</span>
+          <div style="display:flex;gap:4px;" id="ov-growth-win-btns">
+            <button onclick="_setOvGrowthWindow('all')" id="ovgw-all" style="font-size:11px;padding:3px 10px;border:1px solid var(--card-border);border-radius:5px;background:var(--card);color:var(--text-muted);cursor:pointer;">All</button>
+            <button onclick="_setOvGrowthWindow(24)"    id="ovgw-24"  style="font-size:11px;padding:3px 10px;border:1px solid var(--card-border);border-radius:5px;background:var(--card);color:var(--text-muted);cursor:pointer;">24m</button>
+            <button onclick="_setOvGrowthWindow(12)"    id="ovgw-12"  style="font-size:11px;padding:3px 10px;border:1px solid var(--card-border);border-radius:5px;background:var(--accent);color:#fff;cursor:pointer;">12m</button>
+            <button onclick="_setOvGrowthWindow(6)"     id="ovgw-6"   style="font-size:11px;padding:3px 10px;border:1px solid var(--card-border);border-radius:5px;background:var(--card);color:var(--text-muted);cursor:pointer;">6m</button>
+            <button onclick="_setOvGrowthWindow(3)"     id="ovgw-3"   style="font-size:11px;padding:3px 10px;border:1px solid var(--card-border);border-radius:5px;background:var(--card);color:var(--text-muted);cursor:pointer;">3m</button>
+          </div>
+        </div>
+      </div>
+      <p style="font-size:12px;color:var(--text-muted);margin:0 0 10px;">Green bars (gained) sit above zero; red bars (lost) sit below zero. The blue <strong>Net Gain / Loss</strong> filled area crosses through — a positive month sits above the zero gridline, a negative month dips below. Purple line on the right axis is the running Total Subscribers (Send-To base).</p>
+      <div class="chart-container h340"><canvas id="ov-growth"></canvas></div>
     </div>
 
     <div class="chart-card">
@@ -469,9 +481,31 @@ function renderOverview(M) {
   window._ovCampData = M.campaign_table || [];
   window._ovCampWindow = '90d';   // default — matches the highlighted button
   _renderOvCampTrend();
-  // Growth chart — sourced from superage.growth_history via M.subscriber_monthly
+  // Growth chart — sourced from superage.growth_history via M.subscriber_monthly.
+  // Default window = 12 months (matches the highlighted button). Stash the
+  // payload + active window on `window` so the filter buttons can re-render
+  // without re-fetching anything.
   const gd = M.subscriber_monthly || {labels:[],new_subs:[],unsubs:[],active_count:[]};
+  window._ovGrowthData = gd;
+  window._ovGrowthWin  = 12;
   _ovGrowthChart(gd, 12);
+}
+
+/* Date-window control for the Subscriber Growth chart. `win` is either the
+ * literal 'all' or a number of months (3 / 6 / 12 / 24). Toggles the
+ * active button style and re-renders with the new slice. */
+function _setOvGrowthWindow(win) {
+  window._ovGrowthWin = win;
+  ['all','24','12','6','3'].forEach(s => {
+    const btn = document.getElementById('ovgw-' + s);
+    if (!btn) return;
+    const wantKey = s === 'all' ? 'all' : parseInt(s, 10);
+    const active = wantKey === win || (win === 'all' && s === 'all');
+    btn.style.background = active ? 'var(--accent)' : 'var(--card)';
+    btn.style.color      = active ? '#fff'          : 'var(--text-muted)';
+  });
+  const n = win === 'all' ? Infinity : Number(win);
+  _ovGrowthChart(window._ovGrowthData || {}, n);
 }
 /* Overview Campaign Performance Trend — pulls from window._ovCampData
  * (= M.campaign_table) and renders two single-metric line charts:
@@ -580,65 +614,72 @@ function _renderOvCampTrend() {
 }
 
 function _ovGrowthChart(gd, n) {
+  // n can be Infinity (when the user picks "All"); slice() copes with that.
   const labels = (gd.labels||[]).slice(-n);
   const newS   = (gd.new_subs||[]).slice(-n);
   const unsub  = (gd.unsubs||[]).slice(-n);
   const active = (gd.active_count||[]).slice(-n);
   // MRR-style layout: gained sits above zero (positive), lost sits below
-  // zero (negative), and the Net Gain/Loss line crosses through. We flip
-  // unsubs to negative for the bar series; the underlying positive count
-  // is still shown in the tooltip so the magnitude is readable.
+  // zero (negative), and the Net Gain/Loss series crosses through with a
+  // filled area so it reads at-a-glance even when the bars dominate.
   const unsubNeg = unsub.map(v => -Math.abs(Number(v) || 0));
   const net      = newS.map((v, i) => (Number(v) || 0) - Math.abs(Number(unsub[i]) || 0));
+
   const ctx = document.getElementById('ov-growth');
   if (!ctx) return;
   if (ctx._chart) ctx._chart.destroy();
   ctx._chart = new Chart(ctx, {
     type: 'bar',
     data: { labels, datasets: [
-      { label: 'Gained (new)',     data: newS,     backgroundColor: '#1a7f37', yAxisID: 'y',
-        stack: 'flow', borderRadius: 4 },
-      { label: 'Lost (unsubs)',    data: unsubNeg, backgroundColor: '#cf222e', yAxisID: 'y',
-        stack: 'flow', borderRadius: 4 },
+      { label: 'Gained (new)',     data: newS,     backgroundColor: 'rgba(26,127,55,.85)',
+        borderColor: '#1a7f37', borderWidth: 1, yAxisID: 'y',
+        stack: 'flow', borderRadius: 3,
+        categoryPercentage: 0.6, barPercentage: 0.85 },
+      { label: 'Lost (unsubs)',    data: unsubNeg, backgroundColor: 'rgba(207,34,46,.85)',
+        borderColor: '#cf222e', borderWidth: 1, yAxisID: 'y',
+        stack: 'flow', borderRadius: 3,
+        categoryPercentage: 0.6, barPercentage: 0.85 },
       { label: 'Net Gain / Loss',  data: net, type: 'line',
-        borderColor: '#0969da', backgroundColor: 'transparent',
-        tension: .3, pointRadius: 4, borderWidth: 3, yAxisID: 'y',
-        order: 0 },   // ensure the line renders ON TOP of the bars
+        borderColor: '#0969da', backgroundColor: 'rgba(9,105,218,.15)',
+        tension: .35, pointRadius: 4, pointBackgroundColor: '#0969da',
+        borderWidth: 3, yAxisID: 'y',
+        fill: { target: 'origin', above: 'rgba(9,105,218,.12)', below: 'rgba(9,105,218,.12)' },
+        order: 0 },                          // line drawn ON TOP of bars
       { label: 'Total Subscribers', data: active, type: 'line',
         borderColor: '#8250df', backgroundColor: 'transparent',
-        tension: .25, pointRadius: 2, borderWidth: 2, yAxisID: 'y1' }
+        borderDash: [4, 4], tension: .25, pointRadius: 2, borderWidth: 2,
+        yAxisID: 'y1', order: 1 }
     ]},
     options: { responsive:true, maintainAspectRatio:false,
+      interaction: { mode: 'index', intersect: false },
       plugins:{
-        legend:{ position:'bottom', labels:{ font:{ size:11 } } },
+        legend:{ position:'bottom', labels:{ font:{ size:11 }, boxWidth: 14 } },
         tooltip:{ callbacks:{
-          // Show the magnitude (always positive) for the "Lost" bars even
-          // though the dataset value is negative for layout purposes.
           label: c => {
             const v = c.parsed.y;
             if (c.dataset.label === 'Lost (unsubs)') {
               return `Lost (unsubs): ${Math.abs(Number(v) || 0).toLocaleString()}`;
             }
             if (c.dataset.label === 'Net Gain / Loss') {
-              const n = Number(v) || 0;
-              const sign = n > 0 ? '+' : n < 0 ? '−' : '';
-              return `Net Gain / Loss: ${sign}${Math.abs(n).toLocaleString()}`;
+              const x = Number(v) || 0;
+              const sign = x > 0 ? '+' : x < 0 ? '−' : '';
+              return `Net Gain / Loss: ${sign}${Math.abs(x).toLocaleString()}`;
             }
             return `${c.dataset.label}: ${Number(v || 0).toLocaleString()}`;
           }
         }}
       },
       scales:{
-        // beginAtZero forces the zero line to be visible so gained/lost
-        // bars cleanly diverge from it (MRR-style). The axis ticks abs()
-        // so the labels read "10K" on both sides rather than "-10K".
+        // Zero line is thicker (visible anchor for the divergence). Tick
+        // labels use Math.abs so the y axis reads "10K" on both sides.
         y:  { position:'left',  beginAtZero:true, stacked:true,
               title:{ display:true, text:'Monthly Δ (gained ↑ / lost ↓ / net line)' },
               ticks:{ callback: v => Math.abs(Number(v) || 0).toLocaleString() },
-              grid:{ color: ctx => ctx.tick.value === 0 ? 'var(--text-muted)' : 'rgba(127,127,127,.12)',
-                     lineWidth: ctx => ctx.tick.value === 0 ? 2 : 1 } },
+              grid:{ color: c => c.tick.value === 0 ? 'rgba(127,127,127,.55)' : 'rgba(127,127,127,.12)',
+                     lineWidth: c => c.tick.value === 0 ? 2 : 1 } },
         y1: { position:'right', beginAtZero:false, grid:{ drawOnChartArea:false },
-              title:{ display:true, text:'Total Subscribers' } }
+              title:{ display:true, text:'Total Subscribers' },
+              ticks:{ callback: v => Number(v).toLocaleString() } }
       } }
   });
 }

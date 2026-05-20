@@ -494,20 +494,22 @@ function renderOverview(M) {
   const monthlyFallback = M.subscriber_monthly || {labels:[],new_subs:[],unsubs:[],active_count:[]};
   window._ovGrowthSeries = series || { monthly: monthlyFallback, weekly: null, daily: null };
   window._ovGrowthGran   = 'monthly';
-  window._ovGrowthWin    = 12;
+  window._ovGrowthWin    = 6;
   _renderOvGrowthWinButtons();
   _renderOvGrowth();
 }
 
 /* Defines the window-button presets for each granularity. The number is
  * "how many buckets" — for daily that's days, weekly is weeks, monthly is
- * months. Default window per granularity is the third entry. */
+ * months. Default window per granularity is the third entry. Monthly only
+ * goes up to 6m because the growth_history rollup typically has at most
+ * 6 months of data on hand. */
 const _OV_GROWTH_WIN_PRESETS = {
   daily:   [{key:'all',label:'All'}, {key:90,label:'90d'}, {key:30,label:'30d'}, {key:14,label:'14d'}, {key:7,label:'7d'}],
   weekly:  [{key:'all',label:'All'}, {key:26,label:'26w'}, {key:12,label:'12w'}, {key:8, label:'8w'},  {key:4, label:'4w'}],
-  monthly: [{key:'all',label:'All'}, {key:24,label:'24m'}, {key:12,label:'12m'}, {key:6, label:'6m'},  {key:3, label:'3m'}],
+  monthly: [{key:'all',label:'All'}, {key:6, label:'6m'}, {key:3, label:'3m'}],
 };
-const _OV_GROWTH_DEFAULT_WIN = { daily: 30, weekly: 12, monthly: 12 };
+const _OV_GROWTH_DEFAULT_WIN = { daily: 30, weekly: 12, monthly: 6 };
 
 /* Switch granularity. Re-renders the window-button row to match the new
  * unit (days / weeks / months) and snaps the window to that granularity's

@@ -426,18 +426,22 @@ function renderOverview(M) {
     <div class="chart-card" style="margin-bottom:18px;">
       <div style="display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:6px;">
         <h3 style="margin:0;">Subscriber Growth Over Time <span class="badge-inline">— MRR-style: gained ↑ / lost ↓ / net line</span></h3>
-        <div style="display:flex;align-items:center;gap:6px;">
-          <span style="font-size:11px;color:var(--text-muted);text-transform:uppercase;letter-spacing:.3px;">Window</span>
-          <div style="display:flex;gap:4px;" id="ov-growth-win-btns">
-            <button onclick="_setOvGrowthWindow('all')" id="ovgw-all" style="font-size:11px;padding:3px 10px;border:1px solid var(--card-border);border-radius:5px;background:var(--card);color:var(--text-muted);cursor:pointer;">All</button>
-            <button onclick="_setOvGrowthWindow(24)"    id="ovgw-24"  style="font-size:11px;padding:3px 10px;border:1px solid var(--card-border);border-radius:5px;background:var(--card);color:var(--text-muted);cursor:pointer;">24m</button>
-            <button onclick="_setOvGrowthWindow(12)"    id="ovgw-12"  style="font-size:11px;padding:3px 10px;border:1px solid var(--card-border);border-radius:5px;background:var(--accent);color:#fff;cursor:pointer;">12m</button>
-            <button onclick="_setOvGrowthWindow(6)"     id="ovgw-6"   style="font-size:11px;padding:3px 10px;border:1px solid var(--card-border);border-radius:5px;background:var(--card);color:var(--text-muted);cursor:pointer;">6m</button>
-            <button onclick="_setOvGrowthWindow(3)"     id="ovgw-3"   style="font-size:11px;padding:3px 10px;border:1px solid var(--card-border);border-radius:5px;background:var(--card);color:var(--text-muted);cursor:pointer;">3m</button>
+        <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;">
+          <div style="display:flex;align-items:center;gap:6px;">
+            <span style="font-size:11px;color:var(--text-muted);text-transform:uppercase;letter-spacing:.3px;">Granularity</span>
+            <div style="display:flex;gap:4px;" id="ov-growth-gran-btns">
+              <button onclick="_setOvGrowthGran('daily')"   id="ovgg-daily"   style="font-size:11px;padding:3px 10px;border:1px solid var(--card-border);border-radius:5px;background:var(--card);color:var(--text-muted);cursor:pointer;">Day</button>
+              <button onclick="_setOvGrowthGran('weekly')"  id="ovgg-weekly"  style="font-size:11px;padding:3px 10px;border:1px solid var(--card-border);border-radius:5px;background:var(--card);color:var(--text-muted);cursor:pointer;">Week</button>
+              <button onclick="_setOvGrowthGran('monthly')" id="ovgg-monthly" style="font-size:11px;padding:3px 10px;border:1px solid var(--card-border);border-radius:5px;background:var(--accent);color:#fff;cursor:pointer;">Month</button>
+            </div>
+          </div>
+          <div style="display:flex;align-items:center;gap:6px;">
+            <span style="font-size:11px;color:var(--text-muted);text-transform:uppercase;letter-spacing:.3px;">Window</span>
+            <div style="display:flex;gap:4px;" id="ov-growth-win-btns"></div>
           </div>
         </div>
       </div>
-      <p style="font-size:12px;color:var(--text-muted);margin:0 0 10px;">Green bars (gained) sit above zero; red bars (lost) sit below zero. The blue <strong>Net Gain / Loss</strong> filled area crosses through — a positive month sits above the zero gridline, a negative month dips below. Purple line on the right axis is the running Total Subscribers (Send-To base).</p>
+      <p style="font-size:12px;color:var(--text-muted);margin:0 0 10px;">Green bars (gained) sit above zero; red bars (lost) sit below zero. The blue <strong>Net Gain / Loss</strong> filled area crosses through — a positive bucket sits above the zero gridline, a negative bucket dips below. Purple dashed line on the right axis is the running Total Subscribers (latest snapshot per bucket — Send-To base).</p>
       <div class="chart-container h340"><canvas id="ov-growth"></canvas></div>
     </div>
 
@@ -481,31 +485,75 @@ function renderOverview(M) {
   window._ovCampData = M.campaign_table || [];
   window._ovCampWindow = '90d';   // default — matches the highlighted button
   _renderOvCampTrend();
-  // Growth chart — sourced from superage.growth_history via M.subscriber_monthly.
-  // Default window = 12 months (matches the highlighted button). Stash the
-  // payload + active window on `window` so the filter buttons can re-render
-  // without re-fetching anything.
-  const gd = M.subscriber_monthly || {labels:[],new_subs:[],unsubs:[],active_count:[]};
-  window._ovGrowthData = gd;
-  window._ovGrowthWin  = 12;
-  _ovGrowthChart(gd, 12);
+  // Growth chart — sourced from M.subscriber_growth_series (multi-granularity:
+  // daily / weekly / monthly buckets) with M.subscriber_monthly as the
+  // backwards-compat fallback. Default granularity = monthly, default
+  // window = 12 buckets. Picker buttons + window buttons re-render the
+  // chart by re-slicing the cached payload — no lambda re-fetch.
+  const series = M.subscriber_growth_series || null;
+  const monthlyFallback = M.subscriber_monthly || {labels:[],new_subs:[],unsubs:[],active_count:[]};
+  window._ovGrowthSeries = series || { monthly: monthlyFallback, weekly: null, daily: null };
+  window._ovGrowthGran   = 'monthly';
+  window._ovGrowthWin    = 12;
+  _renderOvGrowthWinButtons();
+  _renderOvGrowth();
 }
 
-/* Date-window control for the Subscriber Growth chart. `win` is either the
- * literal 'all' or a number of months (3 / 6 / 12 / 24). Toggles the
- * active button style and re-renders with the new slice. */
-function _setOvGrowthWindow(win) {
-  window._ovGrowthWin = win;
-  ['all','24','12','6','3'].forEach(s => {
-    const btn = document.getElementById('ovgw-' + s);
+/* Defines the window-button presets for each granularity. The number is
+ * "how many buckets" — for daily that's days, weekly is weeks, monthly is
+ * months. Default window per granularity is the third entry. */
+const _OV_GROWTH_WIN_PRESETS = {
+  daily:   [{key:'all',label:'All'}, {key:90,label:'90d'}, {key:30,label:'30d'}, {key:14,label:'14d'}, {key:7,label:'7d'}],
+  weekly:  [{key:'all',label:'All'}, {key:26,label:'26w'}, {key:12,label:'12w'}, {key:8, label:'8w'},  {key:4, label:'4w'}],
+  monthly: [{key:'all',label:'All'}, {key:24,label:'24m'}, {key:12,label:'12m'}, {key:6, label:'6m'},  {key:3, label:'3m'}],
+};
+const _OV_GROWTH_DEFAULT_WIN = { daily: 30, weekly: 12, monthly: 12 };
+
+/* Switch granularity. Re-renders the window-button row to match the new
+ * unit (days / weeks / months) and snaps the window to that granularity's
+ * default before re-drawing the chart. */
+function _setOvGrowthGran(gran) {
+  window._ovGrowthGran = gran;
+  ['daily','weekly','monthly'].forEach(g => {
+    const btn = document.getElementById('ovgg-' + g);
     if (!btn) return;
-    const wantKey = s === 'all' ? 'all' : parseInt(s, 10);
-    const active = wantKey === win || (win === 'all' && s === 'all');
+    const active = g === gran;
     btn.style.background = active ? 'var(--accent)' : 'var(--card)';
     btn.style.color      = active ? '#fff'          : 'var(--text-muted)';
   });
-  const n = win === 'all' ? Infinity : Number(win);
-  _ovGrowthChart(window._ovGrowthData || {}, n);
+  window._ovGrowthWin = _OV_GROWTH_DEFAULT_WIN[gran];
+  _renderOvGrowthWinButtons();
+  _renderOvGrowth();
+}
+
+/* Builds the window-button row dynamically based on the active granularity.
+ * Highlighted button = current window. Each button calls
+ * _setOvGrowthWindow(key) which restyles + re-renders. */
+function _renderOvGrowthWinButtons() {
+  const container = document.getElementById('ov-growth-win-btns');
+  if (!container) return;
+  const presets = _OV_GROWTH_WIN_PRESETS[window._ovGrowthGran] || _OV_GROWTH_WIN_PRESETS.monthly;
+  container.innerHTML = presets.map(p => {
+    const active = p.key === window._ovGrowthWin;
+    return `<button onclick="_setOvGrowthWindow(${JSON.stringify(p.key)})"
+                    style="font-size:11px;padding:3px 10px;border:1px solid var(--card-border);border-radius:5px;background:${active ? 'var(--accent)' : 'var(--card)'};color:${active ? '#fff' : 'var(--text-muted)'};cursor:pointer;">${p.label}</button>`;
+  }).join('');
+}
+
+function _setOvGrowthWindow(win) {
+  window._ovGrowthWin = win;
+  _renderOvGrowthWinButtons();
+  _renderOvGrowth();
+}
+
+/* Pulls the dataset for the active granularity from the cached series,
+ * resolves the window slice size (or Infinity for All), and hands off to
+ * _ovGrowthChart for the actual Chart.js render. */
+function _renderOvGrowth() {
+  const series = window._ovGrowthSeries || {};
+  const gd = series[window._ovGrowthGran] || series.monthly || {labels:[],new_subs:[],unsubs:[],active_count:[]};
+  const n  = window._ovGrowthWin === 'all' ? Infinity : Number(window._ovGrowthWin);
+  _ovGrowthChart(gd, n);
 }
 /* Overview Campaign Performance Trend — pulls from window._ovCampData
  * (= M.campaign_table) and renders two single-metric line charts:

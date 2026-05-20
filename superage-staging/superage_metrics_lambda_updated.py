@@ -281,19 +281,61 @@ def lambda_handler(event, context):
         """)
         state_rows = cur.fetchall()
 
-        # Growth history table — used for Overview subscriber growth chart
-        cur.execute(f"""
-            SELECT
-                TO_CHAR(DATE_TRUNC('month', snapshot_date), 'YYYY-MM') AS month_label,
-                SUM(gained)       AS gained,
-                SUM(lost)         AS lost,
-                MAX(total_active) AS total_active
-            FROM {S}.growth_history
-            WHERE snapshot_date < CURRENT_DATE
-            GROUP BY DATE_TRUNC('month', snapshot_date)
-            ORDER BY 1
-        """)
-        growth_history_rows = cur.fetchall()
+        # Growth history table — Overview subscriber growth chart.
+        # We produce three granularity buckets (day / week / month) so the
+        # dashboard can flip between them without a lambda re-run. For each
+        # bucket:
+        #   • gained / lost  → SUM of the per-day deltas inside the bucket
+        #   • total_active   → **LATEST snapshot's value** inside the
+        #                       bucket (most recent snapshot_date), so the
+        #                       endpoint matches the lambda's real-time
+        #                       count more closely. Previously we used
+        #                       MAX(total_active) — that returned the
+        #                       month's peak rather than its end-of-period
+        #                       value and caused a ~1.5K gap vs the live
+        #                       state='Active' count when the peak
+        #                       happened mid-month.
+        def _fetch_growth_buckets(date_trunc_unit: str, since_clause: str):
+            cur.execute(f"""
+                WITH ranked AS (
+                    SELECT
+                        DATE_TRUNC('{date_trunc_unit}', snapshot_date::date)::date AS bucket,
+                        snapshot_date,
+                        COALESCE(gained, 0)::int       AS gained,
+                        COALESCE(lost, 0)::int         AS lost,
+                        COALESCE(total_active, 0)::int AS total_active,
+                        ROW_NUMBER() OVER (
+                            PARTITION BY DATE_TRUNC('{date_trunc_unit}', snapshot_date::date)
+                            ORDER BY snapshot_date DESC
+                        ) AS rn
+                    FROM {S}.growth_history
+                    WHERE snapshot_date IS NOT NULL
+                      AND snapshot_date <= CURRENT_DATE
+                      {since_clause}
+                )
+                SELECT
+                    bucket,
+                    SUM(gained)                                AS gained,
+                    SUM(lost)                                  AS lost,
+                    MAX(total_active) FILTER (WHERE rn = 1)    AS total_active
+                FROM ranked
+                GROUP BY bucket
+                ORDER BY bucket
+            """)
+            return cur.fetchall()
+
+        growth_daily_rows   = _fetch_growth_buckets('day',   "AND snapshot_date >= CURRENT_DATE - INTERVAL '120 days'")
+        growth_weekly_rows  = _fetch_growth_buckets('week',  "AND snapshot_date >= CURRENT_DATE - INTERVAL '52 weeks'")
+        growth_monthly_rows = _fetch_growth_buckets('month', "AND snapshot_date >= CURRENT_DATE - INTERVAL '36 months'")
+        # Existing variable name kept so downstream code that builds
+        # M["subscriber_monthly"] doesn't need to change shape.
+        growth_history_rows = [
+            {"month_label":  r["bucket"].strftime("%Y-%m") if r.get("bucket") else "",
+             "gained":       r["gained"],
+             "lost":         r["lost"],
+             "total_active": r["total_active"]}
+            for r in growth_monthly_rows
+        ]
 
         # ─────────────────────────────────────────────────────
         # 2. Campaigns — filter: Recipients > 95
@@ -1208,6 +1250,22 @@ def lambda_handler(event, context):
         "new_subs":     [safe_int(r["gained"]) for r in growth_history_rows],
         "unsubs":       [safe_int(r["lost"]) for r in growth_history_rows],
         "active_count": [safe_int(r["total_active"]) for r in growth_history_rows],
+    }
+
+    # Multi-granularity growth series — Overview chart can flip between
+    # day / week / month buckets without a lambda re-run. `total_active`
+    # on each row is the latest snapshot inside the bucket, not the peak.
+    def _serialise_growth(rows, label_fmt):
+        return {
+            "labels":       [r["bucket"].strftime(label_fmt) if r.get("bucket") else "" for r in rows],
+            "new_subs":     [safe_int(r["gained"])       for r in rows],
+            "unsubs":       [safe_int(r["lost"])         for r in rows],
+            "active_count": [safe_int(r["total_active"]) for r in rows],
+        }
+    M["subscriber_growth_series"] = {
+        "daily":   _serialise_growth(growth_daily_rows,   "%Y-%m-%d"),
+        "weekly":  _serialise_growth(growth_weekly_rows,  "%Y-%m-%d"),  # week-start date
+        "monthly": _serialise_growth(growth_monthly_rows, "%Y-%m"),
     }
 
     # Campaign trend (last 30)

@@ -424,8 +424,8 @@ function renderOverview(M) {
     </div>
 
     <div class="chart-card" style="margin-bottom:18px;">
-      <h3>Subscriber Growth Over Time</h3>
-      <p style="font-size:12px;color:var(--text-muted);margin-top:4px;margin-bottom:10px;">Monthly new subscribers vs. unsubscribes. Net = new minus churned. Last 12 months.</p>
+      <h3>Subscriber Growth Over Time <span class="badge-inline">— MRR-style: gained ↑ / lost ↓ / net line</span></h3>
+      <p style="font-size:12px;color:var(--text-muted);margin-top:4px;margin-bottom:10px;">Green bars (gained) sit above zero; red bars (lost) sit below zero. The blue <strong>Net Gain / Loss</strong> line crosses through — a positive month sits above the zero gridline, a negative month dips below. Purple line on the right axis is the running Total Subscribers (Send-To base). Last 12 months.</p>
       <div class="chart-container h300"><canvas id="ov-growth"></canvas></div>
     </div>
 
@@ -584,23 +584,61 @@ function _ovGrowthChart(gd, n) {
   const newS   = (gd.new_subs||[]).slice(-n);
   const unsub  = (gd.unsubs||[]).slice(-n);
   const active = (gd.active_count||[]).slice(-n);
-  const net    = newS.map((v,i) => (v||0) - (unsub[i]||0));
+  // MRR-style layout: gained sits above zero (positive), lost sits below
+  // zero (negative), and the Net Gain/Loss line crosses through. We flip
+  // unsubs to negative for the bar series; the underlying positive count
+  // is still shown in the tooltip so the magnitude is readable.
+  const unsubNeg = unsub.map(v => -Math.abs(Number(v) || 0));
+  const net      = newS.map((v, i) => (Number(v) || 0) - Math.abs(Number(unsub[i]) || 0));
   const ctx = document.getElementById('ov-growth');
   if (!ctx) return;
   if (ctx._chart) ctx._chart.destroy();
   ctx._chart = new Chart(ctx, {
     type: 'bar',
     data: { labels, datasets: [
-      { label: 'Gained (new)',     data: newS,   backgroundColor: '#1a7f37', yAxisID: 'y' },
-      { label: 'Lost (unsubs)',    data: unsub,  backgroundColor: '#cf222e', yAxisID: 'y' },
-      { label: 'Net change',       data: net,    type: 'line', borderColor: '#0969da', backgroundColor: 'transparent', tension: .3, pointRadius: 3, yAxisID: 'y' },
-      { label: 'Total Subscribers', data: active, type: 'line', borderColor: '#8250df', backgroundColor: 'transparent', tension: .25, pointRadius: 2, borderWidth: 2, yAxisID: 'y1' }
+      { label: 'Gained (new)',     data: newS,     backgroundColor: '#1a7f37', yAxisID: 'y',
+        stack: 'flow', borderRadius: 4 },
+      { label: 'Lost (unsubs)',    data: unsubNeg, backgroundColor: '#cf222e', yAxisID: 'y',
+        stack: 'flow', borderRadius: 4 },
+      { label: 'Net Gain / Loss',  data: net, type: 'line',
+        borderColor: '#0969da', backgroundColor: 'transparent',
+        tension: .3, pointRadius: 4, borderWidth: 3, yAxisID: 'y',
+        order: 0 },   // ensure the line renders ON TOP of the bars
+      { label: 'Total Subscribers', data: active, type: 'line',
+        borderColor: '#8250df', backgroundColor: 'transparent',
+        tension: .25, pointRadius: 2, borderWidth: 2, yAxisID: 'y1' }
     ]},
     options: { responsive:true, maintainAspectRatio:false,
-      plugins:{ legend:{ position:'bottom', labels:{ font:{ size:11 } } } },
+      plugins:{
+        legend:{ position:'bottom', labels:{ font:{ size:11 } } },
+        tooltip:{ callbacks:{
+          // Show the magnitude (always positive) for the "Lost" bars even
+          // though the dataset value is negative for layout purposes.
+          label: c => {
+            const v = c.parsed.y;
+            if (c.dataset.label === 'Lost (unsubs)') {
+              return `Lost (unsubs): ${Math.abs(Number(v) || 0).toLocaleString()}`;
+            }
+            if (c.dataset.label === 'Net Gain / Loss') {
+              const n = Number(v) || 0;
+              const sign = n > 0 ? '+' : n < 0 ? '−' : '';
+              return `Net Gain / Loss: ${sign}${Math.abs(n).toLocaleString()}`;
+            }
+            return `${c.dataset.label}: ${Number(v || 0).toLocaleString()}`;
+          }
+        }}
+      },
       scales:{
-        y:  { position:'left',  beginAtZero:false, title:{ display:true, text:'Monthly Δ' } },
-        y1: { position:'right', beginAtZero:false, grid:{ drawOnChartArea:false }, title:{ display:true, text:'Active Subscribers' } }
+        // beginAtZero forces the zero line to be visible so gained/lost
+        // bars cleanly diverge from it (MRR-style). The axis ticks abs()
+        // so the labels read "10K" on both sides rather than "-10K".
+        y:  { position:'left',  beginAtZero:true, stacked:true,
+              title:{ display:true, text:'Monthly Δ (gained ↑ / lost ↓ / net line)' },
+              ticks:{ callback: v => Math.abs(Number(v) || 0).toLocaleString() },
+              grid:{ color: ctx => ctx.tick.value === 0 ? 'var(--text-muted)' : 'rgba(127,127,127,.12)',
+                     lineWidth: ctx => ctx.tick.value === 0 ? 2 : 1 } },
+        y1: { position:'right', beginAtZero:false, grid:{ drawOnChartArea:false },
+              title:{ display:true, text:'Total Subscribers' } }
       } }
   });
 }

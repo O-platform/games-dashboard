@@ -377,23 +377,38 @@ function renderOverview(M) {
       <div class="kpi-card purple"><div class="label">Quiz Takers</div><div class="value">${fmt(M.quiz_takers)}</div><div class="sub">${M.quiz_takers_pct}% of total subscribers</div></div>
     </div>
 
-    <div class="grid-2">
-      <div class="chart-card">
-        <h3>Current Subscriber Mix <span class="badge-inline">— state='Active', split by engagement segment</span></h3>
-        <div class="chart-container h260"><canvas id="ov-state-donut"></canvas></div>
-        <div id="ov-state-pct-table" style="margin-top:8px;font-size:12px;"></div>
-        <div class="insight">
-          Whole pie = subscribers we currently hold (<code>state = 'Active'</code>), split by engagement segment. <strong>Send-To</strong> are the reachable engaged ones; <strong>Dormant / Ghost / Zombie</strong> rolls up the three disengaged segments into one slice; <strong>Other</strong> covers any active row with a null / empty / unrecognised segment. Unsubscribed, Bounced, and Deleted subscribers are excluded — they're no longer in state='Active'.
+    <div class="chart-card">
+      <h3>Current Subscriber Mix <span class="badge-inline">— state='Active', split by engagement segment</span></h3>
+      <div class="chart-container h260"><canvas id="ov-state-donut"></canvas></div>
+      <div id="ov-state-pct-table" style="margin-top:8px;font-size:12px;"></div>
+      <div class="insight">
+        Whole pie = subscribers we currently hold (<code>state = 'Active'</code>), split by engagement segment. <strong>Send-To</strong> are the reachable engaged ones; <strong>Dormant / Ghost / Zombie</strong> rolls up the three disengaged segments into one slice; <strong>Other</strong> covers any active row with a null / empty / unrecognised segment. Unsubscribed, Bounced, and Deleted subscribers are excluded — they're no longer in state='Active'.
+      </div>
+    </div>
+
+    <div class="chart-card" style="margin-top:18px;">
+      <div style="display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:10px;">
+        <h3 style="margin:0;">Campaign Performance Trend <span class="badge-inline">— one metric per chart, X axis = send date</span></h3>
+        <label style="display:flex;align-items:center;gap:8px;cursor:pointer;">
+          <span style="font-size:11px;color:var(--text-muted);text-transform:uppercase;letter-spacing:.3px;">Sunday Spotlight</span>
+          <label class="switch" for="ovCampIncludeSS" title="Include / exclude Sunday Spotlight campaigns" style="margin:0;">
+            <input type="checkbox" id="ovCampIncludeSS" onchange="_renderOvCampTrend()">
+            <span class="slider-round"></span>
+          </label>
+          <span style="font-size:11px;color:var(--text-muted);" id="ovCampSSState">Excluded</span>
+        </label>
+      </div>
+      <div class="grid-2" style="margin-bottom:0;">
+        <div>
+          <div style="font-size:11px;color:var(--text-muted);text-transform:uppercase;letter-spacing:.3px;margin-bottom:4px;">Open Rate over time</div>
+          <div class="chart-container h260"><canvas id="ov-camp-open"></canvas></div>
+        </div>
+        <div>
+          <div style="font-size:11px;color:var(--text-muted);text-transform:uppercase;letter-spacing:.3px;margin-bottom:4px;">Click Rate over time</div>
+          <div class="chart-container h260"><canvas id="ov-camp-click"></canvas></div>
         </div>
       </div>
-      <div class="chart-card">
-        <h3>Campaign Performance Trend <span class="badge-inline">— Open &amp; Click Rate</span></h3>
-        <div class="chart-container h260"><canvas id="ov-camp-trend"></canvas></div>
-        <div class="insight">
-          Average open rate <strong>${M.avg_open_rate}</strong> &middot; Best campaign <strong>${M.best_open_rate}</strong>.
-          Average click rate <strong>${M.avg_click_rate}</strong>.
-        </div>
-      </div>
+      <div class="insight" id="ov-camp-insight"></div>
     </div>
 
     <div class="chart-card" style="margin-bottom:18px;">
@@ -434,20 +449,100 @@ function renderOverview(M) {
     }).join('');
     pctTbl.innerHTML = rows;
   }
-  // Campaign trend
-  const ct = M.campaign_trend || {labels:[],open_rates:[],click_rates:[]};
-  new Chart(document.getElementById('ov-camp-trend'), {
-    type: 'line',
-    data: { labels: ct.labels, datasets: [
-      { label: 'Open Rate %', data: ct.open_rates, borderColor: '#0969da', backgroundColor: 'transparent', tension:.3, pointRadius:3 },
-      { label: 'Click Rate %', data: ct.click_rates, borderColor: '#1a7f37', backgroundColor: 'transparent', tension:.3, pointRadius:3 }
-    ]},
-    options: { responsive:true, maintainAspectRatio:false, plugins:{legend:{position:'bottom',labels:{font:{size:11}}}}, scales:{y:{beginAtZero:true}} }
-  });
+  // Campaign Performance Trend — built client-side from M.campaign_table
+  // so the Sunday Spotlight include/exclude toggle can re-filter without a
+  // lambda re-run. Two side-by-side charts (Open Rate / Click Rate), each
+  // a single-line series with **send date** on the x-axis so one bar = one
+  // campaign in chronological order.
+  window._ovCampData = M.campaign_table || [];
+  _renderOvCampTrend();
   // Growth chart — sourced from superage.growth_history via M.subscriber_monthly
   const gd = M.subscriber_monthly || {labels:[],new_subs:[],unsubs:[],active_count:[]};
   _ovGrowthChart(gd, 12);
 }
+/* Overview Campaign Performance Trend — pulls from window._ovCampData
+ * (= M.campaign_table) and renders two single-metric line charts:
+ *   • Open Rate over time
+ *   • Click Rate over time
+ * X-axis is the campaign's send date (one point per qualifying campaign),
+ * sorted chronologically. The Sunday Spotlight toggle above the charts
+ * filters out branded-digest sends so their atypical rates don't spike
+ * the trend (off by default — toggle ON to include them). Tooltip shows
+ * the campaign name + the rate; the URL opens in a new tab on point click. */
+function _renderOvCampTrend() {
+  const includeSS = (document.getElementById('ovCampIncludeSS') || {}).checked;
+  const stateEl = document.getElementById('ovCampSSState');
+  if (stateEl) stateEl.textContent = includeSS ? 'Included' : 'Excluded';
+
+  // Filter + sort by send date ASC. Skip rows without a parseable date.
+  const rows = (window._ovCampData || [])
+    .filter(c => includeSS ? true : !((c.name || '').toLowerCase().includes('sunday spotlight')))
+    .filter(c => c.sent_date && !isNaN(Date.parse(c.sent_date)))
+    .sort((a, b) => new Date(a.sent_date) - new Date(b.sent_date));
+
+  const labels   = rows.map(c => String(c.sent_date).slice(0, 10));
+  const names    = rows.map(c => c.name || '');
+  const opens    = rows.map(c => _campPct(c.open_rate));
+  const clicks   = rows.map(c => _campPct(c.click_rate));
+  const urls     = rows.map(c => c.url || '');
+
+  const insightEl = document.getElementById('ov-camp-insight');
+  if (insightEl) {
+    insightEl.innerHTML = rows.length
+      ? `${rows.length} campaign${rows.length === 1 ? '' : 's'} in scope — Sunday Spotlight ${includeSS ? '<strong>included</strong>' : '<strong>excluded</strong>'}. X axis = send date (chronological). Each chart plots one metric so the trend is unambiguous.`
+      : 'No campaigns in scope — toggle Sunday Spotlight on to include branded digests.';
+  }
+
+  const mkOpts = (titleText) => ({
+    responsive: true, maintainAspectRatio: false,
+    plugins: {
+      legend: { display: false },
+      tooltip: {
+        callbacks: {
+          title: items => names[items[0].dataIndex] || labels[items[0].dataIndex],
+          label: c => `${titleText}: ${c.parsed.y == null ? '—' : Number(c.parsed.y).toFixed(2) + '%'}`,
+          afterLabel: c => `Sent: ${labels[c.dataIndex]}`
+        }
+      }
+    },
+    onClick: (_e, els) => {
+      if (!els || !els.length) return;
+      const u = urls[els[0].index];
+      if (u) window.open(u, '_blank', 'noopener');
+    },
+    scales: {
+      x: { ticks: { font: { size: 10 }, maxRotation: 60, minRotation: 0, autoSkip: true, maxTicksLimit: 14 } },
+      y: { beginAtZero: true, ticks: { callback: v => Number(v).toFixed(0) + '%' } }
+    }
+  });
+
+  // Destroy any prior chart instances before re-rendering (toggle flips
+  // produce a fresh dataset each time).
+  if (window._ovOpenChart)  { window._ovOpenChart.destroy();  window._ovOpenChart  = null; }
+  if (window._ovClickChart) { window._ovClickChart.destroy(); window._ovClickChart = null; }
+
+  const openEl  = document.getElementById('ov-camp-open');
+  const clickEl = document.getElementById('ov-camp-click');
+  if (openEl) {
+    window._ovOpenChart = new Chart(openEl, {
+      type: 'line',
+      data: { labels, datasets: [{ label: 'Open Rate %', data: opens,
+        borderColor: '#0969da', backgroundColor: 'rgba(9,105,218,.10)',
+        tension: 0.3, pointRadius: 3, borderWidth: 2, fill: true, spanGaps: true }] },
+      options: mkOpts('Open Rate')
+    });
+  }
+  if (clickEl) {
+    window._ovClickChart = new Chart(clickEl, {
+      type: 'line',
+      data: { labels, datasets: [{ label: 'Click Rate %', data: clicks,
+        borderColor: '#1a7f37', backgroundColor: 'rgba(26,127,55,.10)',
+        tension: 0.3, pointRadius: 3, borderWidth: 2, fill: true, spanGaps: true }] },
+      options: mkOpts('Click Rate')
+    });
+  }
+}
+
 function _ovGrowthChart(gd, n) {
   const labels = (gd.labels||[]).slice(-n);
   const newS   = (gd.new_subs||[]).slice(-n);

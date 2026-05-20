@@ -388,15 +388,27 @@ function renderOverview(M) {
 
     <div class="chart-card" style="margin-top:18px;">
       <div style="display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:10px;">
-        <h3 style="margin:0;">Campaign Performance Trend <span class="badge-inline">— one metric per chart, X axis = send date</span></h3>
-        <label style="display:flex;align-items:center;gap:8px;cursor:pointer;">
-          <span style="font-size:11px;color:var(--text-muted);text-transform:uppercase;letter-spacing:.3px;">Sunday Spotlight</span>
-          <label class="switch" for="ovCampIncludeSS" title="Include / exclude Sunday Spotlight campaigns" style="margin:0;">
-            <input type="checkbox" id="ovCampIncludeSS" onchange="_renderOvCampTrend()">
-            <span class="slider-round"></span>
+        <h3 style="margin:0;">Campaign Performance Trend</h3>
+        <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;">
+          <div style="display:flex;align-items:center;gap:6px;">
+            <span style="font-size:11px;color:var(--text-muted);text-transform:uppercase;letter-spacing:.3px;">Window</span>
+            <div style="display:flex;gap:4px;" id="ov-camp-win-btns">
+              <button onclick="_setOvCampWindow('all')" id="ovcw-all" style="font-size:11px;padding:3px 10px;border:1px solid var(--card-border);border-radius:5px;background:var(--card);color:var(--text-muted);cursor:pointer;">All</button>
+              <button onclick="_setOvCampWindow('180d')" id="ovcw-180" style="font-size:11px;padding:3px 10px;border:1px solid var(--card-border);border-radius:5px;background:var(--card);color:var(--text-muted);cursor:pointer;">180d</button>
+              <button onclick="_setOvCampWindow('90d')" id="ovcw-90"  style="font-size:11px;padding:3px 10px;border:1px solid var(--card-border);border-radius:5px;background:var(--accent);color:#fff;cursor:pointer;">90d</button>
+              <button onclick="_setOvCampWindow('60d')" id="ovcw-60"  style="font-size:11px;padding:3px 10px;border:1px solid var(--card-border);border-radius:5px;background:var(--card);color:var(--text-muted);cursor:pointer;">60d</button>
+              <button onclick="_setOvCampWindow('30d')" id="ovcw-30"  style="font-size:11px;padding:3px 10px;border:1px solid var(--card-border);border-radius:5px;background:var(--card);color:var(--text-muted);cursor:pointer;">30d</button>
+            </div>
+          </div>
+          <label style="display:flex;align-items:center;gap:8px;cursor:pointer;">
+            <span style="font-size:11px;color:var(--text-muted);text-transform:uppercase;letter-spacing:.3px;">Sunday Spotlight</span>
+            <label class="switch" for="ovCampIncludeSS" title="Include / exclude Sunday Spotlight campaigns" style="margin:0;">
+              <input type="checkbox" id="ovCampIncludeSS" onchange="_renderOvCampTrend()">
+              <span class="slider-round"></span>
+            </label>
+            <span style="font-size:11px;color:var(--text-muted);" id="ovCampSSState">Excluded</span>
           </label>
-          <span style="font-size:11px;color:var(--text-muted);" id="ovCampSSState">Excluded</span>
-        </label>
+        </div>
       </div>
       <div class="grid-2" style="margin-bottom:0;">
         <div>
@@ -455,6 +467,7 @@ function renderOverview(M) {
   // a single-line series with **send date** on the x-axis so one bar = one
   // campaign in chronological order.
   window._ovCampData = M.campaign_table || [];
+  window._ovCampWindow = '90d';   // default — matches the highlighted button
   _renderOvCampTrend();
   // Growth chart — sourced from superage.growth_history via M.subscriber_monthly
   const gd = M.subscriber_monthly || {labels:[],new_subs:[],unsubs:[],active_count:[]};
@@ -469,15 +482,37 @@ function renderOverview(M) {
  * filters out branded-digest sends so their atypical rates don't spike
  * the trend (off by default — toggle ON to include them). Tooltip shows
  * the campaign name + the rate; the URL opens in a new tab on point click. */
+function _setOvCampWindow(win) {
+  window._ovCampWindow = win;
+  // Toggle active button styling
+  ['all', '180', '90', '60', '30'].forEach(suffix => {
+    const btn = document.getElementById('ovcw-' + suffix);
+    if (!btn) return;
+    const wantKey = suffix === 'all' ? 'all' : (suffix + 'd');
+    const active = wantKey === win;
+    btn.style.background = active ? 'var(--accent)' : 'var(--card)';
+    btn.style.color      = active ? '#fff'          : 'var(--text-muted)';
+  });
+  _renderOvCampTrend();
+}
+
 function _renderOvCampTrend() {
   const includeSS = (document.getElementById('ovCampIncludeSS') || {}).checked;
   const stateEl = document.getElementById('ovCampSSState');
   if (stateEl) stateEl.textContent = includeSS ? 'Included' : 'Excluded';
 
+  // Resolve the active date window (defaults to 90 days on first render).
+  const win = window._ovCampWindow || '90d';
+  const days = win === 'all' ? null : parseInt(win, 10);
+  const cutoff = days ? (Date.now() - days * 86400000) : null;
+
   // Filter + sort by send date ASC. Skip rows without a parseable date.
+  // Date-window filter is applied here too — keep only campaigns whose
+  // sent_date falls within the last N days (or all if "all" is selected).
   const rows = (window._ovCampData || [])
     .filter(c => includeSS ? true : !((c.name || '').toLowerCase().includes('sunday spotlight')))
     .filter(c => c.sent_date && !isNaN(Date.parse(c.sent_date)))
+    .filter(c => cutoff == null || new Date(c.sent_date).getTime() >= cutoff)
     .sort((a, b) => new Date(a.sent_date) - new Date(b.sent_date));
 
   const labels   = rows.map(c => String(c.sent_date).slice(0, 10));
@@ -488,9 +523,10 @@ function _renderOvCampTrend() {
 
   const insightEl = document.getElementById('ov-camp-insight');
   if (insightEl) {
+    const winLabel = win === 'all' ? 'all time' : `last ${days} days`;
     insightEl.innerHTML = rows.length
-      ? `${rows.length} campaign${rows.length === 1 ? '' : 's'} in scope — Sunday Spotlight ${includeSS ? '<strong>included</strong>' : '<strong>excluded</strong>'}. X axis = send date (chronological). Each chart plots one metric so the trend is unambiguous.`
-      : 'No campaigns in scope — toggle Sunday Spotlight on to include branded digests.';
+      ? `${rows.length} campaign${rows.length === 1 ? '' : 's'} in scope (${esc(winLabel)}) — Sunday Spotlight ${includeSS ? '<strong>included</strong>' : '<strong>excluded</strong>'}.`
+      : `No campaigns in the ${esc(winLabel)} window — widen the date filter or toggle Sunday Spotlight on.`;
   }
 
   const mkOpts = (titleText) => ({

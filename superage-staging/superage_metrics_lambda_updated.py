@@ -462,15 +462,25 @@ def lambda_handler(event, context):
         """)
         content_drill_rows = cur.fetchall()
 
-        # Total distinct article clickers (feeds the "Unique Clickers" KPI).
-        # Earlier this query also produced the 1 / 2–5 / 6–10 / 11–20 / 20+
-        # click-distribution buckets, but that chart was never wired up on the
-        # dashboard so the bucket counts were dropped.
+        # Total distinct article clickers (feeds the "Unique Clickers" KPI)
+        # plus the 1 / 2–5 / 6–10 / 11–20 / 20+ click-distribution buckets
+        # and the repeat-clicker flags maintained on subscriber_clicks
+        # (clicked_7d_2x_plus / clicked_30d_2x_plus) which power the Click
+        # Analysis KPI row.
         cur.execute(f"""
-            SELECT COUNT(*) AS total_clickers
+            SELECT
+                COUNT(*)                                                          AS total_clickers,
+                COUNT(*) FILTER (WHERE clicked_7d_2x_plus  IS TRUE)               AS repeat_7d,
+                COUNT(*) FILTER (WHERE clicked_30d_2x_plus IS TRUE)               AS repeat_30d,
+                COUNT(*) FILTER (WHERE unique_clicks = 1)                         AS bucket_1,
+                COUNT(*) FILTER (WHERE unique_clicks BETWEEN 2  AND 5)            AS bucket_2_5,
+                COUNT(*) FILTER (WHERE unique_clicks BETWEEN 6  AND 10)           AS bucket_6_10,
+                COUNT(*) FILTER (WHERE unique_clicks BETWEEN 11 AND 20)           AS bucket_11_20,
+                COUNT(*) FILTER (WHERE unique_clicks > 20)                        AS bucket_20_plus
             FROM {S}.subscriber_clicks
         """)
-        total_article_clickers = safe_int((cur.fetchone() or {}).get("total_clickers"))
+        clicker_summary = cur.fetchone() or {}
+        total_article_clickers = safe_int(clicker_summary.get("total_clickers"))
 
         # ─────────────────────────────────────────────────────
         # 4. Acquisition quality — utm_source only
@@ -1242,6 +1252,17 @@ def lambda_handler(event, context):
     }
     M["total_article_clicks"]   = total_article_clicks
     M["total_article_clickers"] = total_article_clickers
+    M["clicker_repeat"] = {
+        "repeat_7d":  safe_int(clicker_summary.get("repeat_7d")),
+        "repeat_30d": safe_int(clicker_summary.get("repeat_30d")),
+    }
+    M["clicker_buckets"] = {
+        "b_1":       safe_int(clicker_summary.get("bucket_1")),
+        "b_2_5":     safe_int(clicker_summary.get("bucket_2_5")),
+        "b_6_10":    safe_int(clicker_summary.get("bucket_6_10")),
+        "b_11_20":   safe_int(clicker_summary.get("bucket_11_20")),
+        "b_20_plus": safe_int(clicker_summary.get("bucket_20_plus")),
+    }
 
     # Revenue KPIs
     M["total_revenue"]      = total_revenue

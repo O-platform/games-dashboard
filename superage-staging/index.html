@@ -811,7 +811,7 @@ function renderDigest(M) {
   // intentionally not used here — they overstate moves on small bases
   // (e.g. click rate going 0.5% → 1% is +100% relative but only +0.5 pp).
   const tiles = [
-    { label: 'Net Change',              value: numFromArr(netChange),  prior: prvFromArr(netChange),  spark: sparkNetChange,            fmt: v => v == null ? '—' : (v >= 0 ? '+' : '') + Number(v).toLocaleString(),         higherIsBetter: true,  spark_color: '#1a7f37', isRate: false },
+    { label: 'Subscribers Net Change',  value: numFromArr(netChange),  prior: prvFromArr(netChange),  spark: sparkNetChange,            fmt: v => v == null ? '—' : (v >= 0 ? '+' : '') + Number(v).toLocaleString(),         higherIsBetter: true,  spark_color: '#1a7f37', isRate: false },
     { label: 'Churn % of Sends',         value: num(wd.churn_pct_of_sends), prior: prv(wd.churn_pct_of_sends), spark: sparkOf('churn_pct_of_sends'), fmt: v => v == null ? '—' : Number(v).toFixed(3) + '%',                       higherIsBetter: false, spark_color: '#cf222e', isRate: true  },
     { label: 'Campaigns Sent',           value: num(wd.campaigns_sent), prior: prv(wd.campaigns_sent), spark: sparkOf('campaigns_sent'), fmt: v => v == null ? '—' : Number(v).toLocaleString(),                                higherIsBetter: null,  spark_color: '#8250df', isRate: false },
     { label: 'Avg Open Rate',            value: num(wd.avg_open_rate),  prior: prv(wd.avg_open_rate),  spark: sparkOf('avg_open_rate'),  fmt: v => v == null ? '—' : Number(v).toFixed(2) + '%',                                higherIsBetter: true,  spark_color: '#1a7f37', isRate: true  },
@@ -1675,6 +1675,71 @@ function _renderClickKpis() {
   set('ca-kpi-avg',    camps ? avg.toLocaleString() : '—');
 }
 
+/* Section 3 KPI tiles — subscriber-level click metrics sourced from the
+ * subscriber_clicks rollup (one row per email). Independent of the Sunday
+ * Spotlight toggle since the underlying table doesn't carry campaign tags. */
+function _renderSubscriberClickKpis(M) {
+  const total = Number(M && M.total_article_clickers || 0);
+  const r = (M && M.clicker_repeat) || {};
+  const set = (id, txt) => { const el = document.getElementById(id); if (el) el.textContent = txt; };
+  set('sc-kpi-total', total ? total.toLocaleString() : '—');
+  set('sc-kpi-7d',    r.repeat_7d  != null ? Number(r.repeat_7d).toLocaleString()  : '—');
+  set('sc-kpi-30d',   r.repeat_30d != null ? Number(r.repeat_30d).toLocaleString() : '—');
+}
+
+/* Click-volume distribution bar — buckets subscribers by their lifetime
+ * unique-click count using the same boundaries the lambda emits:
+ * 1, 2–5, 6–10, 11–20, 20+. */
+function _renderClickBucketChart(M) {
+  const b = (M && M.clicker_buckets) || {};
+  const labels = ['1 click', '2–5 clicks', '6–10 clicks', '11–20 clicks', '20+ clicks'];
+  const data   = [
+    Number(b.b_1       || 0),
+    Number(b.b_2_5     || 0),
+    Number(b.b_6_10    || 0),
+    Number(b.b_11_20   || 0),
+    Number(b.b_20_plus || 0),
+  ];
+  const total = data.reduce((a,b)=>a+b, 0);
+  const colors = ['#8250df','#0969da','#1a7f37','#bf8700','#cf222e'];
+  const ctx = _resetCanvas('sc-bucket-bar');
+  if (ctx) {
+    ctx._chart = _newChart(ctx, {
+      type: 'bar',
+      data: { labels, datasets: [{
+        label: 'Subscribers',
+        data,
+        backgroundColor: colors,
+        borderWidth: 0,
+        borderRadius: 4
+      }]},
+      options: { responsive:true, maintainAspectRatio:false,
+        plugins:{
+          legend:{ display:false },
+          tooltip:{ callbacks:{
+            label: (c) => {
+              const pct = total ? (c.parsed.y / total * 100).toFixed(1) : '0.0';
+              return `${Number(c.parsed.y).toLocaleString()} subscribers (${pct}%)`;
+            }
+          }}
+        },
+        scales:{ y:{ beginAtZero:true, ticks:{ callback: v => Number(v).toLocaleString() } } }
+      }
+    });
+  }
+  const ins = document.getElementById('sc-bucket-insight');
+  if (ins) {
+    if (!total) {
+      ins.textContent = 'No subscriber-click data available yet.';
+    } else {
+      const oneOff = data[0];
+      const repeat = total - oneOff;
+      const pct = (n) => (n / total * 100).toFixed(1) + '%';
+      ins.innerHTML = `${repeat.toLocaleString()} of ${total.toLocaleString()} subscribers (${pct(repeat)}) have clicked more than once. The 20+ tail holds ${data[4].toLocaleString()} highly engaged subscribers (${pct(data[4])}).`;
+    }
+  }
+}
+
 function renderContent(M) {
   document.getElementById('content').innerHTML = `
     <div class="section-context-banner">
@@ -1714,7 +1779,7 @@ function renderContent(M) {
       <div class="kpi-card orange"><div class="label">Avg Clicks / Campaign</div><div class="value" id="ca-kpi-avg">—</div><div class="sub">Mean per send (in scope)</div></div>
     </div>
 
-    <h3 style="margin:18px 0 10px;font-size:13px;text-transform:uppercase;letter-spacing:.5px;color:var(--text-muted);">Section 1 — Campaign-Level Aggregated <span class="badge-inline" style="text-transform:none;">sourced from superage."Campaigns" — re-aggregated client-side per toggle</span></h3>
+    <h3 style="margin:18px 0 10px;font-size:13px;text-transform:uppercase;letter-spacing:.5px;color:var(--text-muted);">Section 1 — Campaign-Level Aggregated</h3>
     <div class="grid-2">
       <div class="chart-card">
         <h3>Weekly Campaign Clicks <span class="badge-inline">— last 8 weeks, Mon-Sun rollup</span></h3>
@@ -1728,7 +1793,7 @@ function renderContent(M) {
       </div>
     </div>
 
-    <h3 style="margin:18px 0 10px;font-size:13px;text-transform:uppercase;letter-spacing:.5px;color:var(--text-muted);">Section 2 — Raw Click Events <span class="badge-inline" style="text-transform:none;">sourced from superage."Campaigns_Clicks" — per-event "Date"</span></h3>
+    <h3 style="margin:18px 0 10px;font-size:13px;text-transform:uppercase;letter-spacing:.5px;color:var(--text-muted);">Section 2 — Click Trends Over Time</h3>
     <div class="chart-card">
       <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;margin-bottom:6px;flex-wrap:wrap;">
         <h3 style="margin:0;">Same Weekday <span class="badge-inline" id="cnt-raw-weekday-badge">— last N sends per weekday, total clicks per send</span></h3>
@@ -1760,6 +1825,19 @@ function renderContent(M) {
         <div class="insight" id="cnt-raw-monthly-insight"></div>
       </div>
     </div>
+
+    <h3 style="margin:18px 0 10px;font-size:13px;text-transform:uppercase;letter-spacing:.5px;color:var(--text-muted);">Section 3 — Subscriber Click Behaviour</h3>
+    <div class="kpi-row" style="grid-template-columns:repeat(auto-fit,minmax(180px,1fr));">
+      <div class="kpi-card accent"><div class="label">Unique Email Clickers</div><div class="value" id="sc-kpi-total">—</div><div class="sub">Distinct subscribers in <code>subscriber_clicks</code></div></div>
+      <div class="kpi-card green"><div class="label">Repeat Clickers — Last 7d</div><div class="value" id="sc-kpi-7d">—</div><div class="sub">Clicked 2+ times in the last 7 days</div></div>
+      <div class="kpi-card blue"><div class="label">Repeat Clickers — Last 30d</div><div class="value" id="sc-kpi-30d">—</div><div class="sub">Clicked 2+ times in the last 30 days</div></div>
+    </div>
+    <div class="chart-card">
+      <h3 style="margin-bottom:12px;">Click Volume Distribution <span class="badge-inline">— subscribers grouped by lifetime unique clicks</span></h3>
+      <div class="chart-container h300"><canvas id="sc-bucket-bar"></canvas></div>
+      <div class="insight" id="sc-bucket-insight"></div>
+    </div>
+
     <div class="chart-card">
       <h3 style="margin-bottom:12px;">Top Articles by Unique Clicks <span class="badge-inline">— top 10 all-time</span></h3>
       <div class="tbl-wrap" id="art-table-wrap">
@@ -1778,6 +1856,8 @@ function renderContent(M) {
   // without a fresh fetch.
   _rawClicksData = M;
   _renderClickKpis();
+  _renderSubscriberClickKpis(M);
+  _renderClickBucketChart(M);
   _renderClickSection1();
   _setWeekdayWindow(3);
   _setRawWeeklyWindow(8);

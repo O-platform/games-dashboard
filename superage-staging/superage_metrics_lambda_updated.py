@@ -934,13 +934,12 @@ def lambda_handler(event, context):
                         {_canon_source("COALESCE(NULLIF(TRIM(sa.acquisition_utm_source),''), NULLIF(TRIM(sub.source),''))")},
                         'Organic'
                     ) AS bucket,
-                    -- Effective entry date = LEAST(acquisition_date, date_joined).
-                    -- When acquisition_date is a real backdated date (CPL partners) it wins;
-                    -- when it's a later batch-import timestamp (e.g. Meta), date_joined wins.
+                    -- Use acquisition_date when available (set by partner at real acquisition
+                    -- time); fall back to date_joined when absent.
                     (sub.date_unsubscribed::date
-                        - LEAST(sa.acquisition_date::date, sub.date_joined::date)) AS days_to_unsub,
+                        - COALESCE(sa.acquisition_date::date, sub.date_joined::date)) AS days_to_unsub,
                     (CURRENT_DATE
-                        - LEAST(sa.acquisition_date::date, sub.date_joined::date))::integer AS cohort_age_days
+                        - COALESCE(sa.acquisition_date::date, sub.date_joined::date))::integer AS cohort_age_days
                 FROM {S}.subscribers sub
                 LEFT JOIN sa_acq sa ON sa.email = LOWER(TRIM(sub.email))
                 WHERE sub.date_joined IS NOT NULL AND sub.date_joined::date < CURRENT_DATE

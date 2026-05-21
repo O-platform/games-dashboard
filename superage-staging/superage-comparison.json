@@ -1,66 +1,66 @@
 {
-  "data_as_of": "2026-05-19",
-  "launch_cutoff": "2026-05-17",
+  "data_as_of": "2026-05-21",
+  "launch_cutoff": "2026-05-19",
   "current_week": {
+    "start": "2026-05-18",
+    "end": "2026-05-24"
+  },
+  "previous_week": {
     "start": "2026-05-11",
     "end": "2026-05-17"
   },
-  "previous_week": {
-    "start": "2026-05-04",
-    "end": "2026-05-10"
-  },
   "week_over_week": {
     "current": {
-      "campaigns": 3,
-      "recipients": 2149600,
-      "unique_opens": 962431,
-      "clicks": 44085,
-      "unsubs": 3807,
-      "bounced": 6257,
-      "avg_open_rate": 45.72,
-      "avg_click_rate": 2.02,
-      "best_open_rate": 52.43,
-      "best_click_rate": 2.38
+      "campaigns": 1,
+      "recipients": 817633,
+      "unique_opens": 362979,
+      "clicks": 23540,
+      "unsubs": 1466,
+      "bounced": 2936,
+      "avg_open_rate": 44.39,
+      "avg_click_rate": 2.88,
+      "best_open_rate": 44.39,
+      "best_click_rate": 2.88
     },
     "previous": {
-      "campaigns": 4,
-      "recipients": 2165997,
-      "unique_opens": 1103357,
-      "clicks": 32407,
-      "unsubs": 4849,
-      "bounced": 5786,
-      "avg_open_rate": 56.94,
-      "avg_click_rate": 9.65,
-      "best_open_rate": 73.2,
-      "best_click_rate": 34.02
+      "campaigns": 3,
+      "recipients": 2149600,
+      "unique_opens": 972257,
+      "clicks": 44590,
+      "unsubs": 3865,
+      "bounced": 6257,
+      "avg_open_rate": 46.2,
+      "avg_click_rate": 2.05,
+      "best_open_rate": 53.49,
+      "best_click_rate": 2.39
     },
     "delta": {
       "campaigns": {
-        "value": -1,
-        "pct_change": -25.0
+        "value": -2,
+        "pct_change": -66.7
       },
       "recipients": {
-        "value": -16397,
-        "pct_change": -0.8
+        "value": -1331967,
+        "pct_change": -62.0
       },
       "unique_opens": {
-        "value": -140926,
-        "pct_change": -12.8
+        "value": -609278,
+        "pct_change": -62.7
       },
       "clicks": {
-        "value": 11678,
-        "pct_change": 36.0
+        "value": -21050,
+        "pct_change": -47.2
       },
       "unsubs": {
-        "value": -1042,
-        "pct_change": -21.5
+        "value": -2399,
+        "pct_change": -62.1
       },
       "avg_open_rate": {
-        "value": -11.22,
+        "value": -1.81,
         "unit": "pp"
       },
       "avg_click_rate": {
-        "value": -7.63,
+        "value": 0.83,
         "unit": "pp"
       }
     }
@@ -68,32 +68,32 @@
   "day_comparison": [
     {
       "weekday": "Monday",
-      "current_date": "2026-05-11",
-      "previous_date": "2026-05-04",
+      "current_date": "2026-05-18",
+      "previous_date": "2026-05-11",
       "comparison": {
         "current": {
           "campaigns": 1,
-          "recipients": 824240,
-          "unique_opens": 273027,
-          "clicks": 19611,
-          "unsubs": 1183,
-          "bounced": 3355,
-          "avg_open_rate": 33.12,
-          "avg_click_rate": 2.38,
-          "best_open_rate": 33.12,
-          "best_click_rate": 2.38
+          "recipients": 817633,
+          "unique_opens": 362979,
+          "clicks": 23540,
+          "unsubs": 1466,
+          "bounced": 2936,
+          "avg_open_rate": 44.39,
+          "avg_click_rate": 2.88,
+          "best_open_rate": 44.39,
+          "best_click_rate": 2.88
         },
         "previous": {
           "campaigns": 1,
-          "recipients": 835249,
-          "unique_opens": 368834,
-          "clicks": 9292,
-          "unsubs": 1928,
-          "bounced": 3390,
-          "avg_open_rate": 44.16,
-          "avg_click_rate": 1.11,
-          "best_open_rate": 44.16,
-          "best_click_rate": 1.11
+          "recipients": 824240,
+          "unique_opens": 273947,
+          "clicks": 19674,
+          "unsubs": 1190,
+          "bounced": 3355,
+          "avg_open_rate": 33.24,
+          "avg_click_rate": 2.39,
+          "best_open_rate": 33.24,
+          "best_click_rate": 2.39
         },
         "delta": {
           "campaigns": {
@@ -101,66 +101,66 @@
             "pct_change": 0.0
           },
           "recipients": {
-            "value": -11009,
-            "pct_change": -1.3
+            "value": -6607,
+            "pct_change": -0.8
           },
           "unique_opens": {
-            "value": -95807,
-            "pct_change": -26.0
+            "value": 89032,
+            "pct_change": 32.5
           },
           "clicks": {
-            "value": 10319,
-            "pct_change": 111.1
+            "value": 3866,
+            "pct_change": 19.7
           },
           "unsubs": {
-            "value": -745,
-            "pct_change": -38.6
+            "value": 276,
+            "pct_change": 23.2
           },
           "avg_open_rate": {
-            "value": -11.04,
+            "value": 11.15,
             "unit": "pp"
           },
           "avg_click_rate": {
-            "value": 1.27,
+            "value": 0.49,
             "unit": "pp"
           }
         }
       },
       "current_campaigns": [
         {
+          "name": "SA_PF_20260518 (Sponsor: Eight Sleep | BTL)",
+          "subject": "Your Inner Ear Governs Your Balance. Here\u2019s How to Train It",
+          "sent_date": "2026-05-18",
+          "weekday": "Monday",
+          "recipients": 817633,
+          "unique_opens": 362979,
+          "clicks": 23540,
+          "unsubs": 1466,
+          "open_rate": 44.39,
+          "click_rate": 2.88,
+          "url": "http://createsend.com/t/y-12114A04AA3A4EA92540EF23F30FEDED"
+        }
+      ],
+      "previous_campaigns": [
+        {
           "name": "SA_PF_20260511 (Sponsor: Berkeley Life | Pvolve)",
           "subject": "The Blood Pressure Number Your Doctor Isn't Checking",
           "sent_date": "2026-05-11",
           "weekday": "Monday",
           "recipients": 824240,
-          "unique_opens": 273027,
-          "clicks": 19611,
-          "unsubs": 1183,
-          "open_rate": 33.12,
-          "click_rate": 2.38,
+          "unique_opens": 273947,
+          "clicks": 19674,
+          "unsubs": 1190,
+          "open_rate": 33.24,
+          "click_rate": 2.39,
           "url": "http://createsend.com/t/y-10C1604E3BC6F9462540EF23F30FEDED"
-        }
-      ],
-      "previous_campaigns": [
-        {
-          "name": "SA_PF_20260504 (Sponsor: Timeline)",
-          "subject": "Try the 'Endurance Under Load' Test (And Train To Move Your Numbers)",
-          "sent_date": "2026-05-04",
-          "weekday": "Monday",
-          "recipients": 835249,
-          "unique_opens": 368834,
-          "clicks": 9292,
-          "unsubs": 1928,
-          "open_rate": 44.16,
-          "click_rate": 1.11,
-          "url": "http://createsend.com/t/y-52975ED75AACDBEB2540EF23F30FEDED"
         }
       ]
     },
     {
       "weekday": "Tuesday",
-      "current_date": "2026-05-12",
-      "previous_date": "2026-05-05",
+      "current_date": "2026-05-19",
+      "previous_date": "2026-05-12",
       "comparison": {
         "current": null,
         "previous": null,
@@ -171,136 +171,57 @@
     },
     {
       "weekday": "Wednesday",
-      "current_date": "2026-05-13",
-      "previous_date": "2026-05-06",
+      "current_date": "2026-05-20",
+      "previous_date": "2026-05-13",
+      "comparison": {
+        "current": null,
+        "previous": null,
+        "delta": {}
+      },
+      "current_campaigns": [],
+      "previous_campaigns": []
+    },
+    {
+      "weekday": "Thursday",
+      "current_date": "2026-05-21",
+      "previous_date": "2026-05-14",
       "comparison": {
         "current": null,
         "previous": {
           "campaigns": 1,
-          "recipients": 97,
-          "unique_opens": 71,
-          "clicks": 33,
-          "unsubs": 0,
-          "bounced": 0,
-          "avg_open_rate": 73.2,
-          "avg_click_rate": 34.02,
-          "best_open_rate": 73.2,
-          "best_click_rate": 34.02
+          "recipients": 662852,
+          "unique_opens": 343902,
+          "clicks": 14160,
+          "unsubs": 1369,
+          "bounced": 1506,
+          "avg_open_rate": 51.88,
+          "avg_click_rate": 2.14,
+          "best_open_rate": 51.88,
+          "best_click_rate": 2.14
         },
         "delta": {}
       },
       "current_campaigns": [],
       "previous_campaigns": [
         {
-          "name": "SA_EA_20260506 (Super Age Games)",
-          "subject": "Welcome, Founding Athlete",
-          "sent_date": "2026-05-06",
-          "weekday": "Wednesday",
-          "recipients": 97,
-          "unique_opens": 71,
-          "clicks": 33,
-          "unsubs": 0,
-          "open_rate": 73.2,
-          "click_rate": 34.02,
-          "url": "http://createsend.com/t/y-F24F79A4AC358F292540EF23F30FEDED"
-        }
-      ]
-    },
-    {
-      "weekday": "Thursday",
-      "current_date": "2026-05-14",
-      "previous_date": "2026-05-07",
-      "comparison": {
-        "current": {
-          "campaigns": 1,
-          "recipients": 662852,
-          "unique_opens": 342080,
-          "clicks": 14002,
-          "unsubs": 1356,
-          "bounced": 1506,
-          "avg_open_rate": 51.61,
-          "avg_click_rate": 2.11,
-          "best_open_rate": 51.61,
-          "best_click_rate": 2.11
-        },
-        "previous": {
-          "campaigns": 1,
-          "recipients": 666138,
-          "unique_opens": 373330,
-          "clicks": 14394,
-          "unsubs": 1562,
-          "bounced": 1194,
-          "avg_open_rate": 56.04,
-          "avg_click_rate": 2.16,
-          "best_open_rate": 56.04,
-          "best_click_rate": 2.16
-        },
-        "delta": {
-          "campaigns": {
-            "value": 0,
-            "pct_change": 0.0
-          },
-          "recipients": {
-            "value": -3286,
-            "pct_change": -0.5
-          },
-          "unique_opens": {
-            "value": -31250,
-            "pct_change": -8.4
-          },
-          "clicks": {
-            "value": -392,
-            "pct_change": -2.7
-          },
-          "unsubs": {
-            "value": -206,
-            "pct_change": -13.2
-          },
-          "avg_open_rate": {
-            "value": -4.43,
-            "unit": "pp"
-          },
-          "avg_click_rate": {
-            "value": -0.05,
-            "unit": "pp"
-          }
-        }
-      },
-      "current_campaigns": [
-        {
           "name": "SA_PF_20260514 (Sponsor: Pendulum)",
           "subject": "Tonight Is a Good Night to Start This One Sleep Change",
           "sent_date": "2026-05-14",
           "weekday": "Thursday",
           "recipients": 662852,
-          "unique_opens": 342080,
-          "clicks": 14002,
-          "unsubs": 1356,
-          "open_rate": 51.61,
-          "click_rate": 2.11,
+          "unique_opens": 343902,
+          "clicks": 14160,
+          "unsubs": 1369,
+          "open_rate": 51.88,
+          "click_rate": 2.14,
           "url": "http://createsend.com/t/y-979D9C5A33A1355C2540EF23F30FEDED"
-        }
-      ],
-      "previous_campaigns": [
-        {
-          "name": "SA_PF_20260507 (Sponsor: AG1)",
-          "subject": "How Aggressive Are You, Naturally? Take The Test",
-          "sent_date": "2026-05-07",
-          "weekday": "Thursday",
-          "recipients": 666138,
-          "unique_opens": 373330,
-          "clicks": 14394,
-          "unsubs": 1562,
-          "open_rate": 56.04,
-          "click_rate": 2.16,
-          "url": "http://createsend.com/t/y-14DD458B7F3F081C2540EF23F30FEDED"
         }
       ]
     },
     {
       "weekday": "Friday",
-      "current_date": "2026-05-15",
-      "previous_date": "2026-05-08",
+      "current_date": "2026-05-22",
+      "previous_date": "2026-05-15",
       "comparison": {
         "current": null,
         "previous": null,
@@ -311,8 +232,8 @@
     },
     {
       "weekday": "Saturday",
-      "current_date": "2026-05-16",
-      "previous_date": "2026-05-09",
+      "current_date": "2026-05-23",
+      "previous_date": "2026-05-16",
       "comparison": {
         "current": null,
         "previous": null,
@@ -323,108 +244,69 @@
     },
     {
       "weekday": "Sunday",
-      "current_date": "2026-05-17",
-      "previous_date": "2026-05-10",
+      "current_date": "2026-05-24",
+      "previous_date": "2026-05-17",
       "comparison": {
-        "current": {
-          "campaigns": 1,
-          "recipients": 662508,
-          "unique_opens": 347324,
-          "clicks": 10472,
-          "unsubs": 1268,
-          "bounced": 1396,
-          "avg_open_rate": 52.43,
-          "avg_click_rate": 1.58,
-          "best_open_rate": 52.43,
-          "best_click_rate": 1.58
-        },
+        "current": null,
         "previous": {
           "campaigns": 1,
-          "recipients": 664513,
-          "unique_opens": 361122,
-          "clicks": 8688,
-          "unsubs": 1359,
-          "bounced": 1202,
-          "avg_open_rate": 54.34,
-          "avg_click_rate": 1.31,
-          "best_open_rate": 54.34,
-          "best_click_rate": 1.31
+          "recipients": 662508,
+          "unique_opens": 354408,
+          "clicks": 10756,
+          "unsubs": 1306,
+          "bounced": 1396,
+          "avg_open_rate": 53.49,
+          "avg_click_rate": 1.62,
+          "best_open_rate": 53.49,
+          "best_click_rate": 1.62
         },
-        "delta": {
-          "campaigns": {
-            "value": 0,
-            "pct_change": 0.0
-          },
-          "recipients": {
-            "value": -2005,
-            "pct_change": -0.3
-          },
-          "unique_opens": {
-            "value": -13798,
-            "pct_change": -3.8
-          },
-          "clicks": {
-            "value": 1784,
-            "pct_change": 20.5
-          },
-          "unsubs": {
-            "value": -91,
-            "pct_change": -6.7
-          },
-          "avg_open_rate": {
-            "value": -1.91,
-            "unit": "pp"
-          },
-          "avg_click_rate": {
-            "value": 0.27,
-            "unit": "pp"
-          }
-        }
+        "delta": {}
       },
-      "current_campaigns": [
+      "current_campaigns": [],
+      "previous_campaigns": [
         {
           "name": "SA_PF_20260517 (Sponsor: ReadyRX)",
           "subject": "Normal Blood Pressure. Elevated Risk. Here's Why.",
           "sent_date": "2026-05-17",
           "weekday": "Sunday",
           "recipients": 662508,
-          "unique_opens": 347324,
-          "clicks": 10472,
-          "unsubs": 1268,
-          "open_rate": 52.43,
-          "click_rate": 1.58,
+          "unique_opens": 354408,
+          "clicks": 10756,
+          "unsubs": 1306,
+          "open_rate": 53.49,
+          "click_rate": 1.62,
           "url": "http://createsend.com/t/y-A8FE4855F4724ED22540EF23F30FEDED"
-        }
-      ],
-      "previous_campaigns": [
-        {
-          "name": "SA_CR_20260510 (Sponsor: Fatty15)",
-          "subject": "Sharpen Your Mind With This Art Practice",
-          "sent_date": "2026-05-10",
-          "weekday": "Sunday",
-          "recipients": 664513,
-          "unique_opens": 361122,
-          "clicks": 8688,
-          "unsubs": 1359,
-          "open_rate": 54.34,
-          "click_rate": 1.31,
-          "url": "http://createsend.com/t/y-7FCEB73617D12A752540EF23F30FEDED"
         }
       ]
     }
   ],
   "current_campaigns": [
     {
+      "name": "SA_PF_20260518 (Sponsor: Eight Sleep | BTL)",
+      "subject": "Your Inner Ear Governs Your Balance. Here\u2019s How to Train It",
+      "sent_date": "2026-05-18",
+      "weekday": "Monday",
+      "recipients": 817633,
+      "unique_opens": 362979,
+      "clicks": 23540,
+      "unsubs": 1466,
+      "open_rate": 44.39,
+      "click_rate": 2.88,
+      "url": "http://createsend.com/t/y-12114A04AA3A4EA92540EF23F30FEDED"
+    }
+  ],
+  "previous_campaigns": [
+    {
       "name": "SA_PF_20260511 (Sponsor: Berkeley Life | Pvolve)",
       "subject": "The Blood Pressure Number Your Doctor Isn't Checking",
       "sent_date": "2026-05-11",
       "weekday": "Monday",
       "recipients": 824240,
-      "unique_opens": 273027,
-      "clicks": 19611,
-      "unsubs": 1183,
-      "open_rate": 33.12,
-      "click_rate": 2.38,
+      "unique_opens": 273947,
+      "clicks": 19674,
+      "unsubs": 1190,
+      "open_rate": 33.24,
+      "click_rate": 2.39,
       "url": "http://createsend.com/t/y-10C1604E3BC6F9462540EF23F30FEDED"
     },
     {
@@ -433,11 +315,11 @@
       "sent_date": "2026-05-14",
       "weekday": "Thursday",
       "recipients": 662852,
-      "unique_opens": 342080,
-      "clicks": 14002,
-      "unsubs": 1356,
-      "open_rate": 51.61,
-      "click_rate": 2.11,
+      "unique_opens": 343902,
+      "clicks": 14160,
+      "unsubs": 1369,
+      "open_rate": 51.88,
+      "click_rate": 2.14,
       "url": "http://createsend.com/t/y-979D9C5A33A1355C2540EF23F30FEDED"
     },
     {
@@ -446,71 +328,16 @@
       "sent_date": "2026-05-17",
       "weekday": "Sunday",
       "recipients": 662508,
-      "unique_opens": 347324,
-      "clicks": 10472,
-      "unsubs": 1268,
-      "open_rate": 52.43,
-      "click_rate": 1.58,
+      "unique_opens": 354408,
+      "clicks": 10756,
+      "unsubs": 1306,
+      "open_rate": 53.49,
+      "click_rate": 1.62,
       "url": "http://createsend.com/t/y-A8FE4855F4724ED22540EF23F30FEDED"
-    }
-  ],
-  "previous_campaigns": [
-    {
-      "name": "SA_PF_20260504 (Sponsor: Timeline)",
-      "subject": "Try the 'Endurance Under Load' Test (And Train To Move Your Numbers)",
-      "sent_date": "2026-05-04",
-      "weekday": "Monday",
-      "recipients": 835249,
-      "unique_opens": 368834,
-      "clicks": 9292,
-      "unsubs": 1928,
-      "open_rate": 44.16,
-      "click_rate": 1.11,
-      "url": "http://createsend.com/t/y-52975ED75AACDBEB2540EF23F30FEDED"
-    },
-    {
-      "name": "SA_EA_20260506 (Super Age Games)",
-      "subject": "Welcome, Founding Athlete",
-      "sent_date": "2026-05-06",
-      "weekday": "Wednesday",
-      "recipients": 97,
-      "unique_opens": 71,
-      "clicks": 33,
-      "unsubs": 0,
-      "open_rate": 73.2,
-      "click_rate": 34.02,
-      "url": "http://createsend.com/t/y-F24F79A4AC358F292540EF23F30FEDED"
-    },
-    {
-      "name": "SA_PF_20260507 (Sponsor: AG1)",
-      "subject": "How Aggressive Are You, Naturally? Take The Test",
-      "sent_date": "2026-05-07",
-      "weekday": "Thursday",
-      "recipients": 666138,
-      "unique_opens": 373330,
-      "clicks": 14394,
-      "unsubs": 1562,
-      "open_rate": 56.04,
-      "click_rate": 2.16,
-      "url": "http://createsend.com/t/y-14DD458B7F3F081C2540EF23F30FEDED"
-    },
-    {
-      "name": "SA_CR_20260510 (Sponsor: Fatty15)",
-      "subject": "Sharpen Your Mind With This Art Practice",
-      "sent_date": "2026-05-10",
-      "weekday": "Sunday",
-      "recipients": 664513,
-      "unique_opens": 361122,
-      "clicks": 8688,
-      "unsubs": 1359,
-      "open_rate": 54.34,
-      "click_rate": 1.31,
-      "url": "http://createsend.com/t/y-7FCEB73617D12A752540EF23F30FEDED"
     }
   ],
   "weekly_trend": {
     "labels": [
-      "Feb 23",
       "Mar 02",
       "Mar 09",
       "Mar 16",
@@ -521,10 +348,10 @@
       "Apr 20",
       "Apr 27",
       "May 04",
-      "May 11"
+      "May 11",
+      "May 18"
     ],
     "campaigns": [
-      3,
       4,
       3,
       3,
@@ -535,24 +362,24 @@
       5,
       5,
       4,
-      3
+      3,
+      1
     ],
     "avg_open_rate": [
-      55.13,
       56.63,
       55.74,
-      55.49,
+      55.5,
       56.07,
       57.55,
       57.81,
-      49.2,
-      52.78,
-      54.6,
-      56.94,
-      45.72
+      49.21,
+      52.79,
+      54.63,
+      57.0,
+      46.2,
+      44.39
     ],
     "avg_click_rate": [
-      2.93,
       1.08,
       3.85,
       2.72,
@@ -563,10 +390,10 @@
       6.02,
       2.47,
       9.65,
-      2.02
+      2.05,
+      2.88
     ],
     "recipients": [
-      2230367,
       2284059,
       2158192,
       2151715,
@@ -577,21 +404,22 @@
       2544161,
       2297178,
       2165997,
-      2149600
+      2149600,
+      817633
     ],
     "clicks": [
-      62039,
-      28857,
-      85927,
-      56999,
-      63942,
-      38837,
-      31704,
-      58296,
-      58475,
-      61076,
-      32407,
-      44085
+      28862,
+      85940,
+      57006,
+      63952,
+      38846,
+      31709,
+      58314,
+      58509,
+      61131,
+      32472,
+      44590,
+      23540
     ]
   },
   "campaign_clicks_weekly": {
@@ -616,24 +444,24 @@
       "2026-05-18"
     ],
     "clicks": [
-      38837,
-      31704,
-      58296,
-      58475,
-      61076,
-      32407,
-      44085,
-      21615
+      38846,
+      31709,
+      58314,
+      58509,
+      61131,
+      32472,
+      44590,
+      23540
     ],
     "unique_opens": [
-      1159786,
-      1137269,
-      1104090,
-      1089457,
-      1085801,
-      1103357,
-      962431,
-      344738
+      1159913,
+      1137425,
+      1104313,
+      1089982,
+      1086716,
+      1105202,
+      972257,
+      362979
     ],
     "campaigns": [
       4,
@@ -674,20 +502,20 @@
       "2026-05-01"
     ],
     "clicks": [
-      224177,
-      233326,
-      222705,
-      270238,
-      209182,
-      115772
+      224182,
+      233328,
+      222724,
+      270281,
+      209271,
+      118293
     ],
     "unique_opens": [
-      5081412,
-      5438422,
-      4834325,
-      5541013,
-      4784245,
-      2801450
+      5081469,
+      5438496,
+      4834459,
+      5541384,
+      4785757,
+      2831750
     ],
     "campaigns": [
       12,
@@ -708,38 +536,38 @@
   },
   "campaign_clicks_same_weekday": {
     "labels": [
-      "Tue Apr 21",
-      "Tue Apr 28",
-      "Tue May 05",
-      "Tue May 12",
-      "Tue May 19"
+      "Thu Apr 23",
+      "Thu Apr 30",
+      "Thu May 07",
+      "Thu May 14",
+      "Thu May 21"
     ],
     "days": [
-      "2026-04-21",
-      "2026-04-28",
-      "2026-05-05",
-      "2026-05-12",
-      "2026-05-19"
+      "2026-04-23",
+      "2026-04-30",
+      "2026-05-07",
+      "2026-05-14",
+      "2026-05-21"
     ],
     "clicks": [
-      572,
-      0,
-      0,
-      0,
+      8564,
+      8313,
+      14420,
+      14160,
       0
     ],
     "unique_opens": [
-      2174,
-      0,
-      0,
-      0,
+      344379,
+      336620,
+      373936,
+      343902,
       0
     ],
     "campaigns": [
       1,
-      0,
-      0,
-      0,
+      1,
+      1,
+      1,
       0
     ],
     "is_current": [
@@ -752,32 +580,32 @@
   },
   "campaign_clicks_same_dom": {
     "labels": [
-      "Feb 19, 2026",
-      "Mar 19, 2026",
-      "Apr 19, 2026",
-      "May 19, 2026"
+      "Feb 21, 2026",
+      "Mar 21, 2026",
+      "Apr 21, 2026",
+      "May 21, 2026"
     ],
     "days": [
-      "2026-02-19",
-      "2026-03-19",
-      "2026-04-19",
-      "2026-05-19"
+      "2026-02-21",
+      "2026-03-21",
+      "2026-04-21",
+      "2026-05-21"
     ],
     "clicks": [
-      25016,
-      30015,
-      22743,
+      0,
+      0,
+      572,
       0
     ],
     "unique_opens": [
-      424971,
-      397168,
-      364612,
+      0,
+      0,
+      2174,
       0
     ],
     "campaigns": [
-      1,
-      1,
+      0,
+      0,
       1,
       0
     ],
@@ -790,32 +618,32 @@
   },
   "raw_clicks_same_weekday": {
     "labels": [
-      "Tue Apr 21",
-      "Tue Apr 28",
-      "Tue May 05",
-      "Tue May 12",
-      "Tue May 19"
+      "Thu Apr 23",
+      "Thu Apr 30",
+      "Thu May 07",
+      "Thu May 14",
+      "Thu May 21"
     ],
     "days": [
-      "2026-04-21",
-      "2026-04-28",
-      "2026-05-05",
-      "2026-05-12",
-      "2026-05-19"
+      "2026-04-23",
+      "2026-04-30",
+      "2026-05-07",
+      "2026-05-14",
+      "2026-05-21"
     ],
     "clicks": [
-      6026,
-      5516,
-      2508,
-      3086,
-      2
+      9926,
+      10259,
+      16412,
+      17727,
+      1
     ],
     "clicks_no_ss": [
-      6026,
-      5516,
-      2508,
-      3086,
-      2
+      9926,
+      10259,
+      16412,
+      17727,
+      1
     ],
     "is_current": [
       false,
@@ -883,51 +711,51 @@
         5516,
         2508,
         3086,
-        2
+        3899
       ],
       "clicks_no_ss": [
         6026,
         5516,
         2508,
         3086,
-        2
+        3899
       ],
       "is_current": [
         false,
         false,
         false,
         false,
-        true
+        false
       ]
     },
     "Wed": {
       "labels": [
-        "Wed Apr 15",
         "Wed Apr 22",
         "Wed Apr 29",
         "Wed May 06",
-        "Wed May 13"
+        "Wed May 13",
+        "Wed May 20"
       ],
       "days": [
-        "2026-04-15",
         "2026-04-22",
         "2026-04-29",
         "2026-05-06",
-        "2026-05-13"
+        "2026-05-13",
+        "2026-05-20"
       ],
       "clicks": [
-        1280,
         1977,
         2042,
         1246,
-        1175
+        1175,
+        1600
       ],
       "clicks_no_ss": [
-        1280,
         1977,
         2042,
         1246,
-        1175
+        1175,
+        1600
       ],
       "is_current": [
         false,
@@ -939,39 +767,39 @@
     },
     "Thu": {
       "labels": [
-        "Thu Apr 16",
         "Thu Apr 23",
         "Thu Apr 30",
         "Thu May 07",
-        "Thu May 14"
+        "Thu May 14",
+        "Thu May 21"
       ],
       "days": [
-        "2026-04-16",
         "2026-04-23",
         "2026-04-30",
         "2026-05-07",
-        "2026-05-14"
+        "2026-05-14",
+        "2026-05-21"
       ],
       "clicks": [
-        13170,
         9926,
         10259,
         16412,
-        17727
+        17727,
+        1
       ],
       "clicks_no_ss": [
-        13170,
         9926,
         10259,
         16412,
-        17727
+        17727,
+        1
       ],
       "is_current": [
         false,
         false,
         false,
         false,
-        false
+        true
       ]
     },
     "Fri": {
@@ -1127,7 +955,7 @@
       88003,
       47125,
       61050,
-      28251
+      33749
     ],
     "clicks_no_ss": [
       31444,
@@ -1141,7 +969,7 @@
       88003,
       47125,
       61050,
-      28251
+      33749
     ],
     "is_current": [
       false,
@@ -1181,7 +1009,7 @@
       286673,
       350530,
       290551,
-      159939
+      165437
     ],
     "clicks_no_ss": [
       233530,
@@ -1189,7 +1017,7 @@
       219962,
       306411,
       290294,
-      159939
+      165437
     ],
     "is_current": [
       false,
@@ -1243,7 +1071,7 @@
       6985,
       5786,
       10199,
-      288
+      943
     ],
     "unsubs": [
       5906,
@@ -1254,7 +1082,7 @@
       5493,
       5894,
       5186,
-      1514
+      2080
     ],
     "campaigns_sent": [
       3,
@@ -1281,24 +1109,24 @@
     "avg_open_rate": [
       56.07,
       54.88,
-      52.07,
-      49.2,
-      44.2,
-      48.38,
-      51.52,
-      45.72,
-      42.16
+      52.08,
+      49.21,
+      44.22,
+      48.42,
+      51.6,
+      46.2,
+      44.39
     ],
     "avg_click_rate": [
       2.92,
       1.7,
       1.46,
       2.54,
-      2.3,
-      2.52,
+      2.31,
+      2.53,
       1.53,
-      2.02,
-      2.64
+      2.05,
+      2.88
     ],
     "churn_pct_of_sends": [
       0.2745,
@@ -1309,7 +1137,7 @@
       0.241,
       0.2721,
       0.2413,
-      0.1852
+      0.2544
     ],
     "active_eow": [
       1097606,
@@ -1320,18 +1148,18 @@
       1110566,
       1110496,
       1114651,
-      null
+      1113304
     ],
     "top_sources_by_week": [
       {
         "week_start": "2026-05-11",
         "bucket": "Meta",
-        "subs": 8271
+        "subs": 8299
       },
       {
         "week_start": "2026-05-11",
         "bucket": "Taboola",
-        "subs": 1312
+        "subs": 1319
       },
       {
         "week_start": "2026-05-11",
@@ -1345,18 +1173,18 @@
       },
       {
         "week_start": "2026-05-11",
-        "bucket": "Campaign_monitor",
-        "subs": 49
+        "bucket": "healthbrief",
+        "subs": 21
       },
       {
         "week_start": "2026-05-11",
         "bucket": "superage",
-        "subs": 22
+        "subs": 21
       },
       {
         "week_start": "2026-05-11",
-        "bucket": "healthbrief",
-        "subs": 21
+        "bucket": "Campaign_monitor",
+        "subs": 15
       },
       {
         "week_start": "2026-05-11",
@@ -1381,12 +1209,12 @@
       {
         "week_start": "2026-05-04",
         "bucket": "Taboola",
-        "subs": 3841
+        "subs": 3854
       },
       {
         "week_start": "2026-05-04",
         "bucket": "Meta",
-        "subs": 998
+        "subs": 1003
       },
       {
         "week_start": "2026-05-04",
@@ -1396,27 +1224,27 @@
       {
         "week_start": "2026-05-04",
         "bucket": "healthbrief",
-        "subs": 332
-      },
-      {
-        "week_start": "2026-05-04",
-        "bucket": "Campaign_monitor",
-        "subs": 37
+        "subs": 333
       },
       {
         "week_start": "2026-05-04",
         "bucket": "superage",
-        "subs": 25
+        "subs": 28
       },
       {
         "week_start": "2026-05-04",
-        "bucket": "AllHealthy",
-        "subs": 12
+        "bucket": "Campaign_monitor",
+        "subs": 16
       },
       {
         "week_start": "2026-05-04",
         "bucket": "optimism",
         "subs": 12
+      },
+      {
+        "week_start": "2026-05-04",
+        "bucket": "AllHealthy",
+        "subs": 11
       },
       {
         "week_start": "2026-05-04",
@@ -1440,88 +1268,88 @@
         "url": "https://superage.com/the-blood-pressure-reading-your-doctor-isnt-taking-and-the-exercise-that-helps-it",
         "issue_name": "SA_PF_20260511 (Sponsor: Berkeley Life | Pvolve)",
         "issue_date": "2026-05-11",
-        "unique_clicks": 11690,
-        "total_clicks": 12722
+        "unique_clicks": 11744,
+        "total_clicks": 12791
       },
       {
         "title": "3 Exercises That Quietly Rewire Your Brain For Deep Sleep",
         "url": "https://superage.com/3-exercises-that-quietly-rewire-your-brain-for-deep-sleep",
         "issue_name": "SA_PF_20260514 (Sponsor: Pendulum)",
         "issue_date": "2026-05-14",
-        "unique_clicks": 7948,
-        "total_clicks": 9229
+        "unique_clicks": 8061,
+        "total_clicks": 9371
       },
       {
         "title": "The Blood Pressure Reading Your Doctor Isnt Taking And The Exercise That Helps It",
         "url": "https://superage.com/the-blood-pressure-reading-your-doctor-isnt-taking-and-the-exercise-that-helps-it",
         "issue_name": "SA_PF_20260517 (Sponsor: ReadyRX)",
         "issue_date": "2026-05-17",
-        "unique_clicks": 7144,
-        "total_clicks": 7651
+        "unique_clicks": 7406,
+        "total_clicks": 7937
       },
       {
         "title": "5 Sleep Friendly Nutrients To Add To Your Diet",
         "url": "https://superage.com/5-sleep-friendly-nutrients-to-add-to-your-diet",
         "issue_name": "SA_PF_20260514 (Sponsor: Pendulum)",
         "issue_date": "2026-05-14",
-        "unique_clicks": 5240,
-        "total_clicks": 5848
+        "unique_clicks": 5308,
+        "total_clicks": 5921
       },
       {
         "title": "The Best Vegetables For Your Health Have A Pfas Problem",
         "url": "https://superage.com/the-best-vegetables-for-your-health-have-a-pfas-problem",
         "issue_name": "SA_PF_20260511 (Sponsor: Berkeley Life | Pvolve)",
         "issue_date": "2026-05-11",
-        "unique_clicks": 5054,
-        "total_clicks": 5607
+        "unique_clicks": 5073,
+        "total_clicks": 5629
       },
       {
         "title": "Life Expectancy Gains Are Slowing Your Choices Are More Important Than Ever",
         "url": "https://superage.com/life-expectancy-gains-are-slowing-your-choices-are-more-important-than-ever",
         "issue_name": "SA_PF_20260511 (Sponsor: Berkeley Life | Pvolve)",
         "issue_date": "2026-05-11",
-        "unique_clicks": 2851,
-        "total_clicks": 3203
+        "unique_clicks": 2861,
+        "total_clicks": 3217
       },
       {
         "title": "Cant Sleep Get Out Of Bed Says Sleep Scientist",
         "url": "https://superage.com/cant-sleep-get-out-of-bed-says-sleep-scientist",
         "issue_name": "SA_PF_20260514 (Sponsor: Pendulum)",
         "issue_date": "2026-05-14",
-        "unique_clicks": 2027,
-        "total_clicks": 2299
+        "unique_clicks": 2056,
+        "total_clicks": 2332
       },
       {
         "title": "The Longevity Sleep Routine For Deeper Stronger Rest",
         "url": "https://superage.com/the-longevity-sleep-routine-for-deeper-stronger-rest",
         "issue_name": "SA_PF_20260514 (Sponsor: Pendulum)",
         "issue_date": "2026-05-14",
-        "unique_clicks": 1212,
-        "total_clicks": 1359
+        "unique_clicks": 1234,
+        "total_clicks": 1383
       },
       {
         "title": "Savoy Cabbage Caesar Salad With Homemade Greek Yogurt Dressing",
         "url": "https://superage.com/savoy-cabbage-caesar-salad-with-homemade-greek-yogurt-dressing",
         "issue_name": "SA_PF_20260511 (Sponsor: Berkeley Life | Pvolve)",
         "issue_date": "2026-05-11",
-        "unique_clicks": 1096,
-        "total_clicks": 1232
+        "unique_clicks": 1101,
+        "total_clicks": 1240
       },
       {
         "title": "8 Trainable Longevity Markers That Extend Your Life",
         "url": "https://superage.com/8-trainable-longevity-markers-that-extend-your-life",
         "issue_name": "SA_PF_20260511 (Sponsor: Berkeley Life | Pvolve)",
         "issue_date": "2026-05-11",
-        "unique_clicks": 299,
-        "total_clicks": 326
+        "unique_clicks": 300,
+        "total_clicks": 327
       },
       {
         "title": "Exercising Before Therapy Could Boost Your Results",
         "url": "https://superage.com/exercising-before-therapy-could-boost-your-results",
         "issue_name": "SA_PF_20260511 (Sponsor: Berkeley Life | Pvolve)",
         "issue_date": "2026-05-11",
-        "unique_clicks": 265,
-        "total_clicks": 285
+        "unique_clicks": 268,
+        "total_clicks": 288
       },
       {
         "title": "The Unsung Molecule That Powers Your Brain",
@@ -1538,40 +1366,40 @@
         "url": "https://berkeleylife.com/pages/superage_freesamplepack?utm_source=May%201&utm_medium=Newsletter&utm_campaign=Super%20Age",
         "issue_name": "SA_PF_20260511 (Sponsor: Berkeley Life | Pvolve)",
         "issue_date": "2026-05-11",
-        "unique_clicks": 997,
-        "total_clicks": 1150
+        "unique_clicks": 1001,
+        "total_clicks": 1155
       },
       {
         "title": "BetterHelp - Atwave",
         "url": "https://rewardcellar.com/?a=1471&c=21981&s1=",
         "issue_name": "SA_PF_20260517 (Sponsor: ReadyRX)",
         "issue_date": "2026-05-17",
-        "unique_clicks": 845,
-        "total_clicks": 904
+        "unique_clicks": 886,
+        "total_clicks": 945
       },
       {
         "title": "Pendulum",
         "url": "https://pendulumlife.com/products/pendulum-metabolic-daily?utm_source=newsletter&utm_medium=paid.superage&utm_campaign=PMD&utm_content=cravingsB&utm_medium=email&oid=[oid]&utm_source=superage&utm_campaign=SA_PF_20260514",
         "issue_name": "SA_PF_20260514 (Sponsor: Pendulum)",
         "issue_date": "2026-05-14",
-        "unique_clicks": 512,
-        "total_clicks": 562
+        "unique_clicks": 525,
+        "total_clicks": 576
       },
       {
         "title": "Pendulum",
         "url": "https://pendulumlife.com/products/pendulum-metabolic-daily?utm_source=newsletter&utm_medium=paid.superage&utm_campaign=PMD&utm_content=boostglp1A&utm_medium=email&utm_source=superage",
         "issue_name": "SA_PF_20260514 (Sponsor: Pendulum)",
         "issue_date": "2026-05-14",
-        "unique_clicks": 347,
-        "total_clicks": 386
+        "unique_clicks": 351,
+        "total_clicks": 390
       },
       {
         "title": "Berkeley Life | Pvolve",
         "url": "https://www.pvolve.com/pages/superage-offer?discount=SUPERAGE",
         "issue_name": "SA_PF_20260511 (Sponsor: Berkeley Life | Pvolve)",
         "issue_date": "2026-05-11",
-        "unique_clicks": 339,
-        "total_clicks": 372
+        "unique_clicks": 342,
+        "total_clicks": 375
       }
     ],
     "top_immersions_this_week": [
@@ -1580,8 +1408,8 @@
         "url": "https://superage.com/immersions/four-days-your-healthspan-extended",
         "issue_name": "SA_PF_20260511 (Sponsor: Berkeley Life | Pvolve)",
         "issue_date": "2026-05-11",
-        "unique_clicks": 571,
-        "total_clicks": 603
+        "unique_clicks": 573,
+        "total_clicks": 605
       },
       {
         "title": "Immersions",
@@ -1596,8 +1424,8 @@
         "url": "https://superage.com/immersions",
         "issue_name": "SA_PF_20260514 (Sponsor: Pendulum)",
         "issue_date": "2026-05-14",
-        "unique_clicks": 27,
-        "total_clicks": 30
+        "unique_clicks": 28,
+        "total_clicks": 31
       }
     ]
   }

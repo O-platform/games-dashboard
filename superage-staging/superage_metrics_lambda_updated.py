@@ -878,7 +878,12 @@ def lambda_handler(event, context):
                 COUNT(*) FILTER (WHERE days_active > 365) AS d365plus
             FROM (
                 SELECT
-                    EXTRACT(EPOCH FROM (COALESCE(date_unsubscribed, NOW()) - date_joined)) / 86400 AS days_active
+                    EXTRACT(EPOCH FROM (
+                        COALESCE(
+                            CASE WHEN state = 'Unsubscribed' THEN date_unsubscribed END,
+                            NOW()
+                        ) - date_joined
+                    )) / 86400 AS days_active
                 FROM {S}.subscribers
                 WHERE date_joined IS NOT NULL AND date_joined::date < CURRENT_DATE
                   AND (date_unsubscribed IS NULL OR date_unsubscribed::date < CURRENT_DATE)
@@ -903,7 +908,15 @@ def lambda_handler(event, context):
                 COUNT(*) FILTER (WHERE days_to_unsub IS NULL OR days_to_unsub > 365) AS alive_365
             FROM (
                 SELECT
-                    EXTRACT(EPOCH FROM (date_unsubscribed - date_joined)) / 86400 AS days_to_unsub
+                    -- Gate date_unsubscribed by state='Unsubscribed' — resubscribed
+                    -- subs (state='Active') keep the OLD date_unsubscribed in the
+                    -- subscribers table even after date_joined gets updated to the
+                    -- new join date. Without this guard, days_to_unsub goes negative
+                    -- and silently inflates churn at every milestone.
+                    EXTRACT(EPOCH FROM (
+                        (CASE WHEN state = 'Unsubscribed' THEN date_unsubscribed END)
+                        - date_joined
+                    )) / 86400 AS days_to_unsub
                 FROM {S}.subscribers
                 WHERE date_joined IS NOT NULL AND date_joined::date < CURRENT_DATE
                   AND (date_unsubscribed IS NULL OR date_unsubscribed::date < CURRENT_DATE)
@@ -936,7 +949,12 @@ def lambda_handler(event, context):
                     ) AS bucket,
                     -- Use acquisition_date when available (set by partner at real acquisition
                     -- time); fall back to date_joined when absent.
-                    (sub.date_unsubscribed::date
+                    -- Gate date_unsubscribed by state='Unsubscribed' — resubscribed
+                    -- subs keep the OLD date_unsubscribed in the subscribers row even
+                    -- after date_joined gets bumped to the new join date, which would
+                    -- otherwise yield a negative days_to_unsub and silently count
+                    -- them as churned at every milestone.
+                    ((CASE WHEN sub.state = 'Unsubscribed' THEN sub.date_unsubscribed::date END)
                         - COALESCE(sa.acquisition_date::date, sub.date_joined::date)) AS days_to_unsub,
                     (CURRENT_DATE
                         - COALESCE(sa.acquisition_date::date, sub.date_joined::date))::integer AS cohort_age_days
@@ -1079,7 +1097,10 @@ def lambda_handler(event, context):
                 SELECT
                     LOWER(TRIM(sub.email))                             AS email,
                     COALESCE(sa.acquisition_date, sub.date_joined::date) AS eff_joined,
-                    sub.date_unsubscribed::date                        AS unsubbed,
+                    -- Gate by state — see survival_by_source (Q37b) for the resub
+                    -- explanation; old date_unsubscribed on a resub-Active row would
+                    -- otherwise produce a negative lifespan_days that skews the avg.
+                    CASE WHEN sub.state = 'Unsubscribed' THEN sub.date_unsubscribed::date END AS unsubbed,
                     sub.state,
                     sub.engagement_segment,
                     COALESCE(
@@ -1144,7 +1165,11 @@ def lambda_handler(event, context):
                     DATE_TRUNC('month', date_joined::date)::date AS cohort_month,
                     email,
                     date_joined::date AS joined,
-                    date_unsubscribed::date AS unsubbed
+                    -- Gate by state — resubscribed subs keep the OLD date_unsubscribed
+                    -- in subscribers; their new cohort_month is set by the bumped
+                    -- date_joined, but the stale date_unsubscribed predates that and
+                    -- would mark them as churned at month 1.
+                    CASE WHEN state = 'Unsubscribed' THEN date_unsubscribed::date END AS unsubbed
                 FROM {S}.subscribers
                 WHERE date_joined IS NOT NULL AND date_joined::date < CURRENT_DATE
             )

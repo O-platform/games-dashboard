@@ -924,10 +924,9 @@ def lambda_handler(event, context):
             s AS (
                 SELECT
                     COALESCE(
-                            {_canon_source("COALESCE(NULLIF(TRIM(sa.acquisition_utm_source),''), NULLIF(TRIM(sub.source),''))")},
-                            'Organic'
-                        )
-                    END AS bucket,
+                        {_canon_source("COALESCE(NULLIF(TRIM(sa.acquisition_utm_source),''), NULLIF(TRIM(sub.source),''))")},
+                        'Organic'
+                    ) AS bucket,
                     (sub.date_unsubscribed::date
                         - COALESCE(sa.acquisition_date, sub.date_joined::date)) AS days_to_unsub,
                     -- cohort_age_days: how many days ago this subscriber effectively joined.

@@ -618,9 +618,9 @@ whether to wire PDF/email export.
 
 - **JOIN condition**: `LEFT JOIN subscriber_acquisition ON LOWER(TRIM(sa.email)) = LOWER(TRIM(s.email)) WHERE sa.acquisition_status IN ('added', 'resubscribed')`
 - **Label priority**: `sa.acquisition_utm_source` → `s.utm_source` → `s.source` → `'Organic'`
-- **Effective join date**: when SA has a non-empty `acquisition_utm_source`, `sa.acquisition_date` replaces `subscribers.date_joined` for lifespan and churn-window calculations
-- **Taboola exclusion**: rows where the canonical label resolves to `'Taboola'` are excluded from all source-grouped result sets (Q19, Q20, Q35b, Q37b, comparison lambda top-source)
+- **Effective join date**: `COALESCE(sa.acquisition_date, s.date_joined)` — when SA has a non-NULL `acquisition_date` it replaces `subscribers.date_joined` for lifespan and churn-window calculations
 - **Queries updated**: Q19 (`fetch_acquisition_rows`), Q20 (`utm_clicks_performance`), Q35b (retention by source), Q37b (survival curve per source), and the Weekly Digest top-source query in `superage_comparison_lambda.py`
+- **Taboola**: kept in results as its own canonical bucket — both lowercase `taboola` and capital `Taboola` collapse into a single `Taboola` row via `LOWER(TRIM(...))` in `_canon_source`
 - **No HTML changes needed**: `utmLabel()` in `index.html` is unchanged — canonicalisation happens server-side before GROUP BY
 
 **Note**: `acquisition_sub_source` is not used in the label chain per your instruction — only `acquisition_utm_source` from the SA table feeds the priority chain.

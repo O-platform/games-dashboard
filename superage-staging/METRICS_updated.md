@@ -214,8 +214,6 @@ Raw source values are normalised to a canonical display label **before** the `GR
 
 The `subscriber_acquisition` table (`superage.subscriber_acquisition`) is LEFT JOINed on `LOWER(TRIM(email))` with filter `acquisition_status IN ('added', 'resubscribed')`. When a matching SA row has a non-NULL `acquisition_date`, it is used as the **effective join date** via `COALESCE(sa.acquisition_date, s.date_joined)` for lifespan and churn-window calculations.
 
-**Taboola exclusion:** rows where the canonical label resolves to `'Taboola'` are excluded from all source-grouped result sets (Q19, Q20, Q35b, Q37b, and the comparison lambda top-source query). The canonical mapping itself is still defined so display rendering works if it ever appears in raw data.
-
 Comparisons use `LOWER(TRIM(value))`, so case + whitespace differences collapse automatically. Anything that doesn't match a rule below falls through to `NULLIF(TRIM(value), '')` and is rendered with its raw string.
 
 | Canonical label | Matches (lowercased) | Notes |
@@ -825,7 +823,6 @@ scopes click activity. The old query joined the date-less
 ```sql
 -- Label priority: sa.acquisition_utm_source >> s.utm_source >> s.source >> 'Organic'
 -- Effective join date: COALESCE(sa.acquisition_date, s.date_joined).
--- Taboola rows excluded (WHERE label != 'Taboola').
 -- since_days: None (all-time), 30, 60, or 90.
 WITH sa_acq AS (
     SELECT
@@ -885,7 +882,6 @@ SELECT
           AND (s.unsubbed - s.eff_date) <= 90
     )                                               AS churned_90d
 FROM s LEFT JOIN cc ON s.email = cc.email
-WHERE s.label != 'Taboola'
 GROUP BY 1
 ORDER BY subscribers DESC NULLS LAST
 LIMIT 12;
@@ -905,7 +901,7 @@ LIMIT 12;
 
 ```sql
 -- Label priority: sa.acquisition_utm_source >> s.utm_source >> s.source >> 'Organic'.
--- Taboola excluded. All-time; windowed views fall back to Q19.
+-- All-time; windowed views fall back to Q19.
 WITH sa_acq AS (
     SELECT LOWER(TRIM(email)) AS email, acquisition_utm_source
     FROM superage.subscriber_acquisition
@@ -935,7 +931,6 @@ SELECT
     ROUND(COALESCE(SUM(unique_clicks), 0)::numeric
           / NULLIF(COUNT(DISTINCT email_address), 0), 1) AS avg_per_clicker
 FROM labeled
-WHERE label != 'Taboola'
 GROUP BY 1
 ORDER BY unique_clicks DESC NULLS LAST
 LIMIT 12;
@@ -1138,7 +1133,7 @@ returned as raw values.
 ```sql
 -- Label priority: sa.acquisition_utm_source >> s.utm_source >> s.source >> 'Organic'.
 -- Effective join date: COALESCE(sa.acquisition_date, s.date_joined).
--- Taboola excluded (WHERE m.bucket != 'Taboola'). Min cohort 100; top 15 by size.
+-- Min cohort 100; top 15 by size.
 WITH sa_acq AS (
     SELECT
         LOWER(TRIM(email))    AS email,
@@ -1202,7 +1197,6 @@ SELECT
     COUNT(c.email)                                        AS clickers
 FROM mapped m
 LEFT JOIN clicks c ON c.email = m.email
-WHERE m.bucket != 'Taboola'
 GROUP BY m.bucket
 HAVING COUNT(*) >= 100
 ORDER BY subscribers DESC
@@ -1263,7 +1257,7 @@ Same Day 0/30/60/90/180/365 shape as Q37 but split by acquisition-source bucket.
 ```sql
 -- Label priority: sa.acquisition_utm_source >> s.utm_source >> s.source.
 -- Effective join date: COALESCE(sa.acquisition_date, s.date_joined).
--- Taboola excluded. Sorted by 365-day survival rate DESC.
+-- Sorted by 365-day survival rate DESC.
 WITH sa_acq AS (
     SELECT
         LOWER(TRIM(email))    AS email,
@@ -1304,7 +1298,6 @@ SELECT
     COUNT(*) FILTER (WHERE days_to_unsub IS NULL OR days_to_unsub > 180)    AS alive_180,
     COUNT(*) FILTER (WHERE days_to_unsub IS NULL OR days_to_unsub > 365)    AS alive_365
 FROM s
-WHERE bucket != 'Taboola'
 GROUP BY 1
 HAVING COUNT(*) >= 100
 ORDER BY
@@ -1600,4 +1593,4 @@ ORDER BY c.cohort_month;
     In the same change, **three granularities are emitted**: `daily` (last 120 days), `weekly` (last 52 weeks), `monthly` (last 36 months). Lambda emits `M.subscriber_growth_series = { daily, weekly, monthly }` where each carries `labels` + `new_subs` + `unsubs` + `active_count`. `M.subscriber_monthly` stays populated from the monthly bucket for backwards-compat.
 
     Overview UI adds a **Granularity selector** (Day / Week / Month) plus a **dynamic Window button row** whose presets match the active granularity — Day shows `All / 90d / 30d / 14d / 7d`, Week shows `All / 26w / 12w / 8w / 4w`, Month shows `All / 24m / 12m / 6m / 3m`. Both selectors re-slice the cached payload client-side (no lambda re-run). Defaults: granularity = Month, window = 12.
-67. **subscriber_acquisition table integration (2026-05)**: a new `superage.subscriber_acquisition` table provides acquisition-source attribution more accurate than the legacy `subscribers.utm_source` / `source` columns. Schema: `email`, `acquisition_date`, `acquisition_utm_source`, `acquisition_status`, `brand`, `dynamo_id`, `message`, `acquisition_sub_level`, `acquisition_sub_source`, `acquisition_o_event`, `ingested_at`. Integration adds a LEFT JOIN in Q19 / Q20 / Q35b / Q37b (metrics lambda) and the top-source query (comparison lambda) on `LOWER(TRIM(email))` with filter `acquisition_status IN ('added', 'resubscribed')`. **Label priority**: `sa.acquisition_utm_source` >> `s.utm_source` >> `s.source` >> `'Organic'`. **Effective join date**: `COALESCE(sa.acquisition_date, s.date_joined)` — when SA has a non-NULL `acquisition_date` it replaces `date_joined` for lifespan and churn-window calculations. **Taboola exclusion**: all source-grouped result sets add `WHERE bucket != 'Taboola'` (or equivalent). `utmLabel()` in `index.html` requires no changes.
+67. **subscriber_acquisition table integration (2026-05)**: a new `superage.subscriber_acquisition` table provides acquisition-source attribution more accurate than the legacy `subscribers.utm_source` / `source` columns. Schema: `email`, `acquisition_date`, `acquisition_utm_source`, `acquisition_status`, `brand`, `dynamo_id`, `message`, `acquisition_sub_level`, `acquisition_sub_source`, `acquisition_o_event`, `ingested_at`. Integration adds a LEFT JOIN in Q19 / Q20 / Q35b / Q37b (metrics lambda) and the top-source query (comparison lambda) on `LOWER(TRIM(email))` with filter `acquisition_status IN ('added', 'resubscribed')`. **Label priority**: `sa.acquisition_utm_source` >> `s.utm_source` >> `s.source` >> `'Organic'`. **Effective join date**: `COALESCE(sa.acquisition_date, s.date_joined)` — when SA has a non-NULL `acquisition_date` it replaces `date_joined` for lifespan and churn-window calculations. `utmLabel()` in `index.html` requires no changes — canonicalisation happens server-side before GROUP BY. (Taboola is no longer excluded from results — it appears as its own canonical bucket.)

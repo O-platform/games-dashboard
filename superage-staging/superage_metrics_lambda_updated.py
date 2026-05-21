@@ -615,7 +615,6 @@ def lambda_handler(event, context):
                           AND (s.unsubbed - s.eff_date) <= 90
                     )                                               AS churned_90d
                 FROM s LEFT JOIN cc ON s.email = cc.email
-                WHERE s.label != 'Taboola'
                 GROUP BY 1
                 ORDER BY subscribers DESC NULLS LAST
                 LIMIT {int(limit)}
@@ -623,7 +622,7 @@ def lambda_handler(event, context):
             return cur.fetchall()
 
         # Acquisition source label priority: sa.acquisition_utm_source >>
-        # s.utm_source >> s.source >> 'Organic'. Taboola excluded from results.
+        # s.utm_source >> s.source >> 'Organic'.
         acquisition_utm_rows     = fetch_acquisition_rows("Organic")
         acquisition_utm_rows_30  = fetch_acquisition_rows("Organic", since_days=30)
         acquisition_utm_rows_60  = fetch_acquisition_rows("Organic", since_days=60)
@@ -664,7 +663,6 @@ def lambda_handler(event, context):
                 ROUND(COALESCE(SUM(unique_clicks), 0)::numeric
                       / NULLIF(COUNT(DISTINCT email_address), 0), 1) AS avg_per_clicker
             FROM labeled
-            WHERE label != 'Taboola'
             GROUP BY 1
             ORDER BY unique_clicks DESC NULLS LAST
             LIMIT 12
@@ -941,7 +939,6 @@ def lambda_handler(event, context):
                 COUNT(*) FILTER (WHERE days_to_unsub IS NULL OR days_to_unsub > 180)    AS alive_180,
                 COUNT(*) FILTER (WHERE days_to_unsub IS NULL OR days_to_unsub > 365)    AS alive_365
             FROM s
-            WHERE bucket != 'Taboola'
             GROUP BY 1
             HAVING COUNT(*) >= 100
             -- Sort by 365-day survival rate; tie-break by cohort size.
@@ -1096,7 +1093,6 @@ def lambda_handler(event, context):
                 COUNT(c.email)                                        AS clickers
             FROM mapped m
             LEFT JOIN clicks c ON c.email = m.email
-            WHERE m.bucket != 'Taboola'
             GROUP BY m.bucket
             HAVING COUNT(*) >= 100
             ORDER BY subscribers DESC

@@ -636,7 +636,6 @@ def lambda_handler(event, context):
 
             # Top acquisition source for the last two completed ISO weeks.
             # Label priority: sa.acquisition_utm_source >> s.utm_source >> s.source >> 'Direct'.
-            # Taboola is excluded from results.
             # KEEP THIS BRANCH LIST IN SYNC WITH `_canon_source` IN THE METRICS
             # LAMBDA AND `utmLabel()` IN index.html.
             cur.execute(f"""
@@ -695,7 +694,6 @@ def lambda_handler(event, context):
                     COALESCE(bucket, 'Direct') AS bucket,
                     COUNT(*)                   AS subs
                 FROM src
-                WHERE COALESCE(bucket, 'Direct') != 'Taboola'
                 GROUP BY 1, 2
                 ORDER BY week_start DESC, subs DESC
             """)

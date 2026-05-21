@@ -2663,9 +2663,13 @@ function renderRevenue(M) {
   const rm = M.revenue_monthly || {labels:[],revenue:[],deals:[]};
   const today = new Date();
   const monthStart = new Date(today.getFullYear(), today.getMonth(), 1);
+  const _MON = {Jan:0,Feb:1,Mar:2,Apr:3,May:4,Jun:5,Jul:6,Aug:7,Sep:8,Oct:9,Nov:10,Dec:11};
   const isInProgress = (lbl) => {
-    const d = new Date(lbl + ' 1');  // "May 2026" → Date
-    return isFinite(d.getTime()) && d >= monthStart;
+    // Parse "Mon YYYY" manually — new Date(string) is inconsistent on Safari/iOS.
+    const p = (lbl || '').trim().split(/\s+/);
+    if (p.length < 2 || !(_MON[p[0]] != null) || isNaN(+p[1])) return false;
+    const d = new Date(+p[1], _MON[p[0]], 1);
+    return d >= monthStart;
   };
   const BAR_COLOR = '#1a7f37';
   const revColors  = (rm.labels||[]).map(l => isInProgress(l) ? BAR_COLOR + '66' : BAR_COLOR);

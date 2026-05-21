@@ -1778,6 +1778,11 @@ function renderContent(M) {
       <div class="kpi-card blue"><div class="label">Total Clicks</div><div class="value" id="ca-kpi-clicks">—</div><div class="sub">Sum of campaign <code>Clicks</code></div></div>
       <div class="kpi-card orange"><div class="label">Avg Clicks / Campaign</div><div class="value" id="ca-kpi-avg">—</div><div class="sub">Mean per send (in scope)</div></div>
     </div>
+    <div class="kpi-row" style="grid-template-columns:repeat(auto-fit,minmax(180px,1fr));margin-top:8px;">
+      <div class="kpi-card accent"><div class="label">Unique Email Clickers</div><div class="value" id="sc-kpi-total">—</div><div class="sub">Distinct subscribers in <code>subscriber_clicks</code></div></div>
+      <div class="kpi-card green"><div class="label">Repeat Clickers — Last 7d</div><div class="value" id="sc-kpi-7d">—</div><div class="sub">Clicked 2+ times in last 7 days</div></div>
+      <div class="kpi-card blue"><div class="label">Repeat Clickers — Last 30d</div><div class="value" id="sc-kpi-30d">—</div><div class="sub">Clicked 2+ times in last 30 days</div></div>
+    </div>
 
     <h3 style="margin:18px 0 10px;font-size:13px;text-transform:uppercase;letter-spacing:.5px;color:var(--text-muted);">Section 1 — Campaign-Level Aggregated</h3>
     <div class="grid-2">
@@ -1827,11 +1832,6 @@ function renderContent(M) {
     </div>
 
     <h3 style="margin:18px 0 10px;font-size:13px;text-transform:uppercase;letter-spacing:.5px;color:var(--text-muted);">Section 3 — Subscriber Click Behaviour</h3>
-    <div class="kpi-row" style="grid-template-columns:repeat(auto-fit,minmax(180px,1fr));">
-      <div class="kpi-card accent"><div class="label">Unique Email Clickers</div><div class="value" id="sc-kpi-total">—</div><div class="sub">Distinct subscribers in <code>subscriber_clicks</code></div></div>
-      <div class="kpi-card green"><div class="label">Repeat Clickers — Last 7d</div><div class="value" id="sc-kpi-7d">—</div><div class="sub">Clicked 2+ times in the last 7 days</div></div>
-      <div class="kpi-card blue"><div class="label">Repeat Clickers — Last 30d</div><div class="value" id="sc-kpi-30d">—</div><div class="sub">Clicked 2+ times in the last 30 days</div></div>
-    </div>
     <div class="chart-card">
       <h3 style="margin-bottom:12px;">Click Volume Distribution <span class="badge-inline">— subscribers grouped by lifetime unique clicks</span></h3>
       <div class="chart-container h300"><canvas id="sc-bucket-bar"></canvas></div>

@@ -2770,7 +2770,7 @@ function renderRetention(M) {
       <div class="chart-container h300"><canvas id="ret-camp-unsub-rate"></canvas></div>
       <div class="insight">Line = <strong>SUM(<code>Unsubscribed</code>) ÷ SUM(<code>Recipients</code>) × 100</strong> per month, both columns from <code>Campaigns</code> (filter <code>Recipients &gt; 95</code>). Counts only subscribers who clicked the unsub link in a campaign sent that month — distinct from the list-churn-per-send rate (which includes hard bounces and manual deletions). Months with no qualifying send show no point. <em>Note: <code>Recipients</code> is per-send and not deduplicated across campaigns — a subscriber receiving 4 emails contributes 4× to the denominator, so the rate is per-impression, not per-unique-person.</em></div>
     </div>
-    <h2 style="font-size:14px;font-weight:600;color:var(--text);margin:22px 0 10px;">Retention by Acquisition Source <span class="badge-inline" style="text-transform:none;">acquisition source → source → 'Organic'</span></h2>
+    <h2 style="font-size:14px;font-weight:600;color:var(--text);margin:22px 0 10px;">Retention by Acquisition Source <span class="badge-inline" style="text-transform:none;">acquisition source → utm_source → source → 'Organic'</span></h2>
     <div class="chart-card">
       <div class="tbl-wrap"><table class="dash-table">
         <thead><tr>

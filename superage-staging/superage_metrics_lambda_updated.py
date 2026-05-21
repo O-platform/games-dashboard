@@ -586,6 +586,7 @@ def lambda_handler(event, context):
                         LOWER(TRIM(s.email))         AS email,
                         COALESCE(
                             {_canon_source('sa.acquisition_utm_source')},
+                            {_canon_source('s.utm_source')},
                             {_canon_source('s.source')},
                             %s
                         )                            AS label,
@@ -636,7 +637,7 @@ def lambda_handler(event, context):
             return cur.fetchall()
 
         # Acquisition source label priority: sa.acquisition_utm_source >>
-        # s.source >> 'Organic'.
+        # s.utm_source >> s.source >> 'Organic'.
         acquisition_utm_rows     = fetch_acquisition_rows("Organic")
         acquisition_utm_rows_30  = fetch_acquisition_rows("Organic", since_days=30)
         acquisition_utm_rows_60  = fetch_acquisition_rows("Organic", since_days=60)
@@ -657,6 +658,7 @@ def lambda_handler(event, context):
                 SELECT
                     COALESCE(
                         {_canon_source('sa.acquisition_utm_source')},
+                        {_canon_source('s.utm_source')},
                         {_canon_source('s.source')},
                         'Organic'
                     )                                 AS label,
@@ -932,7 +934,7 @@ def lambda_handler(event, context):
             s AS (
                 SELECT
                     COALESCE(
-                        {_canon_source("COALESCE(NULLIF(TRIM(sa.acquisition_utm_source),''), NULLIF(TRIM(sub.source),''))")},
+                        {_canon_source("COALESCE(NULLIF(TRIM(sa.acquisition_utm_source),''), NULLIF(TRIM(sub.utm_source),''), NULLIF(TRIM(sub.source),''))")},
                         'Organic'
                     ) AS bucket,
                     -- Use acquisition_date when available (set by partner at real acquisition
@@ -1085,6 +1087,7 @@ def lambda_handler(event, context):
                     sub.engagement_segment,
                     COALESCE(
                         NULLIF(TRIM(sa.acquisition_utm_source), ''),
+                        NULLIF(TRIM(sub.utm_source), ''),
                         NULLIF(TRIM(sub.source), ''),
                         'Organic'
                     )                                                  AS source_raw

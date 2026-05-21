@@ -635,7 +635,7 @@ def lambda_handler(event, context):
             weekly_digest_rows = cur.fetchall()
 
             # Top acquisition source for the last two completed ISO weeks.
-            # Label priority: sa.acquisition_utm_source >> s.source >> 'Organic'.
+            # Label priority: sa.acquisition_utm_source >> s.utm_source >> s.source >> 'Organic'.
             # KEEP THIS BRANCH LIST IN SYNC WITH `_canon_source` IN THE METRICS
             # LAMBDA AND `utmLabel()` IN index.html.
             cur.execute(f"""
@@ -650,33 +650,35 @@ def lambda_handler(event, context):
                         CASE
                             WHEN LOWER(COALESCE(
                                     NULLIF(TRIM(sa.acquisition_utm_source),''),
+                                    NULLIF(TRIM(s.utm_source),''),
                                     NULLIF(TRIM(s.source),''), ''))
-                                 IN ('organic','direct','none','null','(none)','(null)','n/a','-','')
+                                 IN ('organic','direct','none','null','(none)','(null)','n/a','-','',
+                                     'website','homepage','home','web','site')
                                 THEN 'Organic'
-                            WHEN LOWER(TRIM(COALESCE(NULLIF(TRIM(sa.acquisition_utm_source),''), NULLIF(TRIM(s.source),''))))
+                            WHEN LOWER(TRIM(COALESCE(NULLIF(TRIM(sa.acquisition_utm_source),''), NULLIF(TRIM(s.utm_source),''), NULLIF(TRIM(s.source),''))))
                                  IN ('ahcpl1','allhealthy','allhealthy.com')           THEN 'AllHealthy'
-                            WHEN LOWER(TRIM(COALESCE(NULLIF(TRIM(sa.acquisition_utm_source),''), NULLIF(TRIM(s.source),''))))
+                            WHEN LOWER(TRIM(COALESCE(NULLIF(TRIM(sa.acquisition_utm_source),''), NULLIF(TRIM(s.utm_source),''), NULLIF(TRIM(s.source),''))))
                                  LIKE 'td_cpl2%%'                                       THEN 'TrueDemocracy'
-                            WHEN LOWER(TRIM(COALESCE(NULLIF(TRIM(sa.acquisition_utm_source),''), NULLIF(TRIM(s.source),''))))
+                            WHEN LOWER(TRIM(COALESCE(NULLIF(TRIM(sa.acquisition_utm_source),''), NULLIF(TRIM(s.utm_source),''), NULLIF(TRIM(s.source),''))))
                                  IN ('tdcpl1','tdcpl2')                                 THEN 'TrueDemocracy'
-                            WHEN LOWER(TRIM(COALESCE(NULLIF(TRIM(sa.acquisition_utm_source),''), NULLIF(TRIM(s.source),''))))
+                            WHEN LOWER(TRIM(COALESCE(NULLIF(TRIM(sa.acquisition_utm_source),''), NULLIF(TRIM(s.utm_source),''), NULLIF(TRIM(s.source),''))))
                                  IN ('lscpl1','lscpl2','ls_cpl2','livingsimply','livingsimply.com')
                                                                                         THEN 'LivingSimply'
-                            WHEN LOWER(TRIM(COALESCE(NULLIF(TRIM(sa.acquisition_utm_source),''), NULLIF(TRIM(s.source),''))))
+                            WHEN LOWER(TRIM(COALESCE(NULLIF(TRIM(sa.acquisition_utm_source),''), NULLIF(TRIM(s.utm_source),''), NULLIF(TRIM(s.source),''))))
                                  IN ('dpcpl1','dp_cpl2')                                THEN 'DailyPuzzle'
-                            WHEN LOWER(TRIM(COALESCE(NULLIF(TRIM(sa.acquisition_utm_source),''), NULLIF(TRIM(s.source),''))))
+                            WHEN LOWER(TRIM(COALESCE(NULLIF(TRIM(sa.acquisition_utm_source),''), NULLIF(TRIM(s.utm_source),''), NULLIF(TRIM(s.source),''))))
                                  = 'hfcpl1'                                             THEN 'HealthFirst'
-                            WHEN LOWER(TRIM(COALESCE(NULLIF(TRIM(sa.acquisition_utm_source),''), NULLIF(TRIM(s.source),''))))
+                            WHEN LOWER(TRIM(COALESCE(NULLIF(TRIM(sa.acquisition_utm_source),''), NULLIF(TRIM(s.utm_source),''), NULLIF(TRIM(s.source),''))))
                                  = 'fccpl1'                                             THEN 'FitConnect'
-                            WHEN LOWER(TRIM(COALESCE(NULLIF(TRIM(sa.acquisition_utm_source),''), NULLIF(TRIM(s.source),''))))
+                            WHEN LOWER(TRIM(COALESCE(NULLIF(TRIM(sa.acquisition_utm_source),''), NULLIF(TRIM(s.utm_source),''), NULLIF(TRIM(s.source),''))))
                                  IN ('facebook','meta','fb','ig')                       THEN 'Meta'
-                            WHEN LOWER(TRIM(COALESCE(NULLIF(TRIM(sa.acquisition_utm_source),''), NULLIF(TRIM(s.source),''))))
+                            WHEN LOWER(TRIM(COALESCE(NULLIF(TRIM(sa.acquisition_utm_source),''), NULLIF(TRIM(s.utm_source),''), NULLIF(TRIM(s.source),''))))
                                  IN ('if','ifcpl1')                                     THEN 'IFCPL'
-                            WHEN LOWER(TRIM(COALESCE(NULLIF(TRIM(sa.acquisition_utm_source),''), NULLIF(TRIM(s.source),''))))
+                            WHEN LOWER(TRIM(COALESCE(NULLIF(TRIM(sa.acquisition_utm_source),''), NULLIF(TRIM(s.utm_source),''), NULLIF(TRIM(s.source),''))))
                                  = 'taboola'                                            THEN 'Taboola'
-                            WHEN LOWER(TRIM(COALESCE(NULLIF(TRIM(sa.acquisition_utm_source),''), NULLIF(TRIM(s.source),''))))
+                            WHEN LOWER(TRIM(COALESCE(NULLIF(TRIM(sa.acquisition_utm_source),''), NULLIF(TRIM(s.utm_source),''), NULLIF(TRIM(s.source),''))))
                                  IN ('superagequiz','longevity_quiz')                   THEN 'SuperAge Quiz'
-                            WHEN LOWER(TRIM(COALESCE(NULLIF(TRIM(sa.acquisition_utm_source),''), NULLIF(TRIM(s.source),''))))
+                            WHEN LOWER(TRIM(COALESCE(NULLIF(TRIM(sa.acquisition_utm_source),''), NULLIF(TRIM(s.utm_source),''), NULLIF(TRIM(s.source),''))))
                                  = 'refind'                                             THEN 'Refind'
                             ELSE NULLIF(TRIM(COALESCE(
                                     NULLIF(TRIM(sa.acquisition_utm_source),''),

@@ -507,6 +507,10 @@ def lambda_handler(event, context):
             lc = f"LOWER(TRIM({col_sql}))"
             return f"""
             CASE
+                -- Literal placeholder strings — treat as missing so the
+                -- caller's COALESCE chain falls through to the next layer
+                -- (e.g. s.source) or the final 'Organic' / 'Direct' fallback.
+                WHEN {lc} IN ('none', 'null', '(none)', '(null)', '-', 'n/a') THEN NULL
                 -- AllHealthy
                 WHEN {lc} IN ('ahcpl1', 'allhealthy', 'allhealthy.com') THEN 'AllHealthy'
                 -- TrueDemocracy: TDCPL1, TDCPL2, and every TD_CPL2_YYYYMMDD batch
@@ -922,7 +926,7 @@ def lambda_handler(event, context):
                     CASE
                         WHEN LOWER(COALESCE(
                                 NULLIF(TRIM(sa.acquisition_utm_source),''),
-                                NULLIF(TRIM(sub.source),''), '')) IN ('organic','direct','') THEN 'Direct'
+                                NULLIF(TRIM(sub.source),''), '')) IN ('organic','direct','none','null','(none)','(null)','n/a','-','') THEN 'Direct'
                         ELSE COALESCE(
                             {_canon_source("COALESCE(NULLIF(TRIM(sa.acquisition_utm_source),''), NULLIF(TRIM(sub.source),''))")},
                             'Direct'
@@ -1076,7 +1080,7 @@ def lambda_handler(event, context):
                 SELECT
                     s.*,
                     CASE
-                        WHEN LOWER(source_raw) IN ('organic', 'direct', '') THEN 'Direct'
+                        WHEN LOWER(source_raw) IN ('organic', 'direct', 'none', 'null', '(none)', '(null)', 'n/a', '-', '') THEN 'Direct'
                         ELSE COALESCE({_canon_source('source_raw')}, 'Direct')
                     END AS bucket,
                     CASE WHEN unsubbed IS NOT NULL THEN (unsubbed - eff_joined) END AS lifespan_days

@@ -650,7 +650,7 @@ def lambda_handler(event, context):
                         CASE
                             WHEN LOWER(COALESCE(
                                     NULLIF(TRIM(sa.acquisition_utm_source),''),
-                                    NULLIF(TRIM(s.source),''), '')) IN ('organic','direct','')
+                                    NULLIF(TRIM(s.source),''), '')) IN ('organic','direct','none','null','(none)','(null)','n/a','-','')
                                 THEN 'Direct'
                             WHEN LOWER(TRIM(COALESCE(NULLIF(TRIM(sa.acquisition_utm_source),''), NULLIF(TRIM(s.source),''))))
                                  IN ('ahcpl1','allhealthy','allhealthy.com')           THEN 'AllHealthy'

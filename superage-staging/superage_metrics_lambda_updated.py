@@ -921,10 +921,8 @@ def lambda_handler(event, context):
                             'Direct'
                         )
                     END AS bucket,
-                    EXTRACT(EPOCH FROM (
-                        sub.date_unsubscribed::date
-                        - COALESCE(sa.acquisition_date, sub.date_joined::date)
-                    )) / 86400 AS days_to_unsub
+                    (sub.date_unsubscribed::date
+                        - COALESCE(sa.acquisition_date, sub.date_joined::date)) AS days_to_unsub
                 FROM {S}.subscribers sub
                 LEFT JOIN sa_acq sa ON sa.email = LOWER(TRIM(sub.email))
                 WHERE sub.date_joined IS NOT NULL AND sub.date_joined::date < CURRENT_DATE

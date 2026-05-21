@@ -261,7 +261,7 @@ def lambda_handler(event, context):
                 FROM {S}."Campaigns"
                 WHERE "Sent Date " IS NOT NULL
                   AND "Sent Date "::date <= %s
-                  AND "Recipients" > 1000
+                  AND "Recipients" > 95
                 ORDER BY "Sent Date "::date ASC
             """, (launch_cutoff,))
             all_rows = cur.fetchall()
@@ -294,7 +294,7 @@ def lambda_handler(event, context):
                     FROM {S}."Campaigns"
                     WHERE "Sent Date " IS NOT NULL
                       AND "Sent Date "::date < CURRENT_DATE
-                      AND "Recipients" > 1000
+                      AND "Recipients" > 95
                       AND "Sent Date "::date >= DATE_TRUNC('week', CURRENT_DATE)::date - INTERVAL '7 weeks'
                     GROUP BY 1
                 )
@@ -329,7 +329,7 @@ def lambda_handler(event, context):
                     FROM {S}."Campaigns"
                     WHERE "Sent Date " IS NOT NULL
                       AND "Sent Date "::date < CURRENT_DATE
-                      AND "Recipients" > 1000
+                      AND "Recipients" > 95
                       AND "Sent Date "::date >= DATE_TRUNC('month', CURRENT_DATE)::date - INTERVAL '5 months'
                     GROUP BY 1
                 )
@@ -365,7 +365,7 @@ def lambda_handler(event, context):
                 FROM d
                 LEFT JOIN {S}."Campaigns" c
                   ON c."Sent Date "::date = d.day
-                 AND c."Recipients" > 1000
+                 AND c."Recipients" > 95
                 GROUP BY d.day
                 ORDER BY d.day
             """)
@@ -396,7 +396,7 @@ def lambda_handler(event, context):
                 FROM d
                 LEFT JOIN {S}."Campaigns" c
                   ON c."Sent Date "::date = d.day
-                 AND c."Recipients" > 1000
+                 AND c."Recipients" > 95
                 GROUP BY d.day
                 ORDER BY d.day
             """)
@@ -404,9 +404,10 @@ def lambda_handler(event, context):
 
             # (B.1) Raw clicks — same weekday across last 5 occurrences (today's weekday).
             # Kept for backwards compatibility; the dashboard now prefers raw_clicks_by_weekday below.
+            # clicks_no_ss = clicks excluding Sunday Spotlight (issue_name match).
             cur.execute(f"""
                 WITH clicks AS (
-                    SELECT "Date"::date AS d
+                    SELECT "Date"::date AS d, issue_name
                     FROM {S}."Campaigns_Clicks"
                     WHERE "Date" IS NOT NULL
                       AND "Date" >= (CURRENT_DATE - INTERVAL '4 weeks')
@@ -423,6 +424,9 @@ def lambda_handler(event, context):
                     d.day,
                     TO_CHAR(d.day, 'Dy Mon DD')   AS label,
                     COUNT(c.d)                    AS clicks,
+                    COUNT(c.d) FILTER (
+                        WHERE c.issue_name NOT ILIKE '%sunday spotlight%'
+                    )                             AS clicks_no_ss,
                     (d.day = CURRENT_DATE)        AS is_current
                 FROM d
                 LEFT JOIN clicks c ON c.d = d.day
@@ -454,7 +458,7 @@ def lambda_handler(event, context):
                     FROM d
                 ),
                 clicks AS (
-                    SELECT "Date"::date AS d
+                    SELECT "Date"::date AS d, issue_name
                     FROM {S}."Campaigns_Clicks"
                     WHERE "Date" IS NOT NULL
                       AND "Date" >= (CURRENT_DATE - INTERVAL '6 weeks')
@@ -465,6 +469,9 @@ def lambda_handler(event, context):
                     r.dow,
                     TO_CHAR(r.day, 'Dy Mon DD')        AS label,
                     COUNT(c.d)                         AS clicks,
+                    COUNT(c.d) FILTER (
+                        WHERE c.issue_name NOT ILIKE '%sunday spotlight%'
+                    )                                  AS clicks_no_ss,
                     (r.day = CURRENT_DATE)             AS is_current
                 FROM ranked r
                 LEFT JOIN clicks c ON c.d = r.day
@@ -477,7 +484,7 @@ def lambda_handler(event, context):
             # (B.2) Raw clicks — last 12 ISO weeks (HTML defaults to 8w view; user can switch 4w/8w/12w).
             cur.execute(f"""
                 WITH clicks AS (
-                    SELECT DATE_TRUNC('week', "Date"::date)::date AS w
+                    SELECT DATE_TRUNC('week', "Date"::date)::date AS w, issue_name
                     FROM {S}."Campaigns_Clicks"
                     WHERE "Date" IS NOT NULL
                       AND "Date" >= (DATE_TRUNC('week', CURRENT_DATE) - INTERVAL '11 weeks')
@@ -494,6 +501,9 @@ def lambda_handler(event, context):
                     w.week_start,
                     TO_CHAR(w.week_start, 'Mon DD')                          AS label,
                     COUNT(c.w)                                               AS clicks,
+                    COUNT(c.w) FILTER (
+                        WHERE c.issue_name NOT ILIKE '%sunday spotlight%'
+                    )                                                        AS clicks_no_ss,
                     (w.week_start = DATE_TRUNC('week', CURRENT_DATE)::date)  AS is_current
                 FROM weeks w
                 LEFT JOIN clicks c ON c.w = w.week_start
@@ -505,7 +515,7 @@ def lambda_handler(event, context):
             # (B.3) Raw clicks — last 6 calendar months
             cur.execute(f"""
                 WITH clicks AS (
-                    SELECT DATE_TRUNC('month', "Date"::date)::date AS m
+                    SELECT DATE_TRUNC('month', "Date"::date)::date AS m, issue_name
                     FROM {S}."Campaigns_Clicks"
                     WHERE "Date" IS NOT NULL
                       AND "Date" >= (DATE_TRUNC('month', CURRENT_DATE) - INTERVAL '5 months')
@@ -522,6 +532,9 @@ def lambda_handler(event, context):
                     m.month_start,
                     TO_CHAR(m.month_start, 'Mon YYYY')                         AS label,
                     COUNT(c.m)                                                 AS clicks,
+                    COUNT(c.m) FILTER (
+                        WHERE c.issue_name NOT ILIKE '%sunday spotlight%'
+                    )                                                          AS clicks_no_ss,
                     (m.month_start = DATE_TRUNC('month', CURRENT_DATE)::date)  AS is_current
                 FROM months m
                 LEFT JOIN clicks c ON c.m = m.month_start
@@ -529,6 +542,185 @@ def lambda_handler(event, context):
                 ORDER BY m.month_start
             """)
             raw_clicks_monthly_rows = cur.fetchall()
+
+            # (C) Weekly digest — 9 ISO weeks (8 completed + the in-progress
+            # current week) of headline metrics for the Weekly Digest tab.
+            # Each row produces values for one ISO Mon-Sun bucket:
+            #   • new_subs   — count of subscribers.date_joined in week
+            #   • unsubs     — count of subscribers.date_unsubscribed in week
+            #   • campaigns_sent / total_sent — Campaigns rows with
+            #     **Recipients >= 200,000** whose Sent Date falls in week.
+            #     Tighter threshold than the dashboard-wide Recipients > 95
+            #     filter so the digest focuses on **mass sends** only — small
+            #     dedicated / segmented campaigns are excluded so their
+            #     atypical open / click rates don't drag the weekly averages.
+            #   • avg_open_rate / avg_click_rate — AVG over those campaigns
+            #   • churn_pct_of_sends — unsubs / total_sent * 100, NULL when
+            #     total_sent = 0 to avoid divide-by-zero spikes
+            #   • active_eow — end-of-week Send-To base from growth_history
+            #     (MAX(total_active) within the week). May be NULL for the
+            #     in-progress week if the snapshot hasn't been written yet.
+            #   • is_current — true for the in-progress week (last row)
+            cur.execute(f"""
+                WITH weeks AS (
+                    SELECT generate_series(
+                        DATE_TRUNC('week', CURRENT_DATE)::date - INTERVAL '8 weeks',
+                        DATE_TRUNC('week', CURRENT_DATE)::date,
+                        INTERVAL '1 week'
+                    )::date AS week_start
+                ),
+                joins AS (
+                    SELECT DATE_TRUNC('week', date_joined::date)::date AS week_start,
+                           COUNT(*) AS n
+                    FROM {S}.subscribers
+                    WHERE date_joined IS NOT NULL
+                      AND date_joined::date < CURRENT_DATE
+                      AND date_joined::date >= DATE_TRUNC('week', CURRENT_DATE)::date - INTERVAL '8 weeks'
+                    GROUP BY 1
+                ),
+                unsubs AS (
+                    SELECT DATE_TRUNC('week', date_unsubscribed::date)::date AS week_start,
+                           COUNT(*) AS n
+                    FROM {S}.subscribers
+                    WHERE date_unsubscribed IS NOT NULL
+                      AND date_unsubscribed::date < CURRENT_DATE
+                      AND date_unsubscribed::date >= DATE_TRUNC('week', CURRENT_DATE)::date - INTERVAL '8 weeks'
+                    GROUP BY 1
+                ),
+                camps AS (
+                    SELECT
+                        DATE_TRUNC('week', "Sent Date "::date)::date AS week_start,
+                        COUNT(*)                                    AS campaigns_sent,
+                        COALESCE(SUM("Recipients"), 0)              AS total_sent,
+                        ROUND(AVG("UOpenRate")::numeric,  2)        AS avg_open_rate,
+                        ROUND(AVG("UClickRate")::numeric, 2)        AS avg_click_rate
+                    FROM {S}."Campaigns"
+                    WHERE "Sent Date " IS NOT NULL
+                      AND "Sent Date "::date < CURRENT_DATE
+                      AND "Recipients" >= 200000                              -- Weekly Digest: mass sends only
+                      AND "Sent Date "::date >= DATE_TRUNC('week', CURRENT_DATE)::date - INTERVAL '8 weeks'
+                    GROUP BY 1
+                ),
+                gh AS (
+                    SELECT DATE_TRUNC('week', snapshot_date::date)::date AS week_start,
+                           MAX(total_active) AS active_eow
+                    FROM {S}.growth_history
+                    WHERE snapshot_date IS NOT NULL
+                      AND snapshot_date <= CURRENT_DATE
+                      AND snapshot_date >= DATE_TRUNC('week', CURRENT_DATE)::date - INTERVAL '8 weeks'
+                    GROUP BY 1
+                )
+                SELECT
+                    w.week_start,
+                    TO_CHAR(w.week_start, 'Mon DD')                          AS label,
+                    COALESCE(j.n, 0)                                         AS new_subs,
+                    COALESCE(u.n, 0)                                         AS unsubs,
+                    COALESCE(c.campaigns_sent, 0)                            AS campaigns_sent,
+                    COALESCE(c.total_sent, 0)                                AS total_sent,
+                    c.avg_open_rate                                          AS avg_open_rate,
+                    c.avg_click_rate                                         AS avg_click_rate,
+                    CASE
+                        WHEN COALESCE(c.total_sent, 0) = 0 THEN NULL
+                        ELSE ROUND(COALESCE(u.n, 0)::numeric / c.total_sent * 100, 4)
+                    END                                                      AS churn_pct_of_sends,
+                    g.active_eow                                             AS active_eow,
+                    (w.week_start = DATE_TRUNC('week', CURRENT_DATE)::date)  AS is_current
+                FROM weeks w
+                LEFT JOIN joins  j ON j.week_start = w.week_start
+                LEFT JOIN unsubs u ON u.week_start = w.week_start
+                LEFT JOIN camps  c ON c.week_start = w.week_start
+                LEFT JOIN gh     g ON g.week_start = w.week_start
+                ORDER BY w.week_start
+            """)
+            weekly_digest_rows = cur.fetchall()
+
+            # Top acquisition source for the last completed week + the prior
+            # one. Canonicalisation mirrors `_canon_source` in the metrics
+            # lambda — duplicated here so the comparison lambda stays
+            # self-contained. KEEP THIS BRANCH LIST IN SYNC WITH THE METRICS
+            # LAMBDA HELPER (`_canon_source`) AND `utmLabel()` in index.html.
+            cur.execute(f"""
+                WITH src AS (
+                    SELECT
+                        DATE_TRUNC('week', date_joined::date)::date AS week_start,
+                        CASE
+                            WHEN LOWER(COALESCE(NULLIF(TRIM(utm_source),''),
+                                                NULLIF(TRIM(source),''), '')) IN ('organic','direct','')
+                                THEN 'Direct'
+                            WHEN LOWER(TRIM(COALESCE(NULLIF(TRIM(utm_source),''), NULLIF(TRIM(source),''))))
+                                 IN ('ahcpl1','allhealthy','allhealthy.com')           THEN 'AllHealthy'
+                            WHEN LOWER(TRIM(COALESCE(NULLIF(TRIM(utm_source),''), NULLIF(TRIM(source),''))))
+                                 LIKE 'td_cpl2%%'                                       THEN 'TrueDemocracy'
+                            WHEN LOWER(TRIM(COALESCE(NULLIF(TRIM(utm_source),''), NULLIF(TRIM(source),''))))
+                                 IN ('tdcpl1','tdcpl2')                                 THEN 'TrueDemocracy'
+                            WHEN LOWER(TRIM(COALESCE(NULLIF(TRIM(utm_source),''), NULLIF(TRIM(source),''))))
+                                 IN ('lscpl1','lscpl2','ls_cpl2','livingsimply','livingsimply.com')
+                                                                                        THEN 'LivingSimply'
+                            WHEN LOWER(TRIM(COALESCE(NULLIF(TRIM(utm_source),''), NULLIF(TRIM(source),''))))
+                                 IN ('dpcpl1','dp_cpl2')                                THEN 'DailyPuzzle'
+                            WHEN LOWER(TRIM(COALESCE(NULLIF(TRIM(utm_source),''), NULLIF(TRIM(source),''))))
+                                 = 'hfcpl1'                                             THEN 'HealthFirst'
+                            WHEN LOWER(TRIM(COALESCE(NULLIF(TRIM(utm_source),''), NULLIF(TRIM(source),''))))
+                                 = 'fccpl1'                                             THEN 'FitConnect'
+                            WHEN LOWER(TRIM(COALESCE(NULLIF(TRIM(utm_source),''), NULLIF(TRIM(source),''))))
+                                 IN ('facebook','meta','fb','ig')                       THEN 'Meta'
+                            WHEN LOWER(TRIM(COALESCE(NULLIF(TRIM(utm_source),''), NULLIF(TRIM(source),''))))
+                                 IN ('if','ifcpl1')                                     THEN 'IFCPL'
+                            WHEN LOWER(TRIM(COALESCE(NULLIF(TRIM(utm_source),''), NULLIF(TRIM(source),''))))
+                                 = 'taboola'                                            THEN 'Taboola'
+                            WHEN LOWER(TRIM(COALESCE(NULLIF(TRIM(utm_source),''), NULLIF(TRIM(source),''))))
+                                 IN ('superagequiz','longevity_quiz')                   THEN 'SuperAge Quiz'
+                            WHEN LOWER(TRIM(COALESCE(NULLIF(TRIM(utm_source),''), NULLIF(TRIM(source),''))))
+                                 = 'refind'                                             THEN 'Refind'
+                            ELSE NULLIF(TRIM(COALESCE(NULLIF(TRIM(utm_source),''),
+                                                       NULLIF(TRIM(source),''))), '')
+                        END AS bucket
+                    FROM {S}.subscribers
+                    WHERE date_joined IS NOT NULL
+                      AND date_joined::date >= DATE_TRUNC('week', CURRENT_DATE)::date - INTERVAL '2 weeks'
+                      AND date_joined::date <  DATE_TRUNC('week', CURRENT_DATE)::date
+                )
+                SELECT
+                    week_start,
+                    COALESCE(bucket, 'Direct') AS bucket,
+                    COUNT(*)                   AS subs
+                FROM src
+                GROUP BY 1, 2
+                ORDER BY week_start DESC, subs DESC
+            """)
+            top_source_rows = cur.fetchall()
+
+            # (C2) Article-level activity for the **last completed Mon–Sun**
+            # ISO week, restricted to the three placement types the digest
+            # cares about: editorial, sponsor, immersion. The Slack
+            # #weekly_automation post uses the same three sections. One row
+            # per (type, article_title, url, issue_name, issue_date). We
+            # bucket by the campaign's `issue_date` because that's the column
+            # `articles_clicks` carries (no per-click event date here).
+            cur.execute(f"""
+                WITH wk AS (
+                    SELECT
+                        DATE_TRUNC('week', CURRENT_DATE)::date - INTERVAL '1 week' AS wk_start,
+                        DATE_TRUNC('week', CURRENT_DATE)::date                       AS wk_end_excl
+                )
+                SELECT
+                    LOWER(TRIM(ac.type))                                 AS atype,
+                    ac.article_title,
+                    ac.url,
+                    ac.issue_name,
+                    ac.issue_date::date                                  AS issue_date,
+                    SUM(ac.unique_clicks)                                AS unique_clicks,
+                    SUM(ac.non_unique_clicks)                            AS total_clicks
+                FROM {S}.articles_clicks ac, wk
+                WHERE ac.issue_date IS NOT NULL
+                  AND ac.issue_date::date >= wk.wk_start
+                  AND ac.issue_date::date <  wk.wk_end_excl
+                  AND LOWER(TRIM(ac.type)) IN ('editorial','sponsor','immersion')
+                GROUP BY 1, ac.article_title, ac.url, ac.issue_name, ac.issue_date::date
+                ORDER BY unique_clicks DESC NULLS LAST
+                LIMIT 200
+            """)
+            digest_articles_rows = cur.fetchall()
 
     if not all_rows:
         result = {"data_as_of": today.isoformat(), "error": "no qualifying campaigns found"}
@@ -623,34 +815,106 @@ def lambda_handler(event, context):
             "campaigns":    [safe_int(r["campaigns"])    for r in campaign_same_dom_rows],
             "is_current":   [bool(r["is_current"])       for r in campaign_same_dom_rows],
         },
-        # Click Analysis trends (Section B — raw click events)
+        # Click Analysis trends (Section B — raw click events).
+        # clicks_no_ss = same count but excluding rows whose issue_name
+        # matches Sunday Spotlight; powers the "Include Sunday Spotlight"
+        # toggle on the Click Analysis tab.
         "raw_clicks_same_weekday": {
-            "labels":     [str(r["label"]) for r in raw_clicks_same_weekday_rows],
-            "days":       [str(r["day"])   for r in raw_clicks_same_weekday_rows],
-            "clicks":     [safe_int(r["clicks"])     for r in raw_clicks_same_weekday_rows],
-            "is_current": [bool(r["is_current"])     for r in raw_clicks_same_weekday_rows],
+            "labels":       [str(r["label"]) for r in raw_clicks_same_weekday_rows],
+            "days":         [str(r["day"])   for r in raw_clicks_same_weekday_rows],
+            "clicks":       [safe_int(r["clicks"])       for r in raw_clicks_same_weekday_rows],
+            "clicks_no_ss": [safe_int(r["clicks_no_ss"]) for r in raw_clicks_same_weekday_rows],
+            "is_current":   [bool(r["is_current"])       for r in raw_clicks_same_weekday_rows],
         },
         # Per-weekday raw click history (last 5 of each weekday).
         "raw_clicks_by_weekday": (lambda rows: {
             dow: {
-                "labels":     [str(r["label"]) for r in rows if str(r["dow"]).strip() == dow],
-                "days":       [str(r["day"])   for r in rows if str(r["dow"]).strip() == dow],
-                "clicks":     [safe_int(r["clicks"])     for r in rows if str(r["dow"]).strip() == dow],
-                "is_current": [bool(r["is_current"])     for r in rows if str(r["dow"]).strip() == dow],
+                "labels":       [str(r["label"]) for r in rows if str(r["dow"]).strip() == dow],
+                "days":         [str(r["day"])   for r in rows if str(r["dow"]).strip() == dow],
+                "clicks":       [safe_int(r["clicks"])       for r in rows if str(r["dow"]).strip() == dow],
+                "clicks_no_ss": [safe_int(r["clicks_no_ss"]) for r in rows if str(r["dow"]).strip() == dow],
+                "is_current":   [bool(r["is_current"])       for r in rows if str(r["dow"]).strip() == dow],
             }
             for dow in ("Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun")
         })(raw_clicks_by_weekday_rows),
         "raw_clicks_weekly": {
-            "labels":      [str(r["label"])      for r in raw_clicks_weekly_rows],
-            "week_starts": [str(r["week_start"]) for r in raw_clicks_weekly_rows],
-            "clicks":      [safe_int(r["clicks"])     for r in raw_clicks_weekly_rows],
-            "is_current":  [bool(r["is_current"])     for r in raw_clicks_weekly_rows],
+            "labels":       [str(r["label"])      for r in raw_clicks_weekly_rows],
+            "week_starts":  [str(r["week_start"]) for r in raw_clicks_weekly_rows],
+            "clicks":       [safe_int(r["clicks"])       for r in raw_clicks_weekly_rows],
+            "clicks_no_ss": [safe_int(r["clicks_no_ss"]) for r in raw_clicks_weekly_rows],
+            "is_current":   [bool(r["is_current"])       for r in raw_clicks_weekly_rows],
         },
         "raw_clicks_monthly": {
             "labels":       [str(r["label"])       for r in raw_clicks_monthly_rows],
             "month_starts": [str(r["month_start"]) for r in raw_clicks_monthly_rows],
-            "clicks":       [safe_int(r["clicks"])     for r in raw_clicks_monthly_rows],
-            "is_current":   [bool(r["is_current"])     for r in raw_clicks_monthly_rows],
+            "clicks":       [safe_int(r["clicks"])       for r in raw_clicks_monthly_rows],
+            "clicks_no_ss": [safe_int(r["clicks_no_ss"]) for r in raw_clicks_monthly_rows],
+            "is_current":   [bool(r["is_current"])       for r in raw_clicks_monthly_rows],
+        },
+        # Weekly Digest — feeds the new Weekly Digest tab. 9 ISO weeks
+        # (8 completed + the in-progress current week, flagged by
+        # `is_current`). Tile-level WoW deltas are computed client-side
+        # against last_completed vs prior_completed indices so the same
+        # source can drive both the headline numbers and the sparklines.
+        "weekly_digest": {
+            "labels":              [str(r["label"])         for r in weekly_digest_rows],
+            "week_starts":         [str(r["week_start"])    for r in weekly_digest_rows],
+            "is_current":          [bool(r["is_current"])   for r in weekly_digest_rows],
+            "new_subs":            [safe_int(r["new_subs"])       for r in weekly_digest_rows],
+            "unsubs":              [safe_int(r["unsubs"])         for r in weekly_digest_rows],
+            "campaigns_sent":      [safe_int(r["campaigns_sent"]) for r in weekly_digest_rows],
+            "total_sent":          [safe_int(r["total_sent"])     for r in weekly_digest_rows],
+            "avg_open_rate":       [safe_float(r["avg_open_rate"])  if r.get("avg_open_rate")  is not None else None for r in weekly_digest_rows],
+            "avg_click_rate":      [safe_float(r["avg_click_rate"]) if r.get("avg_click_rate") is not None else None for r in weekly_digest_rows],
+            "churn_pct_of_sends":  [safe_float(r["churn_pct_of_sends"]) if r.get("churn_pct_of_sends") is not None else None for r in weekly_digest_rows],
+            "active_eow":          [safe_int(r["active_eow"]) if r.get("active_eow") is not None else None for r in weekly_digest_rows],
+            # Top acquisition source per week: list of {week_start, bucket,
+            # subs} rows sorted by week DESC, then subs DESC. Client picks
+            # the top entry for the last completed week.
+            "top_sources_by_week": [
+                {"week_start": str(r["week_start"]),
+                 "bucket":     str(r["bucket"]),
+                 "subs":       safe_int(r["subs"])}
+                for r in top_source_rows
+            ],
+            # Article-level breakdown for the **last completed Mon–Sun**,
+            # split into three buckets by `articles_clicks.type` — the only
+            # three the digest surfaces:
+            #   • editorial  → "Editorial Clicks" list
+            #   • sponsor    → "Sponsor Clicks" list
+            #   • immersion  → "Immersion Clicks" list
+            # Each list is sorted by unique_clicks DESC; client slices to
+            # top 5 per section.
+            "top_editorial_this_week": [
+                {"title":         str(r["article_title"] or ""),
+                 "url":           str(r["url"] or ""),
+                 "issue_name":    str(r["issue_name"] or ""),
+                 "issue_date":    str(r["issue_date"]),
+                 "unique_clicks": safe_int(r["unique_clicks"]),
+                 "total_clicks":  safe_int(r["total_clicks"])}
+                for r in digest_articles_rows
+                if (r["atype"] or "") == "editorial"
+            ],
+            "top_sponsors_this_week": [
+                {"title":         str(r["article_title"] or ""),
+                 "url":           str(r["url"] or ""),
+                 "issue_name":    str(r["issue_name"] or ""),
+                 "issue_date":    str(r["issue_date"]),
+                 "unique_clicks": safe_int(r["unique_clicks"]),
+                 "total_clicks":  safe_int(r["total_clicks"])}
+                for r in digest_articles_rows
+                if (r["atype"] or "") == "sponsor"
+            ],
+            "top_immersions_this_week": [
+                {"title":         str(r["article_title"] or ""),
+                 "url":           str(r["url"] or ""),
+                 "issue_name":    str(r["issue_name"] or ""),
+                 "issue_date":    str(r["issue_date"]),
+                 "unique_clicks": safe_int(r["unique_clicks"]),
+                 "total_clicks":  safe_int(r["total_clicks"])}
+                for r in digest_articles_rows
+                if (r["atype"] or "") == "immersion"
+            ],
         },
     }
 

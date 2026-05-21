@@ -24,10 +24,10 @@ All queries apply these filters:
 ```sql
 \"Sent Date \" IS NOT NULL
 AND \"Sent Date \"::date <= CURRENT_DATE - INTERVAL '2 days'
-AND \"Recipients\" > 1000
+AND \"Recipients\" > 95
 ```
 
-- `> 1000 recipients` — excludes test sends and internal mailings
+- `> 95 recipients` — excludes test sends and internal mailings
 - `<= today - 2 days` — requires campaigns to have had at least 2 days for opens/clicks to accumulate before comparison
 
 ---
@@ -62,7 +62,7 @@ SELECT
 FROM superage.\"Campaigns\"
 WHERE \"Sent Date \" IS NOT NULL
   AND \"Sent Date \"::date <= CURRENT_DATE - INTERVAL '2 days'
-  AND \"Recipients\" > 1000
+  AND \"Recipients\" > 95
   AND \"Sent Date \"::date BETWEEN :cur_week_monday AND :cur_week_sunday;
 
 -- Previous week: same query with BETWEEN :prev_week_monday AND :prev_week_sunday
@@ -102,7 +102,7 @@ SELECT
 FROM superage.\"Campaigns\"
 WHERE \"Sent Date \" IS NOT NULL
   AND \"Sent Date \"::date <= CURRENT_DATE - INTERVAL '2 days'
-  AND \"Recipients\" > 1000
+  AND \"Recipients\" > 95
   AND \"Sent Date \"::date BETWEEN :week_monday AND :week_sunday
 ORDER BY \"Sent Date \"::date ASC;
 ```
@@ -146,7 +146,7 @@ SELECT
 FROM superage.\"Campaigns\"
 WHERE \"Sent Date \" IS NOT NULL
   AND \"Sent Date \"::date <= CURRENT_DATE - INTERVAL '2 days'
-  AND \"Recipients\" > 1000
+  AND \"Recipients\" > 95
   AND \"Sent Date \"::date >= :twelve_weeks_ago
 GROUP BY 1
 ORDER BY 1 ASC;
@@ -212,7 +212,7 @@ SELECT COUNT(*) AS qualifying_campaigns
 FROM superage.\"Campaigns\"
 WHERE \"Sent Date \" IS NOT NULL
   AND \"Sent Date \"::date <= CURRENT_DATE - INTERVAL '2 days'
-  AND \"Recipients\" > 1000;
+  AND \"Recipients\" > 95;
 
 -- 2. Current week campaigns (replace dates as needed)
 SELECT \"Campaign Name\", \"Sent Date \"::date, \"Recipients\", \"UOpenRate\", \"UClickRate\"
@@ -221,14 +221,14 @@ WHERE \"Sent Date \"::date BETWEEN
     DATE_TRUNC('week', (
         SELECT MAX(\"Sent Date \"::date) FROM superage.\"Campaigns\"
         WHERE \"Sent Date \"::date <= CURRENT_DATE - INTERVAL '2 days'
-          AND \"Recipients\" > 1000
+          AND \"Recipients\" > 95
     ))::date
     AND DATE_TRUNC('week', (
         SELECT MAX(\"Sent Date \"::date) FROM superage.\"Campaigns\"
         WHERE \"Sent Date \"::date <= CURRENT_DATE - INTERVAL '2 days'
-          AND \"Recipients\" > 1000
+          AND \"Recipients\" > 95
     ))::date + INTERVAL '6 days'
-  AND \"Recipients\" > 1000
+  AND \"Recipients\" > 95
 ORDER BY \"Sent Date \"::date;
 
 -- 3. Previous week campaigns
@@ -238,14 +238,14 @@ WHERE \"Sent Date \"::date BETWEEN
     DATE_TRUNC('week', (
         SELECT MAX(\"Sent Date \"::date) FROM superage.\"Campaigns\"
         WHERE \"Sent Date \"::date <= CURRENT_DATE - INTERVAL '2 days'
-          AND \"Recipients\" > 1000
+          AND \"Recipients\" > 95
     ))::date - INTERVAL '7 days'
     AND DATE_TRUNC('week', (
         SELECT MAX(\"Sent Date \"::date) FROM superage.\"Campaigns\"
         WHERE \"Sent Date \"::date <= CURRENT_DATE - INTERVAL '2 days'
-          AND \"Recipients\" > 1000
+          AND \"Recipients\" > 95
     ))::date - INTERVAL '1 day'
-  AND \"Recipients\" > 1000
+  AND \"Recipients\" > 95
 ORDER BY \"Sent Date \"::date;
 
 -- 4. Week-over-week avg open rate delta
@@ -256,7 +256,7 @@ WITH weeks AS (
     FROM superage.\"Campaigns\"
     WHERE \"Sent Date \" IS NOT NULL
       AND \"Sent Date \"::date <= CURRENT_DATE - INTERVAL '2 days'
-      AND \"Recipients\" > 1000
+      AND \"Recipients\" > 95
     GROUP BY 1
     ORDER BY 1 DESC
     LIMIT 2
@@ -281,7 +281,7 @@ FROM superage.\"Campaigns\"
 WHERE \"Sent Date \"::date BETWEEN
     DATE_TRUNC('week', CURRENT_DATE)::date - INTERVAL '7 days'
     AND DATE_TRUNC('week', CURRENT_DATE)::date + INTERVAL '13 days'
-  AND \"Recipients\" > 1000
+  AND \"Recipients\" > 95
   AND \"Sent Date \"::date <= CURRENT_DATE - INTERVAL '2 days'
 ORDER BY \"Sent Date \"::date;
 
@@ -296,7 +296,7 @@ SELECT
 FROM superage.\"Campaigns\"
 WHERE \"Sent Date \" IS NOT NULL
   AND \"Sent Date \"::date <= CURRENT_DATE - INTERVAL '2 days'
-  AND \"Recipients\" > 1000
+  AND \"Recipients\" > 95
   AND \"Sent Date \"::date >= CURRENT_DATE - INTERVAL '84 days'  -- 12 weeks
 GROUP BY 1
 ORDER BY 1 ASC;
@@ -305,7 +305,7 @@ ORDER BY 1 ASC;
 SELECT \"Campaign Name\", \"URL\"
 FROM superage.\"Campaigns\"
 WHERE \"URL\" IS NOT NULL AND \"URL\" != ''
-  AND \"Recipients\" > 1000
+  AND \"Recipients\" > 95
 ORDER BY \"Sent Date \" DESC
 LIMIT 10;
 ```
@@ -362,7 +362,7 @@ agg AS (
     FROM superage."Campaigns"
     WHERE "Sent Date " IS NOT NULL
       AND "Sent Date "::date < CURRENT_DATE
-      AND "Recipients" > 1000
+      AND "Recipients" > 95
       AND "Sent Date "::date >= DATE_TRUNC('week', CURRENT_DATE)::date - INTERVAL '7 weeks'
     GROUP BY 1
 )
@@ -399,7 +399,7 @@ agg AS (
     FROM superage."Campaigns"
     WHERE "Sent Date " IS NOT NULL
       AND "Sent Date "::date < CURRENT_DATE
-      AND "Recipients" > 1000
+      AND "Recipients" > 95
       AND "Sent Date "::date >= DATE_TRUNC('month', CURRENT_DATE)::date - INTERVAL '5 months'
     GROUP BY 1
 )
@@ -437,7 +437,7 @@ SELECT
 FROM d
 LEFT JOIN superage."Campaigns" c
   ON c."Sent Date "::date = d.day
- AND c."Recipients" > 1000
+ AND c."Recipients" > 95
 GROUP BY d.day
 ORDER BY d.day;
 ```
@@ -470,14 +470,17 @@ SELECT
 FROM d
 LEFT JOIN superage."Campaigns" c
   ON c."Sent Date "::date = d.day
- AND c."Recipients" > 1000
+ AND c."Recipients" > 95
 GROUP BY d.day
 ORDER BY d.day;
 ```
 
 Exposed as `M.campaign_clicks_same_dom`.
 
-### B.1 — Raw Clicks Same Weekday (last 5 occurrences)
+### B.1 — Raw Clicks Same Weekday (last 5 occurrences of today's weekday)
+
+Kept for backwards compatibility; the dashboard now prefers the
+per-weekday payload below (B.1b).
 
 ```sql
 WITH clicks AS (
@@ -505,21 +508,75 @@ GROUP BY d.day
 ORDER BY d.day;
 ```
 
-Exposed as `M.raw_clicks_same_weekday`.
+Exposed as `M.raw_clicks_same_weekday`. Each row also carries a
+`clicks_no_ss` count — the same query with
+`issue_name NOT ILIKE '%sunday spotlight%'` applied — so the Click Analysis
+"Include Sunday Spotlight" toggle can switch in/out without a separate query.
 
-### B.2 — Raw Clicks Weekly (last 4 ISO weeks)
+### B.1b — Raw Clicks by Weekday (last 5 occurrences of EACH weekday)
+
+Powers the "Same Weekday" grouped-bar chart in the Click Analysis tab.
+The dashboard renders 7 weekday groups with N bars (2, 3 or 5) per
+group, ordered oldest → most recent. Each bar's tooltip shows the
+exact calendar date.
+
+```sql
+WITH d AS (
+    SELECT day::date AS day
+    FROM generate_series(
+        CURRENT_DATE - INTERVAL '6 weeks',
+        CURRENT_DATE,
+        INTERVAL '1 day'
+    ) AS day
+),
+ranked AS (
+    SELECT
+        d.day,
+        TO_CHAR(d.day, 'Dy')                     AS dow,
+        ROW_NUMBER() OVER (
+            PARTITION BY EXTRACT(DOW FROM d.day)
+            ORDER BY d.day DESC
+        ) AS rn
+    FROM d
+),
+clicks AS (
+    SELECT "Date"::date AS d
+    FROM superage."Campaigns_Clicks"
+    WHERE "Date" IS NOT NULL
+      AND "Date" >= (CURRENT_DATE - INTERVAL '6 weeks')
+      AND "Date" <= CURRENT_DATE
+)
+SELECT
+    r.day,
+    r.dow,
+    TO_CHAR(r.day, 'Dy Mon DD')        AS label,
+    COUNT(c.d)                         AS clicks,
+    (r.day = CURRENT_DATE)             AS is_current
+FROM ranked r
+LEFT JOIN clicks c ON c.d = r.day
+WHERE r.rn <= 5
+GROUP BY r.day, r.dow
+ORDER BY r.dow, r.day;
+```
+
+Exposed as `M.raw_clicks_by_weekday`, a dict keyed by `Mon`…`Sun`
+where each value has `labels[]`, `days[]`, `clicks[]`, `clicks_no_ss[]`,
+`is_current[]` in chronological order. `clicks_no_ss[]` is the same count
+filtered by `issue_name NOT ILIKE '%sunday spotlight%'` for the SS toggle.
+
+### B.2 — Raw Clicks Weekly (last 12 ISO weeks)
 
 ```sql
 WITH clicks AS (
     SELECT DATE_TRUNC('week', "Date"::date)::date AS w
     FROM superage."Campaigns_Clicks"
     WHERE "Date" IS NOT NULL
-      AND "Date" >= (DATE_TRUNC('week', CURRENT_DATE) - INTERVAL '3 weeks')
+      AND "Date" >= (DATE_TRUNC('week', CURRENT_DATE) - INTERVAL '11 weeks')
       AND "Date" <= CURRENT_DATE
 ),
 weeks AS (
     SELECT generate_series(
-        DATE_TRUNC('week', CURRENT_DATE)::date - INTERVAL '3 weeks',
+        DATE_TRUNC('week', CURRENT_DATE)::date - INTERVAL '11 weeks',
         DATE_TRUNC('week', CURRENT_DATE)::date,
         INTERVAL '1 week'
     )::date AS week_start
@@ -535,21 +592,25 @@ GROUP BY w.week_start
 ORDER BY w.week_start;
 ```
 
-Exposed as `M.raw_clicks_weekly`.
+Exposed as `M.raw_clicks_weekly`. The dashboard exposes a 4w / 8w /
+12w toggle that slices the tail of this series client-side; default
+view is 8 weeks. Each entry has `clicks` and `clicks_no_ss` (filtered by
+`issue_name NOT ILIKE '%sunday spotlight%'`); the dashboard picks the
+appropriate field based on the "Include Sunday Spotlight" toggle.
 
-### B.3 — Raw Clicks Monthly (last 3 months)
+### B.3 — Raw Clicks Monthly (last 6 months)
 
 ```sql
 WITH clicks AS (
     SELECT DATE_TRUNC('month', "Date"::date)::date AS m
     FROM superage."Campaigns_Clicks"
     WHERE "Date" IS NOT NULL
-      AND "Date" >= (DATE_TRUNC('month', CURRENT_DATE) - INTERVAL '2 months')
+      AND "Date" >= (DATE_TRUNC('month', CURRENT_DATE) - INTERVAL '5 months')
       AND "Date" <= CURRENT_DATE
 ),
 months AS (
     SELECT generate_series(
-        DATE_TRUNC('month', CURRENT_DATE)::date - INTERVAL '2 months',
+        DATE_TRUNC('month', CURRENT_DATE)::date - INTERVAL '5 months',
         DATE_TRUNC('month', CURRENT_DATE)::date,
         INTERVAL '1 month'
     )::date AS month_start
@@ -565,7 +626,8 @@ GROUP BY m.month_start
 ORDER BY m.month_start;
 ```
 
-Exposed as `M.raw_clicks_monthly`.
+Exposed as `M.raw_clicks_monthly` with `clicks` and `clicks_no_ss`
+(filtered by `issue_name NOT ILIKE '%sunday spotlight%'`).
 
 ---
 

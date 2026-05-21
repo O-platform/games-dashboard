@@ -67,10 +67,22 @@
   .sa-logo img, .sa-logo svg { width: 100%; height: 100%; filter: brightness(0) invert(1); }
   .header h1 { font-size: 19px; font-weight: 700; color: var(--text); }
   .header .sub { font-size: 11px; color: var(--text-muted); margin-top: 1px; }
-  .header-right { display: flex; align-items: center; gap: 10px; }
-  .as-of { font-size: 11px; color: var(--text-muted); }
-  .dark-toggle { background: none; border: 1px solid var(--card-border); border-radius: 6px; padding: 5px 10px; font-size: 12px; color: var(--text-muted); cursor: pointer; transition: background .2s; }
-  .dark-toggle:hover { background: var(--card-2); }
+  .header-right { display: flex; align-items: center; gap: 18px; }
+  .header-meta { display: flex; flex-direction: column; gap: 2px; align-items: flex-end; }
+  .header-top { display: flex; align-items: center; gap: 10px; }
+  .header-date { font-size: 14px; font-weight: 600; color: var(--text); white-space: nowrap; }
+  .header-sub-line { font-size: 11px; color: var(--text-muted); }
+  .pill { display: inline-block; padding: 3px 10px; border-radius: 99px; font-size: 10px; font-weight: 700; letter-spacing: .5px; text-transform: uppercase; line-height: 1.3; }
+  .pill-blue { background: rgba(9,105,218,.12); color: var(--accent); border: 1px solid rgba(9,105,218,.30); }
+  body.dark .pill-blue { background: rgba(88,166,255,.15); color: #58a6ff; border-color: rgba(88,166,255,.35); }
+  .dark-switch { display: flex; align-items: center; gap: 8px; cursor: pointer; user-select: none; }
+  .dark-switch input { opacity: 0; width: 0; height: 0; position: absolute; }
+  .dark-slider { position: relative; width: 42px; height: 22px; background: var(--card-border); border-radius: 22px; transition: background .2s; flex-shrink: 0; }
+  .dark-slider:before { content: ""; position: absolute; height: 16px; width: 16px; left: 3px; top: 3px; background: #fff; border-radius: 50%; transition: transform .2s; box-shadow: 0 1px 2px rgba(0,0,0,.25); }
+  .dark-switch input:checked + .dark-slider { background: var(--accent); }
+  .dark-switch input:checked + .dark-slider:before { transform: translateX(20px); }
+  .dark-label { font-size: 11px; font-weight: 700; letter-spacing: .5px; color: var(--text-muted); }
+  body.dark .dark-label { color: var(--text); }
   /* Tabs */
   .tab-bar { background: var(--card); border-bottom: 1px solid var(--card-border); display: flex; overflow-x: auto; padding: 0 16px; gap: 0; }
   .tab { background: none; border: none; border-bottom: 2px solid transparent; padding: 10px 16px; font-size: 13px; font-weight: 500; color: var(--text-muted); cursor: pointer; white-space: nowrap; transition: color .15s, border-color .15s; }
@@ -98,7 +110,12 @@
   .chart-card { background: var(--card); border: 1px solid var(--card-border); border-radius: 10px; padding: 18px 20px; margin-bottom: 18px; }
   .chart-card h3 { font-size: 14px; font-weight: 600; color: var(--text); margin-bottom: 12px; }
   .chart-container { position: relative; }
+  /* Anchor the canvas to the chart-container so Chart.js (with responsive:true,
+     maintainAspectRatio:false) can never shrink below the container's height —
+     fixes the "chart becomes half size after toggling a filter" symptom. */
+  .chart-container > canvas { position: absolute; inset: 0; width: 100% !important; height: 100% !important; }
   .chart-container.h220 { height: 220px; }
+  .chart-container.h240 { height: 240px; }
   .chart-container.h260 { height: 260px; }
   .chart-container.h300 { height: 300px; }
   .chart-container.h340 { height: 340px; }
@@ -113,6 +130,7 @@
   table.dash-table { width: 100%; border-collapse: collapse; font-size: 13px; }
   table.dash-table th { background: var(--card-2); font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: .4px; color: var(--text-muted); padding: 8px 10px; text-align: left; border-bottom: 1px solid var(--card-border); white-space: nowrap; }
   table.dash-table td { padding: 7px 10px; border-bottom: 1px solid var(--row-border); vertical-align: top; }
+  table.dash-table td.nowrap, table.dash-table th.nowrap { white-space: nowrap; }
   table.dash-table tr:hover td { background: var(--row-hover); }
   /* Misc */
   .badge-inline { font-size: 11px; font-weight: 500; color: var(--text-muted); }
@@ -176,24 +194,36 @@
     </div>
   </div>
   <div class="header-right">
-    <span class="as-of" id="as-of-label"></span>
-    <button class="dark-toggle" onclick="toggleDark()">Dark mode</button>
+    <div class="header-meta">
+      <div class="header-top">
+        <span class="pill pill-blue">Daily updates</span>
+        <span class="header-date" id="as-of-label">—</span>
+      </div>
+      <div class="header-sub-line">SuperAge — Brand Pulse · Last updated</div>
+    </div>
+    <label class="dark-switch" title="Toggle dark mode">
+      <input type="checkbox" id="darkToggleInput">
+      <span class="dark-slider"></span>
+      <span class="dark-label">DARK</span>
+    </label>
   </div>
 </header>
 
 <nav class="tab-bar" id="tab-bar">
   <button class="tab active" onclick="showPage('overview',this)">Overview</button>
+  <button class="tab" onclick="showPage('digest',this)">Weekly Digest</button>
   <button class="tab" onclick="showPage('campaigns',this)">Campaigns</button>
   <button class="tab" onclick="showPage('content',this)">Click Analysis</button>
   <button class="tab" onclick="showPage('content-ref',this)">Content Reference</button>
   <button class="tab" onclick="showPage('audience',this)">Audience</button>
-  <button class="tab" onclick="showPage('quiz',this)">Longevity Quiz</button>
+  <button class="tab" onclick="showPage('quiz',this)">Audience Persona</button>
   <button class="tab" onclick="showPage('revenue',this)">Revenue &amp; Sponsors</button>
   <button class="tab" onclick="showPage('retention',this)">Subscriber Retention</button>
   <button class="tab" onclick="showPage('cohort',this)">Cohort Analysis</button>
 </nav>
 
 <div id="overview" class="page active"></div>
+<div id="digest" class="page"></div>
 <div id="campaigns" class="page"></div>
 <div id="content" class="page"></div>
 <div id="content-ref" class="page"></div>
@@ -209,11 +239,18 @@
 /* ═══════════════════════════════════════
    DARK MODE
 ═══════════════════════════════════════ */
-const _dk = localStorage.getItem('sa-dark');
-if (_dk === '1') document.body.classList.add('dark');
-function toggleDark() {
-  document.body.classList.toggle('dark');
-  localStorage.setItem('sa-dark', document.body.classList.contains('dark') ? '1' : '0');
+const _dk = localStorage.getItem('sa-dark') === '1';
+if (_dk) document.body.classList.add('dark');
+function setDark(on) {
+  document.body.classList.toggle('dark', on);
+  localStorage.setItem('sa-dark', on ? '1' : '0');
+}
+{
+  const inp = document.getElementById('darkToggleInput');
+  if (inp) {
+    inp.checked = _dk;
+    inp.addEventListener('change', e => setDark(e.target.checked));
+  }
 }
 
 /* ═══════════════════════════════════════
@@ -237,18 +274,51 @@ function esc(s) {
   return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
 }
 function utmLabel(raw) {
+  // Canonicalises a raw utm_source / source value to a display label.
+  // **Mirror of `_canon_source()` in superage_metrics_lambda_updated.py.**
+  // KEEP BOTH LISTS IN SYNC — the SQL applies this same mapping before
+  // GROUP BY so aliases collapse into a single row in the JSON; this JS
+  // function is the fallback for any raw values that still slip through.
   if (!raw) return '—';
   const s = String(raw).trim().toLowerCase();
-  if (s === 'ahcpl1' || s === 'allhealthy') return 'AllHealthy';
-  if (s === 'tdcpl1') return 'TrueDemocracy';
-  if (s === 'lscpl1' || s === 'livingsimply') return 'LivingSimply';
-  if (s === 'dpcpl1') return 'DailyPuzzle';
+  // AllHealthy
+  if (['ahcpl1', 'allhealthy', 'allhealthy.com'].includes(s)) return 'AllHealthy';
+  // TrueDemocracy: TDCPL1, TDCPL2, and every TD_CPL2_YYYYMMDD batch
+  if (s === 'tdcpl1' || s === 'tdcpl2' || s.startsWith('td_cpl2')) return 'TrueDemocracy';
+  // LivingSimply: CPL1, CPL2 and the .com variant
+  if (['lscpl1','lscpl2','ls_cpl2','livingsimply','livingsimply.com'].includes(s)) return 'LivingSimply';
+  // DailyPuzzle
+  if (s === 'dpcpl1' || s === 'dp_cpl2') return 'DailyPuzzle';
+  // HealthFirst / FitConnect
   if (s === 'hfcpl1') return 'HealthFirst';
   if (s === 'fccpl1') return 'FitConnect';
-  if (['facebook','meta','fb','ig','if'].includes(s)) return 'Meta';
+  // Meta: facebook + instagram only (IF / IFCPL1 split out below)
+  if (['facebook','meta','fb','ig'].includes(s)) return 'Meta';
+  // IFCPL: IF short code + IFCPL1 batch (its own brand, not Meta)
+  if (['if','ifcpl1'].includes(s)) return 'IFCPL';
+  // Taboola
   if (s === 'taboola') return 'Taboola';
+  // HealthBrief / SuperAge Quiz
   if (s === 'healthbrief') return 'HealthBrief';
   if (s === 'superagequiz' || s === 'longevity_quiz') return 'SuperAge Quiz';
+  // TheAgeist
+  if (['theageist','theageist001','ageist'].includes(s)) return 'TheAgeist';
+  if (s.startsWith('ageist_') || s.startsWith('ageistrequest')) return 'TheAgeist';
+  // RecommendedReads
+  if (['recommendedreads.com','rr_cpl2'].includes(s)) return 'RecommendedReads';
+  if (s.startsWith('rrcpl1')) return 'RecommendedReads';
+  // Campaign Monitor / Welcome Flow (case + URL-encoded collapse)
+  if (s === 'campaign_monitor') return 'Campaign Monitor';
+  if (['welcome flow','welcome+flow'].includes(s)) return 'Welcome Flow';
+  // NNCPL family
+  if (s === 'nncpl1' || s.startsWith('nn_cpl2') || s.startsWith('nn1_cpl2')) return 'NNCPL';
+  // ISCPL family
+  if (['is','iscpl1'].includes(s)) return 'ISCPL';
+  // AI referrers
+  if (['chatgpt.com','perplexity','nbot.ai'].includes(s)) return 'AI';
+  // Refind / SuperAge (own labels — SuperAge is distinct from SuperAge Quiz)
+  if (s === 'refind') return 'Refind';
+  if (s === 'superage') return 'SuperAge';
   return raw;
 }
 
@@ -262,8 +332,9 @@ Promise.all([
   .then(([metrics, comparison]) => {
     const M = Object.assign({}, metrics, comparison);
     const asOf = M.data_as_of || '—';
-    document.getElementById('as-of-label').textContent = 'Data as of ' + asOf;
+    document.getElementById('as-of-label').textContent = asOf;
     renderOverview(M);
+    renderDigest(M);
     renderCampaigns(M);
     renderContent(M);
     renderContentRef(M);
@@ -292,63 +363,110 @@ function renderOverview(M) {
     </div>
 
 
-    <div class="kpi-row">
-      <div class="kpi-card accent"><div class="label">Total Subscribers</div><div class="value">${fmt(M.total_subscribers)}</div><div class="sub">All-time subscriber base</div></div>
-      <div class="kpi-card green"><div class="label">Active (Send-to)</div><div class="value">${fmt(M.send_to_active)}</div><div class="sub">${M.send_to_rate} of total — Active, Engaged, Unengaged</div></div>
-      <div class="kpi-card red"><div class="label">Unsubscribed</div><div class="value">${fmt(M.unsubscribed_count)}</div><div class="sub">${M.total_subscribers ? (M.unsubscribed_count/M.total_subscribers*100).toFixed(1)+'%' : '—'} of total</div></div>
-      <div class="kpi-card orange"><div class="label">Bounced</div><div class="value">${fmt(M.bounced_count)}</div><div class="sub">${M.total_subscribers ? (M.bounced_count/M.total_subscribers*100).toFixed(1)+'%' : '—'} of total</div></div>
+    <div class="kpi-row" style="grid-template-columns:repeat(4,1fr);">
+      <div class="kpi-card green"><div class="label">Active (Send-to)</div><div class="value">${fmt(M.send_to_active)}</div><div class="sub">${M.send_to_rate} of subscribers whose state is Active</div></div>
       <div class="kpi-card cyan"><div class="label">Avg Open Rate</div><div class="value">${M.avg_open_rate}</div><div class="sub">Best: ${M.best_open_rate}</div></div>
       <div class="kpi-card blue"><div class="label">Avg Click Rate</div><div class="value">${M.avg_click_rate}</div><div class="sub">Best: ${M.best_click_rate}</div></div>
       <div class="kpi-card orange"><div class="label">Campaigns Sent</div><div class="value">${fmt(M.total_campaigns)}</div><div class="sub">${fmt(M.total_recipients)} total recipients</div></div>
+    </div>
+
+    <div class="kpi-row" style="grid-template-columns:repeat(4,1fr);">
+      <div class="kpi-card accent"><div class="label">Total Subscribers</div><div class="value">${fmt(M.total_subscribers)}</div><div class="sub">All-time subscriber base</div></div>
+      <div class="kpi-card red"><div class="label">Unsubscribed</div><div class="value">${fmt(M.unsubscribed_count)}</div><div class="sub">${M.total_subscribers ? (M.unsubscribed_count/M.total_subscribers*100).toFixed(1)+'%' : '—'} of total</div></div>
+      <div class="kpi-card orange"><div class="label">Bounced</div><div class="value">${fmt(M.bounced_count)}</div><div class="sub">${M.total_subscribers ? (M.bounced_count/M.total_subscribers*100).toFixed(1)+'%' : '—'} of total</div></div>
       <div class="kpi-card purple"><div class="label">Quiz Takers</div><div class="value">${fmt(M.quiz_takers)}</div><div class="sub">${M.quiz_takers_pct}% of total subscribers</div></div>
     </div>
 
-    <div class="grid-2">
-      <div class="chart-card">
-        <h3>Subscriber Status Mix</h3>
-        <div class="chart-container h260"><canvas id="ov-state-donut"></canvas></div>
-        <div id="ov-state-pct-table" style="margin-top:8px;font-size:12px;"></div>
-        <div class="insight">
-          <strong>${M.send_to_rate}</strong> of all subscribers are active (send-to).
-          Unsubscribed: <strong>${M.total_subscribers ? (M.unsubscribed_count/M.total_subscribers*100).toFixed(1)+'%' : '—'}</strong> &middot;
-          Bounced: <strong>${M.total_subscribers ? (M.bounced_count/M.total_subscribers*100).toFixed(1)+'%' : '—'}</strong>
+    <div class="chart-card">
+      <h3>Current Subscriber Mix <span class="badge-inline">— state='Active', split by engagement segment</span></h3>
+      <div class="chart-container h260"><canvas id="ov-state-donut"></canvas></div>
+      <div id="ov-state-pct-table" style="margin-top:8px;font-size:12px;"></div>
+      <div class="insight">
+        Whole pie = subscribers we currently hold (<code>state = 'Active'</code>), split by engagement segment. <strong>Send-To</strong> are the reachable engaged ones; <strong>Dormant / Ghost / Zombie</strong> rolls up the three disengaged segments into one slice; <strong>Other</strong> covers any active row with a null / empty / unrecognised segment. Unsubscribed, Bounced, and Deleted subscribers are excluded — they're no longer in state='Active'.
+      </div>
+    </div>
+
+    <div class="chart-card" style="margin-top:18px;">
+      <div style="display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:10px;">
+        <h3 style="margin:0;">Campaign Performance Trend</h3>
+        <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;">
+          <div style="display:flex;align-items:center;gap:6px;">
+            <span style="font-size:11px;color:var(--text-muted);text-transform:uppercase;letter-spacing:.3px;">Window</span>
+            <div style="display:flex;gap:4px;" id="ov-camp-win-btns">
+              <button onclick="_setOvCampWindow('all')" id="ovcw-all" style="font-size:11px;padding:3px 10px;border:1px solid var(--card-border);border-radius:5px;background:var(--card);color:var(--text-muted);cursor:pointer;">All</button>
+              <button onclick="_setOvCampWindow('180d')" id="ovcw-180" style="font-size:11px;padding:3px 10px;border:1px solid var(--card-border);border-radius:5px;background:var(--card);color:var(--text-muted);cursor:pointer;">180d</button>
+              <button onclick="_setOvCampWindow('90d')" id="ovcw-90"  style="font-size:11px;padding:3px 10px;border:1px solid var(--card-border);border-radius:5px;background:var(--accent);color:#fff;cursor:pointer;">90d</button>
+              <button onclick="_setOvCampWindow('60d')" id="ovcw-60"  style="font-size:11px;padding:3px 10px;border:1px solid var(--card-border);border-radius:5px;background:var(--card);color:var(--text-muted);cursor:pointer;">60d</button>
+              <button onclick="_setOvCampWindow('30d')" id="ovcw-30"  style="font-size:11px;padding:3px 10px;border:1px solid var(--card-border);border-radius:5px;background:var(--card);color:var(--text-muted);cursor:pointer;">30d</button>
+            </div>
+          </div>
+          <label style="display:flex;align-items:center;gap:8px;cursor:pointer;">
+            <span style="font-size:11px;color:var(--text-muted);text-transform:uppercase;letter-spacing:.3px;">Sunday Spotlight</span>
+            <label class="switch" for="ovCampIncludeSS" title="Include / exclude Sunday Spotlight campaigns" style="margin:0;">
+              <input type="checkbox" id="ovCampIncludeSS" onchange="_renderOvCampTrend()">
+              <span class="slider-round"></span>
+            </label>
+            <span style="font-size:11px;color:var(--text-muted);" id="ovCampSSState">Excluded</span>
+          </label>
         </div>
       </div>
-      <div class="chart-card">
-        <h3>Campaign Performance Trend <span class="badge-inline">— Open &amp; Click Rate</span></h3>
-        <div class="chart-container h260"><canvas id="ov-camp-trend"></canvas></div>
-        <div class="insight">
-          Average open rate <strong>${M.avg_open_rate}</strong> &middot; Best campaign <strong>${M.best_open_rate}</strong>.
-          Average click rate <strong>${M.avg_click_rate}</strong>.
+      <div class="grid-2" style="margin-bottom:0;">
+        <div>
+          <div style="font-size:11px;color:var(--text-muted);text-transform:uppercase;letter-spacing:.3px;margin-bottom:4px;">Open Rate over time</div>
+          <div class="chart-container h260"><canvas id="ov-camp-open"></canvas></div>
+        </div>
+        <div>
+          <div style="font-size:11px;color:var(--text-muted);text-transform:uppercase;letter-spacing:.3px;margin-bottom:4px;">Click Rate over time</div>
+          <div class="chart-container h260"><canvas id="ov-camp-click"></canvas></div>
         </div>
       </div>
+      <div class="insight" id="ov-camp-insight"></div>
     </div>
 
     <div class="chart-card" style="margin-bottom:18px;">
-      <h3>Subscriber Growth Over Time</h3>
-      <p style="font-size:12px;color:var(--text-muted);margin-top:4px;margin-bottom:10px;">Monthly new subscribers vs. unsubscribes. Net = new minus churned. Last 12 months.</p>
-      <div class="chart-container h300"><canvas id="ov-growth"></canvas></div>
+      <div style="display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:6px;">
+        <h3 style="margin:0;">Subscriber Growth Over Time <span class="badge-inline">— MRR-style: gained ↑ / lost ↓ / net line</span></h3>
+        <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;">
+          <div style="display:flex;align-items:center;gap:6px;">
+            <span style="font-size:11px;color:var(--text-muted);text-transform:uppercase;letter-spacing:.3px;">Granularity</span>
+            <div style="display:flex;gap:4px;" id="ov-growth-gran-btns">
+              <button onclick="_setOvGrowthGran('daily')"   id="ovgg-daily"   style="font-size:11px;padding:3px 10px;border:1px solid var(--card-border);border-radius:5px;background:var(--card);color:var(--text-muted);cursor:pointer;">Day</button>
+              <button onclick="_setOvGrowthGran('weekly')"  id="ovgg-weekly"  style="font-size:11px;padding:3px 10px;border:1px solid var(--card-border);border-radius:5px;background:var(--card);color:var(--text-muted);cursor:pointer;">Week</button>
+              <button onclick="_setOvGrowthGran('monthly')" id="ovgg-monthly" style="font-size:11px;padding:3px 10px;border:1px solid var(--card-border);border-radius:5px;background:var(--accent);color:#fff;cursor:pointer;">Month</button>
+            </div>
+          </div>
+          <div style="display:flex;align-items:center;gap:6px;">
+            <span style="font-size:11px;color:var(--text-muted);text-transform:uppercase;letter-spacing:.3px;">Window</span>
+            <div style="display:flex;gap:4px;" id="ov-growth-win-btns"></div>
+          </div>
+        </div>
+      </div>
+      <p style="font-size:12px;color:var(--text-muted);margin:0 0 10px;">Green bars (gained) sit above zero; red bars (lost) sit below zero. The blue <strong>Net Gain / Loss</strong> filled area crosses through — a positive bucket sits above the zero gridline, a negative bucket dips below. Purple dashed line on the right axis is the running Total Subscribers (latest snapshot per bucket — Send-To base).</p>
+      <div class="chart-container h340"><canvas id="ov-growth"></canvas></div>
     </div>
 
     <div class="chart-card">
-      <h3>Top Campaign Open Rates</h3>
+      <h3>Recent Campaigns Metrics</h3>
       <div class="tbl-wrap"><table class="dash-table"><thead><tr><th>#</th><th>Campaign</th><th>Sent</th><th>Recipients</th><th>Open Rate</th><th>Click Rate</th></tr></thead>
-      <tbody>${(M.top_campaigns||[]).slice(0,10).map((c,i)=>{
+      <tbody>${([...(M.campaign_table||[])].sort((a,b)=>{const da=Date.parse(a.sent_date||'')||0;const db=Date.parse(b.sent_date||'')||0;return db-da;}).slice(0,10)).map((c,i)=>{
         const nameCell = c.url ? `<a href="${esc(c.url)}" target="_blank" rel="noopener">${esc(c.name||'')}</a>` : esc(c.name||'');
         const recip = (c.recipients == null) ? '—' : (typeof c.recipients === 'string' ? esc(c.recipients) : fmt(c.recipients));
-        return `<tr><td>${i+1}</td><td>${nameCell}</td><td>${c.sent_date||''}</td><td>${recip}</td><td>${c.open_rate||'—'}</td><td>${c.click_rate||'—'}</td></tr>`;
+        return `<tr><td>${i+1}</td><td>${nameCell}</td><td class="nowrap">${c.sent_date||''}</td><td>${recip}</td><td>${c.open_rate||'—'}</td><td>${c.click_rate||'—'}</td></tr>`;
       }).join('')}</tbody></table></div>
     </div>
   `;
-  // Subscriber status donut
-  const ss = M.subscriber_states || {labels:[], data:[]};
-  const donutColors = ['#1a7f37','#58a6ff','#cf222e','#9a6700','#8250df','#bf3989','#1b7c83'];
+  // Current Subscriber Engagement Mix donut. Three slices over subscribers
+  // we still hold (state='Active' or 'Bounced'). The lambda emits ready-to-go
+  // colours per slice; we fall back to the legacy `subscriber_states` shape
+  // if the new field isn't there yet (pre-lambda-rerun).
+  const ss = M.subscriber_engagement_mix || M.subscriber_states || {labels:[], data:[], colors:[]};
+  const donutColors = ss.colors && ss.colors.length ? ss.colors : ['#1a7f37','#9a6700','#cf222e','#58a6ff','#8250df','#bf3989','#1b7c83'];
   new Chart(document.getElementById('ov-state-donut'), {
     type: 'doughnut',
     data: { labels: ss.labels, datasets: [{ data: ss.data, backgroundColor: donutColors, borderWidth: 1 }] },
     options: { responsive:true, maintainAspectRatio:false, plugins:{ legend:{position:'bottom',labels:{font:{size:11},padding:8}} } }
   });
-  // Status mix % table
+  // % legend strip below the donut
   const pctTbl = document.getElementById('ov-state-pct-table');
   if (pctTbl && ss.labels && ss.labels.length) {
     const total = ss.data.reduce((a,b)=>a+b,0);
@@ -359,42 +477,259 @@ function renderOverview(M) {
     }).join('');
     pctTbl.innerHTML = rows;
   }
-  // Campaign trend
-  const ct = M.campaign_trend || {labels:[],open_rates:[],click_rates:[]};
-  new Chart(document.getElementById('ov-camp-trend'), {
-    type: 'line',
-    data: { labels: ct.labels, datasets: [
-      { label: 'Open Rate %', data: ct.open_rates, borderColor: '#0969da', backgroundColor: 'transparent', tension:.3, pointRadius:3 },
-      { label: 'Click Rate %', data: ct.click_rates, borderColor: '#1a7f37', backgroundColor: 'transparent', tension:.3, pointRadius:3 }
-    ]},
-    options: { responsive:true, maintainAspectRatio:false, plugins:{legend:{position:'bottom',labels:{font:{size:11}}}}, scales:{y:{beginAtZero:true}} }
-  });
-  // Growth chart — sourced from superage.growth_history via M.subscriber_monthly
-  const gd = M.subscriber_monthly || {labels:[],new_subs:[],unsubs:[],active_count:[]};
-  _ovGrowthChart(gd, 12);
+  // Campaign Performance Trend — built client-side from M.campaign_table
+  // so the Sunday Spotlight include/exclude toggle can re-filter without a
+  // lambda re-run. Two side-by-side charts (Open Rate / Click Rate), each
+  // a single-line series with **send date** on the x-axis so one bar = one
+  // campaign in chronological order.
+  window._ovCampData = M.campaign_table || [];
+  window._ovCampWindow = '90d';   // default — matches the highlighted button
+  _renderOvCampTrend();
+  // Growth chart — sourced from M.subscriber_growth_series (multi-granularity:
+  // daily / weekly / monthly buckets) with M.subscriber_monthly as the
+  // backwards-compat fallback. Default granularity = monthly, default
+  // window = 12 buckets. Picker buttons + window buttons re-render the
+  // chart by re-slicing the cached payload — no lambda re-fetch.
+  const series = M.subscriber_growth_series || null;
+  const monthlyFallback = M.subscriber_monthly || {labels:[],new_subs:[],unsubs:[],active_count:[]};
+  window._ovGrowthSeries = series || { monthly: monthlyFallback, weekly: null, daily: null };
+  window._ovGrowthGran   = 'monthly';
+  window._ovGrowthWin    = 6;
+  _renderOvGrowthWinButtons();
+  _renderOvGrowth();
 }
+
+/* Defines the window-button presets for each granularity. The number is
+ * "how many buckets" — for daily that's days, weekly is weeks, monthly is
+ * months. Default window per granularity is the third entry. Monthly only
+ * goes up to 6m because the growth_history rollup typically has at most
+ * 6 months of data on hand. */
+const _OV_GROWTH_WIN_PRESETS = {
+  daily:   [{key:'all',label:'All'}, {key:90,label:'90d'}, {key:30,label:'30d'}, {key:14,label:'14d'}, {key:7,label:'7d'}],
+  weekly:  [{key:'all',label:'All'}, {key:26,label:'26w'}, {key:12,label:'12w'}, {key:8, label:'8w'},  {key:4, label:'4w'}],
+  monthly: [{key:'all',label:'All'}, {key:6, label:'6m'}, {key:3, label:'3m'}],
+};
+const _OV_GROWTH_DEFAULT_WIN = { daily: 30, weekly: 12, monthly: 6 };
+
+/* Switch granularity. Re-renders the window-button row to match the new
+ * unit (days / weeks / months) and snaps the window to that granularity's
+ * default before re-drawing the chart. */
+function _setOvGrowthGran(gran) {
+  window._ovGrowthGran = gran;
+  ['daily','weekly','monthly'].forEach(g => {
+    const btn = document.getElementById('ovgg-' + g);
+    if (!btn) return;
+    const active = g === gran;
+    btn.style.background = active ? 'var(--accent)' : 'var(--card)';
+    btn.style.color      = active ? '#fff'          : 'var(--text-muted)';
+  });
+  window._ovGrowthWin = _OV_GROWTH_DEFAULT_WIN[gran];
+  _renderOvGrowthWinButtons();
+  _renderOvGrowth();
+}
+
+/* Builds the window-button row dynamically based on the active granularity.
+ * Highlighted button = current window. Each button calls
+ * _setOvGrowthWindow(key) which restyles + re-renders. */
+function _renderOvGrowthWinButtons() {
+  const container = document.getElementById('ov-growth-win-btns');
+  if (!container) return;
+  const presets = _OV_GROWTH_WIN_PRESETS[window._ovGrowthGran] || _OV_GROWTH_WIN_PRESETS.monthly;
+  container.innerHTML = presets.map(p => {
+    const active = p.key === window._ovGrowthWin;
+    return `<button onclick="_setOvGrowthWindow(${JSON.stringify(p.key)})"
+                    style="font-size:11px;padding:3px 10px;border:1px solid var(--card-border);border-radius:5px;background:${active ? 'var(--accent)' : 'var(--card)'};color:${active ? '#fff' : 'var(--text-muted)'};cursor:pointer;">${p.label}</button>`;
+  }).join('');
+}
+
+function _setOvGrowthWindow(win) {
+  window._ovGrowthWin = win;
+  _renderOvGrowthWinButtons();
+  _renderOvGrowth();
+}
+
+/* Pulls the dataset for the active granularity from the cached series,
+ * resolves the window slice size (or Infinity for All), and hands off to
+ * _ovGrowthChart for the actual Chart.js render. */
+function _renderOvGrowth() {
+  const series = window._ovGrowthSeries || {};
+  const gd = series[window._ovGrowthGran] || series.monthly || {labels:[],new_subs:[],unsubs:[],active_count:[]};
+  const n  = window._ovGrowthWin === 'all' ? Infinity : Number(window._ovGrowthWin);
+  _ovGrowthChart(gd, n);
+}
+/* Overview Campaign Performance Trend — pulls from window._ovCampData
+ * (= M.campaign_table) and renders two single-metric line charts:
+ *   • Open Rate over time
+ *   • Click Rate over time
+ * X-axis is the campaign's send date (one point per qualifying campaign),
+ * sorted chronologically. The Sunday Spotlight toggle above the charts
+ * filters out branded-digest sends so their atypical rates don't spike
+ * the trend (off by default — toggle ON to include them). Tooltip shows
+ * the campaign name + the rate; the URL opens in a new tab on point click. */
+function _setOvCampWindow(win) {
+  window._ovCampWindow = win;
+  // Toggle active button styling
+  ['all', '180', '90', '60', '30'].forEach(suffix => {
+    const btn = document.getElementById('ovcw-' + suffix);
+    if (!btn) return;
+    const wantKey = suffix === 'all' ? 'all' : (suffix + 'd');
+    const active = wantKey === win;
+    btn.style.background = active ? 'var(--accent)' : 'var(--card)';
+    btn.style.color      = active ? '#fff'          : 'var(--text-muted)';
+  });
+  _renderOvCampTrend();
+}
+
+function _renderOvCampTrend() {
+  const includeSS = (document.getElementById('ovCampIncludeSS') || {}).checked;
+  const stateEl = document.getElementById('ovCampSSState');
+  if (stateEl) stateEl.textContent = includeSS ? 'Included' : 'Excluded';
+
+  // Resolve the active date window (defaults to 90 days on first render).
+  const win = window._ovCampWindow || '90d';
+  const days = win === 'all' ? null : parseInt(win, 10);
+  const cutoff = days ? (Date.now() - days * 86400000) : null;
+
+  // Filter + sort by send date ASC. Skip rows without a parseable date.
+  // Date-window filter is applied here too — keep only campaigns whose
+  // sent_date falls within the last N days (or all if "all" is selected).
+  const rows = (window._ovCampData || [])
+    .filter(c => includeSS ? true : !((c.name || '').toLowerCase().includes('sunday spotlight')))
+    .filter(c => c.sent_date && !isNaN(Date.parse(c.sent_date)))
+    .filter(c => cutoff == null || new Date(c.sent_date).getTime() >= cutoff)
+    .sort((a, b) => new Date(a.sent_date) - new Date(b.sent_date));
+
+  const labels   = rows.map(c => String(c.sent_date).slice(0, 10));
+  const names    = rows.map(c => c.name || '');
+  const opens    = rows.map(c => _campPct(c.open_rate));
+  const clicks   = rows.map(c => _campPct(c.click_rate));
+  const urls     = rows.map(c => c.url || '');
+
+  const insightEl = document.getElementById('ov-camp-insight');
+  if (insightEl) {
+    const winLabel = win === 'all' ? 'all time' : `last ${days} days`;
+    insightEl.innerHTML = rows.length
+      ? `${rows.length} campaign${rows.length === 1 ? '' : 's'} in scope (${esc(winLabel)}) — Sunday Spotlight ${includeSS ? '<strong>included</strong>' : '<strong>excluded</strong>'}.`
+      : `No campaigns in the ${esc(winLabel)} window — widen the date filter or toggle Sunday Spotlight on.`;
+  }
+
+  const mkOpts = (titleText) => ({
+    responsive: true, maintainAspectRatio: false,
+    plugins: {
+      legend: { display: false },
+      tooltip: {
+        callbacks: {
+          title: items => names[items[0].dataIndex] || labels[items[0].dataIndex],
+          label: c => `${titleText}: ${c.parsed.y == null ? '—' : Number(c.parsed.y).toFixed(2) + '%'}`,
+          afterLabel: c => `Sent: ${labels[c.dataIndex]}`
+        }
+      }
+    },
+    onClick: (_e, els) => {
+      if (!els || !els.length) return;
+      const u = urls[els[0].index];
+      if (u) window.open(u, '_blank', 'noopener');
+    },
+    scales: {
+      x: { ticks: { font: { size: 10 }, maxRotation: 60, minRotation: 0, autoSkip: true, maxTicksLimit: 14 } },
+      y: { beginAtZero: true, ticks: { callback: v => Number(v).toFixed(0) + '%' } }
+    }
+  });
+
+  // Destroy any prior chart instances before re-rendering (toggle flips
+  // produce a fresh dataset each time).
+  if (window._ovOpenChart)  { window._ovOpenChart.destroy();  window._ovOpenChart  = null; }
+  if (window._ovClickChart) { window._ovClickChart.destroy(); window._ovClickChart = null; }
+
+  const openEl  = document.getElementById('ov-camp-open');
+  const clickEl = document.getElementById('ov-camp-click');
+  if (openEl) {
+    window._ovOpenChart = new Chart(openEl, {
+      type: 'line',
+      data: { labels, datasets: [{ label: 'Open Rate %', data: opens,
+        borderColor: '#0969da', backgroundColor: 'rgba(9,105,218,.10)',
+        tension: 0.3, pointRadius: 3, borderWidth: 2, fill: true, spanGaps: true }] },
+      options: mkOpts('Open Rate')
+    });
+  }
+  if (clickEl) {
+    window._ovClickChart = new Chart(clickEl, {
+      type: 'line',
+      data: { labels, datasets: [{ label: 'Click Rate %', data: clicks,
+        borderColor: '#1a7f37', backgroundColor: 'rgba(26,127,55,.10)',
+        tension: 0.3, pointRadius: 3, borderWidth: 2, fill: true, spanGaps: true }] },
+      options: mkOpts('Click Rate')
+    });
+  }
+}
+
 function _ovGrowthChart(gd, n) {
+  // n can be Infinity (when the user picks "All"); slice() copes with that.
   const labels = (gd.labels||[]).slice(-n);
   const newS   = (gd.new_subs||[]).slice(-n);
   const unsub  = (gd.unsubs||[]).slice(-n);
   const active = (gd.active_count||[]).slice(-n);
-  const net    = newS.map((v,i) => (v||0) - (unsub[i]||0));
+  // MRR-style layout: gained sits above zero (positive), lost sits below
+  // zero (negative), and the Net Gain/Loss series crosses through with a
+  // filled area so it reads at-a-glance even when the bars dominate.
+  const unsubNeg = unsub.map(v => -Math.abs(Number(v) || 0));
+  const net      = newS.map((v, i) => (Number(v) || 0) - Math.abs(Number(unsub[i]) || 0));
+
   const ctx = document.getElementById('ov-growth');
   if (!ctx) return;
   if (ctx._chart) ctx._chart.destroy();
   ctx._chart = new Chart(ctx, {
     type: 'bar',
     data: { labels, datasets: [
-      { label: 'Gained (new)',     data: newS,   backgroundColor: '#1a7f37', yAxisID: 'y' },
-      { label: 'Lost (unsubs)',    data: unsub,  backgroundColor: '#cf222e', yAxisID: 'y' },
-      { label: 'Net change',       data: net,    type: 'line', borderColor: '#0969da', backgroundColor: 'transparent', tension: .3, pointRadius: 3, yAxisID: 'y' },
-      { label: 'Total Subscribers (Active)', data: active, type: 'line', borderColor: '#8250df', backgroundColor: 'transparent', tension: .25, pointRadius: 2, borderWidth: 2, yAxisID: 'y1' }
+      { label: 'Gained (new)',     data: newS,     backgroundColor: 'rgba(26,127,55,.85)',
+        borderColor: '#1a7f37', borderWidth: 1, yAxisID: 'y',
+        stack: 'flow', borderRadius: 3,
+        categoryPercentage: 0.6, barPercentage: 0.85 },
+      { label: 'Lost (unsubs)',    data: unsubNeg, backgroundColor: 'rgba(207,34,46,.85)',
+        borderColor: '#cf222e', borderWidth: 1, yAxisID: 'y',
+        stack: 'flow', borderRadius: 3,
+        categoryPercentage: 0.6, barPercentage: 0.85 },
+      { label: 'Net Gain / Loss',  data: net, type: 'line',
+        borderColor: '#0969da', backgroundColor: 'rgba(9,105,218,.15)',
+        tension: .35, pointRadius: 4, pointBackgroundColor: '#0969da',
+        borderWidth: 3, yAxisID: 'y',
+        fill: { target: 'origin', above: 'rgba(9,105,218,.12)', below: 'rgba(9,105,218,.12)' },
+        order: 0 },                          // line drawn ON TOP of bars
+      { label: 'Total Subscribers', data: active, type: 'line',
+        borderColor: '#8250df', backgroundColor: 'transparent',
+        borderDash: [4, 4], tension: .25, pointRadius: 2, borderWidth: 2,
+        yAxisID: 'y1', order: 1 }
     ]},
     options: { responsive:true, maintainAspectRatio:false,
-      plugins:{ legend:{ position:'bottom', labels:{ font:{ size:11 } } } },
+      interaction: { mode: 'index', intersect: false },
+      plugins:{
+        legend:{ position:'bottom', labels:{ font:{ size:11 }, boxWidth: 14 } },
+        tooltip:{ callbacks:{
+          label: c => {
+            const v = c.parsed.y;
+            if (c.dataset.label === 'Lost (unsubs)') {
+              return `Lost (unsubs): ${Math.abs(Number(v) || 0).toLocaleString()}`;
+            }
+            if (c.dataset.label === 'Net Gain / Loss') {
+              const x = Number(v) || 0;
+              const sign = x > 0 ? '+' : x < 0 ? '−' : '';
+              return `Net Gain / Loss: ${sign}${Math.abs(x).toLocaleString()}`;
+            }
+            return `${c.dataset.label}: ${Number(v || 0).toLocaleString()}`;
+          }
+        }}
+      },
       scales:{
-        y:  { position:'left',  beginAtZero:false, title:{ display:true, text:'Monthly Δ' } },
-        y1: { position:'right', beginAtZero:false, grid:{ drawOnChartArea:false }, title:{ display:true, text:'Active Subscribers' } }
+        // Zero line is thicker (visible anchor for the divergence). Tick
+        // labels use Math.abs so the y axis reads "10K" on both sides.
+        y:  { position:'left',  beginAtZero:true, stacked:true,
+              title:{ display:true, text:'Monthly Δ (gained ↑ / lost ↓ / net line)' },
+              ticks:{ callback: v => Math.abs(Number(v) || 0).toLocaleString() },
+              grid:{ color: c => c.tick.value === 0 ? 'rgba(127,127,127,.55)' : 'rgba(127,127,127,.12)',
+                     lineWidth: c => c.tick.value === 0 ? 2 : 1 } },
+        y1: { position:'right', beginAtZero:false, grid:{ drawOnChartArea:false },
+              title:{ display:true, text:'Total Subscribers' },
+              ticks:{ callback: v => Number(v).toLocaleString() } }
       } }
   });
 }
@@ -415,6 +750,330 @@ function _campPct(v) {
   return isFinite(n) ? n : null;
 }
 
+/* ═══════════════════════════════════════
+   WEEKLY DIGEST
+═══════════════════════════════════════ */
+/* Reads M.weekly_digest (produced by the comparison lambda — 9 ISO weeks of
+ * headline metrics with the in-progress current week flagged). Compares the
+ * **last completed week** (the second-to-last entry — the last entry is the
+ * in-progress current week, which is excluded from deltas because it's
+ * partial) against the **prior completed week** (third-to-last entry).
+ * No flags, no exports yet — basic version. */
+function renderDigest(M) {
+  const wd = M.weekly_digest || null;
+  const root = document.getElementById('digest');
+  if (!root) return;
+  if (!wd || !(wd.labels && wd.labels.length)) {
+    root.innerHTML = `
+      <div class="section-context-banner">
+        <strong>Weekly Digest</strong> — Not populated yet. Re-run the comparison lambda to ship the <code>weekly_digest</code> payload.
+      </div>`;
+    return;
+  }
+  // Find the last-completed week (latest is_current = false). If every row
+  // is is_current = true (edge case: only the current week has data) we
+  // fall back to the last entry so the page at least renders something.
+  const lastCompletedIdx = (() => {
+    for (let i = wd.labels.length - 1; i >= 0; i--) {
+      if (!wd.is_current[i]) return i;
+    }
+    return wd.labels.length - 1;
+  })();
+  const priorCompletedIdx = lastCompletedIdx - 1 >= 0 ? lastCompletedIdx - 1 : null;
+
+  const num = arr => (arr && arr[lastCompletedIdx] != null ? Number(arr[lastCompletedIdx]) : null);
+  const prv = arr => (arr && priorCompletedIdx != null && arr[priorCompletedIdx] != null ? Number(arr[priorCompletedIdx]) : null);
+
+  // Top source for the last completed week — top_sources_by_week is sorted
+  // week_start DESC then subs DESC, so the first row matching the last
+  // completed week_start is the winner.
+  const lastWeekStart = wd.week_starts[lastCompletedIdx];
+  const topSrcRow = (wd.top_sources_by_week || []).find(r => r.week_start === lastWeekStart);
+  const topSrc = topSrcRow ? `${utmLabel(topSrcRow.bucket)} (${Number(topSrcRow.subs).toLocaleString()})` : '—';
+
+  // 8-week sparkline series for each metric. Pull every entry except the
+  // in-progress current one so the sparkline shows completed weeks only.
+  const sparkLabels = wd.labels.filter((_, i) => !wd.is_current[i]);
+  const sparkOf = key => (wd[key] || []).filter((_, i) => !wd.is_current[i]);
+
+  // Net change per week = new_subs - unsubs. Computed client-side from
+  // the two arrays in the JSON so we don't need a new lambda field.
+  const netChange      = (wd.new_subs || []).map((n, i) => Number(n||0) - Number((wd.unsubs || [])[i] || 0));
+  const sparkNetChange = netChange.filter((_, i) => !wd.is_current[i]);
+  const numFromArr = (arr) => (arr && arr[lastCompletedIdx] != null ? Number(arr[lastCompletedIdx]) : null);
+  const prvFromArr = (arr) => (arr && priorCompletedIdx != null && arr[priorCompletedIdx] != null ? Number(arr[priorCompletedIdx]) : null);
+
+  // Tile definitions: label, current/prior values, sparkline array, formatter,
+  // "higher is better" hint for delta arrow colouring (null = neutral),
+  // and an `isRate` flag so rate metrics render their delta in **pp**
+  // (percentage points, absolute difference) and count metrics render
+  // their delta as a plain integer diff. Relative-percent deltas are
+  // intentionally not used here — they overstate moves on small bases
+  // (e.g. click rate going 0.5% → 1% is +100% relative but only +0.5 pp).
+  const tiles = [
+    { label: 'Net Change',              value: numFromArr(netChange),  prior: prvFromArr(netChange),  spark: sparkNetChange,            fmt: v => v == null ? '—' : (v >= 0 ? '+' : '') + Number(v).toLocaleString(),         higherIsBetter: true,  spark_color: '#1a7f37', isRate: false },
+    { label: 'Churn % of Sends',         value: num(wd.churn_pct_of_sends), prior: prv(wd.churn_pct_of_sends), spark: sparkOf('churn_pct_of_sends'), fmt: v => v == null ? '—' : Number(v).toFixed(3) + '%',                       higherIsBetter: false, spark_color: '#cf222e', isRate: true  },
+    { label: 'Campaigns Sent',           value: num(wd.campaigns_sent), prior: prv(wd.campaigns_sent), spark: sparkOf('campaigns_sent'), fmt: v => v == null ? '—' : Number(v).toLocaleString(),                                higherIsBetter: null,  spark_color: '#8250df', isRate: false },
+    { label: 'Avg Open Rate',            value: num(wd.avg_open_rate),  prior: prv(wd.avg_open_rate),  spark: sparkOf('avg_open_rate'),  fmt: v => v == null ? '—' : Number(v).toFixed(2) + '%',                                higherIsBetter: true,  spark_color: '#1a7f37', isRate: true  },
+    { label: 'Avg Click Rate',           value: num(wd.avg_click_rate), prior: prv(wd.avg_click_rate), spark: sparkOf('avg_click_rate'), fmt: v => v == null ? '—' : Number(v).toFixed(2) + '%',                                higherIsBetter: true,  spark_color: '#0969da', isRate: true  },
+  ];
+
+  // Delta always uses the **absolute** difference (current − prior):
+  //   • rate tiles render it as percentage points (`pp`),
+  //   • count tiles render it as a plain signed integer.
+  // Relative percent change is intentionally not surfaced — it inflates
+  // moves on small bases (e.g. a click rate going 0.5% → 1% is +100%
+  // relative but only +0.5 pp).
+  const deltaHTML = (t) => {
+    if (t.value == null || t.prior == null) {
+      return `<span style="font-size:11px;color:var(--text-muted);">vs prior — no data</span>`;
+    }
+    const diff = t.value - t.prior;
+    const arrow = diff > 0 ? '▲' : diff < 0 ? '▼' : '–';
+    const good  = t.higherIsBetter == null ? null
+                : (diff === 0 ? null : (diff > 0) === t.higherIsBetter);
+    const color = good == null ? 'var(--text-muted)' : good ? '#1a7f37' : '#cf222e';
+    const magnitude = t.isRate ? `${Math.abs(diff).toFixed(2)} pp`
+                                : `${Math.abs(diff).toLocaleString()}`;
+    return `<span style="font-size:12px;font-weight:600;color:${color};">${arrow} ${magnitude}</span>
+            <span style="font-size:11px;color:var(--text-muted);"> vs prior week</span>`;
+  };
+
+  const lastLabel  = wd.labels[lastCompletedIdx]  || '—';
+  const priorLabel = priorCompletedIdx != null ? wd.labels[priorCompletedIdx] : '—';
+
+  root.innerHTML = `
+    <div class="section-context-banner">
+      <strong>Weekly Digest</strong> — Headline metrics for <strong>${esc(lastLabel)}</strong> (last completed Mon–Sun), compared against <strong>${esc(priorLabel)}</strong>. Sparklines show the 8 prior completed weeks (excluding the in-progress current week). <strong>Campaign aggregates count mass sends only — <code>Recipients ≥ 200,000</code></strong>; small dedicated / segmented sends are excluded so their atypical open / click rates don't drag the weekly averages.
+    </div>
+
+    <div class="kpi-row" style="grid-template-columns:repeat(auto-fit,minmax(220px,1fr));">
+      ${tiles.map((t, i) => `
+        <div class="kpi-card" style="display:flex;flex-direction:column;gap:6px;">
+          <div class="label">${esc(t.label)}</div>
+          <div class="value" style="font-size:24px;">${t.fmt(t.value)}</div>
+          <div>${deltaHTML(t)}</div>
+          <div class="chart-container" style="height:48px;position:relative;margin-top:4px;">
+            <canvas id="dig-spark-${i}"></canvas>
+          </div>
+        </div>
+      `).join('')}
+    </div>
+
+    <!-- Slack-style summary block — mirrors the #weekly_automation
+         post format. Numbers come from the same wd payload as the tiles
+         above plus the last-completed-week's article-level rollup
+         (top_content_this_week / top_sponsors_this_week /
+         top_immersions_this_week). -->
+    <!-- One chart-card per section so each visual gets its own header,
+         padding, and border — matches the styling on every other tab.
+         The actual markup for each card comes from _digestSummaryBody(),
+         which returns five sibling .chart-card blocks rather than one
+         wrapper card with the summary glued inside. -->
+    ${_digestSummaryBody(wd, lastCompletedIdx, priorCompletedIdx, lastLabel)}
+  `;
+
+  // Sparklines — minimal Chart.js lines with axes hidden.
+  tiles.forEach((t, i) => {
+    const el = document.getElementById(`dig-spark-${i}`);
+    if (!el) return;
+    new Chart(el, {
+      type: 'line',
+      data: {
+        labels: sparkLabels,
+        datasets: [{
+          data: t.spark.map(v => v == null ? null : Number(v)),
+          borderColor: t.spark_color,
+          backgroundColor: t.spark_color + '22',
+          tension: 0.3, pointRadius: 0, borderWidth: 1.5, fill: true, spanGaps: true,
+        }]
+      },
+      options: {
+        responsive: true, maintainAspectRatio: false,
+        plugins: { legend: { display: false }, tooltip: {
+          callbacks: { label: c => `${t.label}: ${t.fmt(c.parsed.y)}` }
+        } },
+        scales: { x: { display: false }, y: { display: false } },
+        elements: { line: { borderJoinStyle: 'round' } },
+      }
+    });
+  });
+
+  // Doughnut + three horizontal-bar charts inside the summary block.
+  _initDigestCharts();
+}
+
+/* Builds the visual summary block under the Weekly Digest tiles as a
+ * sequence of standalone chart-cards (Overall stats / Sources doughnut /
+ * Editorial / Sponsor / Immersion) so each section gets the same
+ * heading, padding, and border treatment as the rest of the dashboard.
+ * Returns markup with canvas placeholders; _initDigestCharts() is then
+ * called by renderDigest() to instantiate the Chart.js objects after the
+ * markup is injected. */
+function _digestSummaryBody(wd, lastIdx, priorIdx, lastLabel) {
+  const cur  = (key) => wd[key] && wd[key][lastIdx]  != null ? Number(wd[key][lastIdx])  : null;
+  const prev = (key) => wd[key] && priorIdx != null && wd[key][priorIdx] != null ? Number(wd[key][priorIdx]) : null;
+  const pp   = (a, b) => (a == null || b == null) ? null : (a - b);
+  const fmtN = v => v == null ? '—' : Number(v).toLocaleString();
+  const fmtP = (v, decimals = 2) => v == null ? '—' : Number(v).toFixed(decimals) + '%';
+  const arrow = d => d == null ? '' : d > 0 ? '▲' : d < 0 ? '▼' : '–';
+  const ppHTML = (deltaPP, higherIsBetter) => {
+    if (deltaPP == null) return '';
+    const good = higherIsBetter == null ? null : (deltaPP === 0 ? null : (deltaPP > 0) === higherIsBetter);
+    const colour = good == null ? 'var(--text-muted)' : good ? '#1a7f37' : '#cf222e';
+    return ` <span style="color:${colour};font-weight:600;">${arrow(deltaPP)} ${Math.abs(deltaPP).toFixed(2)} pp</span>`;
+  };
+
+  // ── Card 1: Overall (text-only stats strip)
+  const camps     = cur('campaigns_sent') || 0;
+  const totalSent = cur('total_sent')     || 0;
+  const openR     = cur('avg_open_rate');
+  const clickR    = cur('avg_click_rate');
+  const unsubR    = cur('churn_pct_of_sends');
+  const overall = `
+    <div class="chart-card" style="margin-top:18px;">
+      <h3>Overall — ${esc(lastLabel || '')} <span class="badge-inline">campaign aggregates</span></h3>
+      <div style="font-size:13px;line-height:1.6;color:var(--text);">
+        <strong>${fmtN(camps)} campaign${camps === 1 ? '' : 's'}</strong>
+        &nbsp;· ${fmtN(totalSent)} sent
+        &nbsp;· ${fmtP(openR)} open rate${ppHTML(pp(openR,  prev('avg_open_rate')),  true)}
+        &nbsp;· ${fmtP(clickR)} click rate${ppHTML(pp(clickR, prev('avg_click_rate')), true)}
+        &nbsp;· ${fmtP(unsubR, 3)} unsub${ppHTML(pp(unsubR, prev('churn_pct_of_sends')), false)}
+      </div>
+      <div class="insight">
+        Aggregates over campaigns with <code>Recipients &ge; 200,000</code> only — mass sends. Small dedicated / segmented sends are excluded so their atypical open / click rates don't skew the weekly averages.
+        <code>Recipients</code> itself is not deduplicated — same subscriber receiving N emails counts N×.
+        Unsub rate = unsubs ÷ <code>total_sent</code> × 100. Deltas vs prior completed week (pp = percentage points).
+      </div>
+    </div>`;
+
+  // ── Source breakdown — was a text line, now a doughnut with the
+  // canonical labels + sub counts driving the slices. Cache the dataset
+  // on window so _initDigestCharts can read it after innerHTML.
+  const lastWeekStart = wd.week_starts && wd.week_starts[lastIdx];
+  const allSrc = (wd.top_sources_by_week || []).filter(r => r.week_start === lastWeekStart);
+  const totalNew = allSrc.reduce((a, r) => a + (Number(r.subs) || 0), 0);
+  window._digSrcData = allSrc;
+  window._digSrcTotal = totalNew;
+
+  // ── Card 2: Sources doughnut
+  const sourceBlock = (allSrc.length === 0)
+    ? `<div class="chart-card">
+        <h3>New Subscribers by Source</h3>
+        <div class="insight" style="font-style:italic;">No new subscribers recorded this week.</div>
+      </div>`
+    : `<div class="chart-card">
+        <h3>New Subscribers by Source <span class="badge-inline">total: ${fmtN(totalNew)}</span></h3>
+        <div class="chart-container h300"><canvas id="dig-src-pie"></canvas></div>
+        <div class="insight">Canonical-source split of subscribers who joined during the last completed week. Click a legend entry to hide that slice.</div>
+      </div>`;
+
+  // ── Three article-section horizontal bars — Editorial / Sponsor /
+  // Immersion. Each canvas is sized to fit ~5 rows; rendered by
+  // _initDigestCharts. Empty sections collapse to a muted "none this
+  // week." note so the layout doesn't shift when there are no rows.
+  // ── Cards 3-5: Editorial / Sponsor / Immersion — all use the text-row
+  // helper below. Each row is its own bordered tile so the article URL is
+  // visible at-a-glance instead of being hidden behind a tooltip. (The
+  // earlier bar-chart variant — sectionBlock + per-canvas init in
+  // _initDigestCharts — was retired in favour of one consistent
+  // representation across all three categories.)
+  //
+  // Text-row block — each row is
+  // its own bordered tile that shows the title (linked), the issue +
+  // send date, the URL backing the row (small + monospace + clickable),
+  // and the unique / total clicks. Used in place of the bar chart so the
+  // URL is visible at-a-glance instead of hidden behind a tooltip.
+  const textRowBlock = (heading, rows, badge) => {
+    const data = (rows || []).slice(0, 5);
+    if (!data.length) {
+      return `<div class="chart-card">
+        <h3>${esc(heading)}</h3>
+        <div class="insight" style="font-style:italic;">No ${esc(heading.toLowerCase())} this week.</div>
+      </div>`;
+    }
+    const badgeHTML = badge ? ` <span class="badge-inline">${esc(badge)}</span>` : '';
+    const items = data.map(r => {
+      const titleLine = r.url
+        ? `<a href="${esc(r.url)}" target="_blank" rel="noopener" style="font-weight:600;color:var(--text);text-decoration:none;">${esc(r.title || '(untitled)')}</a>`
+        : `<span style="font-weight:600;color:var(--text);">${esc(r.title || '(untitled)')}</span>`;
+      const meta = [];
+      if (r.issue_name) meta.push(`<span>Issue: <strong>${esc(r.issue_name)}</strong></span>`);
+      if (r.issue_date) meta.push(`<span>Sent: <strong>${esc(String(r.issue_date).slice(0,10))}</strong></span>`);
+      const metaLine = meta.length
+        ? `<div style="font-size:11px;color:var(--text-muted);margin-top:2px;">${meta.join(' &middot; ')}</div>`
+        : '';
+      const urlLine = r.url
+        ? `<div style="font-size:11px;color:var(--text-muted);margin-top:2px;word-break:break-all;"><code>${esc(r.url)}</code></div>`
+        : '';
+      const stats = `<div style="font-size:12px;color:var(--text);white-space:nowrap;margin-left:14px;">
+        <strong>${fmtN(r.unique_clicks)}</strong> unique <span style="color:var(--text-muted);">&middot; ${fmtN(r.total_clicks)} total</span>
+      </div>`;
+      return `<div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px;padding:10px 0;border-bottom:1px solid var(--row-border);">
+        <div style="flex:1;min-width:0;">
+          <div style="font-size:13px;">${titleLine}</div>
+          ${metaLine}
+          ${urlLine}
+        </div>
+        ${stats}
+      </div>`;
+    }).join('');
+    return `<div class="chart-card">
+      <h3>${esc(heading)}${badgeHTML}</h3>
+      <div style="margin-top:6px;">${items}</div>
+      <div class="insight">Top 5 by unique clicks. Title and URL link out to the article in a new tab.</div>
+    </div>`;
+  };
+
+  const editorial  = textRowBlock('Editorial Clicks', wd.top_editorial_this_week || wd.top_content_this_week, 'type = editorial');
+  const sponsors   = textRowBlock('Sponsor Clicks',   wd.top_sponsors_this_week, 'type = sponsor');
+  const immersions = textRowBlock('Immersion Clicks', wd.top_immersions_this_week, 'type = immersion');
+
+  // The three article cards stack vertically (each its own row), and all
+  // three now use the text-row format so the article URL is visible
+  // at-a-glance without needing a hover.
+  return overall + sourceBlock + editorial + sponsors + immersions;
+}
+
+/* Instantiates the Chart.js charts inside the Weekly Digest summary block.
+ * Must run AFTER _digestSummaryBody's HTML is injected — `renderDigest`
+ * calls it at the end of its render pass. Reads its data from
+ * window._digSrcData / window._dig_<canvasId> stashed by the body fn. */
+function _initDigestCharts() {
+  const palette = ['#0969da','#cf222e','#8250df','#9a6700','#bf3989','#1b7c83','#1a7f37','#58a6ff','#3fb950','#fb8500','#fb6f92','#7d4e00','#4f8cff','#34d399','#a78bfa','#f87171','#fbbf24'];
+
+  // Sources doughnut
+  const srcCanvas = document.getElementById('dig-src-pie');
+  const allSrc = window._digSrcData || [];
+  const totalNew = window._digSrcTotal || 0;
+  if (srcCanvas && allSrc.length) {
+    new Chart(srcCanvas, {
+      type: 'doughnut',
+      data: {
+        labels: allSrc.map(r => utmLabel(r.bucket)),
+        datasets: [{ data: allSrc.map(r => Number(r.subs) || 0),
+                     backgroundColor: allSrc.map((_, i) => palette[i % palette.length]),
+                     borderWidth: 1 }]
+      },
+      options: {
+        responsive: true, maintainAspectRatio: false,
+        plugins: {
+          legend: { position: 'right', labels: { font: { size: 11 }, padding: 6, boxWidth: 12 } },
+          tooltip: { callbacks: { label: c => {
+            const pct = totalNew ? (c.parsed / totalNew * 100).toFixed(2) : '0.00';
+            return `${c.label}: ${Number(c.parsed).toLocaleString()} (${pct}%)`;
+          }}}
+        }
+      }
+    });
+  }
+
+  // The per-article horizontal-bar charts that used to live here were
+  // retired when Editorial / Sponsor / Immersion all switched to the
+  // text-row representation. _initDigestCharts() now only handles the
+  // Sources doughnut.
+}
+
 function renderCampaigns(M) {
   document.getElementById('campaigns').innerHTML = `
     <div class="section-context-banner">
@@ -424,12 +1083,12 @@ function renderCampaigns(M) {
     <div class="camp-toolbar">
       <div class="camp-toolbar-left">
         <label class="switch" for="hideSundaySpotlight" title="Include Sunday Spotlight campaigns">
-          <input type="checkbox" id="hideSundaySpotlight" onchange="_filterCampaigns()" checked>
+          <input type="checkbox" id="hideSundaySpotlight" onchange="_filterCampaigns()">
           <span class="slider-round"></span>
         </label>
         <div>
           <div style="font-size:13px;font-weight:600;color:var(--text);">Include Sunday Spotlight</div>
-          <div style="font-size:11px;color:var(--text-muted);" id="camp-filter-state">Including branded digest sends</div>
+          <div style="font-size:11px;color:var(--text-muted);" id="camp-filter-state">Excluding branded digest sends</div>
         </div>
       </div>
       <div class="camp-toolbar-right" id="camp-scope-label" style="font-size:12px;color:var(--text-muted);"></div>
@@ -440,7 +1099,7 @@ function renderCampaigns(M) {
       <div class="kpi-card cyan"><div class="label">Avg Open Rate</div><div class="value" id="kpi-avg-open">—</div><div class="sub">Unique opens / recipients</div></div>
       <div class="kpi-card blue"><div class="label">Avg Click Rate</div><div class="value" id="kpi-avg-click">—</div><div class="sub">Clicks / recipients</div></div>
       <div class="kpi-card green"><div class="label">Best Open Rate</div><div class="value" id="kpi-best-open">—</div><div class="sub">Single campaign peak</div></div>
-      <div class="kpi-card orange"><div class="label">Total Recipients</div><div class="value" id="kpi-recipients">—</div><div class="sub"><span id="kpi-unique-opens">—</span> unique opens</div></div>
+      <div class="kpi-card orange"><div class="label">Total Sent Emails</div><div class="value" id="kpi-recipients">—</div><div class="sub"><span id="kpi-unique-opens">—</span> unique opens</div></div>
     </div>
 
     <div class="kpi-row" style="grid-template-columns:repeat(3,1fr);">
@@ -574,7 +1233,7 @@ function _renderCampPage() {
     <thead><tr><th>#</th><th>Campaign</th><th>Subject</th><th>Sent Date</th><th>Total Sent Emails</th><th>Unique Opens</th><th>Open Rate</th><th>Clicks</th><th>Click Rate</th><th>Unsubs</th></tr></thead>
     <tbody>${slice.map((c,i)=>{
       const nameCell = c.url ? `<a href="${esc(c.url)}" target="_blank" rel="noopener">${esc(c.name||'')}</a>` : esc(c.name||'');
-      return `<tr><td>${start+i+1}</td><td>${nameCell}</td><td>${esc(c.subject||'')}</td><td>${c.sent_date||''}</td><td>${_campCell(c.recipients)}</td><td>${_campCell(c.unique_opens)}</td><td>${c.open_rate||'—'}</td><td>${_campCell(c.clicks)}</td><td>${c.click_rate||'—'}</td><td>${_campCell(c.unsubs)}</td></tr>`;
+      return `<tr><td>${start+i+1}</td><td>${nameCell}</td><td>${esc(c.subject||'')}</td><td class="nowrap">${c.sent_date||''}</td><td>${_campCell(c.recipients)}</td><td>${_campCell(c.unique_opens)}</td><td>${c.open_rate||'—'}</td><td>${_campCell(c.clicks)}</td><td>${c.click_rate||'—'}</td><td>${_campCell(c.unsubs)}</td></tr>`;
     }).join('')}</tbody></table></div>`;
   const pager = document.getElementById('camp-pager');
   if (pager) {
@@ -599,29 +1258,64 @@ function _renderCampPage() {
 /* ═══════════════════════════════════════
    CLICK ANALYSIS  (was: Website Content)
 ═══════════════════════════════════════ */
-function _clickTrendInsight(series, metric, unit) {
-  // series = M.campaign_clicks_*  with `clicks` and `is_current` arrays
+function _clickTrendInsight(series, metric, unit, fmtVal) {
+  // Compare the LAST TWO COMPLETED periods — skip any bar flagged is_current
+  // so partial weeks/months don't produce a misleading drop.
   const data = series[metric] || [];
-  if (data.length < 2) return '';
-  const cur  = data[data.length - 1] || 0;
-  const prev = data[data.length - 2] || 0;
+  const isc  = series.is_current || [];
+  const completed = [];
+  for (let i = data.length - 1; i >= 0; i--) {
+    if (!isc[i] && data[i] != null) completed.push(i);
+    if (completed.length === 2) break;
+  }
+  if (completed.length < 2) return '';
+  const cur  = Number(data[completed[0]]) || 0;
+  const prev = Number(data[completed[1]]) || 0;
   if (prev === 0 && cur === 0) return '';
   const pct = prev > 0 ? ((cur - prev) / prev * 100) : 100;
   const dir = pct >= 0 ? '↑' : '↓';
   const clr = pct >= 0 ? 'var(--green)' : 'var(--red)';
-  return `<strong style="color:${clr}">${dir} ${Math.abs(pct).toFixed(1)}%</strong> vs previous (${fmt(cur)} vs ${fmt(prev)} ${unit})`;
+  const f = fmtVal || (v => fmt(v));
+  return `<strong style="color:${clr}">${dir} ${Math.abs(pct).toFixed(1)}%</strong> vs previous (${f(cur)} vs ${f(prev)} ${unit})`;
 }
-function _clickTrendChart(canvasId, series, metric, color, label) {
+/* Properly tear down the old Chart instance, reset any inline sizing the
+ * previous render left on the canvas, then hand a clean canvas back. Without
+ * destroy() the old chart's ResizeObserver keeps firing on the old (detached)
+ * canvas; without clearing style/width/height attrs Chart.js sometimes reads
+ * the old size instead of the container, which is why the chart looked half-
+ * size after toggling the Sunday Spotlight filter. */
+function _resetCanvas(id) {
+  const old = document.getElementById(id);
+  if (!old) return null;
+  if (old._chart) { try { old._chart.destroy(); } catch (e) {} old._chart = null; }
+  const fresh = old.cloneNode(false);
+  fresh.removeAttribute('style');
+  fresh.removeAttribute('width');
+  fresh.removeAttribute('height');
+  old.parentNode.replaceChild(fresh, old);
+  return fresh;
+}
+
+/* Create a chart and then force a resize on the next animation frame so it
+ * recomputes against the parent container after layout settles. Belt-and-
+ * braces against the "chart shrinks after toggle" Chart.js bug. */
+function _newChart(ctx, cfg) {
+  const c = new Chart(ctx, cfg);
+  requestAnimationFrame(() => { try { c.resize(); } catch (e) {} });
+  return c;
+}
+
+function _clickTrendChart(canvasId, series, metric, color, label, tickFormat) {
   const labels = series.labels || [];
   const data   = series[metric] || [];
   const cur    = series.is_current || [];
   const camps  = series.campaigns || [];
+  const tickFn = tickFormat || (v => v.toLocaleString());
   const bg = data.map((_,i) => cur[i] ? color + '66' : color);
   const border = data.map((_,i) => cur[i] ? color : 'transparent');
-  const ctx = document.getElementById(canvasId);
+  const ctx = _resetCanvas(canvasId);
   if (!ctx) return;
-  if (ctx._chart) ctx._chart.destroy();
-  ctx._chart = new Chart(ctx, {
+  ctx._chart = _newChart(ctx, {
     type: 'bar',
     data: { labels, datasets: [{
       label,
@@ -638,18 +1332,120 @@ function _clickTrendChart(canvasId, series, metric, color, label) {
           afterLabel: (c) => {
             const lines = [];
             if (camps[c.dataIndex] != null) lines.push(`Campaigns: ${camps[c.dataIndex]}`);
-            if (cur[c.dataIndex]) lines.push('(in progress)');
+            if (cur[c.dataIndex]) lines.push('(in progress — excluded from comparison)');
             return lines;
           }
         }}
       },
-      scales:{ y:{ beginAtZero:true, ticks:{ callback: v => v.toLocaleString() } } } }
+      scales:{ y:{ beginAtZero:true, ticks:{ callback: v => tickFn(v) } } } }
   });
 }
 
 /* Raw-click section state for weekday/week-range selectors */
 let _rawClicksData = null;
 const _weekdayLong = { Mon:'Monday', Tue:'Tuesday', Wed:'Wednesday', Thu:'Thursday', Fri:'Friday', Sat:'Saturday', Sun:'Sunday' };
+
+/* Click Analysis — toolbar state helpers.
+ * `_ssOn()` returns true when the user wants Sunday Spotlight INCLUDED
+ * (toggle checked). Default OFF (excluded), matching the Campaigns tab.
+ * `_rawMetric(series)` picks the right field for raw-click series:
+ *   - SS included → 'clicks'
+ *   - SS excluded AND lambda emitted 'clicks_no_ss' → 'clicks_no_ss'
+ *   - Otherwise fall back to 'clicks' (older lambda output).
+ */
+function _ssOn() {
+  const el = document.getElementById('clicksIncludeSS');
+  return el ? el.checked : false;
+}
+function _rawMetric(series) {
+  if (_ssOn()) return 'clicks';
+  return (series && Array.isArray(series.clicks_no_ss)) ? 'clicks_no_ss' : 'clicks';
+}
+
+/* Section 1 client-side aggregation from M.campaign_table.
+ * Lets us filter Sunday Spotlight and switch between Total / Per-campaign /
+ * Click-to-Open % without needing a lambda re-run.
+ */
+function _isoWeekStart(d) {
+  const x = new Date(d);
+  if (isNaN(x)) return null;
+  const day = x.getDay();
+  const back = day === 0 ? 6 : day - 1;
+  x.setHours(0,0,0,0);
+  x.setDate(x.getDate() - back);
+  return x;
+}
+function _monthStart(d) {
+  const x = new Date(d);
+  if (isNaN(x)) return null;
+  x.setHours(0,0,0,0);
+  x.setDate(1);
+  return x;
+}
+const _fmtWeekLabel  = d => d.toLocaleDateString('en-US', { month:'short', day:'2-digit' });
+const _fmtMonthLabel = d => d.toLocaleDateString('en-US', { month:'short', year:'numeric' });
+
+function _buildCampaignSeries(rows, periodFn, formatter, limit) {
+  const today = new Date(); today.setHours(0,0,0,0);
+  const todayKey = periodFn(today).getTime();
+  const groups = new Map();
+  rows.forEach(c => {
+    const d = new Date(c.sent_date || '');
+    if (isNaN(d)) return;
+    const k = periodFn(d).getTime();
+    if (!groups.has(k)) groups.set(k, { clicks:0, opens:0, recipients:0, n:0 });
+    const g = groups.get(k);
+    g.clicks     += _campNum(c.clicks);
+    g.opens      += _campNum(c.unique_opens);
+    g.recipients += _campNum(c.recipients);
+    g.n          += 1;
+  });
+  let keys = [...groups.keys()].sort((a,b) => a - b);
+  if (limit && keys.length > limit) keys = keys.slice(keys.length - limit);
+  return {
+    labels:       keys.map(k => formatter(new Date(k))),
+    clicks:       keys.map(k => groups.get(k).clicks),
+    per_campaign: keys.map(k => { const g = groups.get(k); return g.n ? Math.round(g.clicks / g.n) : 0; }),
+    ctor:         keys.map(k => { const g = groups.get(k); return g.opens ? Number((g.clicks / g.opens * 100).toFixed(1)) : 0; }),
+    campaigns:    keys.map(k => groups.get(k).n),
+    unique_opens: keys.map(k => groups.get(k).opens),
+    recipients:   keys.map(k => groups.get(k).recipients),
+    is_current:   keys.map(k => k === todayKey)
+  };
+}
+
+function _renderClickSection1() {
+  const includeSS = _ssOn();
+  const metric    = (document.getElementById('clicksMetric') || {}).value || 'clicks';
+  const stateEl   = document.getElementById('clicks-ss-state');
+  if (stateEl) stateEl.textContent = includeSS ? 'Including branded digest sends' : 'Excluding branded digest sends';
+  const table = (_rawClicksData && _rawClicksData.campaign_table) || [];
+  const rows  = table.filter(c => includeSS ? true : !((c.name||'').toLowerCase().includes('sunday spotlight')));
+  const weekly  = _buildCampaignSeries(rows, _isoWeekStart, _fmtWeekLabel,  8);
+  const monthly = _buildCampaignSeries(rows, _monthStart,  _fmtMonthLabel, 6);
+  const isCtor    = metric === 'ctor';
+  const isPerCamp = metric === 'per_campaign';
+  const metricLabel = isPerCamp ? 'Clicks / campaign' : (isCtor ? 'Click-to-Open %' : 'Total clicks');
+  const unitLabel   = isPerCamp ? 'clicks/campaign'  : (isCtor ? 'CTOR'             : 'clicks');
+  const tickFmt     = isCtor ? (v => v.toFixed(1) + '%') : (v => Number(v).toLocaleString());
+  const valFmt      = isCtor ? (v => Number(v).toFixed(1) + '%') : (v => Number(v).toLocaleString());
+  _clickTrendChart('cnt-weekly-bar',  weekly,  metric, '#0969da', metricLabel, tickFmt);
+  _clickTrendChart('cnt-monthly-bar', monthly, metric, '#1a7f37', metricLabel, tickFmt);
+  const wIns = document.getElementById('cnt-weekly-insight');
+  if (wIns) {
+    const txt = _clickTrendInsight(weekly, metric, unitLabel, valFmt);
+    wIns.innerHTML = txt
+      ? `WoW (last 2 completed weeks): ${txt}. The faded bar is the current (in-progress) week — excluded from the comparison.`
+      : `Not enough completed weeks for a WoW comparison yet.`;
+  }
+  const mIns = document.getElementById('cnt-monthly-insight');
+  if (mIns) {
+    const txt = _clickTrendInsight(monthly, metric, unitLabel, valFmt);
+    mIns.innerHTML = txt
+      ? `MoM (last 2 completed months): ${txt}. The faded bar is the current (in-progress) month — excluded from the comparison.`
+      : `Not enough completed months for a MoM comparison yet.`;
+  }
+}
 
 function _sliceSeries(series, n) {
   if (!series || !series.labels) return series || {};
@@ -661,30 +1457,153 @@ function _sliceSeries(series, n) {
   return out;
 }
 
-function _setWeekdayPick(dow) {
+/* Same Weekday chart — campaign-send view.
+ * For each weekday (Mon–Sun), we show the last `n` campaigns sent on that
+ * weekday (from M.campaign_table) with their *total clicks*. Bars are
+ * coloured green when above that weekday's average and red when below,
+ * with in-progress sends (< 2 days old) shown in pale grey because their
+ * click totals are still accumulating.
+ */
+function _setWeekdayWindow(n) {
   if (!_rawClicksData) return;
-  const byDow = _rawClicksData.raw_clicks_by_weekday || {};
-  const todayDow = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'][(new Date()).getDay()];
-  // Prefer per-weekday data if available, else fall back to the legacy single-weekday payload for today.
-  let series = byDow[dow];
-  if ((!series || !(series.labels||[]).length) && dow === todayDow) {
-    series = _rawClicksData.raw_clicks_same_weekday || {};
+  window._rawWeekdayN = n;
+  ['rwd-2','rwd-3','rwd-5'].forEach(id => {
+    const btn = document.getElementById(id);
+    if (!btn) return;
+    const active = parseInt(id.split('-')[1]) === n;
+    btn.style.background = active ? 'var(--accent)' : 'var(--card)';
+    btn.style.color = active ? '#fff' : 'var(--text-muted)';
+  });
+  const dows = ['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];
+  const ssOn = _ssOn();
+  const today = new Date(); today.setHours(0,0,0,0);
+  const inProgressCutoff = today.getTime() - 2 * 86400000;
+
+  // Bucket every campaign by the weekday it was sent on.
+  const table = (_rawClicksData && _rawClicksData.campaign_table) || [];
+  const byDow = { Mon:[], Tue:[], Wed:[], Thu:[], Fri:[], Sat:[], Sun:[] };
+  table.forEach(c => {
+    if (!ssOn && (c.name||'').toLowerCase().includes('sunday spotlight')) return;
+    const d = new Date(c.sent_date || '');
+    if (isNaN(d)) return;
+    const dow = dows[((d.getDay()+6) % 7)];   // 0=Mon … 6=Sun
+    byDow[dow].push({
+      sent:       d,
+      label:      d.toLocaleDateString('en-US', { month:'short', day:'2-digit', year:'2-digit' }),
+      name:       c.name || '',
+      clicks:     _campNum(c.clicks),
+      inProgress: d.getTime() >= inProgressCutoff
+    });
+  });
+
+  // Keep the most recent `n` per weekday.
+  let weekdaysWithData = 0;
+  dows.forEach(d => {
+    byDow[d].sort((a,b) => b.sent - a.sent);
+    if (byDow[d].length) weekdaysWithData++;
+    byDow[d] = byDow[d].slice(0, n);
+  });
+
+  // Average per weekday — excludes in-progress sends so their incomplete
+  // totals don't drag the baseline down for the rest of the bars.
+  const avgs = {};
+  dows.forEach(d => {
+    const done = byDow[d].filter(x => !x.inProgress);
+    avgs[d] = done.length ? done.reduce((s,x) => s + x.clicks, 0) / done.length : 0;
+  });
+
+  // Build n datasets — index `positionFromEnd = n-1-i` reads "0 = most recent".
+  // Each bar gets its own colour: green if ≥ that weekday's average, red if
+  // below, pale grey if still in-progress (excluded from the comparison).
+  const GREEN     = 'rgba(63,185,80,0.85)';
+  const RED       = 'rgba(248,81,73,0.85)';
+  const INP_GREY  = 'rgba(140,149,159,0.45)';
+  const INP_BORDER = 'rgba(140,149,159,0.85)';
+  const datasets = [];
+  for (let i = 0; i < n; i++) {
+    const positionFromEnd = n - 1 - i;        // 0 = most recent
+    const labelTxt = positionFromEnd === 0 ? 'Most recent'
+                   : positionFromEnd === 1 ? '1 week back'
+                   : `${positionFromEnd} weeks back`;
+    const data = dows.map(d => {
+      const row = byDow[d][positionFromEnd];
+      return row ? row.clicks : null;
+    });
+    const bg = dows.map(d => {
+      const row = byDow[d][positionFromEnd];
+      if (!row) return 'transparent';
+      if (row.inProgress) return INP_GREY;
+      return row.clicks >= avgs[d] ? GREEN : RED;
+    });
+    const borderColor = dows.map(d => {
+      const row = byDow[d][positionFromEnd];
+      return (row && row.inProgress) ? INP_BORDER : 'transparent';
+    });
+    datasets.push({
+      label: labelTxt,
+      data,
+      backgroundColor: bg,
+      borderColor,
+      borderWidth: 1.5,
+      _dates: dows.map(d => byDow[d][positionFromEnd]?.label || ''),
+      _names: dows.map(d => byDow[d][positionFromEnd]?.name  || ''),
+      _inProg: dows.map(d => !!byDow[d][positionFromEnd]?.inProgress),
+      _avg:    dows.map(d => avgs[d]),
+      borderRadius: 3
+    });
   }
-  series = series || { labels:[], clicks:[], is_current:[] };
-  _clickTrendChart('cnt-raw-weekday-bar', series, 'clicks', '#8250df', 'Click events');
+
+  const ctx = _resetCanvas('cnt-raw-weekday-bar');
+  if (!ctx) return;
+  ctx._chart = _newChart(ctx, {
+    type: 'bar',
+    data: { labels: dows.map(d => _weekdayLong[d]||d), datasets },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: {
+        legend: { display: false },
+        tooltip: { callbacks: {
+          title: (items) => items.length ? (items[0].chart.data.labels[items[0].dataIndex] || '') : '',
+          label: (c) => {
+            const ds = c.dataset;
+            const date = (ds._dates && ds._dates[c.dataIndex]) || '';
+            const name = (ds._names && ds._names[c.dataIndex]) || '';
+            const inP  = (ds._inProg && ds._inProg[c.dataIndex]) || false;
+            const avg  = (ds._avg   && ds._avg[c.dataIndex])    || 0;
+            const val  = (c.parsed && c.parsed.y != null) ? Number(c.parsed.y) : 0;
+            const lines = [];
+            lines.push(`${name || ds.label}${date ? ' — '+date : ''}`);
+            lines.push(`${val.toLocaleString()} total clicks`);
+            if (inP) lines.push('(in progress — < 2 days since send)');
+            else if (avg > 0) {
+              const diff = ((val - avg) / avg * 100);
+              const dir = diff >= 0 ? '↑' : '↓';
+              lines.push(`Weekday avg: ${Math.round(avg).toLocaleString()} (${dir} ${Math.abs(diff).toFixed(1)}%)`);
+            }
+            return lines;
+          }
+        }}
+      },
+      scales: { y: { beginAtZero: true, ticks: { callback: v => v.toLocaleString() } } }
+    }
+  });
+
   const badge = document.getElementById('cnt-raw-weekday-badge');
-  if (badge) badge.textContent = `— last ${(series.labels||[]).length || 0} ${_weekdayLong[dow]||dow}s`;
+  if (badge) badge.textContent = `— last ${n} sends per weekday, total clicks per send`;
   const ins = document.getElementById('cnt-raw-weekday-insight');
   if (ins) {
-    const trend = _clickTrendInsight(series, 'clicks', 'click events');
-    ins.innerHTML = trend
-      ? `Most recent ${_weekdayLong[dow]||dow} vs prior: ${trend}.`
-      : `No ${_weekdayLong[dow]||dow} data available — re-run the comparison lambda to populate.`;
+    const legend = `<span style="display:inline-block;width:10px;height:10px;background:${GREEN};border-radius:2px;vertical-align:middle;margin:0 4px 1px 0;"></span>above that weekday's average · `
+                 + `<span style="display:inline-block;width:10px;height:10px;background:${RED};border-radius:2px;vertical-align:middle;margin:0 4px 1px 6px;"></span>below average · `
+                 + `<span style="display:inline-block;width:10px;height:10px;background:${INP_GREY};border:1px solid ${INP_BORDER};border-radius:2px;vertical-align:middle;margin:0 4px 1px 6px;"></span>in progress (&lt; 2 days since send)`;
+    ins.innerHTML = weekdaysWithData < 7
+      ? `Showing campaigns for <strong>${weekdaysWithData} of 7</strong> weekdays — only weekdays with at least one send appear. <br>${legend}`
+      : `Hover a bar for the campaign name, send date and how it compares to that weekday's average. <br>${legend}`;
   }
 }
 
 function _setRawWeeklyWindow(n) {
   if (!_rawClicksData) return;
+  window._rawWeeklyN = n;
   ['rww-4','rww-8','rww-12'].forEach(id => {
     const btn = document.getElementById(id);
     if (!btn) return;
@@ -693,67 +1612,136 @@ function _setRawWeeklyWindow(n) {
     btn.style.color = active ? '#fff' : 'var(--text-muted)';
   });
   const series = _sliceSeries(_rawClicksData.raw_clicks_weekly || {}, n);
-  _clickTrendChart('cnt-raw-weekly-bar', series, 'clicks', '#bf3989', 'Click events');
+  const m = _rawMetric(series);
+  _clickTrendChart('cnt-raw-weekly-bar', series, m, '#bf3989', 'Click events');
   const badge = document.getElementById('cnt-raw-weekly-badge');
   if (badge) badge.textContent = `— last ${(series.labels||[]).length || 0} ISO weeks`;
   const ins = document.getElementById('cnt-raw-weekly-insight');
-  if (ins) ins.innerHTML = `WoW: ${_clickTrendInsight(series, 'clicks', 'click events')}.`;
+  if (ins) {
+    const txt = _clickTrendInsight(series, m, 'click events');
+    ins.innerHTML = txt
+      ? `WoW (last 2 completed weeks): ${txt}. The faded bar is the current (in-progress) week — excluded from the comparison.`
+      : `Not enough completed weeks for a WoW comparison yet.`;
+  }
 }
 
 function _renderRawMonthly() {
   if (!_rawClicksData) return;
   const series = _rawClicksData.raw_clicks_monthly || {};
-  _clickTrendChart('cnt-raw-monthly-bar', series, 'clicks', '#9a6700', 'Click events');
+  const m = _rawMetric(series);
+  _clickTrendChart('cnt-raw-monthly-bar', series, m, '#9a6700', 'Click events');
   const badge = document.getElementById('cnt-raw-monthly-badge');
   if (badge) badge.textContent = `— last ${(series.labels||[]).length || 0} months`;
   const ins = document.getElementById('cnt-raw-monthly-insight');
-  if (ins) ins.innerHTML = `MoM: ${_clickTrendInsight(series, 'clicks', 'click events')}.`;
+  if (ins) {
+    const txt = _clickTrendInsight(series, m, 'click events');
+    ins.innerHTML = txt
+      ? `MoM (last 2 completed months): ${txt}. The faded bar is the current (in-progress) month — excluded from the comparison.`
+      : `Not enough completed months for a MoM comparison yet.`;
+  }
+}
+
+/* Re-render every chart on the Click Analysis tab. Called when the
+ * "Include Sunday Spotlight" toggle flips — now also drives the four
+ * KPI cards above the charts so they share the same scope. */
+function _refreshClicksTab() {
+  _renderClickKpis();
+  _renderClickSection1();
+  _setWeekdayWindow(window._rawWeekdayN || 3);
+  _setRawWeeklyWindow(window._rawWeeklyN || 8);
+  _renderRawMonthly();
+}
+
+/* Click Analysis KPIs — campaigns sent / total recipients / total clicks /
+ * avg clicks per campaign, re-aggregated from M.campaign_table against the
+ * current Sunday Spotlight toggle so the headline numbers always match the
+ * Section 1 chart series below. */
+function _renderClickKpis() {
+  const includeSS = _ssOn();
+  const table = (_rawClicksData && _rawClicksData.campaign_table) || [];
+  const rows  = table.filter(c => includeSS ? true
+                                            : !((c.name||'').toLowerCase().includes('sunday spotlight')));
+  let camps = 0, recip = 0, clicks = 0;
+  rows.forEach(c => {
+    camps  += 1;
+    recip  += _campNum(c.recipients);
+    clicks += _campNum(c.clicks);
+  });
+  const avg = camps ? Math.round(clicks / camps) : 0;
+  const set = (id, txt) => { const el = document.getElementById(id); if (el) el.textContent = txt; };
+  set('ca-kpi-camps',  camps.toLocaleString());
+  set('ca-kpi-recip',  recip.toLocaleString());
+  set('ca-kpi-clicks', clicks.toLocaleString());
+  set('ca-kpi-avg',    camps ? avg.toLocaleString() : '—');
 }
 
 function renderContent(M) {
   document.getElementById('content').innerHTML = `
     <div class="section-context-banner">
-      <strong>Click Analysis</strong> — Engagement with SuperAge website articles. Tracks unique and total clicks per article, category, and author. Data starts December 2025.
+      <strong>Click Analysis</strong> — Engagement with SuperAge website articles. Tracks unique and total clicks per article, category, and author. <strong>Click-event data (Section 2: Same Weekday / Weekly / Monthly raw events + per-article click totals) starts December 2025.</strong> Section 1 campaign-aggregate metrics come from the CreateSend <em>Campaigns</em> table and reflect the full send history.
     </div>
-    <div class="kpi-row" style="grid-template-columns:repeat(auto-fit,minmax(140px,1fr));">
-      <div class="kpi-card accent"><div class="label">Total Clicks</div><div class="value">${fmt(M.total_article_clicks)}</div><div class="sub">All tracked articles</div></div>
-      <div class="kpi-card green"><div class="label">Unique Clickers</div><div class="value">${fmt(M.unique_article_clickers != null ? M.unique_article_clickers : M.total_article_clickers)}</div><div class="sub">Distinct email addresses</div></div>
-      <div class="kpi-card blue"><div class="label">Articles Clicked</div><div class="value">${fmt(M.articles_clicked_count != null ? M.articles_clicked_count : (M.content_summary && M.content_summary.unique_articles))}</div><div class="sub">Distinct URLs tracked</div></div>
-      <div class="kpi-card orange"><div class="label">Avg Clicks/Article</div><div class="value">${(()=>{ if (M.avg_clicks_per_article) return M.avg_clicks_per_article; const tc=M.total_article_clicks||(M.content_summary&&M.content_summary.unique_clicks); const ua=M.articles_clicked_count!=null?M.articles_clicked_count:(M.content_summary&&M.content_summary.unique_articles); return (tc && ua) ? Math.round(tc/ua).toLocaleString() : '—'; })()}</div><div class="sub">Mean engagement depth</div></div>
+    <!-- Toolbar moved ABOVE the KPI cards so the Sunday Spotlight toggle
+         visibly governs the whole tab (KPIs, charts, table). -->
+    <div class="camp-toolbar" style="margin: 0 0 12px;">
+      <div class="camp-toolbar-left">
+        <label class="switch" for="clicksIncludeSS" title="Include Sunday Spotlight campaigns">
+          <input type="checkbox" id="clicksIncludeSS" onchange="_refreshClicksTab()">
+          <span class="slider-round"></span>
+        </label>
+        <div>
+          <div style="font-size:13px;font-weight:600;color:var(--text);">Include Sunday Spotlight</div>
+          <div style="font-size:11px;color:var(--text-muted);" id="clicks-ss-state">Excluding branded digest sends</div>
+        </div>
+      </div>
+      <div style="display:flex;align-items:center;gap:8px;">
+        <label style="font-size:12px;color:var(--text-muted);">Section 1 metric:</label>
+        <select id="clicksMetric" onchange="_renderClickSection1()" style="font-size:12px;padding:5px 10px;border:1px solid var(--card-border);border-radius:6px;background:var(--card);color:var(--text);">
+          <option value="clicks">Total clicks</option>
+          <option value="per_campaign" selected>Clicks / campaign</option>
+          <option value="ctor">Click-to-Open %</option>
+        </select>
+      </div>
     </div>
 
-    <h3 style="margin:18px 0 10px;font-size:13px;text-transform:uppercase;letter-spacing:.5px;color:var(--text-muted);">Section 1 — Campaign-Level Aggregated <span class="badge-inline" style="text-transform:none;">sourced from superage."Campaigns"</span></h3>
+    <!-- Click Analysis KPIs are now campaign-level aggregates computed
+         client-side from M.campaign_table filtered by the toggle above, so
+         flipping Sunday Spotlight visibly changes every number on the tab.
+         Values are populated by _renderClickKpis() in _refreshClicksTab(). -->
+    <div class="kpi-row" style="grid-template-columns:repeat(auto-fit,minmax(140px,1fr));">
+      <div class="kpi-card accent"><div class="label">Campaigns Sent</div><div class="value" id="ca-kpi-camps">—</div><div class="sub">In scope (after toggle)</div></div>
+      <div class="kpi-card green"><div class="label">Total Recipients</div><div class="value" id="ca-kpi-recip">—</div><div class="sub">Sum of <code>Recipients</code></div></div>
+      <div class="kpi-card blue"><div class="label">Total Clicks</div><div class="value" id="ca-kpi-clicks">—</div><div class="sub">Sum of campaign <code>Clicks</code></div></div>
+      <div class="kpi-card orange"><div class="label">Avg Clicks / Campaign</div><div class="value" id="ca-kpi-avg">—</div><div class="sub">Mean per send (in scope)</div></div>
+    </div>
+
+    <h3 style="margin:18px 0 10px;font-size:13px;text-transform:uppercase;letter-spacing:.5px;color:var(--text-muted);">Section 1 — Campaign-Level Aggregated <span class="badge-inline" style="text-transform:none;">sourced from superage."Campaigns" — re-aggregated client-side per toggle</span></h3>
     <div class="grid-2">
       <div class="chart-card">
         <h3>Weekly Campaign Clicks <span class="badge-inline">— last 8 weeks, Mon-Sun rollup</span></h3>
         <div class="chart-container h260"><canvas id="cnt-weekly-bar"></canvas></div>
-        <div class="insight">WoW: ${_clickTrendInsight(M.campaign_clicks_weekly || {}, 'clicks', 'clicks')}. The last bar is the current (in-progress) week — partial data only.</div>
+        <div class="insight" id="cnt-weekly-insight"></div>
       </div>
       <div class="chart-card">
         <h3>Monthly Campaign Clicks <span class="badge-inline">— last 6 months</span></h3>
         <div class="chart-container h260"><canvas id="cnt-monthly-bar"></canvas></div>
-        <div class="insight">MoM: ${_clickTrendInsight(M.campaign_clicks_monthly || {}, 'clicks', 'clicks')}. The last bar is the current (in-progress) month.</div>
+        <div class="insight" id="cnt-monthly-insight"></div>
       </div>
     </div>
 
     <h3 style="margin:18px 0 10px;font-size:13px;text-transform:uppercase;letter-spacing:.5px;color:var(--text-muted);">Section 2 — Raw Click Events <span class="badge-inline" style="text-transform:none;">sourced from superage."Campaigns_Clicks" — per-event "Date"</span></h3>
-    <div class="grid-3">
-      <div class="chart-card">
-        <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;margin-bottom:6px;flex-wrap:wrap;">
-          <h3 style="margin:0;">Same Weekday <span class="badge-inline" id="cnt-raw-weekday-badge">— last same-weekday clicks</span></h3>
-          <select id="cnt-raw-weekday-select" onchange="_setWeekdayPick(this.value)" style="font-size:11px;padding:3px 6px;border-radius:5px;border:1px solid var(--card-border);background:var(--card);color:var(--text);">
-            <option value="Mon">Monday</option>
-            <option value="Tue">Tuesday</option>
-            <option value="Wed">Wednesday</option>
-            <option value="Thu">Thursday</option>
-            <option value="Fri">Friday</option>
-            <option value="Sat">Saturday</option>
-            <option value="Sun">Sunday</option>
-          </select>
+    <div class="chart-card">
+      <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;margin-bottom:6px;flex-wrap:wrap;">
+        <h3 style="margin:0;">Same Weekday <span class="badge-inline" id="cnt-raw-weekday-badge">— last N sends per weekday, total clicks per send</span></h3>
+        <div style="display:flex;gap:4px;" id="cnt-raw-weekday-btns">
+          <button onclick="_setWeekdayWindow(2)" id="rwd-2" style="font-size:11px;padding:3px 8px;border:1px solid var(--card-border);border-radius:5px;background:var(--card);color:var(--text-muted);cursor:pointer;">2 weeks</button>
+          <button onclick="_setWeekdayWindow(3)" id="rwd-3" style="font-size:11px;padding:3px 8px;border:1px solid var(--card-border);border-radius:5px;background:var(--accent);color:#fff;cursor:pointer;">3 weeks</button>
+          <button onclick="_setWeekdayWindow(5)" id="rwd-5" style="font-size:11px;padding:3px 8px;border:1px solid var(--card-border);border-radius:5px;background:var(--card);color:var(--text-muted);cursor:pointer;">5 weeks</button>
         </div>
-        <div class="chart-container h240"><canvas id="cnt-raw-weekday-bar"></canvas></div>
-        <div class="insight" id="cnt-raw-weekday-insight"></div>
       </div>
+      <div class="chart-container h300"><canvas id="cnt-raw-weekday-bar"></canvas></div>
+      <div class="insight" id="cnt-raw-weekday-insight"></div>
+    </div>
+    <div class="grid-2">
       <div class="chart-card">
         <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;margin-bottom:6px;flex-wrap:wrap;">
           <h3 style="margin:0;">Weekly <span class="badge-inline" id="cnt-raw-weekly-badge">— last ISO weeks</span></h3>
@@ -773,16 +1761,7 @@ function renderContent(M) {
       </div>
     </div>
     <div class="chart-card">
-      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
-        <h3>Top Articles by Unique Clicks</h3>
-        <div style="display:flex;gap:4px;" id="art-window-btns">
-          <button onclick="_setArtWindow(0)"  id="artw-all" style="font-size:11px;padding:3px 10px;border:1px solid var(--card-border);border-radius:5px;background:var(--accent);color:#fff;cursor:pointer;">All</button>
-          <button onclick="_setArtWindow(7)"  id="artw-7"   style="font-size:11px;padding:3px 10px;border:1px solid var(--card-border);border-radius:5px;background:var(--card);color:var(--text-muted);cursor:pointer;">7d</button>
-          <button onclick="_setArtWindow(15)" id="artw-15"  style="font-size:11px;padding:3px 10px;border:1px solid var(--card-border);border-radius:5px;background:var(--card);color:var(--text-muted);cursor:pointer;">15d</button>
-          <button onclick="_setArtWindow(30)" id="artw-30"  style="font-size:11px;padding:3px 10px;border:1px solid var(--card-border);border-radius:5px;background:var(--card);color:var(--text-muted);cursor:pointer;">30d</button>
-          <button onclick="_setArtWindow(90)" id="artw-90"  style="font-size:11px;padding:3px 10px;border:1px solid var(--card-border);border-radius:5px;background:var(--card);color:var(--text-muted);cursor:pointer;">90d</button>
-        </div>
-      </div>
+      <h3 style="margin-bottom:12px;">Top Articles by Unique Clicks <span class="badge-inline">— top 10 all-time</span></h3>
       <div class="tbl-wrap" id="art-table-wrap">
         <table class="dash-table" id="art-main-table">
           <thead><tr><th>#</th><th>Article</th><th>Category</th><th>Author</th><th>Position</th><th>Unique Clicks</th><th>Total Clicks</th></tr></thead>
@@ -790,85 +1769,26 @@ function renderContent(M) {
         </table>
       </div>
     </div>
-    <div class="grid-2">
-      <div class="chart-card">
-        <h3>Clicks by Category</h3>
-        <div class="chart-container h300"><canvas id="cnt-cat-bar"></canvas></div>
-      </div>
-      <div class="chart-card">
-        <h3>Clicks by Author</h3>
-        <div class="chart-container h300"><canvas id="cnt-author-bar"></canvas></div>
-      </div>
-    </div>
-    <div class="chart-card">
-      <h3>Tag / Topic Performance</h3>
-      <div class="tbl-wrap"><table class="dash-table"><thead><tr><th>Tag / Topic</th><th>Articles</th><th>Unique Clicks</th><th>Total Clicks</th><th>Clicks per Placement</th></tr></thead>
-      <tbody>${(M.tag_performance||[]).sort((a,b)=>(b.avg_unique_clicks||0)-(a.avg_unique_clicks||0)).map(t=>`<tr><td>${esc(t.tag||'')}</td><td>${fmt(t.article_count)}</td><td>${fmt(t.unique_clicks)}</td><td>${fmt(t.total_clicks)}</td><td>${t.avg_unique_clicks != null ? Number(t.avg_unique_clicks).toFixed(1) : '—'}</td></tr>`).join('')}</tbody></table></div>
-    </div>
   `;
-  /* Article table data */
-  artTableData   = M.top_articles || [];
-  artWindowedData = M.top_articles_windowed || {};
-  _setArtWindow(0);
-  // Section 1 — Campaign-level aggregated
-  _clickTrendChart('cnt-weekly-bar',        M.campaign_clicks_weekly        || {}, 'clicks', '#0969da', 'Clicks');
-  _clickTrendChart('cnt-monthly-bar',       M.campaign_clicks_monthly       || {}, 'clicks', '#1a7f37', 'Clicks');
-  // Section 2 — Raw click events from Campaigns_Clicks
+  /* Article table data — top 10 all-time by unique clicks (the windowed
+   * date filters were dropped because only "All" returned data). */
+  _renderArtTable(M.top_articles || []);
+  // Both Click Analysis sections need the merged data object so the toolbar
+  // (Sunday Spotlight toggle, Section-1 metric dropdown) can re-render
+  // without a fresh fetch.
   _rawClicksData = M;
-  const todayDow = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'][(new Date()).getDay()];
-  const wdSelect = document.getElementById('cnt-raw-weekday-select');
-  if (wdSelect) wdSelect.value = todayDow;
-  _setWeekdayPick(todayDow);
+  _renderClickKpis();
+  _renderClickSection1();
+  _setWeekdayWindow(3);
   _setRawWeeklyWindow(8);
   _renderRawMonthly();
-  // Category bar
-  const catD = M.category_performance || {labels:[],unique_clicks:[],total_clicks:[]};
-  new Chart(document.getElementById('cnt-cat-bar'), {
-    type: 'bar',
-    data: { labels: catD.labels, datasets: [
-      { label: 'Unique Clicks', data: catD.unique_clicks, backgroundColor: '#0969da' },
-      { label: 'Total Clicks',  data: catD.total_clicks,  backgroundColor: '#1a7f37' }
-    ]},
-    options: { responsive:true, maintainAspectRatio:false, indexAxis:'y', plugins:{legend:{position:'bottom',labels:{font:{size:11}}}}, scales:{x:{beginAtZero:true}} }
-  });
-  // Author bar
-  const authD = M.author_performance || {labels:[],unique_clicks:[],total_clicks:[]};
-  new Chart(document.getElementById('cnt-author-bar'), {
-    type: 'bar',
-    data: { labels: authD.labels, datasets: [
-      { label: 'Unique Clicks', data: authD.unique_clicks, backgroundColor: '#8250df' },
-      { label: 'Total Clicks',  data: authD.total_clicks,  backgroundColor: '#bf3989' }
-    ]},
-    options: { responsive:true, maintainAspectRatio:false, indexAxis:'y', plugins:{legend:{position:'bottom',labels:{font:{size:11}}}}, scales:{x:{beginAtZero:true}} }
-  });
-}
-let artTableData = [];
-let artWindowedData = {};
-let artCurrentWindow = 0;
-function _setArtWindow(days) {
-  artCurrentWindow = days;
-  // Update button styles
-  const btnMap = {0:'artw-all', 7:'artw-7', 15:'artw-15', 30:'artw-30', 90:'artw-90'};
-  Object.entries(btnMap).forEach(([d, id]) => {
-    const btn = document.getElementById(id);
-    if (!btn) return;
-    const active = parseInt(d) === days;
-    btn.style.background = active ? 'var(--accent)' : 'var(--card)';
-    btn.style.color = active ? '#fff' : 'var(--text-muted)';
-  });
-  // Pick data
-  let rows;
-  if (days === 0) {
-    rows = artTableData;
-  } else {
-    rows = (artWindowedData[String(days)] || artWindowedData[days] || []);
-  }
-  _renderArtTable(rows);
+  // Clicks-by-Category / Clicks-by-Author / Tag-Topic-Performance moved to
+  // the Content Reference tab to avoid duplication.
 }
 function _renderArtTable(rows) {
   const tbody = document.getElementById('art-main-tbody');
   if (!tbody) return;
-  tbody.innerHTML = rows.slice(0,50).map((r,i) => {
+  tbody.innerHTML = rows.slice(0,10).map((r,i) => {
     const posCell = r.story_position ? fmt(r.story_position) : '<span style="color:var(--text-muted);font-style:italic;">No position</span>';
     const titleCell = r.url
       ? `<a href="${esc(r.url)}" target="_blank" rel="noopener">${esc(r.title||'')}</a>`
@@ -906,6 +1826,7 @@ function renderContentRef(M) {
   document.getElementById('content-ref').innerHTML = `
     <div class="section-context-banner">
       <strong>Content Reference</strong> — Article-level click data, inner-joined to WordPress metadata so only published SuperAge articles appear (sponsor placements are excluded). All filters scope the KPIs, charts, sleeper-hits insight and the article table together.
+      <span style="display:inline-block;margin-left:6px;padding:1px 8px;border-radius:10px;background:var(--card-2);border:1px solid var(--card-border);color:var(--text);font-weight:600;">Data starts December 2025.</span>
     </div>
 
     <div class="chart-card" style="padding:14px 18px;">
@@ -947,12 +1868,11 @@ function renderContentRef(M) {
       <div class="kpi-card green"><div class="label">Unique Clicks</div><div class="value" id="cr-kpi-uniq">—</div><div class="sub">Sum across articles</div></div>
       <div class="kpi-card blue"><div class="label">Total Clicks</div><div class="value" id="cr-kpi-total">—</div><div class="sub">Including repeats</div></div>
       <div class="kpi-card orange"><div class="label">Avg Unique Clicks / Article</div><div class="value" id="cr-kpi-avg">—</div><div class="sub">Mean engagement</div></div>
-      <div class="kpi-card purple"><div class="label">Top Position Cat</div><div class="value" id="cr-kpi-poscat" style="font-size:16px;">—</div><div class="sub" id="cr-kpi-poscat-sub">By unique clicks</div></div>
     </div>
 
     <div class="grid-2">
       <div class="chart-card">
-        <h3>Unique Clicks by Position Category</h3>
+        <h3>Clicks by Position Category <span class="badge-inline">— avg per article (unique &amp; total), in scope</span></h3>
         <div class="chart-container h260"><canvas id="cr-poscat-bar"></canvas></div>
         <div class="insight" id="cr-poscat-insight"></div>
       </div>
@@ -968,11 +1888,37 @@ function renderContentRef(M) {
       </div>
     </div>
 
+    <div class="grid-2">
+      <div class="chart-card">
+        <h3>Top Categories <span class="badge-inline">— avg clicks per article (top 10 by avg unique), in scope</span></h3>
+        <div class="chart-container h340"><canvas id="cr-cat-bar"></canvas></div>
+        <div class="insight" id="cr-cat-insight"></div>
+      </div>
+      <div class="chart-card">
+        <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px;flex-wrap:wrap;margin-bottom:6px;">
+          <h3 style="margin:0;">Top Tags <span class="badge-inline">— avg clicks per article (top 10 by avg unique), in scope</span></h3>
+          <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;">
+            <span style="font-size:11px;color:var(--text-muted);text-transform:uppercase;letter-spacing:.3px;" title="Drops tags that appear in fewer than this many articles, so one-off tags can't dominate the average.">Tag appears in ≥</span>
+            <div style="display:flex;gap:4px;" id="cr-tag-min-btns">
+              <button onclick="_crSetTagMin(1)"  id="crtm-1"  style="font-size:11px;padding:3px 9px;border:1px solid var(--card-border);border-radius:5px;background:var(--accent);color:#fff;cursor:pointer;" title="No filter — every tag is eligible.">1</button>
+              <button onclick="_crSetTagMin(3)"  id="crtm-3"  style="font-size:11px;padding:3px 9px;border:1px solid var(--card-border);border-radius:5px;background:var(--card);color:var(--text-muted);cursor:pointer;" title="Keep tags that appear in 3+ articles">3</button>
+              <button onclick="_crSetTagMin(5)"  id="crtm-5"  style="font-size:11px;padding:3px 9px;border:1px solid var(--card-border);border-radius:5px;background:var(--card);color:var(--text-muted);cursor:pointer;" title="Keep tags that appear in 5+ articles">5</button>
+              <button onclick="_crSetTagMin(7)"  id="crtm-7"  style="font-size:11px;padding:3px 9px;border:1px solid var(--card-border);border-radius:5px;background:var(--card);color:var(--text-muted);cursor:pointer;" title="Keep tags that appear in 7+ articles">7</button>
+              <button onclick="_crSetTagMin(10)" id="crtm-10" style="font-size:11px;padding:3px 9px;border:1px solid var(--card-border);border-radius:5px;background:var(--card);color:var(--text-muted);cursor:pointer;" title="Keep tags that appear in 10+ articles">10</button>
+            </div>
+            <span style="font-size:11px;color:var(--text-muted);">articles</span>
+          </div>
+        </div>
+        <div class="chart-container h340"><canvas id="cr-tag-bar"></canvas></div>
+        <div class="insight" id="cr-tag-insight"></div>
+      </div>
+    </div>
+
     <div class="chart-card" style="padding:14px 18px;">
       <h3 style="margin-bottom:10px;">All Articles</h3>
       <div id="cr-count" style="font-size:12px;color:var(--text-muted);margin-bottom:8px;"></div>
       <div class="tbl-wrap"><table class="dash-table" id="cr-table">
-        <thead><tr><th>Position</th><th>Pos Cat</th><th>Title</th><th>Category</th><th>Tags</th><th>Author</th><th>Unique Clicks</th><th>Total Clicks</th></tr></thead>
+        <thead><tr><th>Position</th><th>Pos Cat</th><th>Title</th><th title="The campaign / issue this article appeared in. One row per (article, issue) placement, so an article featured in multiple sends appears once per send.">Issue</th><th>Category</th><th>Tags</th><th>Author</th><th>Unique Clicks</th><th>Total Clicks</th></tr></thead>
         <tbody id="cr-tbody"></tbody>
       </table></div>
       <div id="cr-pager" style="display:flex;align-items:center;justify-content:space-between;gap:6px;margin-top:12px;font-size:12px;color:var(--text-muted);flex-wrap:wrap;"></div>
@@ -1026,6 +1972,12 @@ function _crFilter() {
   _crRenderKpis(rows);
   _crRenderPosCatChart(rows);
   _crRenderSleepers(rows);
+  _crRenderTopBar('cr-cat-bar', 'cr-cat-insight', '_crCatBarChart', rows, _crCategory, 'category');
+  // Top Tags honours a "minimum articles per tag" threshold so the average
+  // isn't dominated by tags that appear on a single article. Default 1 = no
+  // filter; the toolbar buttons (1/3/5/7/10) flip window._crTagMin and
+  // re-call _crRenderTopBar via _crSetTagMin().
+  _crRenderTopBar('cr-tag-bar', 'cr-tag-insight', '_crTagBarChart', rows, _crTags,     'tag', window._crTagMin || 1);
   _crRenderPage();
 
   const filtered = posCat || pos !== '' || author || cat || tag || q;
@@ -1040,22 +1992,124 @@ function _crRenderKpis(rows) {
   const uniq = rows.reduce((a,r) => a + (Number(r.unique_clicks)||0), 0);
   const tot  = rows.reduce((a,r) => a + (Number(r.total_clicks)||0), 0);
   const avg  = n ? (uniq / n) : 0;
-  const byCat = {};
-  rows.forEach(r => {
-    const k = _crPosCat(r) || 'unknown';
-    byCat[k] = (byCat[k]||0) + (Number(r.unique_clicks)||0);
-  });
-  let top = null;
-  Object.entries(byCat).forEach(([k,v]) => { if (!top || v > top[1]) top = [k,v]; });
   const set = (id, v) => { const el=document.getElementById(id); if (el) el.textContent = v; };
   set('cr-kpi-articles', fmt(n));
   set('cr-kpi-uniq',     fmt(uniq));
   set('cr-kpi-total',    fmt(tot));
   set('cr-kpi-avg',      avg ? avg.toFixed(1) : '—');
-  if (top) {
-    set('cr-kpi-poscat', top[0].charAt(0).toUpperCase() + top[0].slice(1));
-    set('cr-kpi-poscat-sub', `${fmt(top[1])} unique clicks`);
-  } else { set('cr-kpi-poscat','—'); set('cr-kpi-poscat-sub','—'); }
+}
+
+function _crAggregateBySplit(rows, accessor, minCount) {
+  // Accumulate unique/total clicks + article count per split label
+  // (categories/tags are comma-separated in WordPress). Pre-compute the
+  // per-article averages so the Top Categories / Top Tags charts can plot
+  // them directly without re-deriving on every render. `minCount` (default 1)
+  // drops labels whose article count is below the threshold — used by the
+  // Top Tags "Min articles" filter so tags that only appear on one article
+  // don't dominate the avg-clicks ranking.
+  const threshold = Math.max(1, Number(minCount) || 1);
+  const acc = {};
+  rows.forEach(r => {
+    _crSplit(accessor(r)).forEach(label => {
+      if (!acc[label]) acc[label] = { unique: 0, total: 0, count: 0 };
+      acc[label].unique += Number(r.unique_clicks) || 0;
+      acc[label].total  += Number(r.total_clicks)  || 0;
+      acc[label].count  += 1;
+    });
+  });
+  return Object.entries(acc)
+    .filter(([, v]) => v.count >= threshold)
+    .map(([label, v]) => ({
+      label,
+      unique:    v.unique,
+      total:     v.total,
+      count:     v.count,
+      avgUnique: v.count ? Math.round(v.unique / v.count) : 0,
+      avgTotal:  v.count ? Math.round(v.total  / v.count) : 0,
+    }))
+    .sort((a, b) => b.avgUnique - a.avgUnique)
+    .slice(0, 10);
+}
+
+function _crSetTagMin(n) {
+  window._crTagMin = Math.max(1, Number(n) || 1);
+  [1, 3, 5, 7, 10].forEach(v => {
+    const btn = document.getElementById('crtm-' + v);
+    if (!btn) return;
+    const active = v === window._crTagMin;
+    btn.style.background = active ? 'var(--accent)' : 'var(--card)';
+    btn.style.color      = active ? '#fff'          : 'var(--text-muted)';
+  });
+  const rows = window._crFiltered || [];
+  _crRenderTopBar('cr-tag-bar', 'cr-tag-insight', '_crTagBarChart', rows, _crTags, 'tag', window._crTagMin);
+}
+
+function _crRenderTopBar(canvasId, insightId, chartKey, rows, accessor, noun, minCount) {
+  const data = _crAggregateBySplit(rows, accessor, minCount);
+  const ctx = document.getElementById(canvasId);
+  if (!ctx) return;
+  if (window[chartKey]) window[chartKey].destroy();
+  // Inline plugin: stamp "N articles" at the end of each Unique bar so the
+  // user can see how many articles back each average.
+  const countLabelPlugin = {
+    id: 'countLabels-' + chartKey,
+    afterDatasetsDraw(chart) {
+      const meta = chart.getDatasetMeta(0);
+      if (!meta || !meta.data) return;
+      const c = chart.ctx;
+      const isDark = document.body.classList.contains('dark');
+      c.save();
+      c.font = '10px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
+      c.fillStyle = isDark ? '#8b949e' : '#57606a';
+      c.textAlign = 'left';
+      c.textBaseline = 'middle';
+      meta.data.forEach((bar, i) => {
+        if (i >= data.length) return;
+        const d = data[i];
+        c.fillText(`${d.count.toLocaleString()} article${d.count === 1 ? '' : 's'}`, bar.x + 6, bar.y);
+      });
+      c.restore();
+    }
+  };
+  window[chartKey] = new Chart(ctx, {
+    type: 'bar',
+    data: {
+      labels: data.map(d => d.label),
+      datasets: [
+        { label:'Avg Unique Clicks / Article', data: data.map(d => d.avgUnique), backgroundColor:'#1a7f37', borderRadius:4 },
+        { label:'Avg Total Clicks / Article',  data: data.map(d => d.avgTotal),  backgroundColor:'#0969da', borderRadius:4 },
+      ],
+    },
+    options: { responsive:true, maintainAspectRatio:false, indexAxis:'y',
+      // Leave room on the right for the article-count label the plugin draws.
+      layout: { padding: { right: 90 } },
+      plugins:{ legend:{ position:'bottom', labels:{ font:{ size:11 } } },
+                tooltip:{ callbacks:{ afterLabel: ctx => {
+                  const d = data[ctx.dataIndex];
+                  if (!d) return '';
+                  return [
+                    `${d.count.toLocaleString()} article${d.count === 1 ? '' : 's'}`,
+                    `Totals: ${fmt(d.unique)} unique · ${fmt(d.total)} total clicks`
+                  ];
+                } } } },
+      scales:{ x:{ beginAtZero:true, ticks:{ callback: v => v.toLocaleString() } } } },
+    plugins: [countLabelPlugin]
+  });
+  const ins = document.getElementById(insightId);
+  if (ins) {
+    const threshold = Math.max(1, Number(minCount) || 1);
+    const minNote = threshold > 1
+      ? ` <span style="color:var(--text-muted);">(showing ${noun}s that appear in ≥ ${threshold} articles)</span>`
+      : '';
+    if (!data.length) {
+      ins.innerHTML = threshold > 1
+        ? `No ${noun} in scope appears in ≥ ${threshold} articles.`
+        : `No ${noun} in scope.`;
+    } else {
+      const top = data[0];
+      ins.innerHTML = `Top ${noun} by avg: <strong>${esc(top.label)}</strong> — avg ${fmt(top.avgUnique)} unique / ${fmt(top.avgTotal)} total clicks per article (${fmt(top.count)} article${top.count===1?'':'s'}, ${fmt(top.unique)} unique / ${fmt(top.total)} total clicks).${minNote}`;
+    }
+  }
 }
 
 function _crRenderPosCatChart(rows) {
@@ -1068,27 +2122,64 @@ function _crRenderPosCatChart(rows) {
     byCat[k].t += Number(r.total_clicks)||0;
     byCat[k].n += 1;
   });
-  const labels = order.map(k => k.charAt(0).toUpperCase()+k.slice(1));
+  const labels    = order.map(k => k.charAt(0).toUpperCase()+k.slice(1));
+  const counts    = order.map(k => byCat[k].n);
   const uniqData  = order.map(k => byCat[k].u);
   const totalData = order.map(k => byCat[k].t);
-  const counts    = order.map(k => byCat[k].n);
+  // Bars now show per-article averages (matches the Top Categories /
+  // Top Tags charts). One decimal kept because the buckets are narrow
+  // and rounding to ints would crush low-volume categories.
+  const avgUnique = order.map((k,i) => counts[i] ? (uniqData[i]/counts[i])  : 0);
+  const avgTotal  = order.map((k,i) => counts[i] ? (totalData[i]/counts[i]) : 0);
+  // Plugin: write "N articles" above each Avg-Unique bar so the volume
+  // backing each average is visible.
+  const countLabelPlugin = {
+    id: 'countLabels-poscat',
+    afterDatasetsDraw(chart) {
+      const meta = chart.getDatasetMeta(0);
+      if (!meta || !meta.data) return;
+      const c = chart.ctx;
+      const isDark = document.body.classList.contains('dark');
+      c.save();
+      c.font = '10px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
+      c.fillStyle = isDark ? '#8b949e' : '#57606a';
+      c.textAlign = 'center';
+      c.textBaseline = 'bottom';
+      meta.data.forEach((bar, i) => {
+        if (i >= counts.length) return;
+        c.fillText(`${counts[i].toLocaleString()} article${counts[i] === 1 ? '' : 's'}`, bar.x, bar.y - 4);
+      });
+      c.restore();
+    }
+  };
   if (window._crPosCatChart) window._crPosCatChart.destroy();
   window._crPosCatChart = new Chart(document.getElementById('cr-poscat-bar'), {
     type: 'bar',
     data: { labels, datasets: [
-      { label:'Unique Clicks', data:uniqData,  backgroundColor:'#1a7f37', borderRadius:4 },
-      { label:'Total Clicks',  data:totalData, backgroundColor:'#0969da', borderRadius:4 }
+      { label:'Avg Unique Clicks / Article', data: avgUnique, backgroundColor:'#1a7f37', borderRadius:4 },
+      { label:'Avg Total Clicks / Article',  data: avgTotal,  backgroundColor:'#0969da', borderRadius:4 }
     ]},
     options: { responsive:true, maintainAspectRatio:false,
+      // Top padding so the "N articles" plugin text doesn't get clipped.
+      layout: { padding: { top: 18 } },
       plugins:{ legend:{position:'bottom',labels:{font:{size:11}}},
-                tooltip:{callbacks:{ afterLabel: ctx => `Articles: ${counts[ctx.dataIndex]}` }} },
-      scales:{ y:{ beginAtZero:true } } }
+                tooltip:{callbacks:{
+                  label: ctx => `${ctx.dataset.label}: ${Number(ctx.parsed.y).toLocaleString(undefined, {maximumFractionDigits:1})}`,
+                  afterLabel: ctx => {
+                    const i = ctx.dataIndex;
+                    return [
+                      `${counts[i].toLocaleString()} article${counts[i] === 1 ? '' : 's'}`,
+                      `Totals: ${fmt(uniqData[i])} unique · ${fmt(totalData[i])} total clicks`
+                    ];
+                  }
+                }} },
+      scales:{ y:{ beginAtZero:true, ticks:{ callback: v => Number(v).toLocaleString() } } } },
+    plugins: [countLabelPlugin]
   });
   const ins = document.getElementById('cr-poscat-insight');
   if (ins) {
-    const avgU = order.map((k,i) => counts[i] ? (uniqData[i]/counts[i]) : 0);
     ins.innerHTML = order.map((k,i) =>
-      `<strong style="color:${_crPosColors[k]}">${labels[i]}</strong>: ${counts[i]} article${counts[i]===1?'':'s'} &middot; avg ${avgU[i].toFixed(1)} unique clicks`
+      `<strong style="color:${_crPosColors[k]}">${labels[i]}</strong>: ${counts[i]} article${counts[i]===1?'':'s'} &middot; avg ${avgUnique[i].toFixed(1)} unique / ${avgTotal[i].toFixed(1)} total clicks per article`
     ).join(' &nbsp;·&nbsp; ');
   }
 }
@@ -1149,10 +2240,17 @@ function _crRenderPage() {
       const titleCell = r.url
         ? `<a href="${esc(r.url)}" target="_blank" rel="noopener">${esc(r.title||'')}</a>`
         : esc(r.title||'');
+      // Issue column — appended just after Title. Empty when the lambda
+      // hasn't been re-run since `issue_name` was added to the JSON.
+      const issueDate = (r.issue_date || '').slice(0, 10);
+      const issueCell = r.issue_name
+        ? `${esc(r.issue_name)}${issueDate ? ` <span style="color:var(--text-muted);font-size:11px;">(${esc(issueDate)})</span>` : ''}`
+        : '<span style="color:var(--text-muted);">—</span>';
       return `<tr>
         <td>${posCell}</td>
         <td>${pcCell}</td>
         <td>${titleCell}</td>
+        <td>${issueCell}</td>
         <td>${esc(_crCategory(r))}</td>
         <td>${esc(_crTags(r))}</td>
         <td>${esc(_crAuthor(r))}</td>
@@ -1195,75 +2293,186 @@ function renderAudience(M) {
   document.getElementById('audience').innerHTML = `
     <div class="section-context-banner">
       <strong>Audience Intelligence</strong> — Where subscribers come from and how engaged they are. Acquisition quality metrics help identify which sources deliver the highest-value contacts.
-      Data starts December 2025.
+      <span style="display:inline-block;margin-left:6px;padding:1px 8px;border-radius:10px;background:var(--card-2);border:1px solid var(--card-border);color:var(--text);font-weight:600;">Click columns (Clickers, Clicker Rate, Clicks, Avg Clicks/Sub) start December 2025 — Subscriber counts, % of Total, and 30/90-Day Churn are full history.</span>
+    </div>
+    <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:12px;">
+      <div style="font-size:12px;color:var(--text-muted);">
+        <strong style="color:var(--text);">Time window</strong>
+        <span id="aud-window-badge"> — all time</span>
+      </div>
+      <div style="display:flex;gap:4px;" id="aud-window-btns">
+        <button onclick="_setAcqWindow('all')" id="audw-all" style="font-size:11px;padding:3px 10px;border:1px solid var(--card-border);border-radius:5px;background:var(--accent);color:#fff;cursor:pointer;">All time</button>
+        <button onclick="_setAcqWindow('30d')" id="audw-30" style="font-size:11px;padding:3px 10px;border:1px solid var(--card-border);border-radius:5px;background:var(--card);color:var(--text-muted);cursor:pointer;">Last 30 days</button>
+        <button onclick="_setAcqWindow('60d')" id="audw-60" style="font-size:11px;padding:3px 10px;border:1px solid var(--card-border);border-radius:5px;background:var(--card);color:var(--text-muted);cursor:pointer;">Last 60 days</button>
+        <button onclick="_setAcqWindow('90d')" id="audw-90" style="font-size:11px;padding:3px 10px;border:1px solid var(--card-border);border-radius:5px;background:var(--card);color:var(--text-muted);cursor:pointer;">Last 90 days</button>
+      </div>
     </div>
     <div class="kpi-row">
-      <div class="kpi-card accent"><div class="label">Total Subscribers</div><div class="value">${fmt(M.total_subscribers)}</div><div class="sub">All-time base</div></div>
-      <div class="kpi-card green"><div class="label">Active Rate</div><div class="value">${M.active_rate||'—'}</div><div class="sub">Currently active</div></div>
-      <div class="kpi-card blue"><div class="label">Top UTM Source</div><div class="value" style="font-size:14px;">${utmLabel((M.acquisition_quality&&M.acquisition_quality.utm_source&&M.acquisition_quality.utm_source.rows&&M.acquisition_quality.utm_source.rows[0]&&M.acquisition_quality.utm_source.rows[0].label)||'')}</div><div class="sub">Largest acquisition channel</div></div>
-      <div class="kpi-card orange"><div class="label">Top Source %</div><div class="value">${(()=>{const r=M.acquisition_quality&&M.acquisition_quality.utm_source&&M.acquisition_quality.utm_source.rows||[];const total=r.reduce((s,x)=>s+(x.subscribers||x.count||0),0);const top=r[0]?(r[0].subscribers||r[0].count||0):0;return top&&total?(top/total*100).toFixed(1)+'%':'—';})()}</div><div class="sub">Share of categorised subscribers</div></div>
+      <div class="kpi-card accent"><div class="label" id="kpi-aud-subs-label">Total Subscribers</div><div class="value" id="kpi-aud-subs">${fmt(M.total_subscribers)}</div><div class="sub" id="kpi-aud-subs-sub">All-time base</div></div>
+      <div class="kpi-card green"><div class="label">Active Rate</div><div class="value">${M.active_rate||'—'}</div><div class="sub">Currently active (global)</div></div>
+      <div class="kpi-card blue"><div class="label">Top Source</div><div class="value" style="font-size:14px;" id="kpi-top-source">—</div><div class="sub">Largest acquisition channel</div></div>
+      <div class="kpi-card orange"><div class="label">Top Source %</div><div class="value" id="kpi-top-source-pct">—</div><div class="sub">Share of categorised subscribers</div></div>
     </div>
     <div class="grid-2">
       <div class="chart-card">
-        <h3>Acquisition by UTM Source <span class="badge-inline">utm_source → source → Organic</span></h3>
+        <h3>Acquisition by Source</h3>
         <div class="chart-container h300"><canvas id="aud-source-pie"></canvas></div>
       </div>
       <div class="chart-card">
-        <h3>UTM Clicks Performance</h3>
+        <h3>Source Clicks Performance</h3>
         <div class="chart-container h300"><canvas id="aud-utm-clicks"></canvas></div>
       </div>
     </div>
     <div class="chart-card">
-      <h3>Acquisition Quality by UTM Source <span class="badge-inline">utm_source → source → Organic</span></h3>
-      <div class="tbl-wrap"><table class="dash-table"><thead><tr><th>UTM Source</th><th>Subscribers</th><th>% of Total</th><th>Clickers</th><th>Clicker Rate</th><th>Unique Clicks</th><th>Avg Clicks / Subscriber</th></tr></thead>
-      <tbody>${(()=>{
-        const aq = M.acquisition_quality&&M.acquisition_quality.utm_source||{rows:[]};
-        const total = (aq.rows||[]).reduce((s,r)=>s+(r.subscribers||r.count||0),0);
-        return (aq.rows||[]).map(r=>{
-          const subs = r.subscribers!=null?r.subscribers:(r.count||0);
-          const pct  = total ? (subs/total*100).toFixed(1)+'%' : '—';
-          const clk  = r.clicker_rate!=null ? (typeof r.clicker_rate==='string'?r.clicker_rate:Number(r.clicker_rate).toFixed(1)+'%') : '—';
-          const apc  = r.avg_unique_clicks_per_subscriber!=null ? Number(r.avg_unique_clicks_per_subscriber).toFixed(2) : '—';
-          return `<tr><td>${utmLabel(r.label)}</td><td>${fmt(subs)}</td><td>${pct}</td><td>${fmt(r.clickers)}</td><td>${clk}</td><td>${fmt(r.unique_clicks)}</td><td>${apc}</td></tr>`;
-        }).join('');
-      })()}</tbody></table></div>
+      <h3 style="margin:0 0 10px;">Acquisition Quality by Source</h3>
+      <div class="tbl-wrap"><table class="dash-table" id="aud-acq-table">
+        <thead><tr>
+          <th>Source</th><th>Subscribers</th><th>% of Total</th><th>Clickers</th><th>Clicker Rate</th>
+          <th>Clicks</th><th>Avg Clicks / Subscriber</th>
+          <th title="Subscribers from this source who unsubscribed within 30 days of joining, as a % of the source cohort">30-Day Churn</th>
+          <th title="Subscribers from this source who unsubscribed within 90 days of joining, as a % of the source cohort">90-Day Churn</th>
+        </tr></thead>
+        <tbody id="aud-acq-tbody"></tbody>
+      </table></div>
     </div>
   `;
-  // Acquisition source pie
-  const aq = M.acquisition_quality&&M.acquisition_quality.utm_source||{rows:[]};
-  const pieLabels = (aq.rows||[]).map(r=>utmLabel(r.label));
-  const pieData   = (aq.rows||[]).map(r=>(r.subscribers!=null?r.subscribers:(r.count||0)));
-  new Chart(document.getElementById('aud-source-pie'), {
+  // Build pie + bar with empty data; _setAcqWindow fills them.
+  window._audPieChart = new Chart(document.getElementById('aud-source-pie'), {
     type: 'doughnut',
-    data: { labels: pieLabels, datasets: [{ data: pieData, backgroundColor: ['#0969da','#1a7f37','#cf222e','#9a6700','#8250df','#bf3989','#1b7c83','#7d4e00','#58a6ff','#3fb950'] }] },
+    data: { labels: [], datasets: [{ data: [], backgroundColor: ['#0969da','#1a7f37','#cf222e','#9a6700','#8250df','#bf3989','#1b7c83','#7d4e00','#58a6ff','#3fb950'] }] },
     options: { responsive:true, maintainAspectRatio:false, plugins:{ legend:{position:'bottom',labels:{font:{size:11},padding:6}} } }
   });
-  // UTM clicks performance bar
-  const uc = M.utm_clicks_performance || {labels:[],unique_clicks:[],total_clicks:[]};
-  new Chart(document.getElementById('aud-utm-clicks'), {
+  window._audBarChart = new Chart(document.getElementById('aud-utm-clicks'), {
     type: 'bar',
-    data: { labels: (uc.labels||[]).map(utmLabel), datasets: [
-      { label: 'Unique Clicks', data: uc.unique_clicks, backgroundColor: '#0969da' },
-      { label: 'Total Clicks',  data: uc.total_clicks,  backgroundColor: '#1a7f37' }
+    data: { labels: [], datasets: [
+      { label: 'Unique Clicks', data: [], backgroundColor: '#0969da' },
+      { label: 'Total Clicks',  data: [], backgroundColor: '#1a7f37' }
     ]},
     options: { responsive:true, maintainAspectRatio:false, indexAxis:'y', plugins:{legend:{position:'bottom',labels:{font:{size:11}}}}, scales:{x:{beginAtZero:true}} }
   });
+  // Stash data for _setAcqWindow + remember the all-time bar series so we
+  // can still show the proper Unique-vs-Total split when window === 'all'
+  // (Q20's utm_clicks_performance has separate counts; Q19's per-window
+  // rows just have raw click events, so unique == total there).
+  window._acqSource = (M.acquisition_quality && M.acquisition_quality.utm_source) || {};
+  window._acqBarAllTime = M.utm_clicks_performance || null;
+  window._M_total_subscribers = M.total_subscribers || 0;
+  _setAcqWindow('all');
+}
+
+/* Single shared time-window driver for the whole Audience tab.
+ * Updates: the four KPI cards (Total Subscribers / Top Source / Top Source %),
+ * the Acquisition-by-Source doughnut, the Source Clicks Performance bar
+ * chart, and the Acquisition Quality table. Reads windowed cohorts from
+ * `M.acquisition_quality.utm_source.rows_all / rows_30d / rows_60d / rows_90d`
+ * (Q19), and — for the "All time" view of the bar chart only — falls back
+ * to `M.utm_clicks_performance` (Q20) so the Unique-vs-Total split is
+ * preserved at that scale. */
+function _setAcqWindow(win) {
+  const src = window._acqSource || {};
+  const map = { all: src.rows_all || src.rows || [],
+                '30d': src.rows_30d || [],
+                '60d': src.rows_60d || [],
+                '90d': src.rows_90d || [] };
+  const rows = map[win] || [];
+
+  // Toggle button styles
+  ['audw-all','audw-30','audw-60','audw-90'].forEach(id => {
+    const btn = document.getElementById(id);
+    if (!btn) return;
+    const want = id.split('-')[1]; // all / 30 / 60 / 90
+    const wantKey = want === 'all' ? 'all' : (want + 'd');
+    const active = wantKey === win;
+    btn.style.background = active ? 'var(--accent)' : 'var(--card)';
+    btn.style.color      = active ? '#fff'          : 'var(--text-muted)';
+  });
+  const badge = document.getElementById('aud-window-badge');
+  if (badge) badge.textContent = win === 'all'
+    ? ' — all time'
+    : ` — subscribers joined in last ${win.replace('d','')} days, clicks made in that window`;
+
+  // KPI cards — Total Subscribers, Top Source, Top Source %.
+  // "Total Subscribers" is the source-table total (= subscribers with an
+  // attribution row); for the all-time view that's smaller than M.total_subscribers
+  // because organic / blank-utm fall into a single bucket. We still show
+  // M.total_subscribers for the all-time view so the headline number matches
+  // the Overview KPI; for windowed views we show the in-window cohort total.
+  const total = rows.reduce((s, r) => s + (Number(r.subscribers) || 0), 0);
+  const top   = rows[0] || {};
+  const topName = top.label ? utmLabel(top.label) : '—';
+  const topPct  = (total && top.subscribers) ? (top.subscribers / total * 100).toFixed(1) + '%' : '—';
+
+  const subsEl    = document.getElementById('kpi-aud-subs');
+  const subsLbl   = document.getElementById('kpi-aud-subs-sub');
+  const subsLabel = document.getElementById('kpi-aud-subs-label');
+  if (subsEl)    subsEl.textContent    = win === 'all'
+                                          ? Number(window._M_total_subscribers || total).toLocaleString()
+                                          : total.toLocaleString();
+  if (subsLbl)   subsLbl.textContent   = win === 'all' ? 'All-time base' : `Joined in last ${win.replace('d','')} days`;
+  if (subsLabel) subsLabel.textContent = win === 'all' ? 'Total Subscribers' : 'New Subscribers';
+  const topSrcEl = document.getElementById('kpi-top-source');
+  const topPctEl = document.getElementById('kpi-top-source-pct');
+  if (topSrcEl) topSrcEl.textContent = topName;
+  if (topPctEl) topPctEl.textContent = topPct;
+
+  // Pie — Acquisition by Source
+  if (window._audPieChart) {
+    window._audPieChart.data.labels = rows.map(r => utmLabel(r.label));
+    window._audPieChart.data.datasets[0].data = rows.map(r => Number(r.subscribers) || 0);
+    window._audPieChart.update();
+  }
+
+  // Bar — Source Clicks Performance.
+  // All-time: use utm_clicks_performance (proper unique vs total split).
+  // Windowed: derive from the per-source rows where unique == total (raw
+  // event count from Campaigns_Clicks). For the windowed view we still show
+  // both series (with equal heights) so the chart shape is consistent.
+  if (window._audBarChart) {
+    if (win === 'all' && window._acqBarAllTime && (window._acqBarAllTime.labels||[]).length) {
+      const uc = window._acqBarAllTime;
+      window._audBarChart.data.labels = (uc.labels || []).map(utmLabel);
+      window._audBarChart.data.datasets[0].data = uc.unique_clicks || [];
+      window._audBarChart.data.datasets[1].data = uc.total_clicks  || [];
+    } else {
+      window._audBarChart.data.labels = rows.map(r => utmLabel(r.label));
+      window._audBarChart.data.datasets[0].data = rows.map(r => Number(r.unique_clicks != null ? r.unique_clicks : r.clicks) || 0);
+      window._audBarChart.data.datasets[1].data = rows.map(r => Number(r.non_unique_clicks != null ? r.non_unique_clicks : r.clicks) || 0);
+    }
+    window._audBarChart.update();
+  }
+
+  // Table
+  const tbody = document.getElementById('aud-acq-tbody');
+  if (!tbody) return;
+  if (!rows.length) {
+    tbody.innerHTML = `<tr><td colspan="9" style="text-align:center;color:var(--text-muted);padding:14px;">No data in this window yet — re-run the metrics lambda to populate.</td></tr>`;
+    return;
+  }
+  tbody.innerHTML = rows.map(r => {
+    const subs = Number(r.subscribers) || 0;
+    const pct  = total ? (subs / total * 100).toFixed(1) + '%' : '—';
+    const clk  = r.clicker_rate != null ? (typeof r.clicker_rate === 'string' ? r.clicker_rate : Number(r.clicker_rate).toFixed(1) + '%') : '—';
+    const apc  = (r.avg_clicks_per_subscriber != null ? r.avg_clicks_per_subscriber : r.avg_unique_clicks_per_subscriber);
+    const apcS = (apc != null && !Number.isNaN(Number(apc))) ? Number(apc).toFixed(2) : '—';
+    const clicks = r.clicks != null ? r.clicks : r.unique_clicks;
+    const c30  = (r.churned_30d_rate != null) ? `${Number(r.churned_30d_rate).toFixed(1)}% <span style="color:var(--text-muted);">(${fmt(r.churned_30d)})</span>` : '—';
+    const c90  = (r.churned_90d_rate != null) ? `${Number(r.churned_90d_rate).toFixed(1)}% <span style="color:var(--text-muted);">(${fmt(r.churned_90d)})</span>` : '—';
+    return `<tr><td>${utmLabel(r.label)}</td><td>${fmt(subs)}</td><td>${pct}</td><td>${fmt(r.clickers)}</td><td>${clk}</td><td>${fmt(clicks)}</td><td>${apcS}</td><td>${c30}</td><td>${c90}</td></tr>`;
+  }).join('');
 }
 
 /* ═══════════════════════════════════════
-   LONGEVITY QUIZ
+   AUDIENCE PERSONA (quiz-sourced)
 ═══════════════════════════════════════ */
 function renderQuiz(M) {
   const qk = M.quiz_kpis || {};
   document.getElementById('quiz').innerHTML = `
     <div class="section-context-banner">
-      <strong>Longevity Quiz</strong> — SuperAge longevity-quiz engagement and demographic insights. Tracks completion volume, age distribution, longevity score and lifestyle indicators.
+      <strong>Audience Persona</strong> — SuperAge audience demographics and lifestyle indicators sourced from quiz responses. Tracks completion volume, age distribution, and lifestyle signals.
     </div>
     <div class="kpi-row" style="grid-template-columns:repeat(auto-fit,minmax(160px,1fr));">
       <div class="kpi-card accent"><div class="label">Total Quiz Takers</div><div class="value">${fmt(qk.total_takers)}</div><div class="sub">Longevity quiz completions</div></div>
       <div class="kpi-card green"><div class="label">Avg Age</div><div class="value">${qk.avg_age||'—'}</div><div class="sub">Mean respondent age</div></div>
-      <div class="kpi-card cyan"><div class="label">Avg Longevity Score</div><div class="value">${qk.avg_score||'—'}</div><div class="sub">Mean score</div></div>
-      <div class="kpi-card blue"><div class="label">Max Longevity Score</div><div class="value">${qk.max_score||'—'}</div><div class="sub">Highest recorded</div></div>
       <div class="kpi-card orange"><div class="label">Fitness Quiz</div><div class="value">${fmt(qk.fitness_quiz_takers)}</div><div class="sub">Took fitness quiz</div></div>
       <div class="kpi-card pink"><div class="label">Menupause Quiz</div><div class="value">${fmt(qk.menu_quiz_takers)}</div><div class="sub">Took menupause quiz</div></div>
     </div>
@@ -1273,21 +2482,15 @@ function renderQuiz(M) {
         <div class="chart-container h300"><canvas id="quiz-age-dist"></canvas></div>
       </div>
       <div class="chart-card">
-        <h3>Longevity Score Distribution</h3>
-        <div class="chart-container h300"><canvas id="quiz-score-dist"></canvas></div>
-      </div>
-    </div>
-    <div class="grid-2">
-      <div class="chart-card">
         <h3>Gender</h3>
-        <div class="chart-container h260"><canvas id="quiz-gender"></canvas></div>
-      </div>
-      <div class="chart-card">
-        <h3>Education Level</h3>
-        <div class="chart-container h260"><canvas id="quiz-education"></canvas></div>
+        <div class="chart-container h300"><canvas id="quiz-gender"></canvas></div>
       </div>
     </div>
-    <h2 style="font-size:14px;font-weight:600;color:var(--text);margin:18px 0 10px;">Lifestyle &amp; Longevity Indicators</h2>
+    <div class="chart-card">
+      <h3>Education Level</h3>
+      <div class="chart-container h260"><canvas id="quiz-education"></canvas></div>
+    </div>
+    <h2 style="font-size:14px;font-weight:600;color:var(--text);margin:18px 0 10px;">Lifestyle Indicators</h2>
     <div class="grid-2">
       <div class="chart-card">
         <h3>Exercise Frequency</h3>
@@ -1321,7 +2524,6 @@ function renderQuiz(M) {
     new Chart(el, { type:'doughnut', data:{ labels:d.labels||[], datasets:[{data:d.data||[], backgroundColor:(d.colors&&d.colors.length?d.colors:palette)}] }, options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'bottom',labels:{font:{size:11},padding:6}}}} });
   }
   barH('quiz-age-dist',   M.quiz_age_dist,       'Takers', '#0969da');
-  barH('quiz-score-dist', M.quiz_score_dist,     'Count',  '#9a6700');
   pie ('quiz-gender',     M.quiz_gender_dist);
   pie ('quiz-education',  M.quiz_education_dist);
   barH('quiz-exercise',   M.quiz_exercise_dist,  'Count',  '#8250df');
@@ -1338,71 +2540,70 @@ function renderRevenue(M) {
   const topName = ts[0] ? ts[0].name : '—';
   document.getElementById('revenue').innerHTML = `
     <div class="section-context-banner">
-      <strong>Revenue &amp; Sponsors</strong> — Advertising and sponsorship performance. Tracks total revenue, deal volume, ECPM benchmarks, and sponsor-level breakdown.
+      <strong>Revenue &amp; Sponsors</strong> — Advertising and sponsorship performance, sourced from <code>sa_airtable_sales</code> rows with a non-null <code>sponsor_type</code>. Headline numbers are sums of the <code>$_line_amount</code> Airtable column. The Monthly Line Amount chart includes future-dated rows (booked but not yet run); the current month and any not-yet-closed months render as faded bars.
     </div>
     <div class="kpi-row">
-      <div class="kpi-card gold"><div class="label">Total Revenue</div><div class="value">${esc(M.total_revenue_fmt||'—')}</div><div class="sub">All sponsors combined</div></div>
+      <div class="kpi-card gold"><div class="label">Total Line Amount</div><div class="value">${esc(M.total_revenue_fmt||'—')}</div><div class="sub">Sum of <code>$_line_amount</code></div></div>
       <div class="kpi-card green"><div class="label">Total Deals</div><div class="value">${fmt(M.total_sponsor_deals)}</div><div class="sub">Sponsorship placements</div></div>
-      <div class="kpi-card blue"><div class="label">Avg ECPM</div><div class="value">${esc(M.avg_ecpm||'—')}</div><div class="sub">Effective CPM across all deals</div></div>
-      <div class="kpi-card cyan"><div class="label">Avg Deal Size</div><div class="value">${esc(M.avg_deal_size_fmt||'—')}</div><div class="sub">Mean revenue per deal</div></div>
-      <div class="kpi-card orange"><div class="label">Top Sponsor</div><div class="value" style="font-size:14px;">${esc(topName)}</div><div class="sub">By revenue</div></div>
+      <div class="kpi-card cyan"><div class="label">Avg Deal Size</div><div class="value">${esc(M.avg_deal_size_fmt||'—')}</div><div class="sub">Mean line amount per deal</div></div>
+      <div class="kpi-card orange"><div class="label">Top Sponsor</div><div class="value" style="font-size:14px;">${esc(topName)}</div><div class="sub">By line amount</div></div>
     </div>
     <div class="grid-2">
       <div class="chart-card">
-        <h3>Monthly Revenue &amp; Deal Volume</h3>
+        <h3>Monthly Line Amount &amp; Deal Volume</h3>
         <div class="chart-container h340"><canvas id="rev-monthly"></canvas></div>
-        <div class="insight">Bars = revenue (left axis). Line = number of deals (right axis). Lighter bars and dashed line = future / not-yet-closed months.</div>
+        <div class="insight">Bars = <code>$_line_amount</code> sum per month (left axis). Line = number of deals (right axis). Faded bars are the current (in-progress) or not-yet-closed months.</div>
       </div>
       <div class="chart-card">
         <h3>Sponsor Type Distribution</h3>
         <div class="chart-container h340"><canvas id="rev-stype"></canvas></div>
-        <div class="insight">Understanding the mix of sponsor types helps diversify revenue and manage dependency on any single category.</div>
+        <div class="insight">Mix of sponsor types across the booked deals. Rows without a sponsor type are excluded everywhere in this tab.</div>
       </div>
     </div>
     <div class="chart-card">
       <h3>Top Sponsors</h3>
       <div class="tbl-wrap"><table class="dash-table">
-        <thead><tr><th>#</th><th>Sponsor</th><th>Deals</th><th>Revenue</th><th>Avg Rev / Deal</th><th>Avg ECPM</th><th>Revenue Share</th></tr></thead>
+        <thead><tr><th>#</th><th>Sponsor</th><th>Deals</th><th>Line Amount</th><th>Avg Line / Deal</th><th>Share of Total</th></tr></thead>
         <tbody>${ts.map((s,i)=>{
           const rev = parseFloat((s.revenue||'').replace(/[$,]/g,'')) || 0;
           const deals = s.deals || 1;
           const avgRev = rev ? '$' + (rev/deals).toLocaleString(undefined,{maximumFractionDigits:0}) : '—';
           const totalRev = parseFloat(M.total_revenue) || 0;
           const share = (totalRev && rev) ? (rev/totalRev*100).toFixed(1)+'%' : '—';
-          return `<tr><td>${i+1}</td><td>${esc(s.name||'')}</td><td>${fmt(s.deals)}</td><td>${esc(s.revenue||'—')}</td><td>${avgRev}</td><td>${esc(s.avg_ecpm||'—')}</td><td>${share}</td></tr>`;
+          return `<tr><td>${i+1}</td><td>${esc(s.name||'')}</td><td>${fmt(s.deals)}</td><td>${esc(s.revenue||'—')}</td><td>${avgRev}</td><td>${share}</td></tr>`;
         }).join('')}</tbody>
       </table></div>
     </div>
   `;
 
-  // Monthly revenue + deals — bars and line, with future-month differentiation
+  // Monthly revenue + deals — styled to match the Monthly Campaign Clicks
+  // chart (single green bar series; current / future months use the same
+  // colour but at 40% alpha to read as "in-progress"). The deals line stays
+  // as one continuous overlay, no past/future split, no "Future →" label.
   const rm = M.revenue_monthly || {labels:[],revenue:[],deals:[]};
   const today = new Date();
   const monthStart = new Date(today.getFullYear(), today.getMonth(), 1);
-  const isFuture = (lbl) => {
+  const isInProgress = (lbl) => {
     const d = new Date(lbl + ' 1');  // "May 2026" → Date
-    return isFinite(d.getTime()) && d > monthStart;
+    return isFinite(d.getTime()) && d >= monthStart;
   };
-  const revColors = (rm.labels||[]).map(l => isFuture(l) ? 'rgba(125,78,0,0.30)' : '#7d4e00');
-  const futureMask = (rm.labels||[]).map(isFuture);
-  // For the deals line: split into past (solid) + future (dashed) series so the future segment is visually distinct
-  const dealsPast   = (rm.deals||[]).map((v,i) => futureMask[i] ? null : v);
-  const dealsFuture = (rm.deals||[]).map((v,i) => futureMask[i] ? v : null);
-  // Bridge so the line connects across the boundary
-  for (let i=1; i<futureMask.length; i++) {
-    if (futureMask[i] && !futureMask[i-1]) dealsFuture[i-1] = rm.deals[i-1];
-  }
+  const BAR_COLOR = '#1a7f37';
+  const revColors  = (rm.labels||[]).map(l => isInProgress(l) ? BAR_COLOR + '66' : BAR_COLOR);
+  const revBorders = (rm.labels||[]).map(l => isInProgress(l) ? BAR_COLOR        : 'transparent');
   new Chart(document.getElementById('rev-monthly'), {
     data: {
       labels: rm.labels||[],
       datasets: [
-        { type:'bar', label:'Revenue ($)', data: rm.revenue||[], backgroundColor: revColors, yAxisID:'y' },
-        { type:'line', label:'Deals',         data: dealsPast,    borderColor:'#0969da', backgroundColor:'transparent', tension:.25, pointRadius:3, yAxisID:'y1' },
-        { type:'line', label:'Deals (future)',data: dealsFuture,  borderColor:'#0969da', backgroundColor:'transparent', borderDash:[5,4], tension:.25, pointRadius:3, pointStyle:'circle', yAxisID:'y1' }
+        { type:'bar', label:'Revenue ($)', data: rm.revenue||[],
+          backgroundColor: revColors, borderColor: revBorders, borderWidth: 2, borderRadius: 4,
+          yAxisID:'y' },
+        { type:'line', label:'Deals', data: rm.deals||[],
+          borderColor:'#0969da', backgroundColor:'transparent',
+          tension:.25, pointRadius:3, yAxisID:'y1' }
       ]
     },
     options: { responsive:true, maintainAspectRatio:false,
-      plugins:{ legend:{ position:'top', labels:{ font:{ size:11 }, filter: it => it.text !== 'Deals (future)' } } },
+      plugins:{ legend:{ position:'top', labels:{ font:{ size:11 } } } },
       scales:{
         y:  { position:'left',  beginAtZero:true, ticks:{ callback:v=>'$'+v.toLocaleString() } },
         y1: { position:'right', beginAtZero:true, grid:{ drawOnChartArea:false }, ticks:{ stepSize:1 } }
@@ -1432,7 +2633,7 @@ function renderRetention(M) {
 
   document.getElementById('retention').innerHTML = `
     <div class="section-context-banner">
-      <strong>Subscriber Retention</strong> — How long subscribers stay engaged after joining, aggregated across all subscribers. Curves show the % still active at 30 / 60 / 90 / 180 / 365 days.
+      <strong>Subscriber Retention</strong> — How long subscribers stay engaged after joining. The Survival Curve overlays the all-subscriber baseline with one line per major acquisition source so you can compare churn shapes; curves show the % still active at 30 / 60 / 90 / 180 / 365 days. "Active" = state = 'Active' AND engagement_segment NOT IN (Ghosts, Zombies, Dormant). Source buckets use the canonical mapping from §4 of METRICS_updated.md.
     </div>
     <div class="kpi-row">
       <div class="kpi-card green"><div class="label">30-Day Retention</div><div class="value">${pct(findRate('Day 30'))}</div><div class="sub">Still active at day 30</div></div>
@@ -1442,9 +2643,29 @@ function renderRetention(M) {
       <div class="kpi-card purple"><div class="label">Active Rate</div><div class="value">${esc(rt.active_rate||'—')}</div><div class="sub">${fmt(rt.active)} of ${fmt(rt.total)} subscribers</div></div>
     </div>
     <div class="chart-card">
-      <h3>Survival Curve <span class="badge-inline">— all subscribers</span></h3>
+      <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:6px;">
+        <h3 style="margin:0;">Survival Curve <span class="badge-inline">— all subscribers + acquisition sources</span></h3>
+        <div style="position:relative;" id="ret-src-picker">
+          <button type="button" id="ret-src-btn"
+                  onclick="_retCurveToggleMenu(event)"
+                  style="font-size:11px;padding:5px 12px;border:1px solid var(--card-border);border-radius:6px;background:var(--card);color:var(--text);cursor:pointer;display:inline-flex;align-items:center;gap:6px;"
+                  aria-haspopup="true" aria-expanded="false">
+            <span>Filter sources</span>
+            <span id="ret-src-summary" style="color:var(--text-muted);font-weight:500;">— all selected</span>
+            <span style="font-size:9px;">▼</span>
+          </button>
+          <div id="ret-src-menu"
+               style="display:none;position:absolute;right:0;top:calc(100% + 4px);z-index:50;min-width:240px;max-width:320px;max-height:340px;overflow:auto;background:var(--card);border:1px solid var(--card-border);border-radius:8px;box-shadow:0 6px 18px rgba(0,0,0,.25);padding:6px;font-size:11px;">
+            <div style="display:flex;gap:6px;padding:6px 8px;border-bottom:1px solid var(--card-border);margin-bottom:4px;">
+              <button type="button" onclick="_retCurveAll(true)"  style="flex:1;font-size:11px;padding:3px 8px;border:1px solid var(--card-border);border-radius:5px;background:var(--card-2);color:var(--text);cursor:pointer;">All</button>
+              <button type="button" onclick="_retCurveAll(false)" style="flex:1;font-size:11px;padding:3px 8px;border:1px solid var(--card-border);border-radius:5px;background:var(--card-2);color:var(--text);cursor:pointer;">None</button>
+            </div>
+            <div id="ret-src-list"></div>
+          </div>
+        </div>
+      </div>
       <div class="chart-container h340"><canvas id="ret-curve"></canvas></div>
-      <div class="insight">30-day: <strong>${pct(findRate('Day 30'))}</strong> &middot; 60-day: <strong>${pct(findRate('Day 60'))}</strong> &middot; 90-day: <strong>${pct(findRate('Day 90'))}</strong>.</div>
+      <div class="insight">Overall — 30-day: <strong>${pct(findRate('Day 30'))}</strong> &middot; 60-day: <strong>${pct(findRate('Day 60'))}</strong> &middot; 90-day: <strong>${pct(findRate('Day 90'))}</strong>. Thick green line = all subscribers (always visible); each thin coloured line = one canonical source bucket (≥ 100 subscribers). Use <strong>Filter sources</strong> above to pick which sources to overlay — checkbox per source, plus All / None for bulk control.</div>
     </div>
     <div class="grid-2">
       <div class="chart-card">
@@ -1455,20 +2676,98 @@ function renderRetention(M) {
       <div class="chart-card">
         <h3>Monthly Churn Volume</h3>
         <div class="chart-container h300"><canvas id="ret-churn"></canvas></div>
-        <div class="insight">Count of subscribers who unsubscribed in each month.</div>
+        <div class="insight">Count of subscribers whose state flipped to <code>Unsubscribed</code> each month (all channels — campaign-link clicks, hard bounces, manual deletions). The companion <strong>Campaign Unsubscribe Rate</strong> chart below tracks the pure per-send rate.</div>
       </div>
+    </div>
+
+    <div class="chart-card" style="margin-top:18px;">
+      <h3>Campaign Unsubscribe Rate <span class="badge-inline">— pure-Campaigns, both sides from <code>Campaigns</code></span></h3>
+      <div class="chart-container h300"><canvas id="ret-camp-unsub-rate"></canvas></div>
+      <div class="insight">Line = <strong>SUM(<code>Unsubscribed</code>) ÷ SUM(<code>Recipients</code>) × 100</strong> per month, both columns from <code>Campaigns</code> (filter <code>Recipients &gt; 95</code>). Counts only subscribers who clicked the unsub link in a campaign sent that month — distinct from the list-churn-per-send rate (which includes hard bounces and manual deletions). Months with no qualifying send show no point. <em>Note: <code>Recipients</code> is per-send and not deduplicated across campaigns — a subscriber receiving 4 emails contributes 4× to the denominator, so the rate is per-impression, not per-unique-person.</em></div>
+    </div>
+    <h2 style="font-size:14px;font-weight:600;color:var(--text);margin:22px 0 10px;">Retention by Acquisition Source <span class="badge-inline" style="text-transform:none;">utm_source → source → 'Organic', bucketed</span></h2>
+    <div class="chart-card">
+      <div class="tbl-wrap"><table class="dash-table">
+        <thead><tr>
+          <th>Source</th><th>Subscribers</th><th>Active Now</th><th>Churned</th>
+          <th>Unsub ≤ 15 d</th><th>Unsub ≤ 30 d</th>
+          <th title="Average lifespan in days, across churned subscribers only">Avg Lifespan (days)</th><th title="Median lifespan in days, across churned subscribers only">Median Lifespan</th>
+          <th>Clickers</th><th>Clicker Rate</th><th>Unique Clicks</th><th>Clicks / Clicker</th>
+        </tr></thead>
+        <tbody>${(M.retention_by_source||[]).map(r => {
+          const u15 = `${fmt(r.unsub_15d)} <span style="color:var(--text-muted);">(${(r.unsub_15d_rate||0).toFixed(1)}%)</span>`;
+          const u30 = `${fmt(r.unsub_30d)} <span style="color:var(--text-muted);">(${(r.unsub_30d_rate||0).toFixed(1)}%)</span>`;
+          return `<tr>
+            <td><strong>${esc(r.source||'')}</strong></td>
+            <td>${fmt(r.subscribers)}</td>
+            <td>${fmt(r.active_now)}</td>
+            <td>${fmt(r.churned)}</td>
+            <td>${u15}</td>
+            <td>${u30}</td>
+            <td>${r.avg_lifespan_days != null ? r.avg_lifespan_days : '—'}</td>
+            <td>${r.median_lifespan_days != null ? r.median_lifespan_days : '—'}</td>
+            <td>${fmt(r.clickers)}</td>
+            <td>${(r.clicker_rate||0).toFixed(1)}%</td>
+            <td>${fmt(r.total_unique_clicks)}</td>
+            <td>${r.avg_clicks_per_clicker != null ? Number(r.avg_clicks_per_clicker).toFixed(1) : '—'}</td>
+          </tr>`;
+        }).join('')}</tbody>
+      </table></div>
+      <div class="insight"><strong>Active Now</strong> = state = 'Active' AND engagement_segment NOT IN (Ghosts, Zombies, Dormant). Source buckets use the canonical source-label mapping shared with the Audience tab — see METRICS_updated.md §4 "Source label canonicalisation". <strong>Direct</strong> rolls up <code>organic</code>, <code>direct</code> and empty UTM. Lifespan is computed only across churned subscribers (avg / median days from join to unsub) — still-active subscribers haven't churned yet so they're excluded. <em>Clicker / Unique Clicks / Clicks per Clicker columns reflect click events from December 2025 onwards; the Subscribers / Active / Churned / Lifespan columns use full history.</em></div>
     </div>
   `;
 
-  new Chart(document.getElementById('ret-curve'), {
+  // Overlay chart: the overall "all subscribers" line (filled, thick green)
+  // plus one thin line per acquisition-source bucket from
+  // M.survival_curve_by_source.series. Legend at the bottom drives per-source
+  // toggling; the Show all / Hide all buttons up top fan out to every
+  // non-baseline dataset (see _retCurveAll). Palette has 16 entries to
+  // comfortably cover ~15 canonical buckets without colour collisions.
+  const sourcePalette = [
+    '#0969da','#cf222e','#8250df','#9a6700','#bf3989','#1b7c83','#58a6ff','#3fb950',
+    '#fb8500','#fb6f92','#7d4e00','#4f8cff','#34d399','#a78bfa','#f87171','#fbbf24'
+  ];
+  const bySource = (M.survival_curve_by_source && M.survival_curve_by_source.series) || [];
+  const overlayLabels = (M.survival_curve_by_source && M.survival_curve_by_source.labels) || sc.labels || [];
+  const datasets = [
+    { label: 'All subscribers', data: sc.rates || [],
+      borderColor: '#1a7f37', backgroundColor: 'rgba(26,127,55,.10)',
+      tension:.3, fill:true, pointRadius:4, borderWidth:3, order:99 }
+  ].concat(bySource.map((s, i) => ({
+    label: `${s.label} (${(s.total||0).toLocaleString()})`,
+    data: s.rates || [],
+    borderColor: sourcePalette[i % sourcePalette.length],
+    backgroundColor: 'transparent',
+    tension: .3, fill: false, pointRadius: 3, borderWidth: 2, order: i
+  })));
+  window._retCurveChart = new Chart(document.getElementById('ret-curve'), {
     type: 'line',
-    data: { labels: sc.labels||[], datasets: [
-      { label: 'Retention %', data: sc.rates||[], borderColor: '#1a7f37', backgroundColor: 'rgba(26,127,55,.1)', tension:.3, fill:true, pointRadius:4 }
-    ]},
+    data: { labels: overlayLabels, datasets },
     options: { responsive:true, maintainAspectRatio:false,
-      plugins:{ legend:{ display:false } },
+      // Legend is replaced by the "Filter sources" dropdown above the chart
+      // — that gives a multi-select panel with checkboxes plus All / None.
+      plugins:{ legend:{ display: false },
+                tooltip:{ callbacks:{ label: c => `${c.dataset.label}: ${Number(c.parsed.y).toFixed(1)}%` } } },
+      interaction: { mode:'index', intersect:false },
       scales:{ y:{ min:0, max:100, ticks:{ callback: v => v+'%' } } } }
   });
+  // Populate the "Filter sources" dropdown — one checkbox per per-source
+  // dataset (datasets[0] is the always-visible "All subscribers" baseline,
+  // skipped). _retCurveToggleSrc(i, checked) flips a single dataset; the
+  // All / None buttons up top route through _retCurveAll().
+  const srcList = document.getElementById('ret-src-list');
+  if (srcList) {
+    srcList.innerHTML = datasets.slice(1).map((d, idx) => {
+      const i = idx + 1; // real dataset index in the chart
+      const safeLabel = esc(d.label);
+      const swatch = `<span style="display:inline-block;width:10px;height:10px;border-radius:2px;background:${d.borderColor};margin-right:8px;vertical-align:middle;"></span>`;
+      return `<label style="display:flex;align-items:center;gap:8px;padding:5px 8px;cursor:pointer;border-radius:4px;" onmouseover="this.style.background='var(--card-2)'" onmouseout="this.style.background=''">
+        <input type="checkbox" checked onchange="_retCurveToggleSrc(${i}, this.checked)" style="cursor:pointer;">
+        ${swatch}<span style="flex:1;color:var(--text);">${safeLabel}</span>
+      </label>`;
+    }).join('');
+  }
+  _retCurveUpdateSummary();
 
   const ld = M.lifespan_dist || {labels:[],data:[]};
   new Chart(document.getElementById('ret-lifespan'), {
@@ -1481,16 +2780,144 @@ function renderRetention(M) {
       scales:{ y:{ beginAtZero:true } } }
   });
 
-  const mc = M.monthly_churn || {labels:[],data:[]};
+  // Mixed chart: red bars = monthly unsubscribe volume (left axis), blue
+  // Monthly Churn Volume — bars only. The per-send churn-rate line that
+  // used to overlay this chart was moved to its own card below
+  // (Campaign Unsubscribe Rate), and the bar series here is now just the
+  // raw unsubscribe volume so the chart isn't trying to communicate two
+  // metrics at once.
+  const mc = M.monthly_churn || {labels:[],data:[],churn_pct:[],campaign_unsub_pct:[],total_sent:[],campaign_unsubs:[]};
+  const labels    = mc.labels || [];
+  const sends     = mc.total_sent || [];
   new Chart(document.getElementById('ret-churn'), {
     type: 'bar',
-    data: { labels: mc.labels||[], datasets: [
-      { label: 'Churn (unsubscribes)', data: mc.data||[], backgroundColor: '#cf222e', borderRadius: 4 }
+    data: { labels, datasets: [
+      { label: 'Unsubscribes', data: mc.data || [],
+        backgroundColor: '#cf222e', borderRadius: 4 }
     ]},
     options: { responsive:true, maintainAspectRatio:false,
-      plugins:{ legend:{ display:false } },
-      scales:{ y:{ beginAtZero:true } } }
+      plugins:{
+        legend:{ display:false },
+        tooltip:{ callbacks:{
+          label: c => {
+            const i = c.dataIndex;
+            const sent = sends[i] || 0;
+            return [
+              `Unsubscribes: ${Number(c.parsed.y).toLocaleString()}`,
+              sent ? `Total emails sent: ${sent.toLocaleString()}` : 'No qualifying sends this month'
+            ];
+          }
+        }}
+      },
+      scales:{ y:{ beginAtZero:true, title:{ display:true, text:'Unsubscribes' } } }
+    }
   });
+
+  // Campaign Unsubscribe Rate — pure-Campaigns line: SUM(Unsubscribed) /
+  // SUM(Recipients) * 100 per month, both columns from `Campaigns`. Months
+  // with no qualifying send produce a null point (spanGaps keeps the line
+  // continuous either side). Empty array safe — chart still renders.
+  const campRate    = (mc.campaign_unsub_pct || []).map(v => v == null ? null : Number(v));
+  const campUnsubs  = mc.campaign_unsubs || [];
+  const campTarget = document.getElementById('ret-camp-unsub-rate');
+  if (campTarget) {
+    new Chart(campTarget, {
+      type: 'line',
+      data: { labels, datasets: [
+        { label: 'Campaign unsub rate', data: campRate,
+          borderColor: '#0969da', backgroundColor: 'rgba(9,105,218,.10)',
+          tension: 0.3, pointRadius: 3, borderWidth: 2, fill: true, spanGaps: true }
+      ]},
+      options: { responsive:true, maintainAspectRatio:false,
+        plugins:{
+          legend:{ display:false },
+          tooltip:{ callbacks:{
+            label: c => {
+              const v = c.parsed.y;
+              const i = c.dataIndex;
+              const u = campUnsubs[i] || 0;
+              const s = sends[i] || 0;
+              return [
+                `Rate: ${v == null ? '—' : v.toFixed(3) + '%'}`,
+                s ? `${u.toLocaleString()} campaign-link unsubs / ${s.toLocaleString()} sends` : 'No qualifying sends this month'
+              ];
+            }
+          }}
+        },
+        scales:{
+          y:{ beginAtZero:true, title:{ display:true, text:'Campaign unsub rate' },
+              ticks:{ callback: v => Number(v).toFixed(2) + '%' } }
+        }
+      }
+    });
+  }
+}
+
+/* "Filter sources" dropdown plumbing for the Retention survival overlay.
+ * - _retCurveToggleMenu(e)        — open / close the panel (also closes on outside click)
+ * - _retCurveToggleSrc(idx, vis)  — flip one per-source dataset's visibility
+ * - _retCurveAll(visible)         — bulk-toggle every per-source dataset
+ * - _retCurveUpdateSummary()      — refreshes the "N of M selected" hint on the button
+ *
+ * The "All subscribers" baseline (dataset index 0) is always visible. */
+function _retCurveAll(visible) {
+  const c = window._retCurveChart;
+  if (!c) return;
+  c.data.datasets.forEach((_, i) => {
+    if (i === 0) return; // keep the "All subscribers" baseline visible
+    c.setDatasetVisibility(i, visible);
+  });
+  // Keep the dropdown checkboxes in sync with the chart state.
+  document.querySelectorAll('#ret-src-list input[type="checkbox"]').forEach(cb => {
+    cb.checked = visible;
+  });
+  c.update();
+  _retCurveUpdateSummary();
+}
+function _retCurveToggleSrc(idx, visible) {
+  const c = window._retCurveChart;
+  if (!c) return;
+  c.setDatasetVisibility(idx, visible);
+  c.update();
+  _retCurveUpdateSummary();
+}
+function _retCurveToggleMenu(ev) {
+  if (ev) ev.stopPropagation();
+  const m = document.getElementById('ret-src-menu');
+  const btn = document.getElementById('ret-src-btn');
+  if (!m) return;
+  const opening = m.style.display !== 'block';
+  m.style.display = opening ? 'block' : 'none';
+  if (btn) btn.setAttribute('aria-expanded', opening ? 'true' : 'false');
+  // One-shot outside-click listener while the menu is open.
+  if (opening) {
+    setTimeout(() => {
+      const closer = (e) => {
+        const picker = document.getElementById('ret-src-picker');
+        if (picker && !picker.contains(e.target)) {
+          const mm = document.getElementById('ret-src-menu');
+          if (mm) mm.style.display = 'none';
+          if (btn) btn.setAttribute('aria-expanded', 'false');
+          document.removeEventListener('click', closer);
+        }
+      };
+      document.addEventListener('click', closer);
+    }, 0);
+  }
+}
+function _retCurveUpdateSummary() {
+  const c = window._retCurveChart;
+  const out = document.getElementById('ret-src-summary');
+  if (!c || !out) return;
+  const total = c.data.datasets.length - 1; // exclude baseline
+  let on = 0;
+  for (let i = 1; i < c.data.datasets.length; i++) {
+    if (c.isDatasetVisible(i)) on++;
+  }
+  out.textContent = total === 0 ? '— no sources'
+                  : on === total ? `— all ${total} selected`
+                  : on === 0     ? `— none selected (baseline only)`
+                                 : `— ${on} of ${total} selected`;
 }
 
 /* ═══════════════════════════════════════
@@ -1518,15 +2945,24 @@ function renderCohort(M) {
       <div class="insight">Each row = a monthly cohort. M1 = % still active 1 month after joining, etc. Colors: dark green ≥ 80% &middot; light green ≥ 60% &middot; amber ≥ 40% &middot; red &lt; 40%.</div>
     </div>
     <div class="chart-card">
-      <h3>Cohort Performance Table</h3>
+      <h3>Cohort Performance Table <span class="badge-inline">— 2025+ cohorts only</span></h3>
       <div class="tbl-wrap"><table class="dash-table">
-        <thead><tr><th>Cohort</th><th>Size</th><th>Active Now</th><th>Churned</th><th>Retention %</th><th>Churn %</th><th>Early Churn (90d)</th><th>Campaigns Sent</th></tr></thead>
+        <thead><tr>
+          <th title="Join-month label">Cohort</th>
+          <th title="Cohort size at join — total subscribers who joined in this month">Cohort Size</th>
+          <th title="Still on the list today (state = Active or Bounced)">Total Subscribers</th>
+          <th title="Reachable engaged subscribers — state = 'Active' AND engagement_segment NOT IN Ghosts/Zombies/Dormant">Active (Send-To)</th>
+          <th title="Active (Send-To) / Cohort Size — canonical Active rule">Active % (of Cohort Size)</th>
+          <th title="Churned / Cohort Size">Churn %</th>
+          <th title="Subscribers who unsubscribed within 90 days of joining, as % of cohort">Early Churn (90d)</th>
+          <th title="Campaigns with > 95 recipients sent during this cohort's join month">Campaigns Sent</th>
+        </tr></thead>
         <tbody>${tableRows.map(r => `<tr>
           <td>${esc(r.cohort||'')}</td>
           <td>${fmt(r.size)}</td>
+          <td>${fmt(r.total_subscribers != null ? r.total_subscribers : (Number(r.size) - Number(r.churned||0)))}</td>
           <td>${fmt(r.active_now)}</td>
-          <td>${fmt(r.churned)}</td>
-          <td>${esc(r.retention_pct||'—')}</td>
+          <td>${esc(r.active_pct || r.retention_pct || '—')}</td>
           <td>${esc(r.churn_rate_pct||'—')}</td>
           <td>${esc(r.early_churn_pct||'—')}</td>
           <td>${fmt(r.campaigns_sent)}</td>

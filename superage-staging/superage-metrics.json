@@ -8468,7 +8468,7 @@
       ],
       "subscribers": [
         614743,
-        357520,
+        357522,
         186387,
         177168,
         130894,
@@ -8476,7 +8476,7 @@
         61840,
         60997,
         46345,
-        32619,
+        32617,
         24550,
         22118
       ],
@@ -8568,7 +8568,7 @@
         },
         {
           "label": "Organic",
-          "subscribers": 357520,
+          "subscribers": 357522,
           "clickers": 58721,
           "clicks": 433533,
           "unique_clicks": 433533,
@@ -8688,7 +8688,7 @@
         },
         {
           "label": "Meta",
-          "subscribers": 32619,
+          "subscribers": 32617,
           "clickers": 1369,
           "clicks": 3525,
           "unique_clicks": 3525,
@@ -8750,7 +8750,7 @@
         },
         {
           "label": "Organic",
-          "subscribers": 357520,
+          "subscribers": 357522,
           "clickers": 58721,
           "clicks": 433533,
           "unique_clicks": 433533,
@@ -8870,7 +8870,7 @@
         },
         {
           "label": "Meta",
-          "subscribers": 32619,
+          "subscribers": 32617,
           "clickers": 1369,
           "clicks": 3525,
           "unique_clicks": 3525,
@@ -9846,11 +9846,11 @@
       "365d+"
     ],
     "data": [
-      245568,
-      184285,
-      206404,
-      315598,
-      852294
+      245305,
+      184295,
+      206508,
+      315591,
+      852458
     ]
   },
   "survival_curve": {
@@ -9876,9 +9876,9 @@
       81.1,
       78.3,
       75.9,
-      73.8,
-      72.0,
-      70.4,
+      73.9,
+      72.1,
+      70.5,
       69.0,
       67.8,
       66.7,
@@ -9922,11 +9922,11 @@
         ]
       },
       {
-        "label": "Taboola",
-        "total": 24524,
+        "label": "Meta",
+        "total": 32554,
         "rates": [
           100.0,
-          84.0,
+          83.9,
           null,
           null,
           null,
@@ -9941,11 +9941,11 @@
         ]
       },
       {
-        "label": "Meta",
-        "total": 32556,
+        "label": "Taboola",
+        "total": 24524,
         "rates": [
           100.0,
-          83.7,
+          84.1,
           null,
           null,
           null,
@@ -9983,7 +9983,7 @@
         "total": 4162,
         "rates": [
           100.0,
-          80.0,
+          80.1,
           null,
           null,
           null,
@@ -9999,7 +9999,7 @@
       },
       {
         "label": "Organic",
-        "total": 357399,
+        "total": 357401,
         "rates": [
           100.0,
           90.0,
@@ -10011,7 +10011,7 @@
           71.0,
           69.0,
           67.3,
-          65.8,
+          65.9,
           64.6,
           73.0
         ]
@@ -10431,7 +10431,7 @@
       "unsub_30d": 83332,
       "unsub_15d_rate": 11.0,
       "unsub_30d_rate": 13.6,
-      "avg_lifespan_days": 128.9,
+      "avg_lifespan_days": 128.8,
       "median_lifespan_days": 85.0,
       "total_unique_clicks": 435644,
       "clickers": 80775,
@@ -10440,7 +10440,7 @@
     },
     {
       "source": "Organic",
-      "subscribers": 357520,
+      "subscribers": 357522,
       "active_now": 159010,
       "churned": 104223,
       "unsub_15d": 26229,
@@ -10568,15 +10568,15 @@
     },
     {
       "source": "Meta",
-      "subscribers": 32619,
+      "subscribers": 32617,
       "active_now": 16048,
       "churned": 4596,
       "unsub_15d": 3811,
       "unsub_30d": 4355,
       "unsub_15d_rate": 11.7,
       "unsub_30d_rate": 13.4,
-      "avg_lifespan_days": -5.0,
-      "median_lifespan_days": 2.0,
+      "avg_lifespan_days": 7.2,
+      "median_lifespan_days": 3.0,
       "total_unique_clicks": 2868,
       "clickers": 1327,
       "clicker_rate": 4.1,
@@ -10591,7 +10591,7 @@
       "unsub_30d": 3488,
       "unsub_15d_rate": 12.9,
       "unsub_30d_rate": 14.2,
-      "avg_lifespan_days": 5.1,
+      "avg_lifespan_days": 5.3,
       "median_lifespan_days": 2.0,
       "total_unique_clicks": 1920,
       "clickers": 1050,
@@ -10639,8 +10639,8 @@
       "unsub_30d": 507,
       "unsub_15d_rate": 6.9,
       "unsub_30d_rate": 9.1,
-      "avg_lifespan_days": 157.3,
-      "median_lifespan_days": 115.5,
+      "avg_lifespan_days": 157.1,
+      "median_lifespan_days": 115.0,
       "total_unique_clicks": 29562,
       "clickers": 2450,
       "clicker_rate": 44.2,
@@ -10703,7 +10703,7 @@
     {
       "cohort": "2025-01",
       "size": 255011,
-      "m1": 86.1,
+      "m1": 86.2,
       "m2": 82.7,
       "m3": 79.8,
       "m4": 77.3,
@@ -10743,7 +10743,7 @@
       "m2": 82.8,
       "m3": 79.7,
       "m4": 76.7,
-      "m5": 74.1,
+      "m5": 74.2,
       "m6": 72.1,
       "m9": 67.1,
       "m12": 63.2
@@ -10758,7 +10758,7 @@
       "m5": 72.2,
       "m6": 69.4,
       "m9": 63.3,
-      "m12": 59.2
+      "m12": 59.3
     },
     {
       "cohort": "2025-06",
@@ -10775,10 +10775,10 @@
     {
       "cohort": "2025-07",
       "size": 39341,
-      "m1": 88.6,
+      "m1": 88.7,
       "m2": 82.5,
       "m3": 76.7,
-      "m4": 72.2,
+      "m4": 72.3,
       "m5": 69.0,
       "m6": 66.3,
       "m9": 60.8,
@@ -10788,11 +10788,11 @@
       "cohort": "2025-08",
       "size": 12237,
       "m1": 94.7,
-      "m2": 91.3,
+      "m2": 91.4,
       "m3": 88.8,
       "m4": 86.9,
       "m5": 85.3,
-      "m6": 84.2,
+      "m6": 84.3,
       "m9": 81.6,
       "m12": null
     },
@@ -10823,23 +10823,23 @@
     {
       "cohort": "2025-11",
       "size": 14476,
-      "m1": 91.3,
-      "m2": 88.1,
-      "m3": 85.7,
-      "m4": 84.1,
-      "m5": 82.3,
-      "m6": 81.0,
+      "m1": 91.4,
+      "m2": 88.2,
+      "m3": 85.9,
+      "m4": 84.3,
+      "m5": 82.5,
+      "m6": 81.2,
       "m9": null,
       "m12": null
     },
     {
       "cohort": "2025-12",
       "size": 27700,
-      "m1": 87.2,
-      "m2": 84.2,
-      "m3": 81.9,
-      "m4": 79.9,
-      "m5": 78.5,
+      "m1": 87.3,
+      "m2": 84.3,
+      "m3": 82.1,
+      "m4": 80.1,
+      "m5": 78.7,
       "m6": null,
       "m9": null,
       "m12": null
@@ -10847,10 +10847,10 @@
     {
       "cohort": "2026-01",
       "size": 35530,
-      "m1": 86.3,
-      "m2": 83.6,
-      "m3": 81.3,
-      "m4": 79.7,
+      "m1": 86.4,
+      "m2": 83.7,
+      "m3": 81.4,
+      "m4": 79.9,
       "m5": null,
       "m6": null,
       "m9": null,
@@ -10859,9 +10859,9 @@
     {
       "cohort": "2026-02",
       "size": 36562,
-      "m1": 88.0,
-      "m2": 85.2,
-      "m3": 83.0,
+      "m1": 88.1,
+      "m2": 85.3,
+      "m3": 83.2,
       "m4": null,
       "m5": null,
       "m6": null,
@@ -10871,8 +10871,8 @@
     {
       "cohort": "2026-03",
       "size": 31541,
-      "m1": 88.0,
-      "m2": 84.9,
+      "m1": 88.1,
+      "m2": 85.1,
       "m3": null,
       "m4": null,
       "m5": null,
@@ -10883,7 +10883,7 @@
     {
       "cohort": "2026-04",
       "size": 42817,
-      "m1": 85.2,
+      "m1": 85.3,
       "m2": null,
       "m3": null,
       "m4": null,
@@ -11096,7 +11096,7 @@
   ],
   "cohort_kpis": {
     "total_cohorts": 20,
-    "avg_90d_retention": "83.3%",
+    "avg_90d_retention": "83.4%",
     "best_cohort_label": "2024-12",
     "best_cohort_m3": "89.3%",
     "worst_cohort_label": "2025-07",

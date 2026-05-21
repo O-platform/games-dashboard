@@ -1595,9 +1595,14 @@ def lambda_handler(event, context):
     }
 
     def _sv_rate(alive, eligible):
-        """Return cohort-age-gated survival rate, or None when no eligible subs."""
+        """Return cohort-age-gated survival rate, or None when fewer than 50 subs are eligible.
+
+        A minimum eligible threshold of 50 prevents a source whose cohort hasn't
+        matured yet (e.g. Meta with a batch-import acquisition_date from April 2026)
+        from producing a spurious 100% line based on 1–2 data points.
+        """
         e = safe_int(eligible)
-        if not e:
+        if e < 50:
             return None
         return round(safe_int(alive) / e * 100, 1)
 

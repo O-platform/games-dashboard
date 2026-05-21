@@ -509,8 +509,8 @@ def lambda_handler(event, context):
             CASE
                 -- Literal placeholder strings — treat as missing so the
                 -- caller's COALESCE chain falls through to the next layer
-                -- (e.g. s.source) or the final 'Organic' / 'Direct' fallback.
-                WHEN {lc} IN ('none', 'null', '(none)', '(null)', '-', 'n/a') THEN NULL
+                -- (e.g. s.source) or the final 'Organic' fallback.
+                WHEN {lc} IN ('none', 'null', '(none)', '(null)', '-', 'n/a', 'organic', 'direct') THEN NULL
                 -- AllHealthy
                 WHEN {lc} IN ('ahcpl1', 'allhealthy', 'allhealthy.com') THEN 'AllHealthy'
                 -- TrueDemocracy: TDCPL1, TDCPL2, and every TD_CPL2_YYYYMMDD batch
@@ -923,13 +923,9 @@ def lambda_handler(event, context):
             ),
             s AS (
                 SELECT
-                    CASE
-                        WHEN LOWER(COALESCE(
-                                NULLIF(TRIM(sa.acquisition_utm_source),''),
-                                NULLIF(TRIM(sub.source),''), '')) IN ('organic','direct','none','null','(none)','(null)','n/a','-','') THEN 'Direct'
-                        ELSE COALESCE(
+                    COALESCE(
                             {_canon_source("COALESCE(NULLIF(TRIM(sa.acquisition_utm_source),''), NULLIF(TRIM(sub.source),''))")},
-                            'Direct'
+                            'Organic'
                         )
                     END AS bucket,
                     (sub.date_unsubscribed::date
@@ -1079,10 +1075,7 @@ def lambda_handler(event, context):
             mapped AS (
                 SELECT
                     s.*,
-                    CASE
-                        WHEN LOWER(source_raw) IN ('organic', 'direct', 'none', 'null', '(none)', '(null)', 'n/a', '-', '') THEN 'Direct'
-                        ELSE COALESCE({_canon_source('source_raw')}, 'Direct')
-                    END AS bucket,
+                    COALESCE({_canon_source('source_raw')}, 'Organic') AS bucket,
                     CASE WHEN unsubbed IS NOT NULL THEN (unsubbed - eff_joined) END AS lifespan_days
                 FROM s
             ),

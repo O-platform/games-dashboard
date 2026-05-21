@@ -635,7 +635,7 @@ def lambda_handler(event, context):
             weekly_digest_rows = cur.fetchall()
 
             # Top acquisition source for the last two completed ISO weeks.
-            # Label priority: sa.acquisition_utm_source >> s.source >> 'Direct'.
+            # Label priority: sa.acquisition_utm_source >> s.source >> 'Organic'.
             # KEEP THIS BRANCH LIST IN SYNC WITH `_canon_source` IN THE METRICS
             # LAMBDA AND `utmLabel()` IN index.html.
             cur.execute(f"""
@@ -650,8 +650,9 @@ def lambda_handler(event, context):
                         CASE
                             WHEN LOWER(COALESCE(
                                     NULLIF(TRIM(sa.acquisition_utm_source),''),
-                                    NULLIF(TRIM(s.source),''), '')) IN ('organic','direct','none','null','(none)','(null)','n/a','-','')
-                                THEN 'Direct'
+                                    NULLIF(TRIM(s.source),''), ''))
+                                 IN ('organic','direct','none','null','(none)','(null)','n/a','-','')
+                                THEN 'Organic'
                             WHEN LOWER(TRIM(COALESCE(NULLIF(TRIM(sa.acquisition_utm_source),''), NULLIF(TRIM(s.source),''))))
                                  IN ('ahcpl1','allhealthy','allhealthy.com')           THEN 'AllHealthy'
                             WHEN LOWER(TRIM(COALESCE(NULLIF(TRIM(sa.acquisition_utm_source),''), NULLIF(TRIM(s.source),''))))
@@ -689,7 +690,7 @@ def lambda_handler(event, context):
                 )
                 SELECT
                     week_start,
-                    COALESCE(bucket, 'Direct') AS bucket,
+                    COALESCE(bucket, 'Organic') AS bucket,
                     COUNT(*)                   AS subs
                 FROM src
                 GROUP BY 1, 2

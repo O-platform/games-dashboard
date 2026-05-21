@@ -282,7 +282,8 @@ function utmLabel(raw) {
   if (!raw) return '—';
   const s = String(raw).trim().toLowerCase();
   // Literal placeholder strings — surface as '—' rather than rendering 'none' as its own source
-  if (['none', 'null', '(none)', '(null)', 'n/a', '-', ''].includes(s)) return '—';
+  if (['none', 'null', '(none)', '(null)', 'n/a', '-', '',
+       'organic', 'direct', 'website', 'homepage', 'home', 'web', 'site'].includes(s)) return 'Organic';
   // AllHealthy
   if (['ahcpl1', 'allhealthy', 'allhealthy.com'].includes(s)) return 'AllHealthy';
   // TrueDemocracy: TDCPL1, TDCPL2, and every TD_CPL2_YYYYMMDD batch

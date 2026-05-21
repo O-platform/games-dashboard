@@ -510,7 +510,8 @@ def lambda_handler(event, context):
                 -- Literal placeholder strings — treat as missing so the
                 -- caller's COALESCE chain falls through to the next layer
                 -- (e.g. s.source) or the final 'Organic' fallback.
-                WHEN {lc} IN ('none', 'null', '(none)', '(null)', '-', 'n/a', 'organic', 'direct') THEN NULL
+                WHEN {lc} IN ('none', 'null', '(none)', '(null)', '-', 'n/a', 'organic', 'direct',
+                             'website', 'homepage', 'home', 'web', 'site') THEN NULL
                 -- AllHealthy
                 WHEN {lc} IN ('ahcpl1', 'allhealthy', 'allhealthy.com') THEN 'AllHealthy'
                 -- TrueDemocracy: TDCPL1, TDCPL2, and every TD_CPL2_YYYYMMDD batch

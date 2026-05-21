@@ -634,57 +634,68 @@ def lambda_handler(event, context):
             """)
             weekly_digest_rows = cur.fetchall()
 
-            # Top acquisition source for the last completed week + the prior
-            # one. Canonicalisation mirrors `_canon_source` in the metrics
-            # lambda — duplicated here so the comparison lambda stays
-            # self-contained. KEEP THIS BRANCH LIST IN SYNC WITH THE METRICS
-            # LAMBDA HELPER (`_canon_source`) AND `utmLabel()` in index.html.
+            # Top acquisition source for the last two completed ISO weeks.
+            # Label priority: sa.acquisition_utm_source >> s.utm_source >> s.source >> 'Direct'.
+            # Taboola is excluded from results.
+            # KEEP THIS BRANCH LIST IN SYNC WITH `_canon_source` IN THE METRICS
+            # LAMBDA AND `utmLabel()` IN index.html.
             cur.execute(f"""
-                WITH src AS (
+                WITH sa_acq AS (
+                    SELECT LOWER(TRIM(email)) AS email, acquisition_utm_source
+                    FROM {S}.subscriber_acquisition
+                    WHERE acquisition_status IN ('added', 'resubscribed')
+                ),
+                src AS (
                     SELECT
-                        DATE_TRUNC('week', date_joined::date)::date AS week_start,
+                        DATE_TRUNC('week', s.date_joined::date)::date AS week_start,
                         CASE
-                            WHEN LOWER(COALESCE(NULLIF(TRIM(utm_source),''),
-                                                NULLIF(TRIM(source),''), '')) IN ('organic','direct','')
+                            WHEN LOWER(COALESCE(
+                                    NULLIF(TRIM(sa.acquisition_utm_source),''),
+                                    NULLIF(TRIM(s.utm_source),''),
+                                    NULLIF(TRIM(s.source),''), '')) IN ('organic','direct','')
                                 THEN 'Direct'
-                            WHEN LOWER(TRIM(COALESCE(NULLIF(TRIM(utm_source),''), NULLIF(TRIM(source),''))))
+                            WHEN LOWER(TRIM(COALESCE(NULLIF(TRIM(sa.acquisition_utm_source),''), NULLIF(TRIM(s.utm_source),''), NULLIF(TRIM(s.source),''))))
                                  IN ('ahcpl1','allhealthy','allhealthy.com')           THEN 'AllHealthy'
-                            WHEN LOWER(TRIM(COALESCE(NULLIF(TRIM(utm_source),''), NULLIF(TRIM(source),''))))
+                            WHEN LOWER(TRIM(COALESCE(NULLIF(TRIM(sa.acquisition_utm_source),''), NULLIF(TRIM(s.utm_source),''), NULLIF(TRIM(s.source),''))))
                                  LIKE 'td_cpl2%%'                                       THEN 'TrueDemocracy'
-                            WHEN LOWER(TRIM(COALESCE(NULLIF(TRIM(utm_source),''), NULLIF(TRIM(source),''))))
+                            WHEN LOWER(TRIM(COALESCE(NULLIF(TRIM(sa.acquisition_utm_source),''), NULLIF(TRIM(s.utm_source),''), NULLIF(TRIM(s.source),''))))
                                  IN ('tdcpl1','tdcpl2')                                 THEN 'TrueDemocracy'
-                            WHEN LOWER(TRIM(COALESCE(NULLIF(TRIM(utm_source),''), NULLIF(TRIM(source),''))))
+                            WHEN LOWER(TRIM(COALESCE(NULLIF(TRIM(sa.acquisition_utm_source),''), NULLIF(TRIM(s.utm_source),''), NULLIF(TRIM(s.source),''))))
                                  IN ('lscpl1','lscpl2','ls_cpl2','livingsimply','livingsimply.com')
                                                                                         THEN 'LivingSimply'
-                            WHEN LOWER(TRIM(COALESCE(NULLIF(TRIM(utm_source),''), NULLIF(TRIM(source),''))))
+                            WHEN LOWER(TRIM(COALESCE(NULLIF(TRIM(sa.acquisition_utm_source),''), NULLIF(TRIM(s.utm_source),''), NULLIF(TRIM(s.source),''))))
                                  IN ('dpcpl1','dp_cpl2')                                THEN 'DailyPuzzle'
-                            WHEN LOWER(TRIM(COALESCE(NULLIF(TRIM(utm_source),''), NULLIF(TRIM(source),''))))
+                            WHEN LOWER(TRIM(COALESCE(NULLIF(TRIM(sa.acquisition_utm_source),''), NULLIF(TRIM(s.utm_source),''), NULLIF(TRIM(s.source),''))))
                                  = 'hfcpl1'                                             THEN 'HealthFirst'
-                            WHEN LOWER(TRIM(COALESCE(NULLIF(TRIM(utm_source),''), NULLIF(TRIM(source),''))))
+                            WHEN LOWER(TRIM(COALESCE(NULLIF(TRIM(sa.acquisition_utm_source),''), NULLIF(TRIM(s.utm_source),''), NULLIF(TRIM(s.source),''))))
                                  = 'fccpl1'                                             THEN 'FitConnect'
-                            WHEN LOWER(TRIM(COALESCE(NULLIF(TRIM(utm_source),''), NULLIF(TRIM(source),''))))
+                            WHEN LOWER(TRIM(COALESCE(NULLIF(TRIM(sa.acquisition_utm_source),''), NULLIF(TRIM(s.utm_source),''), NULLIF(TRIM(s.source),''))))
                                  IN ('facebook','meta','fb','ig')                       THEN 'Meta'
-                            WHEN LOWER(TRIM(COALESCE(NULLIF(TRIM(utm_source),''), NULLIF(TRIM(source),''))))
+                            WHEN LOWER(TRIM(COALESCE(NULLIF(TRIM(sa.acquisition_utm_source),''), NULLIF(TRIM(s.utm_source),''), NULLIF(TRIM(s.source),''))))
                                  IN ('if','ifcpl1')                                     THEN 'IFCPL'
-                            WHEN LOWER(TRIM(COALESCE(NULLIF(TRIM(utm_source),''), NULLIF(TRIM(source),''))))
+                            WHEN LOWER(TRIM(COALESCE(NULLIF(TRIM(sa.acquisition_utm_source),''), NULLIF(TRIM(s.utm_source),''), NULLIF(TRIM(s.source),''))))
                                  = 'taboola'                                            THEN 'Taboola'
-                            WHEN LOWER(TRIM(COALESCE(NULLIF(TRIM(utm_source),''), NULLIF(TRIM(source),''))))
+                            WHEN LOWER(TRIM(COALESCE(NULLIF(TRIM(sa.acquisition_utm_source),''), NULLIF(TRIM(s.utm_source),''), NULLIF(TRIM(s.source),''))))
                                  IN ('superagequiz','longevity_quiz')                   THEN 'SuperAge Quiz'
-                            WHEN LOWER(TRIM(COALESCE(NULLIF(TRIM(utm_source),''), NULLIF(TRIM(source),''))))
+                            WHEN LOWER(TRIM(COALESCE(NULLIF(TRIM(sa.acquisition_utm_source),''), NULLIF(TRIM(s.utm_source),''), NULLIF(TRIM(s.source),''))))
                                  = 'refind'                                             THEN 'Refind'
-                            ELSE NULLIF(TRIM(COALESCE(NULLIF(TRIM(utm_source),''),
-                                                       NULLIF(TRIM(source),''))), '')
+                            ELSE NULLIF(TRIM(COALESCE(
+                                    NULLIF(TRIM(sa.acquisition_utm_source),''),
+                                    NULLIF(TRIM(s.utm_source),''),
+                                    NULLIF(TRIM(s.source),''))), '')
                         END AS bucket
-                    FROM {S}.subscribers
-                    WHERE date_joined IS NOT NULL
-                      AND date_joined::date >= DATE_TRUNC('week', CURRENT_DATE)::date - INTERVAL '2 weeks'
-                      AND date_joined::date <  DATE_TRUNC('week', CURRENT_DATE)::date
+                    FROM {S}.subscribers s
+                    LEFT JOIN sa_acq sa ON sa.email = LOWER(TRIM(s.email))
+                    WHERE s.date_joined IS NOT NULL
+                      AND s.date_joined::date >= DATE_TRUNC('week', CURRENT_DATE)::date - INTERVAL '2 weeks'
+                      AND s.date_joined::date <  DATE_TRUNC('week', CURRENT_DATE)::date
                 )
                 SELECT
                     week_start,
                     COALESCE(bucket, 'Direct') AS bucket,
                     COUNT(*)                   AS subs
                 FROM src
+                WHERE COALESCE(bucket, 'Direct') != 'Taboola'
                 GROUP BY 1, 2
                 ORDER BY week_start DESC, subs DESC
             """)

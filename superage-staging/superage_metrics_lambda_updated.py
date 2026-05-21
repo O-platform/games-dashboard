@@ -545,25 +545,44 @@ def lambda_handler(event, context):
                 ELSE NULLIF(TRIM({col_sql}), '')
             END
             """
-        def fetch_acquisition_rows(label_expr: str, fallback_label: str,
-                                   since_days=None, limit: int = 12):
-            sub_filter = ""
+        def fetch_acquisition_rows(fallback_label: str, since_days=None, limit: int = 12):
+            # Label priority: sa.acquisition_utm_source >> s.utm_source >> s.source >> fallback
+            # Effective join date: COALESCE(sa.acquisition_date, s.date_joined).
+            # Taboola rows are excluded from results (canonical label = 'Taboola').
+            eff_date_filter = ""
             click_filter = ""
             if since_days is not None:
-                sub_filter   = f"AND date_joined::date >= CURRENT_DATE - INTERVAL '{int(since_days)} days'"
+                eff_date_filter = (
+                    f"AND COALESCE(sa.acquisition_date::date, s.date_joined::date)"
+                    f" >= CURRENT_DATE - INTERVAL '{int(since_days)} days'"
+                )
                 click_filter = f"AND cc.\"Date\"::date >= CURRENT_DATE - INTERVAL '{int(since_days)} days'"
             cur.execute(f"""
-                WITH s AS (
+                WITH sa_acq AS (
                     SELECT
-                        LOWER(TRIM(email))                  AS email,
-                        COALESCE({label_expr}, %s)          AS label,
-                        state,
-                        date_joined::date                   AS joined,
-                        date_unsubscribed::date             AS unsubbed
-                    FROM {S}.subscribers
-                    WHERE email IS NOT NULL AND TRIM(email) != ''
-                      AND date_joined::date < CURRENT_DATE
-                      {sub_filter}
+                        LOWER(TRIM(email))           AS email,
+                        acquisition_utm_source,
+                        acquisition_date::date        AS acquisition_date
+                    FROM {S}.subscriber_acquisition
+                    WHERE acquisition_status IN ('added', 'resubscribed')
+                ),
+                s AS (
+                    SELECT
+                        LOWER(TRIM(s.email))         AS email,
+                        COALESCE(
+                            {_canon_source('sa.acquisition_utm_source')},
+                            {_canon_source('s.utm_source')},
+                            {_canon_source('s.source')},
+                            %s
+                        )                            AS label,
+                        s.state,
+                        COALESCE(sa.acquisition_date, s.date_joined::date) AS eff_date,
+                        s.date_unsubscribed::date    AS unsubbed
+                    FROM {S}.subscribers s
+                    LEFT JOIN sa_acq sa ON sa.email = LOWER(TRIM(s.email))
+                    WHERE s.email IS NOT NULL AND TRIM(s.email) != ''
+                      AND s.date_joined::date < CURRENT_DATE
+                      {eff_date_filter}
                 ),
                 cc AS (
                     SELECT
@@ -587,28 +606,28 @@ def lambda_handler(event, context):
                           / NULLIF(COUNT(*), 0) * 100, 1)           AS clicker_rate,
                     COUNT(*) FILTER (
                         WHERE s.state = 'Unsubscribed'
-                          AND s.unsubbed IS NOT NULL AND s.joined IS NOT NULL
-                          AND (s.unsubbed - s.joined) <= 30
+                          AND s.unsubbed IS NOT NULL AND s.eff_date IS NOT NULL
+                          AND (s.unsubbed - s.eff_date) <= 30
                     )                                               AS churned_30d,
                     COUNT(*) FILTER (
                         WHERE s.state = 'Unsubscribed'
-                          AND s.unsubbed IS NOT NULL AND s.joined IS NOT NULL
-                          AND (s.unsubbed - s.joined) <= 90
+                          AND s.unsubbed IS NOT NULL AND s.eff_date IS NOT NULL
+                          AND (s.unsubbed - s.eff_date) <= 90
                     )                                               AS churned_90d
                 FROM s LEFT JOIN cc ON s.email = cc.email
+                WHERE s.label != 'Taboola'
                 GROUP BY 1
                 ORDER BY subscribers DESC NULLS LAST
                 LIMIT {int(limit)}
             """, (fallback_label,))
             return cur.fetchall()
 
-        # Acquisition source label: utm_source → source → 'Organic',
-        # with both columns canonicalised via _canon_source().
-        _label_expr = f"{_canon_source('utm_source')}, {_canon_source('source')}"
-        acquisition_utm_rows     = fetch_acquisition_rows(_label_expr, "Organic")
-        acquisition_utm_rows_30  = fetch_acquisition_rows(_label_expr, "Organic", since_days=30)
-        acquisition_utm_rows_60  = fetch_acquisition_rows(_label_expr, "Organic", since_days=60)
-        acquisition_utm_rows_90  = fetch_acquisition_rows(_label_expr, "Organic", since_days=90)
+        # Acquisition source label priority: sa.acquisition_utm_source >>
+        # s.utm_source >> s.source >> 'Organic'. Taboola excluded from results.
+        acquisition_utm_rows     = fetch_acquisition_rows("Organic")
+        acquisition_utm_rows_30  = fetch_acquisition_rows("Organic", since_days=30)
+        acquisition_utm_rows_60  = fetch_acquisition_rows("Organic", since_days=60)
+        acquisition_utm_rows_90  = fetch_acquisition_rows("Organic", since_days=90)
 
         # ─────────────────────────────────────────────────────
         # 5. UTM source subscriber click performance
@@ -616,19 +635,36 @@ def lambda_handler(event, context):
         #    from subscriber_clicks joined to subscribers.
         # ─────────────────────────────────────────────────────
         cur.execute(f"""
+            WITH sa_acq AS (
+                SELECT LOWER(TRIM(email)) AS email, acquisition_utm_source
+                FROM {S}.subscriber_acquisition
+                WHERE acquisition_status IN ('added', 'resubscribed')
+            ),
+            labeled AS (
+                SELECT
+                    COALESCE(
+                        {_canon_source('sa.acquisition_utm_source')},
+                        {_canon_source('s.utm_source')},
+                        {_canon_source('s.source')},
+                        'Organic'
+                    )                                 AS label,
+                    sc.email_address,
+                    sc.unique_clicks,
+                    sc.non_unique_clicks
+                FROM {S}.subscriber_clicks sc
+                JOIN {S}.subscribers s
+                  ON LOWER(TRIM(s.email)) = LOWER(TRIM(sc.email_address))
+                LEFT JOIN sa_acq sa ON sa.email = LOWER(TRIM(s.email))
+            )
             SELECT
-                COALESCE(
-                  {_canon_source('s.utm_source')},
-                  {_canon_source('s.source')},
-                  'Organic'
-                ) AS label,
-                COUNT(DISTINCT sc.email_address) AS clickers,
-                COALESCE(SUM(sc.unique_clicks), 0)     AS unique_clicks,
-                COALESCE(SUM(sc.non_unique_clicks), 0) AS total_clicks,
-                ROUND(COALESCE(SUM(sc.unique_clicks), 0)::numeric / NULLIF(COUNT(DISTINCT sc.email_address), 0), 1) AS avg_per_clicker
-            FROM {S}.subscriber_clicks sc
-            JOIN {S}.subscribers s
-              ON LOWER(TRIM(s.email)) = LOWER(TRIM(sc.email_address))
+                label,
+                COUNT(DISTINCT email_address)          AS clickers,
+                COALESCE(SUM(unique_clicks), 0)        AS unique_clicks,
+                COALESCE(SUM(non_unique_clicks), 0)    AS total_clicks,
+                ROUND(COALESCE(SUM(unique_clicks), 0)::numeric
+                      / NULLIF(COUNT(DISTINCT email_address), 0), 1) AS avg_per_clicker
+            FROM labeled
+            WHERE label != 'Taboola'
             GROUP BY 1
             ORDER BY unique_clicks DESC NULLS LAST
             LIMIT 12
@@ -867,20 +903,34 @@ def lambda_handler(event, context):
         # sources, and quick "show all / hide all" buttons live above the
         # chart for bulk control.
         cur.execute(f"""
-            WITH s AS (
+            WITH sa_acq AS (
+                SELECT
+                    LOWER(TRIM(email))           AS email,
+                    acquisition_utm_source,
+                    acquisition_date::date        AS acquisition_date
+                FROM {S}.subscriber_acquisition
+                WHERE acquisition_status IN ('added', 'resubscribed')
+            ),
+            s AS (
                 SELECT
                     CASE
-                        WHEN LOWER(COALESCE(NULLIF(TRIM(utm_source),''),
-                                            NULLIF(TRIM(source),''), '')) IN ('organic','direct','') THEN 'Direct'
+                        WHEN LOWER(COALESCE(
+                                NULLIF(TRIM(sa.acquisition_utm_source),''),
+                                NULLIF(TRIM(sub.utm_source),''),
+                                NULLIF(TRIM(sub.source),''), '')) IN ('organic','direct','') THEN 'Direct'
                         ELSE COALESCE(
-                            {_canon_source("COALESCE(NULLIF(TRIM(utm_source),''), NULLIF(TRIM(source),''))")},
+                            {_canon_source("COALESCE(NULLIF(TRIM(sa.acquisition_utm_source),''), NULLIF(TRIM(sub.utm_source),''), NULLIF(TRIM(sub.source),''))")},
                             'Direct'
                         )
                     END AS bucket,
-                    EXTRACT(EPOCH FROM (date_unsubscribed - date_joined)) / 86400 AS days_to_unsub
-                FROM {S}.subscribers
-                WHERE date_joined IS NOT NULL AND date_joined::date < CURRENT_DATE
-                  AND (date_unsubscribed IS NULL OR date_unsubscribed::date < CURRENT_DATE)
+                    EXTRACT(EPOCH FROM (
+                        sub.date_unsubscribed::date
+                        - COALESCE(sa.acquisition_date, sub.date_joined::date)
+                    )) / 86400 AS days_to_unsub
+                FROM {S}.subscribers sub
+                LEFT JOIN sa_acq sa ON sa.email = LOWER(TRIM(sub.email))
+                WHERE sub.date_joined IS NOT NULL AND sub.date_joined::date < CURRENT_DATE
+                  AND (sub.date_unsubscribed IS NULL OR sub.date_unsubscribed::date < CURRENT_DATE)
             )
             SELECT
                 bucket,
@@ -891,12 +941,10 @@ def lambda_handler(event, context):
                 COUNT(*) FILTER (WHERE days_to_unsub IS NULL OR days_to_unsub > 180)    AS alive_180,
                 COUNT(*) FILTER (WHERE days_to_unsub IS NULL OR days_to_unsub > 365)    AS alive_365
             FROM s
+            WHERE bucket != 'Taboola'
             GROUP BY 1
             HAVING COUNT(*) >= 100
-            -- Sort by **365-day survival rate** so the dropdown lists the
-            -- best-retaining sources first (top of the curve). Tie-breaker
-            -- is cohort size DESC so larger sources surface over smaller
-            -- ones when the rate is identical.
+            -- Sort by 365-day survival rate; tie-break by cohort size.
             ORDER BY
                 (COUNT(*) FILTER (WHERE days_to_unsub IS NULL OR days_to_unsub > 365)::numeric
                  / NULLIF(COUNT(*), 0)) DESC NULLS LAST,
@@ -985,29 +1033,39 @@ def lambda_handler(event, context):
         # rates, plus total unique article clicks via subscriber_clicks.
         # "Active Now" uses the same two-condition Active rule as Q1b / Q35.
         cur.execute(f"""
-            WITH s AS (
+            WITH sa_acq AS (
                 SELECT
-                    LOWER(TRIM(email))                                                 AS email,
-                    date_joined::date                                                  AS joined,
-                    date_unsubscribed::date                                            AS unsubbed,
-                    state,
-                    engagement_segment,
-                    COALESCE(NULLIF(TRIM(utm_source), ''), NULLIF(TRIM(source), ''), 'Organic') AS source_raw
-                FROM {S}.subscribers
-                WHERE date_joined IS NOT NULL AND date_joined::date < CURRENT_DATE
+                    LOWER(TRIM(email))           AS email,
+                    acquisition_utm_source,
+                    acquisition_date::date        AS acquisition_date
+                FROM {S}.subscriber_acquisition
+                WHERE acquisition_status IN ('added', 'resubscribed')
+            ),
+            s AS (
+                SELECT
+                    LOWER(TRIM(sub.email))                             AS email,
+                    COALESCE(sa.acquisition_date, sub.date_joined::date) AS eff_joined,
+                    sub.date_unsubscribed::date                        AS unsubbed,
+                    sub.state,
+                    sub.engagement_segment,
+                    COALESCE(
+                        NULLIF(TRIM(sa.acquisition_utm_source), ''),
+                        NULLIF(TRIM(sub.utm_source), ''),
+                        NULLIF(TRIM(sub.source), ''),
+                        'Organic'
+                    )                                                  AS source_raw
+                FROM {S}.subscribers sub
+                LEFT JOIN sa_acq sa ON sa.email = LOWER(TRIM(sub.email))
+                WHERE sub.date_joined IS NOT NULL AND sub.date_joined::date < CURRENT_DATE
             ),
             mapped AS (
                 SELECT
                     s.*,
-                    -- Use the canonical source-label mapping (Source label
-                    -- canonicalisation in §4 of METRICS_updated.md). Coerce
-                    -- 'organic' / 'direct' / '' to 'Direct' so they share a
-                    -- single bucket; everything else goes through _canon_source.
                     CASE
                         WHEN LOWER(source_raw) IN ('organic', 'direct', '') THEN 'Direct'
                         ELSE COALESCE({_canon_source('source_raw')}, 'Direct')
                     END AS bucket,
-                    CASE WHEN unsubbed IS NOT NULL THEN (unsubbed - joined) END        AS lifespan_days
+                    CASE WHEN unsubbed IS NOT NULL THEN (unsubbed - eff_joined) END AS lifespan_days
                 FROM s
             ),
             clicks AS (
@@ -1038,13 +1096,7 @@ def lambda_handler(event, context):
                 COUNT(c.email)                                        AS clickers
             FROM mapped m
             LEFT JOIN clicks c ON c.email = m.email
-            -- WHERE filter was previously restricting to the old fixed bucket
-            -- list ('AH CPL', 'Ageist CPL', 'Share', 'Meta', 'Google', 'Direct').
-            -- That filter dropped every canonical bucket name except 'Meta'
-            -- when Q35b was refactored to use _canon_source — so the table
-            -- silently shrank to one row. Replaced with a HAVING threshold
-            -- so the table now lists every canonical bucket with a non-tiny
-            -- cohort (min 100 subscribers), top 15 by size.
+            WHERE m.bucket != 'Taboola'
             GROUP BY m.bucket
             HAVING COUNT(*) >= 100
             ORDER BY subscribers DESC

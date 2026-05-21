@@ -8468,7 +8468,7 @@
       ],
       "subscribers": [
         614746,
-        219558,
+        219561,
         186387,
         177168,
         130895,
@@ -8478,7 +8478,7 @@
         60997,
         46345,
         32586,
-        24553
+        24550
       ],
       "clickers": [
         81624,
@@ -8568,7 +8568,7 @@
         },
         {
           "label": "Organic",
-          "subscribers": 219558,
+          "subscribers": 219561,
           "clickers": 37250,
           "clicks": 225139,
           "unique_clicks": 225139,
@@ -8718,7 +8718,7 @@
         },
         {
           "label": "Taboola",
-          "subscribers": 24553,
+          "subscribers": 24550,
           "clickers": 1056,
           "clicks": 2220,
           "unique_clicks": 2220,
@@ -8750,7 +8750,7 @@
         },
         {
           "label": "Organic",
-          "subscribers": 219558,
+          "subscribers": 219561,
           "clickers": 37250,
           "clicks": 225139,
           "unique_clicks": 225139,
@@ -8900,7 +8900,7 @@
         },
         {
           "label": "Taboola",
-          "subscribers": 24553,
+          "subscribers": 24550,
           "clickers": 1056,
           "clicks": 2220,
           "unique_clicks": 2220,
@@ -9846,11 +9846,11 @@
       "365d+"
     ],
     "data": [
-      245848,
-      184208,
-      206448,
-      315636,
-      852458
+      245840,
+      184214,
+      206456,
+      315634,
+      852461
     ]
   },
   "survival_curve": {
@@ -9895,14 +9895,14 @@
       },
       {
         "label": "Taboola",
-        "total": 24553,
+        "total": 24550,
         "rates": [
           100.0,
-          84.1,
-          100.0,
-          100.0,
-          100.0,
-          100.0
+          84.0,
+          null,
+          null,
+          null,
+          null
         ]
       },
       {
@@ -10075,7 +10075,7 @@
       },
       {
         "label": "Direct",
-        "total": 219558,
+        "total": 219561,
         "rates": [
           100.0,
           89.6,
@@ -10322,8 +10322,8 @@
     },
     {
       "source": "Direct",
-      "subscribers": 219558,
-      "active_now": 83309,
+      "subscribers": 219561,
+      "active_now": 83310,
       "churned": 81236,
       "unsub_15d": 15515,
       "unsub_30d": 22746,
@@ -10482,8 +10482,8 @@
     },
     {
       "source": "Taboola",
-      "subscribers": 24553,
-      "active_now": 10536,
+      "subscribers": 24550,
+      "active_now": 10535,
       "churned": 3479,
       "unsub_15d": 3152,
       "unsub_30d": 3470,

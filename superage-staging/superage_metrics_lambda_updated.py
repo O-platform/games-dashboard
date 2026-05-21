@@ -929,7 +929,12 @@ def lambda_handler(event, context):
                         )
                     END AS bucket,
                     (sub.date_unsubscribed::date
-                        - COALESCE(sa.acquisition_date, sub.date_joined::date)) AS days_to_unsub
+                        - COALESCE(sa.acquisition_date, sub.date_joined::date)) AS days_to_unsub,
+                    -- cohort_age_days: how many days ago this subscriber effectively joined.
+                    -- Used as the milestone gate: a sub who joined 20 days ago cannot be
+                    -- counted toward the Day-30 denominator — they haven't had time to churn yet.
+                    (CURRENT_DATE - COALESCE(sa.acquisition_date, sub.date_joined::date))::integer
+                        AS cohort_age_days
                 FROM {S}.subscribers sub
                 LEFT JOIN sa_acq sa ON sa.email = LOWER(TRIM(sub.email))
                 WHERE sub.date_joined IS NOT NULL AND sub.date_joined::date < CURRENT_DATE
@@ -937,12 +942,20 @@ def lambda_handler(event, context):
             )
             SELECT
                 bucket,
-                COUNT(*)                                                                AS total,
-                COUNT(*) FILTER (WHERE days_to_unsub IS NULL OR days_to_unsub > 30)     AS alive_30,
-                COUNT(*) FILTER (WHERE days_to_unsub IS NULL OR days_to_unsub > 60)     AS alive_60,
-                COUNT(*) FILTER (WHERE days_to_unsub IS NULL OR days_to_unsub > 90)     AS alive_90,
-                COUNT(*) FILTER (WHERE days_to_unsub IS NULL OR days_to_unsub > 180)    AS alive_180,
-                COUNT(*) FILTER (WHERE days_to_unsub IS NULL OR days_to_unsub > 365)    AS alive_365
+                COUNT(*)                                                                         AS total,
+                -- alive_N  = subscribers who reached day N AND hadn't churned by then
+                -- eligible_N = subscribers who have been in the cohort >= N days
+                -- Rate = alive / eligible (NULL when eligible = 0 → line stops at that point)
+                COUNT(*) FILTER (WHERE cohort_age_days >= 30  AND (days_to_unsub IS NULL OR days_to_unsub > 30))  AS alive_30,
+                COUNT(*) FILTER (WHERE cohort_age_days >= 30)                                                      AS eligible_30,
+                COUNT(*) FILTER (WHERE cohort_age_days >= 60  AND (days_to_unsub IS NULL OR days_to_unsub > 60))  AS alive_60,
+                COUNT(*) FILTER (WHERE cohort_age_days >= 60)                                                      AS eligible_60,
+                COUNT(*) FILTER (WHERE cohort_age_days >= 90  AND (days_to_unsub IS NULL OR days_to_unsub > 90))  AS alive_90,
+                COUNT(*) FILTER (WHERE cohort_age_days >= 90)                                                      AS eligible_90,
+                COUNT(*) FILTER (WHERE cohort_age_days >= 180 AND (days_to_unsub IS NULL OR days_to_unsub > 180)) AS alive_180,
+                COUNT(*) FILTER (WHERE cohort_age_days >= 180)                                                     AS eligible_180,
+                COUNT(*) FILTER (WHERE cohort_age_days >= 365 AND (days_to_unsub IS NULL OR days_to_unsub > 365)) AS alive_365,
+                COUNT(*) FILTER (WHERE cohort_age_days >= 365)                                                     AS eligible_365
             FROM s
             GROUP BY 1
             HAVING COUNT(*) >= 100
@@ -1557,23 +1570,31 @@ def lambda_handler(event, context):
         ],
     }
 
-    # Per-source overlay: one rates[] per acquisition source bucket (top 8
-    # by cohort size, minimum 500 subscribers). Same Day 0/30/60/90/180/365
-    # labels as the overall curve so the dashboard can overlay them on one
-    # chart with a legend.
+    def _sv_rate(alive, eligible):
+        """Return cohort-age-gated survival rate, or None when no eligible subs."""
+        e = safe_int(eligible)
+        if not e:
+            return None
+        return round(safe_int(alive) / e * 100, 1)
+
+    # Per-source overlay: one rates[] per acquisition source bucket.
+    # Rates use cohort-age-gated denominators (eligible_N = subs who have been
+    # subscribed >= N days), so young cohorts like Taboola produce null for
+    # milestones they haven't reached yet — Chart.js stops drawing the line there
+    # instead of extending a misleading flat line to Day 365.
     M["survival_curve_by_source"] = {
         "labels": ["Day 0", "Day 30", "Day 60", "Day 90", "Day 180", "Day 365"],
         "series": [
             {
-                "label":  str(r["bucket"]),
-                "total":  safe_int(r["total"]),
-                "rates":  [
+                "label": str(r["bucket"]),
+                "total": safe_int(r["total"]),
+                "rates": [
                     100.0,
-                    round(safe_int(r["alive_30"])  / max(safe_int(r["total"]), 1) * 100, 1),
-                    round(safe_int(r["alive_60"])  / max(safe_int(r["total"]), 1) * 100, 1),
-                    round(safe_int(r["alive_90"])  / max(safe_int(r["total"]), 1) * 100, 1),
-                    round(safe_int(r["alive_180"]) / max(safe_int(r["total"]), 1) * 100, 1),
-                    round(safe_int(r["alive_365"]) / max(safe_int(r["total"]), 1) * 100, 1),
+                    _sv_rate(r["alive_30"],  r["eligible_30"]),
+                    _sv_rate(r["alive_60"],  r["eligible_60"]),
+                    _sv_rate(r["alive_90"],  r["eligible_90"]),
+                    _sv_rate(r["alive_180"], r["eligible_180"]),
+                    _sv_rate(r["alive_365"], r["eligible_365"]),
                 ],
             }
             for r in survival_by_source_rows

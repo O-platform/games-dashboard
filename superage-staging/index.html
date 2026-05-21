@@ -2822,7 +2822,10 @@ function renderRetention(M) {
     data: s.rates || [],
     borderColor: sourcePalette[i % sourcePalette.length],
     backgroundColor: 'transparent',
-    tension: .3, fill: false, pointRadius: 3, borderWidth: 2, order: i
+    tension: .3, fill: false, pointRadius: 3, borderWidth: 2, order: i,
+    // spanGaps:false (Chart.js default) — null values break the line so young
+    // cohorts don't draw a misleading flat line to Day 365.
+    spanGaps: false,
   })));
   window._retCurveChart = new Chart(document.getElementById('ret-curve'), {
     type: 'line',
@@ -2831,7 +2834,7 @@ function renderRetention(M) {
       // Legend is replaced by the "Filter sources" dropdown above the chart
       // — that gives a multi-select panel with checkboxes plus All / None.
       plugins:{ legend:{ display: false },
-                tooltip:{ callbacks:{ label: c => `${c.dataset.label}: ${Number(c.parsed.y).toFixed(1)}%` } } },
+                tooltip:{ callbacks:{ label: c => c.parsed.y == null ? null : `${c.dataset.label}: ${Number(c.parsed.y).toFixed(1)}%` } } },
       interaction: { mode:'index', intersect:false },
       scales:{ y:{ min:0, max:100, ticks:{ callback: v => v+'%' } } } }
   });

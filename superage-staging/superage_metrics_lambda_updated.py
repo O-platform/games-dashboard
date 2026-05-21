@@ -556,7 +556,7 @@ def lambda_handler(event, context):
             END
             """
         def fetch_acquisition_rows(fallback_label: str, since_days=None, limit: int = 12):
-            # Label priority: sa.acquisition_utm_source >> s.utm_source >> s.source >> fallback
+            # Label priority: sa.acquisition_utm_source >> s.source >> fallback
             # Effective join date: COALESCE(sa.acquisition_date, s.date_joined).
             # Taboola rows are excluded from results (canonical label = 'Taboola').
             eff_date_filter = ""
@@ -581,7 +581,6 @@ def lambda_handler(event, context):
                         LOWER(TRIM(s.email))         AS email,
                         COALESCE(
                             {_canon_source('sa.acquisition_utm_source')},
-                            {_canon_source('s.utm_source')},
                             {_canon_source('s.source')},
                             %s
                         )                            AS label,
@@ -632,7 +631,7 @@ def lambda_handler(event, context):
             return cur.fetchall()
 
         # Acquisition source label priority: sa.acquisition_utm_source >>
-        # s.utm_source >> s.source >> 'Organic'.
+        # s.source >> 'Organic'.
         acquisition_utm_rows     = fetch_acquisition_rows("Organic")
         acquisition_utm_rows_30  = fetch_acquisition_rows("Organic", since_days=30)
         acquisition_utm_rows_60  = fetch_acquisition_rows("Organic", since_days=60)
@@ -653,7 +652,6 @@ def lambda_handler(event, context):
                 SELECT
                     COALESCE(
                         {_canon_source('sa.acquisition_utm_source')},
-                        {_canon_source('s.utm_source')},
                         {_canon_source('s.source')},
                         'Organic'
                     )                                 AS label,
@@ -924,10 +922,9 @@ def lambda_handler(event, context):
                     CASE
                         WHEN LOWER(COALESCE(
                                 NULLIF(TRIM(sa.acquisition_utm_source),''),
-                                NULLIF(TRIM(sub.utm_source),''),
                                 NULLIF(TRIM(sub.source),''), '')) IN ('organic','direct','') THEN 'Direct'
                         ELSE COALESCE(
-                            {_canon_source("COALESCE(NULLIF(TRIM(sa.acquisition_utm_source),''), NULLIF(TRIM(sub.utm_source),''), NULLIF(TRIM(sub.source),''))")},
+                            {_canon_source("COALESCE(NULLIF(TRIM(sa.acquisition_utm_source),''), NULLIF(TRIM(sub.source),''))")},
                             'Direct'
                         )
                     END AS bucket,
@@ -1055,7 +1052,6 @@ def lambda_handler(event, context):
                     sub.engagement_segment,
                     COALESCE(
                         NULLIF(TRIM(sa.acquisition_utm_source), ''),
-                        NULLIF(TRIM(sub.utm_source), ''),
                         NULLIF(TRIM(sub.source), ''),
                         'Organic'
                     )                                                  AS source_raw

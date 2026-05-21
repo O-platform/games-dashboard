@@ -1,5 +1,7 @@
 # SuperAge Analytics Dashboard — Metrics Reference
 
+_Last updated: **2026-05-21** — acquisition source priority chain simplified to `sa.acquisition_utm_source >> s.source >> 'Organic'` (subscriber-level `utm_source` step dropped). Click Analysis tab gained Section 3 — Subscriber Click Behaviour (Unique Email Clickers + Repeat-7d / Repeat-30d + Click Volume Distribution). Weekly Digest "Net Change" tile renamed to "Subscribers Net Change". See per-section last-updated notes below._
+
 This document describes every metric, chart, and data source used in the SuperAge dashboard,
 including the exact SQL queries run by the Lambda so anomalies can be reproduced and debugged directly in RDS.
 
@@ -64,6 +66,8 @@ AND "Recipients" > 95
 
 ## 1. Overview
 
+_Dashboard tab: **Overview** (also covers **Weekly Digest**). Last updated: 2026-05-21._
+
 The overview tab surfaces the most important headline numbers across all sections.
 
 **KPI cards — primary row** (4 cards, in this order):
@@ -94,6 +98,8 @@ The overview tab surfaces the most important headline numbers across all section
 ---
 
 ## 2. Campaigns
+
+_Dashboard tab: **Campaigns**. Last updated: 2026-05-21._
 
 All campaign metrics use the filter: `Recipients > 95 AND Sent Date < today`.
 
@@ -129,6 +135,8 @@ The toggle excludes campaigns whose `name` contains `sunday spotlight` (case-ins
 ---
 
 ## 3. Website Content
+
+_Dashboard tabs: **Click Analysis** (Section 1 — Campaign-Level Aggregated, Section 2 — Click Trends Over Time, Section 3 — Subscriber Click Behaviour) and **Content Reference**. Last updated: 2026-05-21._
 
 This section measures how SuperAge's website articles perform when featured in campaigns.
 
@@ -176,6 +184,8 @@ The "Include Sunday Spotlight" toggle simply filters out `campaign_table` rows w
 
 ## 4. Audience
 
+_Dashboard tab: **Audience**. Last updated: 2026-05-21._
+
 ### Time window selector
 
 The whole Audience tab is governed by a single **time window** toggle at the top: `All time / Last 30 days / Last 60 days / Last 90 days`. Picking a window re-renders, in one shot:
@@ -194,7 +204,7 @@ Total subscribers (or in-window cohort), active rate, top source, top source sha
 
 ### Acquisition by Source
 
-The dashboard label is **Source** (UTM is treated as an internal term in the SQL only). Grouped by the fallback `COALESCE(NULLIF(TRIM(utm_source),''), NULLIF(TRIM(source),''), 'Organic')` — `utm_source` wins, then the legacy `source` column, then the literal `Organic`. Both the pie chart and the table consume `M.acquisition_quality.utm_source.rows_all / rows_30d / rows_60d / rows_90d` (Q19).
+The dashboard label is **Source** (UTM is treated as an internal term in the SQL only). Grouped by the fallback `COALESCE(NULLIF(TRIM(sa.acquisition_utm_source),''), NULLIF(TRIM(s.source),''), 'Organic')` — the `subscriber_acquisition` UTM wins (when the email has an SA row with `acquisition_status IN ('added','resubscribed')`), otherwise the legacy `source` column, then the literal `Organic`. `s.utm_source` is no longer part of the chain. Both the pie chart and the table consume `M.acquisition_quality.utm_source.rows_all / rows_30d / rows_60d / rows_90d` (Q19).
 
 The Audience tab table renders these columns per source: **Subscribers**, **% of Total**, **Clickers**, **Clicker Rate**, **Clicks**, **Avg Clicks / Subscriber**, **30-Day Churn**, **90-Day Churn**. (Avg Sponsor Click / Sub and Open Rate % were removed — see `FEEDBACK_REPLIES.md`.)
 
@@ -210,7 +220,9 @@ Raw source values are normalised to a canonical display label **before** the `GR
 - **`utmLabel(raw)`** in `index.html` — JS fallback that hits any raw value that slipped through (e.g. a brand-new source the lambda hasn't been updated for).
 
 **Source priority chain (applied in all acquisition queries):**
-`sa.acquisition_utm_source` (from `subscriber_acquisition`) → `s.utm_source` → `s.source` → `'Organic'`
+`sa.acquisition_utm_source` (from `subscriber_acquisition`) → `s.source` → `'Organic'`
+
+> Changed 2026-05-21: `s.utm_source` was dropped from the chain. Earlier the order was `sa.acquisition_utm_source >> s.utm_source >> s.source >> 'Organic'`; the subscriber-level `utm_source` column is no longer consulted.
 
 The `subscriber_acquisition` table (`superage.subscriber_acquisition`) is LEFT JOINed on `LOWER(TRIM(email))` with filter `acquisition_status IN ('added', 'resubscribed')`. When a matching SA row has a non-NULL `acquisition_date`, it is used as the **effective join date** via `COALESCE(sa.acquisition_date, s.date_joined)` for lifespan and churn-window calculations.
 
@@ -238,7 +250,7 @@ Comparisons use `LOWER(TRIM(value))`, so case + whitespace differences collapse 
 | **AI** | `chatgpt.com`, `perplexity`, `nbot.ai` | aggregated AI-referrer bucket |
 | **Refind** | `refind` | own label (just the casing fix) |
 | **SuperAge** | `superage` | own label — **distinct from SuperAge Quiz** |
-| **Organic** | `''` (empty `utm_source` and `source`) | final `COALESCE` fallback in Q19's label_expr |
+| **Organic** | both `sa.acquisition_utm_source` and `s.source` empty / NULL | final `COALESCE` fallback in Q19's label_expr |
 
 > Adding a new entry: add a `WHEN` branch to `_canon_source(col_sql)` in `superage_metrics_lambda_updated.py` **and** a matching `if (...) return '<label>';` block in `utmLabel(raw)` in `index.html`. Both files have cross-reference comments calling out the requirement.
 
@@ -247,6 +259,8 @@ The same canonicaliser also runs in **Q35b — Retention by Acquisition Source**
 ---
 
 ## 5. Audience Persona
+
+_Dashboard tab: **Audience Persona**. Last updated: 2026-05-21._
 
 | Metric | What it measures |
 |---|---|
@@ -260,6 +274,8 @@ Demographics: age distribution, gender, marital status, exercise frequency, slee
 ---
 
 ## 6. Revenue & Sponsors
+
+_Dashboard tab: **Revenue & Sponsors**. Last updated: 2026-05-21._
 
 Source: `superage.sa_airtable_sales`. Every query in this section requires both **`$_line_amount IS NOT NULL`** and **`sponsor_type IS NOT NULL AND TRIM(sponsor_type) != ''`** so rows without a categorised sponsor type are excluded across the tab. Future-dated rows are **kept** — the Monthly Line Amount chart shows them as faded bars so booked-but-not-yet-run placements are visible alongside historical line amounts.
 
@@ -278,13 +294,15 @@ Source: `superage.sa_airtable_sales`. Every query in this section requires both 
 
 ## 7. Subscriber Retention
 
+_Dashboard tab: **Subscriber Retention**. Last updated: 2026-05-21._
+
 Aggregates retention across **all subscribers** (no L1/L2 split). KPIs: total, active, churned, avg + median lifespan, active rate. **"Active"** uses the canonical two-condition rule (state='Active' AND engagement_segment NOT IN Ghosts/Zombies/Dormant).
 
 Charts: Survival Curve (% still active at day 30 / 60 / 90 / 180 / 365), Lifespan Distribution, Monthly Churn Volume.
 
 ### Retention by Acquisition Source
 
-A second table on the same tab buckets subscribers by `COALESCE(utm_source, source, 'Organic')` into six product-relevant labels (**AH CPL**, **Ageist CPL**, **Share**, **Meta**, **Google**, **Direct**) and reports for each:
+A second table on the same tab buckets subscribers by `COALESCE(sa.acquisition_utm_source, s.source, 'Organic')` into six product-relevant labels (**AH CPL**, **Ageist CPL**, **Share**, **Meta**, **Google**, **Direct**) and reports for each:
 
 | Column | Meaning |
 |---|---|
@@ -300,6 +318,8 @@ Powered by `M.retention_by_source[]` — see Q35b for the SQL.
 ---
 
 ## 8. Cohort Analysis
+
+_Dashboard tab: **Cohort Analysis**. Last updated: 2026-05-21._
 
 Groups subscribers by join month and tracks % still active at M+1 through M+12.
 
@@ -821,7 +841,7 @@ scopes click activity. The old query joined the date-less
 `subscriber_clicks` rollup and couldn't be windowed.
 
 ```sql
--- Label priority: sa.acquisition_utm_source >> s.utm_source >> s.source >> 'Organic'
+-- Label priority: sa.acquisition_utm_source >> s.source >> 'Organic'
 -- Effective join date: COALESCE(sa.acquisition_date, s.date_joined).
 -- since_days: None (all-time), 30, 60, or 90.
 WITH sa_acq AS (
@@ -837,7 +857,6 @@ s AS (
         LOWER(TRIM(s.email))  AS email,
         COALESCE(
             _canon(sa.acquisition_utm_source),
-            _canon(s.utm_source),
             _canon(s.source),
             'Organic'
         )                      AS label,
@@ -900,7 +919,7 @@ LIMIT 12;
 ## Q20 — Audience: Source Clicks Performance
 
 ```sql
--- Label priority: sa.acquisition_utm_source >> s.utm_source >> s.source >> 'Organic'.
+-- Label priority: sa.acquisition_utm_source >> s.source >> 'Organic'.
 -- All-time; windowed views fall back to Q19.
 WITH sa_acq AS (
     SELECT LOWER(TRIM(email)) AS email, acquisition_utm_source
@@ -911,7 +930,6 @@ labeled AS (
     SELECT
         COALESCE(
             _canon(sa.acquisition_utm_source),
-            _canon(s.utm_source),
             _canon(s.source),
             'Organic'
         )                             AS label,
@@ -1131,7 +1149,7 @@ list (`AH CPL` / `Ageist CPL` / `Share` / `Meta` / `IFCPL` / `Google` /
 returned as raw values.
 
 ```sql
--- Label priority: sa.acquisition_utm_source >> s.utm_source >> s.source >> 'Organic'.
+-- Label priority: sa.acquisition_utm_source >> s.source >> 'Organic'.
 -- Effective join date: COALESCE(sa.acquisition_date, s.date_joined).
 -- Min cohort 100; top 15 by size.
 WITH sa_acq AS (
@@ -1151,7 +1169,6 @@ s AS (
         sub.engagement_segment,
         COALESCE(
             NULLIF(TRIM(sa.acquisition_utm_source), ''),
-            NULLIF(TRIM(sub.utm_source), ''),
             NULLIF(TRIM(sub.source), ''),
             'Organic'
         )                                                   AS source_raw
@@ -1255,7 +1272,7 @@ Exposed as `M.survival_curve = { labels: ['Day 0','Day 30',...], rates: [100, %,
 Same Day 0/30/60/90/180/365 shape as Q37 but split by acquisition-source bucket. Powers the new overlay on the Retention tab: the all-subscriber baseline (filled green, Q37) plus one thin line per source. Source buckets use the **canonical mapping** (§4 → "Source label canonicalisation") so labels here match the Audience tab and Q35b. Minimum cohort 100 subscribers; **no `LIMIT`** — every canonical bucket with a non-trivial cohort ships as a series so the user can decide which to keep visible. The dashboard exposes per-source toggling via the Chart.js legend (click to hide / show) plus **Show all / Hide all** buttons above the chart.
 
 ```sql
--- Label priority: sa.acquisition_utm_source >> s.utm_source >> s.source.
+-- Label priority: sa.acquisition_utm_source >> s.source.
 -- Effective join date: COALESCE(sa.acquisition_date, s.date_joined).
 -- Sorted by 365-day survival rate DESC.
 WITH sa_acq AS (
@@ -1271,19 +1288,15 @@ s AS (
         CASE
             WHEN LOWER(COALESCE(
                     NULLIF(TRIM(sa.acquisition_utm_source),''),
-                    NULLIF(TRIM(sub.utm_source),''),
                     NULLIF(TRIM(sub.source),''), '')) IN ('organic','direct','') THEN 'Direct'
             ELSE COALESCE(
                 _canon(COALESCE(NULLIF(TRIM(sa.acquisition_utm_source),''),
-                                NULLIF(TRIM(sub.utm_source),''),
                                 NULLIF(TRIM(sub.source),''))),
                 'Direct'
             )
         END AS bucket,
-        EXTRACT(EPOCH FROM (
-            sub.date_unsubscribed::date
-            - COALESCE(sa.acquisition_date, sub.date_joined::date)
-        )) / 86400 AS days_to_unsub
+        (sub.date_unsubscribed::date
+            - COALESCE(sa.acquisition_date, sub.date_joined::date)) AS days_to_unsub
     FROM superage.subscribers sub
     LEFT JOIN sa_acq sa ON sa.email = LOWER(TRIM(sub.email))
     WHERE sub.date_joined IS NOT NULL AND sub.date_joined::date < CURRENT_DATE
@@ -1593,4 +1606,4 @@ ORDER BY c.cohort_month;
     In the same change, **three granularities are emitted**: `daily` (last 120 days), `weekly` (last 52 weeks), `monthly` (last 36 months). Lambda emits `M.subscriber_growth_series = { daily, weekly, monthly }` where each carries `labels` + `new_subs` + `unsubs` + `active_count`. `M.subscriber_monthly` stays populated from the monthly bucket for backwards-compat.
 
     Overview UI adds a **Granularity selector** (Day / Week / Month) plus a **dynamic Window button row** whose presets match the active granularity — Day shows `All / 90d / 30d / 14d / 7d`, Week shows `All / 26w / 12w / 8w / 4w`, Month shows `All / 24m / 12m / 6m / 3m`. Both selectors re-slice the cached payload client-side (no lambda re-run). Defaults: granularity = Month, window = 12.
-67. **subscriber_acquisition table integration (2026-05)**: a new `superage.subscriber_acquisition` table provides acquisition-source attribution more accurate than the legacy `subscribers.utm_source` / `source` columns. Schema: `email`, `acquisition_date`, `acquisition_utm_source`, `acquisition_status`, `brand`, `dynamo_id`, `message`, `acquisition_sub_level`, `acquisition_sub_source`, `acquisition_o_event`, `ingested_at`. Integration adds a LEFT JOIN in Q19 / Q20 / Q35b / Q37b (metrics lambda) and the top-source query (comparison lambda) on `LOWER(TRIM(email))` with filter `acquisition_status IN ('added', 'resubscribed')`. **Label priority**: `sa.acquisition_utm_source` >> `s.utm_source` >> `s.source` >> `'Organic'`. **Effective join date**: `COALESCE(sa.acquisition_date, s.date_joined)` — when SA has a non-NULL `acquisition_date` it replaces `date_joined` for lifespan and churn-window calculations. `utmLabel()` in `index.html` requires no changes — canonicalisation happens server-side before GROUP BY. (Taboola is no longer excluded from results — it appears as its own canonical bucket.)
+67. **subscriber_acquisition table integration (2026-05)**: a new `superage.subscriber_acquisition` table provides acquisition-source attribution more accurate than the legacy `subscribers.utm_source` / `source` columns. Schema: `email`, `acquisition_date`, `acquisition_utm_source`, `acquisition_status`, `brand`, `dynamo_id`, `message`, `acquisition_sub_level`, `acquisition_sub_source`, `acquisition_o_event`, `ingested_at`. Integration adds a LEFT JOIN in Q19 / Q20 / Q35b / Q37b (metrics lambda) and the top-source query (comparison lambda) on `LOWER(TRIM(email))` with filter `acquisition_status IN ('added', 'resubscribed')`. **Label priority**: `sa.acquisition_utm_source` >> `s.source` >> `'Organic'` (the older `s.utm_source` step in the chain was dropped on 2026-05-21 — subscriber-level UTM is no longer consulted). **Effective join date**: `COALESCE(sa.acquisition_date, s.date_joined)` — when SA has a non-NULL `acquisition_date` it replaces `date_joined` for lifespan and churn-window calculations. `utmLabel()` in `index.html` requires no changes — canonicalisation happens server-side before GROUP BY. (Taboola is no longer excluded from results — it appears as its own canonical bucket.)

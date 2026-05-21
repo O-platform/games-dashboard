@@ -934,13 +934,11 @@ def lambda_handler(event, context):
                         {_canon_source("COALESCE(NULLIF(TRIM(sa.acquisition_utm_source),''), NULLIF(TRIM(sub.source),''))")},
                         'Organic'
                     ) AS bucket,
-                    (sub.date_unsubscribed::date
-                        - COALESCE(sa.acquisition_date, sub.date_joined::date)) AS days_to_unsub,
-                    -- cohort_age_days: how many days ago this subscriber effectively joined.
-                    -- Used as the milestone gate: a sub who joined 20 days ago cannot be
-                    -- counted toward the Day-30 denominator — they haven't had time to churn yet.
-                    (CURRENT_DATE - COALESCE(sa.acquisition_date, sub.date_joined::date))::integer
-                        AS cohort_age_days
+                    -- days_to_unsub and cohort_age_days both anchor to date_joined,
+                    -- not acquisition_date. acquisition_date is a batch-import timestamp
+                    -- for many sources (e.g. Meta) and does not reflect the actual join date.
+                    (sub.date_unsubscribed::date - sub.date_joined::date) AS days_to_unsub,
+                    (CURRENT_DATE - sub.date_joined::date)::integer        AS cohort_age_days
                 FROM {S}.subscribers sub
                 LEFT JOIN sa_acq sa ON sa.email = LOWER(TRIM(sub.email))
                 WHERE sub.date_joined IS NOT NULL AND sub.date_joined::date < CURRENT_DATE

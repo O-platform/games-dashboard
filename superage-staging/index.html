@@ -2391,7 +2391,6 @@ function renderAudience(M) {
     </div>
     <div class="kpi-row">
       <div class="kpi-card accent"><div class="label" id="kpi-aud-subs-label">Total Subscribers</div><div class="value" id="kpi-aud-subs">${fmt(M.total_subscribers)}</div><div class="sub" id="kpi-aud-subs-sub">All-time base</div></div>
-      <div class="kpi-card green"><div class="label">Active Rate</div><div class="value">${M.active_rate||'—'}</div><div class="sub">Currently active (global)</div></div>
       <div class="kpi-card blue"><div class="label">Top Source</div><div class="value" style="font-size:14px;" id="kpi-top-source">—</div><div class="sub">Largest acquisition channel</div></div>
       <div class="kpi-card orange"><div class="label">Top Source %</div><div class="value" id="kpi-top-source-pct">—</div><div class="sub">Share of categorised subscribers</div></div>
     </div>
@@ -2719,14 +2718,13 @@ function renderRetention(M) {
 
   document.getElementById('retention').innerHTML = `
     <div class="section-context-banner">
-      <strong>Subscriber Retention</strong> — How long subscribers stay engaged after joining. The Survival Curve overlays the all-subscriber baseline with one line per major acquisition source so you can compare churn shapes; curves show the % still active at 30 / 60 / 90 / 180 / 365 days. "Active" = state = 'Active' AND engagement_segment NOT IN (Ghosts, Zombies, Dormant). Source buckets use the canonical mapping from §4 of METRICS_updated.md.
+      <strong>Subscriber Retention</strong> — How long subscribers stay engaged after joining. The Survival Curve overlays the all-subscriber baseline with one line per major acquisition source so you can compare churn shapes; curves show the % still active at each month from Month 1 through Month 12. "Active" = state = 'Active' AND engagement_segment NOT IN (Ghosts, Zombies, Dormant). Source buckets use the canonical mapping from §4 of METRICS_updated.md.
     </div>
     <div class="kpi-row">
-      <div class="kpi-card green"><div class="label">30-Day Retention</div><div class="value">${pct(findRate('Day 30'))}</div><div class="sub">Still active at day 30</div></div>
-      <div class="kpi-card blue"><div class="label">60-Day Retention</div><div class="value">${pct(findRate('Day 60'))}</div><div class="sub">Still active at day 60</div></div>
-      <div class="kpi-card orange"><div class="label">90-Day Retention</div><div class="value">${pct(findRate('Day 90'))}</div><div class="sub">Still active at day 90</div></div>
+      <div class="kpi-card green"><div class="label">1-Month Retention</div><div class="value">${pct(findRate('Month 1'))}</div><div class="sub">Still active at month 1</div></div>
+      <div class="kpi-card blue"><div class="label">2-Month Retention</div><div class="value">${pct(findRate('Month 2'))}</div><div class="sub">Still active at month 2</div></div>
+      <div class="kpi-card orange"><div class="label">3-Month Retention</div><div class="value">${pct(findRate('Month 3'))}</div><div class="sub">Still active at month 3</div></div>
       <div class="kpi-card cyan"><div class="label">Avg Lifespan</div><div class="value">${rt.avg_lifespan_days != null ? rt.avg_lifespan_days+' d' : '—'}</div><div class="sub">Median: ${rt.median_lifespan_days != null ? rt.median_lifespan_days+' d' : '—'}</div></div>
-      <div class="kpi-card purple"><div class="label">Active Rate</div><div class="value">${esc(rt.active_rate||'—')}</div><div class="sub">${fmt(rt.active)} of ${fmt(rt.total)} subscribers</div></div>
     </div>
     <div class="chart-card">
       <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:6px;">
@@ -2751,7 +2749,7 @@ function renderRetention(M) {
         </div>
       </div>
       <div class="chart-container h340"><canvas id="ret-curve"></canvas></div>
-      <div class="insight">Overall — 30-day: <strong>${pct(findRate('Day 30'))}</strong> &middot; 60-day: <strong>${pct(findRate('Day 60'))}</strong> &middot; 90-day: <strong>${pct(findRate('Day 90'))}</strong>. Thick green line = all subscribers (always visible); each thin coloured line = one canonical source bucket (≥ 100 subscribers). Use <strong>Filter sources</strong> above to pick which sources to overlay — checkbox per source, plus All / None for bulk control.</div>
+      <div class="insight">Overall — Month 1: <strong>${pct(findRate('Month 1'))}</strong> &middot; Month 3: <strong>${pct(findRate('Month 3'))}</strong> &middot; Month 6: <strong>${pct(findRate('Month 6'))}</strong> &middot; Month 12: <strong>${pct(findRate('Month 12'))}</strong>. Thick green line = all subscribers (always visible); each thin coloured line = one canonical source bucket (≥ 100 subscribers). Use <strong>Filter sources</strong> above to pick which sources to overlay — checkbox per source, plus All / None for bulk control.</div>
     </div>
     <div class="grid-2">
       <div class="chart-card">
@@ -3024,7 +3022,6 @@ function renderCohort(M) {
     </div>
     <div class="kpi-row">
       <div class="kpi-card accent"><div class="label">Total Cohorts</div><div class="value">${fmt(k.total_cohorts)}</div><div class="sub">Join-month groups</div></div>
-      <div class="kpi-card green"><div class="label">Avg 90-Day Retention</div><div class="value">${esc(k.avg_90d_retention||'—')}</div><div class="sub">Across all cohorts</div></div>
       <div class="kpi-card blue"><div class="label">Best Cohort (M3)</div><div class="value" style="font-size:16px;">${esc(k.best_cohort_label||'—')}</div><div class="sub">${esc(k.best_cohort_m3||'—')} at M3</div></div>
       <div class="kpi-card red"><div class="label">Worst Cohort (M3)</div><div class="value" style="font-size:16px;">${esc(k.worst_cohort_label||'—')}</div><div class="sub">${esc(k.worst_cohort_m3||'—')} at M3</div></div>
     </div>

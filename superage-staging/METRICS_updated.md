@@ -298,7 +298,7 @@ _Dashboard tab: **Subscriber Retention**. Last updated: 2026-05-21._
 
 Aggregates retention across **all subscribers** (no L1/L2 split). KPIs: total, active, churned, avg + median lifespan, active rate. **"Active"** uses the canonical two-condition rule (state='Active' AND engagement_segment NOT IN Ghosts/Zombies/Dormant).
 
-Charts: Survival Curve (% still active at day 30 / 60 / 90 / 180 / 365), Lifespan Distribution, Monthly Churn Volume.
+Charts: Survival Curve (% still active at Month 1 through Month 12, ~30-day intervals), Lifespan Distribution, Monthly Churn Volume.
 
 ### Retention by Acquisition Source
 
@@ -326,7 +326,6 @@ Groups subscribers by join month and tracks % still active at M+1 through M+12.
 | KPI | Source |
 |---|---|
 | Total Cohorts | Distinct join-month groups |
-| Avg 90-Day Retention | Average M+3 retention across all cohorts with ≥ 20 subscribers |
 | Best / Worst Cohort | Highest / lowest M+3 retention rate |
 
 Charts: Retention Heatmap, 90-Day Churn Rate by Acquisition Source. (The legacy "90-Day Retention by UTM Source" chart was removed; the UTM-cohort SQL no longer runs.)
@@ -1254,7 +1253,14 @@ SELECT
     COUNT(*) FILTER (WHERE days_to_unsub IS NULL OR days_to_unsub > 30)  AS alive_30,
     COUNT(*) FILTER (WHERE days_to_unsub IS NULL OR days_to_unsub > 60)  AS alive_60,
     COUNT(*) FILTER (WHERE days_to_unsub IS NULL OR days_to_unsub > 90)  AS alive_90,
+    COUNT(*) FILTER (WHERE days_to_unsub IS NULL OR days_to_unsub > 120) AS alive_120,
+    COUNT(*) FILTER (WHERE days_to_unsub IS NULL OR days_to_unsub > 150) AS alive_150,
     COUNT(*) FILTER (WHERE days_to_unsub IS NULL OR days_to_unsub > 180) AS alive_180,
+    COUNT(*) FILTER (WHERE days_to_unsub IS NULL OR days_to_unsub > 210) AS alive_210,
+    COUNT(*) FILTER (WHERE days_to_unsub IS NULL OR days_to_unsub > 240) AS alive_240,
+    COUNT(*) FILTER (WHERE days_to_unsub IS NULL OR days_to_unsub > 270) AS alive_270,
+    COUNT(*) FILTER (WHERE days_to_unsub IS NULL OR days_to_unsub > 300) AS alive_300,
+    COUNT(*) FILTER (WHERE days_to_unsub IS NULL OR days_to_unsub > 330) AS alive_330,
     COUNT(*) FILTER (WHERE days_to_unsub IS NULL OR days_to_unsub > 365) AS alive_365
 FROM (
     SELECT
@@ -1265,11 +1271,11 @@ FROM (
 ) x;
 ```
 
-Exposed as `M.survival_curve = { labels: ['Day 0','Day 30',...], rates: [100, %, ...] }` — single series.
+Exposed as `M.survival_curve = { labels: ['Month 0','Month 1',...,'Month 12'], rates: [100, %, ...] }` — single series (Month 0 = 100%, Month 1 = ~Day 30, ..., Month 12 = ~Day 365). Last updated: 2026-05-21.
 
 ## Q37b — Subscriber Retention: Survival Curve per Acquisition Source
 
-Same Day 0/30/60/90/180/365 shape as Q37 but split by acquisition-source bucket. Powers the new overlay on the Retention tab: the all-subscriber baseline (filled green, Q37) plus one thin line per source. Source buckets use the **canonical mapping** (§4 → "Source label canonicalisation") so labels here match the Audience tab and Q35b. Minimum cohort 100 subscribers; **no `LIMIT`** — every canonical bucket with a non-trivial cohort ships as a series so the user can decide which to keep visible. The dashboard exposes per-source toggling via the Chart.js legend (click to hide / show) plus **Show all / Hide all** buttons above the chart.
+Same monthly shape as Q37 (Month 0–12, ~30-day intervals) but split by acquisition-source bucket. Powers the overlay on the Retention tab: the all-subscriber baseline (filled green, Q37) plus one thin line per source. Source buckets use the **canonical mapping** (§4 → "Source label canonicalisation") so labels here match the Audience tab and Q35b. Minimum cohort 100 subscribers; **no `LIMIT`** — every canonical bucket with a non-trivial cohort ships as a series so the user can decide which to keep visible. The dashboard exposes per-source toggling via the "Filter sources" dropdown above the chart plus **All / None** bulk buttons. Young cohorts (e.g. Taboola) emit `null` for milestones they haven't reached yet — Chart.js `spanGaps: false` stops the line there rather than drawing a flat extrapolation. Last updated: 2026-05-21.
 
 ```sql
 -- Label priority: sa.acquisition_utm_source >> s.source.
@@ -1304,12 +1310,33 @@ s AS (
 )
 SELECT
     bucket,
-    COUNT(*)                                                                AS total,
-    COUNT(*) FILTER (WHERE days_to_unsub IS NULL OR days_to_unsub > 30)     AS alive_30,
-    COUNT(*) FILTER (WHERE days_to_unsub IS NULL OR days_to_unsub > 60)     AS alive_60,
-    COUNT(*) FILTER (WHERE days_to_unsub IS NULL OR days_to_unsub > 90)     AS alive_90,
-    COUNT(*) FILTER (WHERE days_to_unsub IS NULL OR days_to_unsub > 180)    AS alive_180,
-    COUNT(*) FILTER (WHERE days_to_unsub IS NULL OR days_to_unsub > 365)    AS alive_365
+    COUNT(*)                                                                            AS total,
+    -- Month 1 (Day 30) through Month 12 (Day 365) — alive_N / eligible_N pairs
+    -- eligible_N = subscribers whose cohort age >= N days (cohort-age-gated denominator)
+    COUNT(*) FILTER (WHERE cohort_age_days >= 30  AND (days_to_unsub IS NULL OR days_to_unsub > 30))  AS alive_30,
+    COUNT(*) FILTER (WHERE cohort_age_days >= 30)                                                      AS eligible_30,
+    COUNT(*) FILTER (WHERE cohort_age_days >= 60  AND (days_to_unsub IS NULL OR days_to_unsub > 60))  AS alive_60,
+    COUNT(*) FILTER (WHERE cohort_age_days >= 60)                                                      AS eligible_60,
+    COUNT(*) FILTER (WHERE cohort_age_days >= 90  AND (days_to_unsub IS NULL OR days_to_unsub > 90))  AS alive_90,
+    COUNT(*) FILTER (WHERE cohort_age_days >= 90)                                                      AS eligible_90,
+    COUNT(*) FILTER (WHERE cohort_age_days >= 120 AND (days_to_unsub IS NULL OR days_to_unsub > 120)) AS alive_120,
+    COUNT(*) FILTER (WHERE cohort_age_days >= 120)                                                     AS eligible_120,
+    COUNT(*) FILTER (WHERE cohort_age_days >= 150 AND (days_to_unsub IS NULL OR days_to_unsub > 150)) AS alive_150,
+    COUNT(*) FILTER (WHERE cohort_age_days >= 150)                                                     AS eligible_150,
+    COUNT(*) FILTER (WHERE cohort_age_days >= 180 AND (days_to_unsub IS NULL OR days_to_unsub > 180)) AS alive_180,
+    COUNT(*) FILTER (WHERE cohort_age_days >= 180)                                                     AS eligible_180,
+    COUNT(*) FILTER (WHERE cohort_age_days >= 210 AND (days_to_unsub IS NULL OR days_to_unsub > 210)) AS alive_210,
+    COUNT(*) FILTER (WHERE cohort_age_days >= 210)                                                     AS eligible_210,
+    COUNT(*) FILTER (WHERE cohort_age_days >= 240 AND (days_to_unsub IS NULL OR days_to_unsub > 240)) AS alive_240,
+    COUNT(*) FILTER (WHERE cohort_age_days >= 240)                                                     AS eligible_240,
+    COUNT(*) FILTER (WHERE cohort_age_days >= 270 AND (days_to_unsub IS NULL OR days_to_unsub > 270)) AS alive_270,
+    COUNT(*) FILTER (WHERE cohort_age_days >= 270)                                                     AS eligible_270,
+    COUNT(*) FILTER (WHERE cohort_age_days >= 300 AND (days_to_unsub IS NULL OR days_to_unsub > 300)) AS alive_300,
+    COUNT(*) FILTER (WHERE cohort_age_days >= 300)                                                     AS eligible_300,
+    COUNT(*) FILTER (WHERE cohort_age_days >= 330 AND (days_to_unsub IS NULL OR days_to_unsub > 330)) AS alive_330,
+    COUNT(*) FILTER (WHERE cohort_age_days >= 330)                                                     AS eligible_330,
+    COUNT(*) FILTER (WHERE cohort_age_days >= 365 AND (days_to_unsub IS NULL OR days_to_unsub > 365)) AS alive_365,
+    COUNT(*) FILTER (WHERE cohort_age_days >= 365)                                                     AS eligible_365
 FROM s
 GROUP BY 1
 HAVING COUNT(*) >= 100
@@ -1323,13 +1350,14 @@ Exposed as:
 
 ```json
 M.survival_curve_by_source = {
-  "labels": ["Day 0","Day 30","Day 60","Day 90","Day 180","Day 365"],
+  "labels": ["Month 0","Month 1","Month 2","Month 3","Month 4","Month 5","Month 6","Month 7","Month 8","Month 9","Month 10","Month 11","Month 12"],
   "series": [
-    { "label": "<Source>", "total": <int>, "rates": [100.0, %30, %60, %90, %180, %365] },
+    { "label": "<Source>", "total": <int>, "rates": [100.0, %M1, %M2, %M3, %M4, %M5, %M6, %M7, %M8, %M9, %M10, %M11, %M12] },
     …
   ]
 }
 ```
+`null` at any position = cohort hasn't reached that age yet (Chart.js `spanGaps:false` stops the line there).
 
 ## Q38 — Subscriber Retention: Monthly Churn Volume + Churn % of Sends
 

@@ -892,7 +892,14 @@ def lambda_handler(event, context):
                 COUNT(*) FILTER (WHERE days_to_unsub IS NULL OR days_to_unsub > 30)  AS alive_30,
                 COUNT(*) FILTER (WHERE days_to_unsub IS NULL OR days_to_unsub > 60)  AS alive_60,
                 COUNT(*) FILTER (WHERE days_to_unsub IS NULL OR days_to_unsub > 90)  AS alive_90,
+                COUNT(*) FILTER (WHERE days_to_unsub IS NULL OR days_to_unsub > 120) AS alive_120,
+                COUNT(*) FILTER (WHERE days_to_unsub IS NULL OR days_to_unsub > 150) AS alive_150,
                 COUNT(*) FILTER (WHERE days_to_unsub IS NULL OR days_to_unsub > 180) AS alive_180,
+                COUNT(*) FILTER (WHERE days_to_unsub IS NULL OR days_to_unsub > 210) AS alive_210,
+                COUNT(*) FILTER (WHERE days_to_unsub IS NULL OR days_to_unsub > 240) AS alive_240,
+                COUNT(*) FILTER (WHERE days_to_unsub IS NULL OR days_to_unsub > 270) AS alive_270,
+                COUNT(*) FILTER (WHERE days_to_unsub IS NULL OR days_to_unsub > 300) AS alive_300,
+                COUNT(*) FILTER (WHERE days_to_unsub IS NULL OR days_to_unsub > 330) AS alive_330,
                 COUNT(*) FILTER (WHERE days_to_unsub IS NULL OR days_to_unsub > 365) AS alive_365
             FROM (
                 SELECT
@@ -951,8 +958,22 @@ def lambda_handler(event, context):
                 COUNT(*) FILTER (WHERE cohort_age_days >= 60)                                                      AS eligible_60,
                 COUNT(*) FILTER (WHERE cohort_age_days >= 90  AND (days_to_unsub IS NULL OR days_to_unsub > 90))  AS alive_90,
                 COUNT(*) FILTER (WHERE cohort_age_days >= 90)                                                      AS eligible_90,
+                COUNT(*) FILTER (WHERE cohort_age_days >= 120 AND (days_to_unsub IS NULL OR days_to_unsub > 120)) AS alive_120,
+                COUNT(*) FILTER (WHERE cohort_age_days >= 120)                                                     AS eligible_120,
+                COUNT(*) FILTER (WHERE cohort_age_days >= 150 AND (days_to_unsub IS NULL OR days_to_unsub > 150)) AS alive_150,
+                COUNT(*) FILTER (WHERE cohort_age_days >= 150)                                                     AS eligible_150,
                 COUNT(*) FILTER (WHERE cohort_age_days >= 180 AND (days_to_unsub IS NULL OR days_to_unsub > 180)) AS alive_180,
                 COUNT(*) FILTER (WHERE cohort_age_days >= 180)                                                     AS eligible_180,
+                COUNT(*) FILTER (WHERE cohort_age_days >= 210 AND (days_to_unsub IS NULL OR days_to_unsub > 210)) AS alive_210,
+                COUNT(*) FILTER (WHERE cohort_age_days >= 210)                                                     AS eligible_210,
+                COUNT(*) FILTER (WHERE cohort_age_days >= 240 AND (days_to_unsub IS NULL OR days_to_unsub > 240)) AS alive_240,
+                COUNT(*) FILTER (WHERE cohort_age_days >= 240)                                                     AS eligible_240,
+                COUNT(*) FILTER (WHERE cohort_age_days >= 270 AND (days_to_unsub IS NULL OR days_to_unsub > 270)) AS alive_270,
+                COUNT(*) FILTER (WHERE cohort_age_days >= 270)                                                     AS eligible_270,
+                COUNT(*) FILTER (WHERE cohort_age_days >= 300 AND (days_to_unsub IS NULL OR days_to_unsub > 300)) AS alive_300,
+                COUNT(*) FILTER (WHERE cohort_age_days >= 300)                                                     AS eligible_300,
+                COUNT(*) FILTER (WHERE cohort_age_days >= 330 AND (days_to_unsub IS NULL OR days_to_unsub > 330)) AS alive_330,
+                COUNT(*) FILTER (WHERE cohort_age_days >= 330)                                                     AS eligible_330,
                 COUNT(*) FILTER (WHERE cohort_age_days >= 365 AND (days_to_unsub IS NULL OR days_to_unsub > 365)) AS alive_365,
                 COUNT(*) FILTER (WHERE cohort_age_days >= 365)                                                     AS eligible_365
             FROM s
@@ -1555,13 +1576,21 @@ def lambda_handler(event, context):
     sv = survival_row
     sv_total = safe_int(sv.get("total")) or 1
     M["survival_curve"] = {
-        "labels": ["Day 0", "Day 30", "Day 60", "Day 90", "Day 180", "Day 365"],
+        "labels": ["Month 0", "Month 1", "Month 2", "Month 3", "Month 4", "Month 5",
+                   "Month 6", "Month 7", "Month 8", "Month 9", "Month 10", "Month 11", "Month 12"],
         "rates":  [
             100.0,
             round(safe_int(sv.get("alive_30"))  / sv_total * 100, 1),
             round(safe_int(sv.get("alive_60"))  / sv_total * 100, 1),
             round(safe_int(sv.get("alive_90"))  / sv_total * 100, 1),
+            round(safe_int(sv.get("alive_120")) / sv_total * 100, 1),
+            round(safe_int(sv.get("alive_150")) / sv_total * 100, 1),
             round(safe_int(sv.get("alive_180")) / sv_total * 100, 1),
+            round(safe_int(sv.get("alive_210")) / sv_total * 100, 1),
+            round(safe_int(sv.get("alive_240")) / sv_total * 100, 1),
+            round(safe_int(sv.get("alive_270")) / sv_total * 100, 1),
+            round(safe_int(sv.get("alive_300")) / sv_total * 100, 1),
+            round(safe_int(sv.get("alive_330")) / sv_total * 100, 1),
             round(safe_int(sv.get("alive_365")) / sv_total * 100, 1),
         ],
     }
@@ -1579,7 +1608,8 @@ def lambda_handler(event, context):
     # milestones they haven't reached yet — Chart.js stops drawing the line there
     # instead of extending a misleading flat line to Day 365.
     M["survival_curve_by_source"] = {
-        "labels": ["Day 0", "Day 30", "Day 60", "Day 90", "Day 180", "Day 365"],
+        "labels": ["Month 0", "Month 1", "Month 2", "Month 3", "Month 4", "Month 5",
+                   "Month 6", "Month 7", "Month 8", "Month 9", "Month 10", "Month 11", "Month 12"],
         "series": [
             {
                 "label": str(r["bucket"]),
@@ -1589,7 +1619,14 @@ def lambda_handler(event, context):
                     _sv_rate(r["alive_30"],  r["eligible_30"]),
                     _sv_rate(r["alive_60"],  r["eligible_60"]),
                     _sv_rate(r["alive_90"],  r["eligible_90"]),
+                    _sv_rate(r["alive_120"], r["eligible_120"]),
+                    _sv_rate(r["alive_150"], r["eligible_150"]),
                     _sv_rate(r["alive_180"], r["eligible_180"]),
+                    _sv_rate(r["alive_210"], r["eligible_210"]),
+                    _sv_rate(r["alive_240"], r["eligible_240"]),
+                    _sv_rate(r["alive_270"], r["eligible_270"]),
+                    _sv_rate(r["alive_300"], r["eligible_300"]),
+                    _sv_rate(r["alive_330"], r["eligible_330"]),
                     _sv_rate(r["alive_365"], r["eligible_365"]),
                 ],
             }

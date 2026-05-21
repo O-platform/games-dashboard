@@ -23,6 +23,17 @@
   },
   "total_article_clicks": 1508235,
   "total_article_clickers": 270348,
+  "clicker_repeat": {
+    "repeat_7d": 13315,
+    "repeat_30d": 54216
+  },
+  "clicker_buckets": {
+    "b_1": 96967,
+    "b_2_5": 103717,
+    "b_6_10": 34064,
+    "b_11_20": 22478,
+    "b_20_plus": 13122
+  },
   "total_revenue": 1351850.0,
   "total_revenue_fmt": "$1,351,850",
   "avg_deal_size_fmt": "$7,004",
@@ -9835,11 +9846,11 @@
       "365d+"
     ],
     "data": [
-      245986,
-      184144,
-      206438,
-      315621,
-      852420
+      245943,
+      184155,
+      206445,
+      315624,
+      852432
     ]
   },
   "survival_curve": {

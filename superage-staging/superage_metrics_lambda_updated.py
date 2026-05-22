@@ -458,15 +458,12 @@ def lambda_handler(event, context):
         content_drill_rows = cur.fetchall()
 
         # Total distinct article clickers (feeds the "Unique Clickers" KPI)
-        # plus the 1 / 2–5 / 6–10 / 11–20 / 20+ click-distribution buckets
-        # and the repeat-clicker flags maintained on subscriber_clicks
-        # (clicked_7d_2x_plus / clicked_30d_2x_plus) which power the Click
-        # Analysis KPI row.
+        # plus the 1 / 2–5 / 6–10 / 11–20 / 20+ click-distribution buckets.
+        # These are lifetime aggregates so they stay sourced from the
+        # `subscriber_clicks` rollup.
         cur.execute(f"""
             SELECT
                 COUNT(*)                                                          AS total_clickers,
-                COUNT(*) FILTER (WHERE clicked_7d_2x_plus  IS TRUE)               AS repeat_7d,
-                COUNT(*) FILTER (WHERE clicked_30d_2x_plus IS TRUE)               AS repeat_30d,
                 COUNT(*) FILTER (WHERE unique_clicks = 1)                         AS bucket_1,
                 COUNT(*) FILTER (WHERE unique_clicks BETWEEN 2  AND 5)            AS bucket_2_5,
                 COUNT(*) FILTER (WHERE unique_clicks BETWEEN 6  AND 10)           AS bucket_6_10,
@@ -476,6 +473,44 @@ def lambda_handler(event, context):
         """)
         clicker_summary = cur.fetchone() or {}
         total_article_clickers = safe_int(clicker_summary.get("total_clickers"))
+
+        # Repeat-clicker counts — derived from the raw `Campaigns_Clicks`
+        # events table, NOT from the date-less subscriber_clicks rollup.
+        # "Repeat clicker in the last N days" = a distinct email address
+        # that produced 2+ click events in that rolling window. The previous
+        # implementation read `clicked_7d_2x_plus` / `clicked_30d_2x_plus`
+        # flags off `subscriber_clicks`, which were refreshed on the rollup's
+        # cadence and didn't always agree with the raw events; computing
+        # from `Campaigns_Clicks` gives the precise count at query time.
+        cur.execute(f"""
+            WITH cc_recent AS (
+                SELECT
+                    LOWER(TRIM("EmailAddress ")) AS email,
+                    "Date"::date                  AS click_date
+                FROM {S}."Campaigns_Clicks"
+                WHERE "Date" IS NOT NULL
+                  AND "EmailAddress " IS NOT NULL
+                  AND TRIM("EmailAddress ") != ''
+                  AND "Date"::date >= CURRENT_DATE - INTERVAL '30 days'
+            ),
+            per_email_7d AS (
+                SELECT email, COUNT(*) AS clicks
+                FROM cc_recent
+                WHERE click_date >= CURRENT_DATE - INTERVAL '7 days'
+                GROUP BY 1
+            ),
+            per_email_30d AS (
+                SELECT email, COUNT(*) AS clicks
+                FROM cc_recent
+                GROUP BY 1
+            )
+            SELECT
+                (SELECT COUNT(*) FROM per_email_7d  WHERE clicks >= 2) AS repeat_7d,
+                (SELECT COUNT(*) FROM per_email_30d WHERE clicks >= 2) AS repeat_30d
+        """)
+        repeat_row = cur.fetchone() or {}
+        clicker_summary["repeat_7d"]  = safe_int(repeat_row.get("repeat_7d"))
+        clicker_summary["repeat_30d"] = safe_int(repeat_row.get("repeat_30d"))
 
         # ─────────────────────────────────────────────────────
         # 4. Acquisition quality — utm_source only

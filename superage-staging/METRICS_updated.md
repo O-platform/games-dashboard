@@ -812,15 +812,13 @@ LIMIT 300;
 
 ---
 
-## Q18 — Audience: Total Article Clickers
+## Q18 — Audience: Total Article Clickers + Click-Distribution Buckets
 
-Single query returns the total clicker count plus repeat-clicker flags and the 5-bucket click-distribution (used by the Click Analysis KPI row and the clicker breakdown chart):
+Total clicker count plus the 5-bucket lifetime click-distribution (used by the Click Analysis KPI row and the clicker breakdown chart):
 
 ```sql
 SELECT
     COUNT(*)                                                  AS total_clickers,
-    COUNT(*) FILTER (WHERE clicked_7d_2x_plus  IS TRUE)       AS repeat_7d,
-    COUNT(*) FILTER (WHERE clicked_30d_2x_plus IS TRUE)       AS repeat_30d,
     COUNT(*) FILTER (WHERE unique_clicks = 1)                 AS bucket_1,
     COUNT(*) FILTER (WHERE unique_clicks BETWEEN 2  AND 5)    AS bucket_2_5,
     COUNT(*) FILTER (WHERE unique_clicks BETWEEN 6  AND 10)   AS bucket_6_10,
@@ -829,10 +827,32 @@ SELECT
 FROM superage.subscriber_clicks;
 ```
 
+## Q18b — Audience: Repeat Clickers (rolling 7d / 30d)
+
+Computed directly from the raw `Campaigns_Clicks` events table — a distinct email that produced **2 or more** click events inside the rolling window:
+
+```sql
+WITH cc_recent AS (
+    SELECT LOWER(TRIM("EmailAddress ")) AS email,
+           "Date"::date                  AS click_date
+    FROM superage."Campaigns_Clicks"
+    WHERE "Date" IS NOT NULL
+      AND "EmailAddress " IS NOT NULL AND TRIM("EmailAddress ") != ''
+      AND "Date"::date >= CURRENT_DATE - INTERVAL '30 days'
+),
+per_email_7d  AS (SELECT email, COUNT(*) AS clicks FROM cc_recent WHERE click_date >= CURRENT_DATE - INTERVAL '7 days' GROUP BY 1),
+per_email_30d AS (SELECT email, COUNT(*) AS clicks FROM cc_recent                                                        GROUP BY 1)
+SELECT
+    (SELECT COUNT(*) FROM per_email_7d  WHERE clicks >= 2) AS repeat_7d,
+    (SELECT COUNT(*) FROM per_email_30d WHERE clicks >= 2) AS repeat_30d;
+```
+
+> Sourced from `Campaigns_Clicks` (not the `subscriber_clicks` rollup) so the window genuinely scopes recent activity instead of relying on the rollup's `clicked_7d_2x_plus` / `clicked_30d_2x_plus` flags. The `EmailAddress ` column has a literal trailing space — keep the double quotes.
+
 Feeds:
-- `M.total_article_clickers` ← `total_clickers`
-- `M.clicker_repeat` ← `{ repeat_7d, repeat_30d }`
-- `M.clicker_buckets` ← `{ b_1, b_2_5, b_6_10, b_11_20, b_20_plus }`
+- `M.total_article_clickers` ← `total_clickers` (Q18)
+- `M.clicker_buckets` ← `{ b_1, b_2_5, b_6_10, b_11_20, b_20_plus }` (Q18)
+- `M.clicker_repeat` ← `{ repeat_7d, repeat_30d }` (Q18b)
 
 ## Q19 — Audience: Acquisition Quality by Source (Engagement Table)
 

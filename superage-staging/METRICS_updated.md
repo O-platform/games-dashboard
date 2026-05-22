@@ -358,10 +358,7 @@ SELECT
     COUNT(*) FILTER (WHERE state = 'Deleted')      AS deleted,
     COUNT(*) FILTER (WHERE has_taken_longevity_quiz = true) AS quiz_takers,
     COUNT(*) FILTER (WHERE took_fitness_quiz::text = '1')   AS fitness_quiz_takers,
-    COUNT(*) FILTER (WHERE took_menu_quiz::text = '1')      AS menu_quiz_takers,
-    COUNT(*) FILTER (
-        WHERE high_engagement_60d IS NOT NULL AND high_engagement_60d::text != ''
-    ) AS high_eng
+    COUNT(*) FILTER (WHERE took_menu_quiz::text = '1')      AS menu_quiz_takers
 FROM superage.subscribers
 WHERE date_joined::date < CURRENT_DATE;
 ```

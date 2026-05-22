@@ -219,10 +219,7 @@ def lambda_handler(event, context):
                 COUNT(*) FILTER (WHERE state = 'Deleted')      AS deleted,
                 COUNT(*) FILTER (WHERE has_taken_longevity_quiz = true) AS quiz_takers,
                 COUNT(*) FILTER (WHERE took_fitness_quiz::text = '1') AS fitness_quiz_takers,
-                COUNT(*) FILTER (WHERE took_menu_quiz::text = '1') AS menu_quiz_takers,
-                COUNT(*) FILTER (
-                    WHERE high_engagement_60d IS NOT NULL AND high_engagement_60d::text != ''
-                ) AS high_eng
+                COUNT(*) FILTER (WHERE took_menu_quiz::text = '1') AS menu_quiz_takers
             FROM {S}.subscribers
             WHERE date_joined::date < CURRENT_DATE
         """)
@@ -271,7 +268,6 @@ def lambda_handler(event, context):
         )
         fitness_quiz_takers  = safe_int(sub.get("fitness_quiz_takers"))
         menu_quiz_takers     = safe_int(sub.get("menu_quiz_takers"))
-        high_engagement_60d  = safe_int(sub.get("high_eng"))
 
         cur.execute(f"""
             SELECT COALESCE(NULLIF(state, ''), 'Unknown') AS state, COUNT(*) AS cnt
@@ -1281,7 +1277,6 @@ def lambda_handler(event, context):
     M["bounced_count"]       = bounced_count
     M["quiz_takers"]         = quiz_takers
     M["quiz_takers_pct"]     = round(100.0 * quiz_takers / total_subscribers, 1) if total_subscribers else 0
-    M["high_engagement_60d"] = high_engagement_60d
     M["active_rate"]         = pct(active_subscribers, total_all_states)  # active / all states
     M["send_to_rate"]        = pct(send_to_active,    total_subscribers)  # send-to / active base
 

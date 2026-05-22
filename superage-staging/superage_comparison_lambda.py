@@ -3,7 +3,8 @@ SuperAge Dashboard — superage-comparison.json Refresh Lambda
 =============================================================
 Generates week-over-week and day-over-day campaign performance comparisons.
 
-Output file: superage-staging/superage-comparison.json
+Output target: Cloudflare R2 — default key `superage-dashboard/superage-comparison.json`,
+served to the dashboard via the `dashboard.pardon-ventures-06b.workers.dev` Worker.
 
 Rules:
   - Only campaigns with Recipients > 95 are included (base dashboard filter).
@@ -17,25 +18,21 @@ Rules:
 
 Required env vars:
   DB_SECRET_ARN   — Secrets Manager ARN (JSON: host/port/dbname/username/password)
-  GITHUB_TOKEN    — Fine-grained PAT (Contents read+write on the repo)
-  GITHUB_REPO     — "O-platform/retention-dshb"
-  GITHUB_BRANCH   — target branch (e.g. "main")
+  R2_SECRET_ARN   — Secrets Manager ARN; secret must carry the keys
+                    account_id, access_key_id, secret_access_key, bucket_name
 
 Optional env vars:
   DB_HOST / DB_PORT / DB_NAME / DB_USER / DB_SSLMODE
-  GITHUB_FILE_PATH  (default: superage-staging/superage-comparison.json)
-  SA_SCHEMA         (default: superage)
-  COMMIT_TO_GITHUB  (default: true; set false for local/test run)
+  R2_FILE_PATH     (default: superage-dashboard/superage-comparison.json)
+  SA_SCHEMA        (default: superage)
+  WRITE_TO_R2      (default: true; set false for local/test run)
 
 Runtime: Python 3.12 | Layer: psycopg2
 """
 
-import base64
 import json
 import logging
 import os
-import urllib.error
-import urllib.request
 from datetime import date, datetime, timedelta
 
 import boto3
@@ -46,59 +43,65 @@ logger = logging.getLogger()
 logger.setLevel(logging.INFO)
 
 _db_secret_cache = None
+_r2_secret_cache = None
+_r2_client_cache = None
 
-GITHUB_TOKEN     = os.environ.get("GITHUB_TOKEN", "")
-GITHUB_REPO      = os.environ.get("GITHUB_REPO", "O-platform/retention-dshb")
-GITHUB_FILE_PATH = os.environ.get("GITHUB_FILE_PATH", "superage-staging/superage-comparison.json")
-GITHUB_BRANCH    = os.environ.get("GITHUB_BRANCH", "main")
-SA_SCHEMA        = os.environ.get("SA_SCHEMA", "superage")
-COMMIT_TO_GITHUB = os.environ.get("COMMIT_TO_GITHUB", "true").strip().lower() not in {"0", "false", "no"}
+R2_FILE_PATH    = os.environ.get("R2_FILE_PATH", "superage-dashboard/superage-comparison.json")
+SA_SCHEMA       = os.environ.get("SA_SCHEMA", "superage")
+WRITE_TO_R2     = os.environ.get("WRITE_TO_R2", "true").strip().lower() not in {"0", "false", "no"}
 
 
 # ─────────────────────────────────────────────────────────────
-# GitHub helpers
+# R2 helpers
 # ─────────────────────────────────────────────────────────────
 
 def _date_label() -> str:
     return date.today().strftime("%b %d, %Y").replace(" 0", " ")
 
 
-def commit_to_github(content: str):
-    if not COMMIT_TO_GITHUB:
-        logger.info("COMMIT_TO_GITHUB=false — skipping GitHub commit.")
-        return
-    if not GITHUB_TOKEN or not GITHUB_REPO:
-        logger.warning("GITHUB_TOKEN or GITHUB_REPO not set — skipping GitHub commit.")
-        return
+def _get_r2_client():
+    """Cached (boto3 S3 client pointed at R2, bucket_name) tuple."""
+    global _r2_client_cache, _r2_secret_cache
+    if _r2_client_cache is not None:
+        return _r2_client_cache
 
-    api_base = f"https://api.github.com/repos/{GITHUB_REPO}/contents/{GITHUB_FILE_PATH}"
-    headers = {
-        "Authorization": f"Bearer {GITHUB_TOKEN}",
-        "Accept": "application/vnd.github+json",
-        "X-GitHub-Api-Version": "2022-11-28",
-        "User-Agent": "superage-comparison-lambda",
-    }
+    arn = os.environ["R2_SECRET_ARN"]
+    sm  = boto3.client(
+        "secretsmanager",
+        region_name=os.environ.get("AWS_REGION", "us-east-1"),
+    )
+    _r2_secret_cache = json.loads(sm.get_secret_value(SecretId=arn)["SecretString"])
 
-    sha = None
+    client = boto3.client(
+        "s3",
+        endpoint_url=f"https://{_r2_secret_cache['account_id']}.r2.cloudflarestorage.com",
+        aws_access_key_id=_r2_secret_cache["access_key_id"],
+        aws_secret_access_key=_r2_secret_cache["secret_access_key"],
+        region_name="auto",
+    )
+    _r2_client_cache = (client, _r2_secret_cache["bucket_name"])
+    return _r2_client_cache
+
+
+def write_to_r2(content: str):
+    """Uploads the JSON string to R2. No-op when WRITE_TO_R2=false (local dev)."""
+    if not WRITE_TO_R2:
+        logger.info("WRITE_TO_R2=false — skipping R2 upload.")
+        return {"written": False, "skipped": True}
     try:
-        req = urllib.request.Request(f"{api_base}?ref={GITHUB_BRANCH}", headers=headers, method="GET")
-        with urllib.request.urlopen(req, timeout=15) as resp:
-            sha = json.loads(resp.read()).get("sha")
-    except urllib.error.HTTPError as e:
-        if e.code != 404:
-            logger.warning(f"GitHub GET failed: {e.code} {e.reason}")
-
-    payload = {"message": f"Update superage-comparison.json — {_date_label()}", "content": base64.b64encode(content.encode()).decode(), "branch": GITHUB_BRANCH}
-    if sha:
-        payload["sha"] = sha
-
-    req = urllib.request.Request(api_base, data=json.dumps(payload).encode(), headers={**headers, "Content-Type": "application/json"}, method="PUT")
-    try:
-        with urllib.request.urlopen(req, timeout=30) as resp:
-            logger.info(f"GitHub commit OK: {resp.status}")
-    except urllib.error.HTTPError as e:
-        logger.error(f"GitHub PUT failed: {e.code} {e.read().decode()[:300]}")
-        raise
+        client, bucket = _get_r2_client()
+        client.put_object(
+            Bucket=bucket,
+            Key=R2_FILE_PATH,
+            Body=content.encode("utf-8"),
+            ContentType="application/json",
+            CacheControl="no-store",
+        )
+        logger.info("R2 write OK — bucket=%s key=%s", bucket, R2_FILE_PATH)
+        return {"written": True, "bucket": bucket, "key": R2_FILE_PATH}
+    except Exception as e:
+        logger.error("R2 write failed: %s", e)
+        return {"written": False, "error": str(e)}
 
 
 # ─────────────────────────────────────────────────────────────
@@ -727,7 +730,7 @@ def lambda_handler(event, context):
 
     if not all_rows:
         result = {"data_as_of": today.isoformat(), "error": "no qualifying campaigns found"}
-        commit_to_github(json.dumps(result, indent=2, default=str))
+        write_to_r2(json.dumps(result, indent=2, default=str))
         return {"statusCode": 200, "body": "no data"}
 
     # ── Determine current and previous week ─────────────────────────
@@ -922,9 +925,9 @@ def lambda_handler(event, context):
     }
 
     payload = json.dumps(M, indent=2, default=str)
-    commit_to_github(payload)
-    logger.info("Done — comparison JSON committed.")
-    return {"statusCode": 200, "body": "ok"}
+    r2_result = write_to_r2(payload)
+    logger.info("Done — comparison JSON uploaded to R2.")
+    return {"statusCode": 200, "body": json.dumps({"status": "ok", "r2": r2_result})}
 
 
 def _campaign_detail(rows):

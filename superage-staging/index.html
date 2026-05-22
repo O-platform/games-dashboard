@@ -323,10 +323,15 @@ function utmLabel(raw) {
 
 /* ═══════════════════════════════════════
    DATA LOAD
+   ───────────────────────────────────────
+   JSON is served from a Cloudflare Worker fronting an R2 bucket. The
+   `superage-dashboard/*.json` keys are written by the two refresh
+   Lambdas (see superage_metrics_lambda_updated.py + superage_comparison_lambda.py).
 ═══════════════════════════════════════ */
+const DASHBOARD_API = 'https://dashboard.pardon-ventures-06b.workers.dev';
 Promise.all([
-  fetch('./superage-metrics.json').then(r => r.json()),
-  fetch('./superage-comparison.json').then(r => r.ok ? r.json() : {}).catch(() => ({}))
+  fetch(`${DASHBOARD_API}/superage-dashboard/superage-metrics.json`).then(r => r.json()),
+  fetch(`${DASHBOARD_API}/superage-dashboard/superage-comparison.json`).then(r => r.ok ? r.json() : {}).catch(() => ({}))
 ])
   .then(([metrics, comparison]) => {
     const M = Object.assign({}, metrics, comparison);

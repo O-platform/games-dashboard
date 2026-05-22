@@ -6,7 +6,6 @@
   "bounced_count": 44919,
   "quiz_takers": 887947,
   "quiz_takers_pct": 79.8,
-  "high_engagement_60d": 417952,
   "active_rate": "61.3%",
   "send_to_rate": "63.6%",
   "total_campaigns": 248,
@@ -16,23 +15,23 @@
   "best_open_rate": "84.78%",
   "best_click_rate": "34.02%",
   "content_summary": {
-    "placements": 593,
-    "unique_articles": 380,
-    "unique_clicks": 1508334,
-    "non_unique_clicks": 1691297
+    "placements": 601,
+    "unique_articles": 385,
+    "unique_clicks": 1522952,
+    "non_unique_clicks": 1707099
   },
-  "total_article_clicks": 1508334,
-  "total_article_clickers": 270357,
+  "total_article_clicks": 1522952,
+  "total_article_clickers": 271332,
   "clicker_repeat": {
-    "repeat_7d": 12696,
-    "repeat_30d": 54121
+    "repeat_7d": 12852,
+    "repeat_30d": 56041
   },
   "clicker_buckets": {
-    "b_1": 96972,
-    "b_2_5": 103717,
-    "b_6_10": 34068,
-    "b_11_20": 22477,
-    "b_20_plus": 13123
+    "b_1": 97070,
+    "b_2_5": 104089,
+    "b_6_10": 34234,
+    "b_11_20": 22644,
+    "b_20_plus": 13295
   },
   "total_revenue": 1351850.0,
   "total_revenue_fmt": "$1,351,850",
@@ -4100,8 +4099,8 @@
       "type": "Editorial",
       "story_position": 3,
       "position_category": "high",
-      "unique_clicks": 28899,
-      "total_clicks": 36060,
+      "unique_clicks": 28905,
+      "total_clicks": 36068,
       "bar_width": "72%"
     },
     {
@@ -4184,8 +4183,8 @@
       "type": "Editorial",
       "story_position": 3,
       "position_category": "high",
-      "unique_clicks": 20334,
-      "total_clicks": 22739,
+      "unique_clicks": 20466,
+      "total_clicks": 22939,
       "bar_width": "51%"
     },
     {
@@ -4364,8 +4363,8 @@
       "type": "Editorial",
       "story_position": 4,
       "position_category": "high",
-      "unique_clicks": 15116,
-      "total_clicks": 19873,
+      "unique_clicks": 15119,
+      "total_clicks": 19886,
       "bar_width": "38%"
     },
     {
@@ -4436,8 +4435,8 @@
       "type": "Editorial",
       "story_position": 4,
       "position_category": "medium",
-      "unique_clicks": 13759,
-      "total_clicks": 17873,
+      "unique_clicks": 13761,
+      "total_clicks": 17876,
       "bar_width": "34%"
     },
     {
@@ -4508,8 +4507,8 @@
       "type": "Editorial",
       "story_position": 3,
       "position_category": "high",
-      "unique_clicks": 11747,
-      "total_clicks": 12794,
+      "unique_clicks": 11752,
+      "total_clicks": 12802,
       "bar_width": "29%"
     },
     {
@@ -4532,8 +4531,8 @@
       "type": "Editorial",
       "story_position": 3,
       "position_category": "high",
-      "unique_clicks": 11464,
-      "total_clicks": 14284,
+      "unique_clicks": 11470,
+      "total_clicks": 14291,
       "bar_width": "29%"
     },
     {
@@ -4580,8 +4579,8 @@
       "url": "https://superage.com/new-cholesterol-guidelines-are-here-10-key-takeaways-and-1-assignment",
       "issue_name": "SA_PF_20260427 (Sponsor: Fisher Investments)",
       "issue_date": "2026-04-27",
-      "unique_clicks": 28899,
-      "total_clicks": 36060,
+      "unique_clicks": 28905,
+      "total_clicks": 36068,
       "story_position": 3,
       "position_category": "high",
       "categories": "Longevity",
@@ -4671,8 +4670,8 @@
       "url": "https://superage.com/the-trainable-system-we-overlook-when-we-talk-about-balance",
       "issue_name": "SA_PF_20260518 (Sponsor: Eight Sleep | BTL)",
       "issue_date": "2026-05-18",
-      "unique_clicks": 20334,
-      "total_clicks": 22739,
+      "unique_clicks": 20466,
+      "total_clicks": 22939,
       "story_position": 3,
       "position_category": "high",
       "categories": "Longevity",
@@ -4866,8 +4865,8 @@
       "url": "https://superage.com/the-most-dangerous-words-in-medicine-your-labs-are-normal",
       "issue_name": "SA_PF_20260503 (Sponsor: Our Place)",
       "issue_date": "2026-05-03",
-      "unique_clicks": 15116,
-      "total_clicks": 19873,
+      "unique_clicks": 15119,
+      "total_clicks": 19886,
       "story_position": 4,
       "position_category": "high",
       "categories": "Longevity",
@@ -4944,8 +4943,8 @@
       "url": "https://superage.com/8-trainable-longevity-markers-that-extend-your-life",
       "issue_name": "SA_CR_20260426 (Sponsor: Timeline)",
       "issue_date": "2026-04-26",
-      "unique_clicks": 13759,
-      "total_clicks": 17873,
+      "unique_clicks": 13761,
+      "total_clicks": 17876,
       "story_position": 4,
       "position_category": "medium",
       "categories": "Longevity",
@@ -5022,8 +5021,8 @@
       "url": "https://superage.com/the-blood-pressure-reading-your-doctor-isnt-taking-and-the-exercise-that-helps-it",
       "issue_name": "SA_PF_20260511 (Sponsor: Berkeley Life | Pvolve)",
       "issue_date": "2026-05-11",
-      "unique_clicks": 11747,
-      "total_clicks": 12794,
+      "unique_clicks": 11752,
+      "total_clicks": 12802,
       "story_position": 3,
       "position_category": "high",
       "categories": "Longevity",
@@ -5048,8 +5047,8 @@
       "url": "https://superage.com/the-science-of-psyching-yourself-up",
       "issue_name": "SA_PF_20260507 (Sponsor: AG1)",
       "issue_date": "2026-05-07",
-      "unique_clicks": 11464,
-      "total_clicks": 14284,
+      "unique_clicks": 11470,
+      "total_clicks": 14291,
       "story_position": 3,
       "position_category": "high",
       "categories": "Fitness",
@@ -5146,6 +5145,19 @@
       "categories": "Longevity",
       "tags": "sleep, recovery, nervous system, science, rest",
       "written_by": "Heather Hurlock"
+    },
+    {
+      "title": "Want Strength And Vitality Stop Ignoring Your Glutes",
+      "url": "https://superage.com/want-strength-and-vitality-stop-ignoring-your-glutes",
+      "issue_name": "SA_PF_20260521 (Sponsor: Particle)",
+      "issue_date": "2026-05-21",
+      "unique_clicks": 9489,
+      "total_clicks": 10274,
+      "story_position": 3,
+      "position_category": "high",
+      "categories": "Fitness",
+      "tags": "longevity, strength training, fitness tips, exercise",
+      "written_by": "Greg Presto"
     },
     {
       "title": "The Longevity Power Of Vo%e2%82%82 Max And How To Train It Safely",
@@ -5295,8 +5307,8 @@
       "url": "https://superage.com/3-exercises-that-quietly-rewire-your-brain-for-deep-sleep",
       "issue_name": "SA_PF_20260514 (Sponsor: Pendulum)",
       "issue_date": "2026-05-14",
-      "unique_clicks": 8065,
-      "total_clicks": 9375,
+      "unique_clicks": 8074,
+      "total_clicks": 9388,
       "story_position": 3,
       "position_category": "high",
       "categories": "Longevity",
@@ -5333,11 +5345,11 @@
       "title": "8 Trainable Longevity Markers That Extend Your Life",
       "url": "https://superage.com/8-trainable-longevity-markers-that-extend-your-life",
       "issue_name": "SA_PF_20260423",
-      "issue_date": "2026-04-23",
-      "unique_clicks": 7482,
-      "total_clicks": 9250,
-      "story_position": 4,
-      "position_category": "high",
+      "issue_date": "2026-04-22",
+      "unique_clicks": 7483,
+      "total_clicks": 9251,
+      "story_position": 0,
+      "position_category": "",
       "categories": "Longevity",
       "tags": "longevity, VO2 Max, healthspan, biomarkers, longevity markers",
       "written_by": "Greg Presto"
@@ -5347,10 +5359,10 @@
       "url": "https://superage.com/the-blood-pressure-reading-your-doctor-isnt-taking-and-the-exercise-that-helps-it",
       "issue_name": "SA_PF_20260517 (Sponsor: ReadyRX)",
       "issue_date": "2026-05-17",
-      "unique_clicks": 7420,
-      "total_clicks": 7953,
+      "unique_clicks": 7442,
+      "total_clicks": 7978,
       "story_position": 4,
-      "position_category": "medium",
+      "position_category": "high",
       "categories": "Longevity",
       "tags": "heart health, blood pressure, Nocturnal blood pressure, hypertension",
       "written_by": "Greg Presto"
@@ -5542,8 +5554,8 @@
       "url": "https://superage.com/5-sleep-friendly-nutrients-to-add-to-your-diet",
       "issue_name": "SA_PF_20260514 (Sponsor: Pendulum)",
       "issue_date": "2026-05-14",
-      "unique_clicks": 5310,
-      "total_clicks": 5923,
+      "unique_clicks": 5315,
+      "total_clicks": 5932,
       "story_position": 5,
       "position_category": "medium",
       "categories": "Nutrition",
@@ -5607,10 +5619,10 @@
       "url": "https://superage.com/the-best-vegetables-for-your-health-have-a-pfas-problem",
       "issue_name": "SA_PF_20260511 (Sponsor: Berkeley Life | Pvolve)",
       "issue_date": "2026-05-11",
-      "unique_clicks": 5073,
-      "total_clicks": 5629,
+      "unique_clicks": 5076,
+      "total_clicks": 5633,
       "story_position": 5,
-      "position_category": "medium",
+      "position_category": "high",
       "categories": "Nutrition",
       "tags": "longevity, healthy eating, plant-based diet, PFAS in diet, dark leafy greens",
       "written_by": "Maggie Michalczyk"
@@ -5646,8 +5658,8 @@
       "url": "https://superage.com/this-is-your-brain-on-art-25-ways-art-illuminates-how-you-feel",
       "issue_name": "SA_CR_20260510 (Sponsor: Fatty15)",
       "issue_date": "2026-05-10",
-      "unique_clicks": 4757,
-      "total_clicks": 6124,
+      "unique_clicks": 4759,
+      "total_clicks": 6127,
       "story_position": 4,
       "position_category": "high",
       "categories": "Focus",
@@ -5971,8 +5983,8 @@
       "url": "https://superage.com/stuck-in-a-thought-loop-heres-what-actually-helps",
       "issue_name": "SA_PF_20260430 (Sponsor: Pendulum)",
       "issue_date": "2026-04-30",
-      "unique_clicks": 3379,
-      "total_clicks": 4044,
+      "unique_clicks": 3380,
+      "total_clicks": 4046,
       "story_position": 7,
       "position_category": "medium",
       "categories": "Focus",
@@ -6088,8 +6100,8 @@
       "url": "https://superage.com/life-expectancy-gains-are-slowing-your-choices-are-more-important-than-ever",
       "issue_name": "SA_PF_20260511 (Sponsor: Berkeley Life | Pvolve)",
       "issue_date": "2026-05-11",
-      "unique_clicks": 2861,
-      "total_clicks": 3217,
+      "unique_clicks": 2863,
+      "total_clicks": 3220,
       "story_position": 5,
       "position_category": "high",
       "categories": "Longevity",
@@ -6101,8 +6113,8 @@
       "url": "https://superage.com/tryptophan-talks-to-your-heart-about-inflammation",
       "issue_name": "SA_PF_20260504 (Sponsor: Timeline)",
       "issue_date": "2026-05-04",
-      "unique_clicks": 2848,
-      "total_clicks": 3200,
+      "unique_clicks": 2849,
+      "total_clicks": 3201,
       "story_position": 5,
       "position_category": "high",
       "categories": "Nutrition",
@@ -6160,6 +6172,19 @@
       "categories": "Fitness",
       "tags": "fitness, exercise, v02 max, running",
       "written_by": "Greg Presto"
+    },
+    {
+      "title": "Refined Carbs May Affect Genes That Control How You Burn Fat",
+      "url": "https://superage.com/refined-carbs-may-affect-genes-that-control-how-you-burn-fat",
+      "issue_name": "SA_PF_20260521 (Sponsor: Particle)",
+      "issue_date": "2026-05-21",
+      "unique_clicks": 2527,
+      "total_clicks": 2665,
+      "story_position": 5,
+      "position_category": "high",
+      "categories": "Nutrition",
+      "tags": "healthy eating, weight gain, carbohydrates, bread",
+      "written_by": "Stephanie Brown"
     },
     {
       "title": "Face Yoga What The Science Says About These Funny Face Routines For Aging",
@@ -6296,8 +6321,8 @@
       "url": "https://superage.com/why-you-should-never-wave-off-white-coat-hypertension",
       "issue_name": "SA_PF_20260507 (Sponsor: AG1)",
       "issue_date": "2026-05-07",
-      "unique_clicks": 2161,
-      "total_clicks": 2534,
+      "unique_clicks": 2162,
+      "total_clicks": 2535,
       "story_position": 5,
       "position_category": "high",
       "categories": "Longevity",
@@ -6387,10 +6412,10 @@
       "url": "https://superage.com/cant-sleep-get-out-of-bed-says-sleep-scientist",
       "issue_name": "SA_PF_20260514 (Sponsor: Pendulum)",
       "issue_date": "2026-05-14",
-      "unique_clicks": 2057,
-      "total_clicks": 2333,
+      "unique_clicks": 2061,
+      "total_clicks": 2338,
       "story_position": 7,
-      "position_category": "low",
+      "position_category": "medium",
       "categories": "Longevity",
       "tags": "sleep, recovery, nervous system, science, rest",
       "written_by": "Heather Hurlock"
@@ -6400,8 +6425,8 @@
       "url": "https://superage.com/8-trainable-longevity-markers-that-extend-your-life",
       "issue_name": "SA_PF_20260427 (Sponsor: Fisher Investments)",
       "issue_date": "2026-04-27",
-      "unique_clicks": 1987,
-      "total_clicks": 2332,
+      "unique_clicks": 1988,
+      "total_clicks": 2333,
       "story_position": 9,
       "position_category": "low",
       "categories": "Longevity",
@@ -6656,19 +6681,6 @@
       "written_by": "Heather Hurlock"
     },
     {
-      "title": "How To Calm Stress 5 Mindfulness Practices That Work",
-      "url": "https://superage.com/how-to-calm-stress-5-mindfulness-practices-that-work",
-      "issue_name": "The Mindset | Issue #114 | December 22nd 2025 (Sponsor: Timeline)",
-      "issue_date": "2025-12-22",
-      "unique_clicks": 1621,
-      "total_clicks": 1761,
-      "story_position": 4,
-      "position_category": "high",
-      "categories": "Longevity, Focus",
-      "tags": "nervous system regulation, healthy aging tips, how to live longer, stress management tools, mental health and longevity, simple stress relief practices, stress and aging, mindfulness for anxiety, anxiety and stress relief, chronic stress health risks, trauma-informed mindfulness, depression and stress connection, how to calm stress, stress and inflammation, breathing exercises for calm, daily mindfulness practice, mindfulness for beginners, mindful breathing exercise, stress reduction techniques, stress and brain health, mindfulness and brain health, MBSR benefits, reduce inflammation naturally, mindfulness meditation longevity, stress and longevity, mindfulness at work, stress relief daily habits, longevity practices, stress relief for busy people, immune system and stress, mindfulness for stress relief, mindfulness-based stress reduction, stress and lifespan, sleep and stress connection",
-      "written_by": "Heather Hurlock"
-    },
-    {
       "title": "Does Vitamin D Slow Cellular Aging",
       "url": "https://superage.com/does-vitamin-d-slow-cellular-aging",
       "issue_name": "The Mindset | Issue #117 | January 5th 2026 (Sponsor: AG1)",
@@ -6679,6 +6691,19 @@
       "position_category": "",
       "categories": "Longevity",
       "tags": "General Health, super ager, Supplements, how to become a super ager, super age brains",
+      "written_by": "Heather Hurlock"
+    },
+    {
+      "title": "How To Calm Stress 5 Mindfulness Practices That Work",
+      "url": "https://superage.com/how-to-calm-stress-5-mindfulness-practices-that-work",
+      "issue_name": "The Mindset | Issue #114 | December 22nd 2025 (Sponsor: Timeline)",
+      "issue_date": "2025-12-22",
+      "unique_clicks": 1621,
+      "total_clicks": 1761,
+      "story_position": 4,
+      "position_category": "high",
+      "categories": "Longevity, Focus",
+      "tags": "nervous system regulation, healthy aging tips, how to live longer, stress management tools, mental health and longevity, simple stress relief practices, stress and aging, mindfulness for anxiety, anxiety and stress relief, chronic stress health risks, trauma-informed mindfulness, depression and stress connection, how to calm stress, stress and inflammation, breathing exercises for calm, daily mindfulness practice, mindfulness for beginners, mindful breathing exercise, stress reduction techniques, stress and brain health, mindfulness and brain health, MBSR benefits, reduce inflammation naturally, mindfulness meditation longevity, stress and longevity, mindfulness at work, stress relief daily habits, longevity practices, stress relief for busy people, immune system and stress, mindfulness for stress relief, mindfulness-based stress reduction, stress and lifespan, sleep and stress connection",
       "written_by": "Heather Hurlock"
     },
     {
@@ -7050,13 +7075,26 @@
       "url": "https://superage.com/mindfulness-and-hope-are-unrelated-researchers-say-thats-the-point",
       "issue_name": "SA_PF_20260518 (Sponsor: Eight Sleep | BTL)",
       "issue_date": "2026-05-18",
-      "unique_clicks": 1298,
-      "total_clicks": 1402,
+      "unique_clicks": 1306,
+      "total_clicks": 1411,
       "story_position": 5,
       "position_category": "medium",
       "categories": "Focus",
       "tags": "mindfulness, hope, mindfulness practices, deliberate practice, mental health",
       "written_by": "Lauren Gray"
+    },
+    {
+      "title": "Electromagnetic Stimulation For Longevity What The Science Says",
+      "url": "https://superage.com/electromagnetic-stimulation-for-longevity-what-the-science-says",
+      "issue_name": "SA_PF_20260518 (Sponsor: Eight Sleep | BTL)",
+      "issue_date": "2026-05-18",
+      "unique_clicks": 1298,
+      "total_clicks": 1524,
+      "story_position": 8,
+      "position_category": "medium",
+      "categories": "Longevity",
+      "tags": "Cognitive health, brain health tips, longevity habits, electromagnetic stimulation, BTL",
+      "written_by": "Sarah Crow"
     },
     {
       "title": "Your Portfolio Isnt Your Only Safety Net",
@@ -7070,19 +7108,6 @@
       "categories": "Wealthspan",
       "tags": "wealthspan, retirement, investment, portfolio, 401(k)",
       "written_by": "Melanie Lockert"
-    },
-    {
-      "title": "Electromagnetic Stimulation For Longevity What The Science Says",
-      "url": "https://superage.com/electromagnetic-stimulation-for-longevity-what-the-science-says",
-      "issue_name": "SA_PF_20260518 (Sponsor: Eight Sleep | BTL)",
-      "issue_date": "2026-05-18",
-      "unique_clicks": 1287,
-      "total_clicks": 1512,
-      "story_position": 8,
-      "position_category": "medium",
-      "categories": "Longevity",
-      "tags": "Cognitive health, brain health tips, longevity habits, electromagnetic stimulation, BTL",
-      "written_by": "Sarah Crow"
     },
     {
       "title": "The Best Meditation Apps For Every Kind Of Practice",
@@ -7102,8 +7127,8 @@
       "url": "https://superage.com/the-longevity-sleep-routine-for-deeper-stronger-rest",
       "issue_name": "SA_PF_20260514 (Sponsor: Pendulum)",
       "issue_date": "2026-05-14",
-      "unique_clicks": 1235,
-      "total_clicks": 1384,
+      "unique_clicks": 1237,
+      "total_clicks": 1386,
       "story_position": 6,
       "position_category": "medium",
       "categories": "Longevity",
@@ -7154,8 +7179,8 @@
       "url": "https://superage.com/this-longevity-equation-sheds-new-light-on-wealthspan",
       "issue_name": "SA_PF_20260430 (Sponsor: Pendulum)",
       "issue_date": "2026-04-30",
-      "unique_clicks": 1153,
-      "total_clicks": 1280,
+      "unique_clicks": 1154,
+      "total_clicks": 1281,
       "story_position": 6,
       "position_category": "medium",
       "categories": "Wealthspan",
@@ -7176,6 +7201,19 @@
       "written_by": "Caren Osten Gerszberg"
     },
     {
+      "title": "These Trials Will Extend Your Healthspan",
+      "url": "https://superage.com/these-trials-will-extend-your-healthspan",
+      "issue_name": "SA_PF_20260518 (Sponsor: Eight Sleep | BTL)",
+      "issue_date": "2026-05-18",
+      "unique_clicks": 1148,
+      "total_clicks": 1241,
+      "story_position": 10,
+      "position_category": "low",
+      "categories": "Longevity",
+      "tags": "longevity, super ager, Super Age, longevity fitness, Super Age Games",
+      "written_by": "Heather Hurlock"
+    },
+    {
       "title": "How To Cultivate An Abundance Mindset",
       "url": "https://superage.com/how-to-cultivate-an-abundance-mindset",
       "issue_name": "The Mindset | Issue #108 | December 1st 2025 (Sponsor: Maui Nui and Berkeley Life)",
@@ -7187,19 +7225,6 @@
       "categories": "Wealthspan",
       "tags": "awe, mindset, wealthspan, abundance",
       "written_by": "Melanie Lockert"
-    },
-    {
-      "title": "These Trials Will Extend Your Healthspan",
-      "url": "https://superage.com/these-trials-will-extend-your-healthspan",
-      "issue_name": "SA_PF_20260518 (Sponsor: Eight Sleep | BTL)",
-      "issue_date": "2026-05-18",
-      "unique_clicks": 1139,
-      "total_clicks": 1231,
-      "story_position": 10,
-      "position_category": "low",
-      "categories": "Longevity",
-      "tags": "longevity, super ager, Super Age, longevity fitness, Super Age Games",
-      "written_by": "Heather Hurlock"
     },
     {
       "title": "Yes And Might Be The Smartest Thing You Say All Week",
@@ -7319,6 +7344,19 @@
       "written_by": "Heather Hurlock"
     },
     {
+      "title": "Roasted Chickpea And Arugula Salad With Lemon Zaatar Dressing",
+      "url": "https://superage.com/roasted-chickpea-and-arugula-salad-with-lemon-zaatar-dressing",
+      "issue_name": "SA_PF_20260518 (Sponsor: Eight Sleep | BTL)",
+      "issue_date": "2026-05-18",
+      "unique_clicks": 973,
+      "total_clicks": 1056,
+      "story_position": 9,
+      "position_category": "low",
+      "categories": "Nutrition",
+      "tags": "Recipe, seasonal produce, vegetarian dinner idea, Seasonal Recipes, vegetarian",
+      "written_by": "Lauren Gray"
+    },
+    {
       "title": "How To Manage Money In Uncertain Times",
       "url": "https://superage.com/how-to-manage-money-in-uncertain-times",
       "issue_name": "SA_PF_20260319 (Sponsor: Acorn)",
@@ -7330,19 +7368,6 @@
       "categories": "Wealthspan",
       "tags": "wealthspan, finance, retirement, investment, portfolio",
       "written_by": "Melanie Lockert"
-    },
-    {
-      "title": "Roasted Chickpea And Arugula Salad With Lemon Zaatar Dressing",
-      "url": "https://superage.com/roasted-chickpea-and-arugula-salad-with-lemon-zaatar-dressing",
-      "issue_name": "SA_PF_20260518 (Sponsor: Eight Sleep | BTL)",
-      "issue_date": "2026-05-18",
-      "unique_clicks": 964,
-      "total_clicks": 1046,
-      "story_position": 9,
-      "position_category": "low",
-      "categories": "Nutrition",
-      "tags": "Recipe, seasonal produce, vegetarian dinner idea, Seasonal Recipes, vegetarian",
-      "written_by": "Lauren Gray"
     },
     {
       "title": "Whole Grain Harvest Muffins For Steady Energy",
@@ -7382,6 +7407,19 @@
       "categories": "Fitness",
       "tags": "",
       "written_by": "Heather Hurlock"
+    },
+    {
+      "title": "Get Real Express Your Authentic Self By Telling These 3 Truths",
+      "url": "https://superage.com/get-real-express-your-authentic-self-by-telling-these-3-truths",
+      "issue_name": "SA_PF_20260521 (Sponsor: Particle)",
+      "issue_date": "2026-05-21",
+      "unique_clicks": 908,
+      "total_clicks": 950,
+      "story_position": 7,
+      "position_category": "low",
+      "categories": "Focus",
+      "tags": "mental health tips, deliberate practice, Relationships, mindfulness",
+      "written_by": "Erin Weed"
     },
     {
       "title": "This Is Your Brain On Art 25 Ways Art Illuminates How You Feel",
@@ -7605,19 +7643,6 @@
       "written_by": "Melanie Lockert"
     },
     {
-      "title": "Nordic Rye Berry And Salmon Salad",
-      "url": "https://superage.com/nordic-rye-berry-and-salmon-salad",
-      "issue_name": "SA_PF_20260323 (Sponsor: Oricle)",
-      "issue_date": "2026-03-23",
-      "unique_clicks": 619,
-      "total_clicks": 654,
-      "story_position": 10,
-      "position_category": "low",
-      "categories": "Nutrition",
-      "tags": "fiber, whole grains, salmon, healthy recip",
-      "written_by": "Drew Green"
-    },
-    {
       "title": "How To Deal With Financial Regret And Shame And Why You Should",
       "url": "https://superage.com/how-to-deal-with-financial-regret-and-shame-and-why-you-should",
       "issue_name": "SA_PF_20260507 (Sponsor: AG1)",
@@ -7629,6 +7654,19 @@
       "categories": "Wealthspan",
       "tags": "financial stress and health, financial planning for longevity, finances, wealthspan, mental health",
       "written_by": "Melanie Lockert"
+    },
+    {
+      "title": "Nordic Rye Berry And Salmon Salad",
+      "url": "https://superage.com/nordic-rye-berry-and-salmon-salad",
+      "issue_name": "SA_PF_20260323 (Sponsor: Oricle)",
+      "issue_date": "2026-03-23",
+      "unique_clicks": 619,
+      "total_clicks": 654,
+      "story_position": 10,
+      "position_category": "low",
+      "categories": "Nutrition",
+      "tags": "fiber, whole grains, salmon, healthy recip",
+      "written_by": "Drew Green"
     },
     {
       "title": "How Awe Slows Time And Supports Well Being",
@@ -7683,6 +7721,19 @@
       "written_by": "Heather Hurlock"
     },
     {
+      "title": "Minding Your Money Why Behavioral Finance Is Key For A 100 Year Portfolio",
+      "url": "https://superage.com/minding-your-money-why-behavioral-finance-is-key-for-a-100-year-portfolio",
+      "issue_name": "SA_PF_20260521 (Sponsor: Particle)",
+      "issue_date": "2026-05-21",
+      "unique_clicks": 424,
+      "total_clicks": 449,
+      "story_position": 6,
+      "position_category": "medium",
+      "categories": "Wealthspan",
+      "tags": "wealth, behavioral science, wealthspan mindset, finances",
+      "written_by": "Melanie Lockert"
+    },
+    {
       "title": "The Case For Earthing Is The Science Legit",
       "url": "https://superage.com/the-case-for-earthing-is-the-science-legit",
       "issue_name": "SA_PF_20260406 (Sponsor: Planted)",
@@ -7700,8 +7751,8 @@
       "url": "https://superage.com/8-trainable-longevity-markers-that-extend-your-life",
       "issue_name": "SA_PF_20260504 (Sponsor: Timeline)",
       "issue_date": "2026-05-04",
-      "unique_clicks": 386,
-      "total_clicks": 450,
+      "unique_clicks": 387,
+      "total_clicks": 451,
       "story_position": 10,
       "position_category": "medium",
       "categories": "Longevity",
@@ -7726,8 +7777,8 @@
       "url": "https://superage.com/the-cognitive-upside-of-building-something-youve-never-built-before",
       "issue_name": "SA_PF_20260518 (Sponsor: Eight Sleep | BTL)",
       "issue_date": "2026-05-18",
-      "unique_clicks": 355,
-      "total_clicks": 372,
+      "unique_clicks": 358,
+      "total_clicks": 375,
       "story_position": 6,
       "position_category": "medium",
       "categories": "Wealthspan",
@@ -7804,8 +7855,8 @@
       "url": "https://superage.com/exercising-before-therapy-could-boost-your-results",
       "issue_name": "SA_PF_20260511 (Sponsor: Berkeley Life | Pvolve)",
       "issue_date": "2026-05-11",
-      "unique_clicks": 268,
-      "total_clicks": 288,
+      "unique_clicks": 269,
+      "total_clicks": 289,
       "story_position": 7,
       "position_category": "medium",
       "categories": "Uncategorized",
@@ -7982,17 +8033,17 @@
       "written_by": "Heather Hurlock"
     },
     {
-      "title": "6 Foods That Help You Live Longer According To New Longevity Research",
-      "url": "https://superage.com/6-foods-that-help-you-live-longer-according-to-new-longevity-research",
-      "issue_name": "The Mindset | Issue #105 | November 20th, 2025 (Sponsor: fatty15)",
-      "issue_date": "2025-11-20",
+      "title": "Six Immersive Experiences For More Joy",
+      "url": "https://superage.com/six-immersive-experiences-for-more-joy",
+      "issue_name": "The Mindset | Issue #104 | November 17th 2025 (Sponsor: AG1)",
+      "issue_date": "2025-11-17",
       "unique_clicks": 39,
-      "total_clicks": 44,
+      "total_clicks": 46,
       "story_position": 0,
       "position_category": "",
-      "categories": "Nutrition",
-      "tags": "longevity, healthy eating, plant-based diet",
-      "written_by": "Heather Hurlock"
+      "categories": "Longevity",
+      "tags": "Travel, experience",
+      "written_by": "Kelle Walsh"
     },
     {
       "title": "Holiday Gift Guide 2025",
@@ -8008,19 +8059,6 @@
       "written_by": "Heather Hurlock"
     },
     {
-      "title": "Six Immersive Experiences For More Joy",
-      "url": "https://superage.com/six-immersive-experiences-for-more-joy",
-      "issue_name": "The Mindset | Issue #104 | November 17th 2025 (Sponsor: AG1)",
-      "issue_date": "2025-11-17",
-      "unique_clicks": 39,
-      "total_clicks": 46,
-      "story_position": 0,
-      "position_category": "",
-      "categories": "Longevity",
-      "tags": "Travel, experience",
-      "written_by": "Kelle Walsh"
-    },
-    {
       "title": "Forget Fad Diets This Is What Your Body Actually Needs",
       "url": "https://superage.com/forget-fad-diets-this-is-what-your-body-actually-needs",
       "issue_name": "The Mindset | Issue #105 | November 20th, 2025 (Sponsor: fatty15)",
@@ -8032,6 +8070,19 @@
       "categories": "Nutrition",
       "tags": "longevity, healthy eating",
       "written_by": "Jen Wagner MD, MS"
+    },
+    {
+      "title": "6 Foods That Help You Live Longer According To New Longevity Research",
+      "url": "https://superage.com/6-foods-that-help-you-live-longer-according-to-new-longevity-research",
+      "issue_name": "The Mindset | Issue #105 | November 20th, 2025 (Sponsor: fatty15)",
+      "issue_date": "2025-11-20",
+      "unique_clicks": 39,
+      "total_clicks": 44,
+      "story_position": 0,
+      "position_category": "",
+      "categories": "Nutrition",
+      "tags": "longevity, healthy eating, plant-based diet",
+      "written_by": "Heather Hurlock"
     },
     {
       "title": "How To Build Muscle Safely After 40 The Ultimate Muscle Boosting Guide For Men And Women",
@@ -8060,19 +8111,6 @@
       "written_by": "Heather Hurlock"
     },
     {
-      "title": "Curiosity Can Sharpen With Age Heres How To Train Yours",
-      "url": "https://superage.com/curiosity-can-sharpen-with-age-heres-how-to-train-yours",
-      "issue_name": "The Mindset | Issue #107 | November 27th, 2025 (Sponsor: Noom)",
-      "issue_date": "2025-11-27",
-      "unique_clicks": 36,
-      "total_clicks": 38,
-      "story_position": 0,
-      "position_category": "",
-      "categories": "Focus",
-      "tags": "longevity, Growth Mindset, mindset, Curiosity",
-      "written_by": "Heather Hurlock"
-    },
-    {
       "title": "The Longevity Power Of Vo%e2%82%82 Max And How To Train It Safely",
       "url": "https://superage.com/the-longevity-power-of-vo%e2%82%82-max-and-how-to-train-it-safely",
       "issue_name": "The Mindset | Issue #117 | January 5th 2026 (Sponsor: AG1)",
@@ -8083,6 +8121,19 @@
       "position_category": "",
       "categories": "Fitness",
       "tags": "longevity, longevity fitness, fitness tips, v02 max",
+      "written_by": "Heather Hurlock"
+    },
+    {
+      "title": "Curiosity Can Sharpen With Age Heres How To Train Yours",
+      "url": "https://superage.com/curiosity-can-sharpen-with-age-heres-how-to-train-yours",
+      "issue_name": "The Mindset | Issue #107 | November 27th, 2025 (Sponsor: Noom)",
+      "issue_date": "2025-11-27",
+      "unique_clicks": 36,
+      "total_clicks": 38,
+      "story_position": 0,
+      "position_category": "",
+      "categories": "Focus",
+      "tags": "longevity, Growth Mindset, mindset, Curiosity",
       "written_by": "Heather Hurlock"
     },
     {
@@ -8151,19 +8202,6 @@
       "written_by": "Greg Presto"
     },
     {
-      "title": "Your Fitness Trackers Most Popular Metric Might Be Lying To You",
-      "url": "https://superage.com/your-fitness-trackers-most-popular-metric-might-be-lying-to-you",
-      "issue_name": "The Mindset | Issue #104 | November 17th 2025 (Sponsor: AG1)",
-      "issue_date": "2025-11-17",
-      "unique_clicks": 24,
-      "total_clicks": 30,
-      "story_position": 0,
-      "position_category": "",
-      "categories": "Fitness",
-      "tags": "fitness, Wearables, HRV",
-      "written_by": "Greg Presto"
-    },
-    {
       "title": "The Science Of How Gratitude Affects The Heart",
       "url": "https://superage.com/the-science-of-how-gratitude-affects-the-heart",
       "issue_name": "The Mindset | Issue #109 | December 4th, 2025 (Sponsor: OneSkin)",
@@ -8175,6 +8213,19 @@
       "categories": "Focus",
       "tags": "Gratitude, mental health",
       "written_by": "Heather Hurlock"
+    },
+    {
+      "title": "Your Fitness Trackers Most Popular Metric Might Be Lying To You",
+      "url": "https://superage.com/your-fitness-trackers-most-popular-metric-might-be-lying-to-you",
+      "issue_name": "The Mindset | Issue #104 | November 17th 2025 (Sponsor: AG1)",
+      "issue_date": "2025-11-17",
+      "unique_clicks": 24,
+      "total_clicks": 30,
+      "story_position": 0,
+      "position_category": "",
+      "categories": "Fitness",
+      "tags": "fitness, Wearables, HRV",
+      "written_by": "Greg Presto"
     },
     {
       "title": "Plant Vs Animal Protein Which Fuels A Longer Life",
@@ -8229,6 +8280,19 @@
       "written_by": "Heather Hurlock"
     },
     {
+      "title": "Are Forever Chemicals Hiding In Your Diet Maybe",
+      "url": "https://superage.com/are-forever-chemicals-hiding-in-your-diet-maybe",
+      "issue_name": "The Mindset | Issue #103 | November 13th, 2025 (Sponsor: Maui Nui)",
+      "issue_date": "2025-11-13",
+      "unique_clicks": 14,
+      "total_clicks": 17,
+      "story_position": 0,
+      "position_category": "",
+      "categories": "Nutrition",
+      "tags": "healthy eating, Clean eating, PFAS in diet, avoid forever chemicals, California PFAS study, slow toxin removal, reduce PFAS levels, low PFAS foods, PFAS exposure tips, seafood PFAS risk, toxic load reduction, fiber PFAS gut, brown rice PFAS, healthy water filter, drinking water PFAS, health longevity tips",
+      "written_by": "Heather Hurlock"
+    },
+    {
       "title": "These Foods Can Counteract Alzheimers Genes According To Harvard Researchers",
       "url": "https://superage.com/these-foods-can-counteract-alzheimers-genes-according-to-harvard-researchers",
       "issue_name": "The Mindset | Issue #101 | November 6th, 2025 (Sponsor: Fatty15)",
@@ -8242,16 +8306,16 @@
       "written_by": "Heather Hurlock"
     },
     {
-      "title": "Are Forever Chemicals Hiding In Your Diet Maybe",
-      "url": "https://superage.com/are-forever-chemicals-hiding-in-your-diet-maybe",
-      "issue_name": "The Mindset | Issue #103 | November 13th, 2025 (Sponsor: Maui Nui)",
-      "issue_date": "2025-11-13",
-      "unique_clicks": 14,
-      "total_clicks": 17,
-      "story_position": 0,
-      "position_category": "",
-      "categories": "Nutrition",
-      "tags": "healthy eating, Clean eating, PFAS in diet, avoid forever chemicals, California PFAS study, slow toxin removal, reduce PFAS levels, low PFAS foods, PFAS exposure tips, seafood PFAS risk, toxic load reduction, fiber PFAS gut, brown rice PFAS, healthy water filter, drinking water PFAS, health longevity tips",
+      "title": "15 Biomarkers That May Predict Superager Brains",
+      "url": "https://superage.com/15-biomarkers-that-may-predict-superager-brains",
+      "issue_name": "The Mindset | Issue #101 | November 6th, 2025 (Sponsor: Fatty15)",
+      "issue_date": "2025-11-06",
+      "unique_clicks": 13,
+      "total_clicks": 14,
+      "story_position": 4,
+      "position_category": "medium",
+      "categories": "Longevity",
+      "tags": "longevity, super ager, Brain health, how to become a super ager, super age brains",
       "written_by": "Heather Hurlock"
     },
     {
@@ -8279,19 +8343,6 @@
       "categories": "Nutrition",
       "tags": "plant-based diet, Recipe, healthy chia dessert, omega-3 dessert recipes, chia pudding recipe, high fiber dessert, vegan chia pudding, berry chia breakfast, no-cook chia pudding, gluten-free chia pudding, dairy-free chia pudding, summer berry chia pudding, antioxidant dessert, healthy summer recipes",
       "written_by": "Kelle Walsh"
-    },
-    {
-      "title": "15 Biomarkers That May Predict Superager Brains",
-      "url": "https://superage.com/15-biomarkers-that-may-predict-superager-brains",
-      "issue_name": "The Mindset | Issue #101 | November 6th, 2025 (Sponsor: Fatty15)",
-      "issue_date": "2025-11-06",
-      "unique_clicks": 13,
-      "total_clicks": 14,
-      "story_position": 4,
-      "position_category": "medium",
-      "categories": "Longevity",
-      "tags": "longevity, super ager, Brain health, how to become a super ager, super age brains",
-      "written_by": "Heather Hurlock"
     },
     {
       "title": "The Exercise That Protects Your Brain",
@@ -8333,32 +8384,6 @@
       "written_by": "Heather Hurlock"
     },
     {
-      "title": "Bottled Water Is A Major Source Of Microplastics According To New Study",
-      "url": "https://superage.com/bottled-water-is-a-major-source-of-microplastics-according-to-new-study",
-      "issue_name": "The Mindset | Issue #103 | November 13th, 2025 (Sponsor: Maui Nui)",
-      "issue_date": "2025-11-13",
-      "unique_clicks": 5,
-      "total_clicks": 5,
-      "story_position": 0,
-      "position_category": "",
-      "categories": "Longevity",
-      "tags": "longevity, microplastics, preventing chronic disease, water",
-      "written_by": "Heather Hurlock"
-    },
-    {
-      "title": "The Power Of Showing Up Lessons From Cal Tri Newport Dunes",
-      "url": "https://superage.com/the-power-of-showing-up-lessons-from-cal-tri-newport-dunes",
-      "issue_name": "Sunday Spotlight | November 9th, 2025 (Sponsor: OneSkin)",
-      "issue_date": "2025-11-09",
-      "unique_clicks": 5,
-      "total_clicks": 6,
-      "story_position": 0,
-      "position_category": "",
-      "categories": "Fitness",
-      "tags": "longevity, fitness, Tri Cal, Triathlon",
-      "written_by": "David Harry Stewart"
-    },
-    {
       "title": "The Truth About Longevity Tests Whats Worth Your Time",
       "url": "https://superage.com/the-truth-about-longevity-tests-whats-worth-your-time",
       "issue_name": "The Mindset | Issue #101 | November 6th, 2025 (Sponsor: Fatty15)",
@@ -8385,6 +8410,32 @@
       "written_by": "Heather Hurlock"
     },
     {
+      "title": "Bottled Water Is A Major Source Of Microplastics According To New Study",
+      "url": "https://superage.com/bottled-water-is-a-major-source-of-microplastics-according-to-new-study",
+      "issue_name": "The Mindset | Issue #103 | November 13th, 2025 (Sponsor: Maui Nui)",
+      "issue_date": "2025-11-13",
+      "unique_clicks": 5,
+      "total_clicks": 5,
+      "story_position": 0,
+      "position_category": "",
+      "categories": "Longevity",
+      "tags": "longevity, microplastics, preventing chronic disease, water",
+      "written_by": "Heather Hurlock"
+    },
+    {
+      "title": "The Power Of Showing Up Lessons From Cal Tri Newport Dunes",
+      "url": "https://superage.com/the-power-of-showing-up-lessons-from-cal-tri-newport-dunes",
+      "issue_name": "Sunday Spotlight | November 9th, 2025 (Sponsor: OneSkin)",
+      "issue_date": "2025-11-09",
+      "unique_clicks": 5,
+      "total_clicks": 6,
+      "story_position": 0,
+      "position_category": "",
+      "categories": "Fitness",
+      "tags": "longevity, fitness, Tri Cal, Triathlon",
+      "written_by": "David Harry Stewart"
+    },
+    {
       "title": "The 5 Microhabits That Rewire Your Brain For Longevity",
       "url": "https://superage.com/the-5-microhabits-that-rewire-your-brain-for-longevity",
       "issue_name": "The Mindset | Issue #101 | November 6th, 2025 (Sponsor: Fatty15)",
@@ -8409,58 +8460,6 @@
       "categories": "Longevity",
       "tags": "General Health",
       "written_by": "Dann Albright, CSCS"
-    },
-    {
-      "title": "Holiday Gift Guide 2025",
-      "url": "https://superage.com/holiday-gift-guide-2025",
-      "issue_name": "The Mindset | Issue #119 | January 12th 2026 (Sponsor: Pendulum)",
-      "issue_date": "2026-01-12",
-      "unique_clicks": 3,
-      "total_clicks": 3,
-      "story_position": 0,
-      "position_category": "",
-      "categories": "Fitness",
-      "tags": "",
-      "written_by": "Heather Hurlock"
-    },
-    {
-      "title": "Build More Muscle In Less Time The One Set Gym Workout",
-      "url": "https://superage.com/build-more-muscle-in-less-time-the-one-set-gym-workout",
-      "issue_name": "The Mindset | Issue #100 | November 3rd, 2025 (Sponsor: Pendulum)",
-      "issue_date": "2025-11-03",
-      "unique_clicks": 3,
-      "total_clicks": 4,
-      "story_position": 2,
-      "position_category": "high",
-      "categories": "Fitness",
-      "tags": "workouts, strength training",
-      "written_by": "Greg Presto"
-    },
-    {
-      "title": "How Handwriting Improves Brain Health And Goal Achievement",
-      "url": "https://superage.com/how-handwriting-improves-brain-health-and-goal-achievement",
-      "issue_name": "The Mindset | Issue #113 | December 18th, 2025 (Sponsor: AG1)",
-      "issue_date": "2025-12-18",
-      "unique_clicks": 3,
-      "total_clicks": 3,
-      "story_position": 0,
-      "position_category": "",
-      "categories": "Focus",
-      "tags": "Brain health, neuroplasticity, goals, handwriting",
-      "written_by": "Heather Hurlock"
-    },
-    {
-      "title": "Holiday Gift Guide 2025",
-      "url": "https://superage.com/holiday-gift-guide-2025",
-      "issue_name": "The Mindset | Issue #117 | January 5th 2026 (Sponsor: AG1)",
-      "issue_date": "2026-01-05",
-      "unique_clicks": 2,
-      "total_clicks": 2,
-      "story_position": 0,
-      "position_category": "",
-      "categories": "Fitness",
-      "tags": "",
-      "written_by": "Heather Hurlock"
     }
   ],
   "acquisition_quality": {
@@ -8472,9 +8471,9 @@
         "TrueDemocracy",
         "AllHealthy",
         "Refind",
-        "DailyPuzzle",
-        "HealthFirst",
-        "FitConnect",
+        "DPCPL1",
+        "HFCPL1",
+        "FCCPL1",
         "Meta",
         "Taboola",
         "RecommendedReads"
@@ -8486,7 +8485,7 @@
         177167,
         130894,
         62301,
-        61840,
+        61839,
         60997,
         46345,
         32624,
@@ -8576,6 +8575,8 @@
           "clicker_rate": "13.3%",
           "churned_30d": 83331,
           "churned_30d_rate": 13.6,
+          "churned_60d": 104831,
+          "churned_60d_rate": 17.1,
           "churned_90d": 121886,
           "churned_90d_rate": 19.8
         },
@@ -8591,6 +8592,8 @@
           "clicker_rate": "16.4%",
           "churned_30d": 35707,
           "churned_30d_rate": 10.0,
+          "churned_60d": 49983,
+          "churned_60d_rate": 14.0,
           "churned_90d": 61674,
           "churned_90d_rate": 17.2
         },
@@ -8606,6 +8609,8 @@
           "clicker_rate": "17.6%",
           "churned_30d": 22162,
           "churned_30d_rate": 11.9,
+          "churned_60d": 31065,
+          "churned_60d_rate": 16.7,
           "churned_90d": 37320,
           "churned_90d_rate": 20.0
         },
@@ -8621,6 +8626,8 @@
           "clicker_rate": "14.7%",
           "churned_30d": 20075,
           "churned_30d_rate": 11.3,
+          "churned_60d": 26175,
+          "churned_60d_rate": 14.8,
           "churned_90d": 31828,
           "churned_90d_rate": 18.0
         },
@@ -8636,6 +8643,8 @@
           "clicker_rate": "19.9%",
           "churned_30d": 15706,
           "churned_30d_rate": 12.0,
+          "churned_60d": 23904,
+          "churned_60d_rate": 18.3,
           "churned_90d": 31539,
           "churned_90d_rate": 24.1
         },
@@ -8651,12 +8660,14 @@
           "clicker_rate": "5.6%",
           "churned_30d": 3479,
           "churned_30d_rate": 5.6,
+          "churned_60d": 4897,
+          "churned_60d_rate": 7.9,
           "churned_90d": 5979,
           "churned_90d_rate": 9.6
         },
         {
-          "label": "DailyPuzzle",
-          "subscribers": 61840,
+          "label": "DPCPL1",
+          "subscribers": 61839,
           "clickers": 8556,
           "clicks": 46598,
           "unique_clicks": 46598,
@@ -8666,11 +8677,13 @@
           "clicker_rate": "13.8%",
           "churned_30d": 10094,
           "churned_30d_rate": 16.3,
+          "churned_60d": 12933,
+          "churned_60d_rate": 20.9,
           "churned_90d": 15273,
           "churned_90d_rate": 24.7
         },
         {
-          "label": "HealthFirst",
+          "label": "HFCPL1",
           "subscribers": 60997,
           "clickers": 9439,
           "clicks": 53049,
@@ -8681,11 +8694,13 @@
           "clicker_rate": "15.5%",
           "churned_30d": 8104,
           "churned_30d_rate": 13.3,
+          "churned_60d": 10604,
+          "churned_60d_rate": 17.4,
           "churned_90d": 12951,
           "churned_90d_rate": 21.2
         },
         {
-          "label": "FitConnect",
+          "label": "FCCPL1",
           "subscribers": 46345,
           "clickers": 9003,
           "clicks": 42880,
@@ -8696,6 +8711,8 @@
           "clicker_rate": "19.4%",
           "churned_30d": 4723,
           "churned_30d_rate": 10.2,
+          "churned_60d": 6469,
+          "churned_60d_rate": 14.0,
           "churned_90d": 8139,
           "churned_90d_rate": 17.6
         },
@@ -8711,6 +8728,8 @@
           "clicker_rate": "4.2%",
           "churned_30d": 4397,
           "churned_30d_rate": 13.5,
+          "churned_60d": 4650,
+          "churned_60d_rate": 14.3,
           "churned_90d": 4650,
           "churned_90d_rate": 14.3
         },
@@ -8726,6 +8745,8 @@
           "clicker_rate": "4.4%",
           "churned_30d": 3513,
           "churned_30d_rate": 14.3,
+          "churned_60d": 3535,
+          "churned_60d_rate": 14.4,
           "churned_90d": 3535,
           "churned_90d_rate": 14.4
         },
@@ -8741,6 +8762,8 @@
           "clicker_rate": "23.7%",
           "churned_30d": 2545,
           "churned_30d_rate": 11.5,
+          "churned_60d": 3231,
+          "churned_60d_rate": 14.6,
           "churned_90d": 3793,
           "churned_90d_rate": 17.1
         }
@@ -8758,6 +8781,8 @@
           "clicker_rate": "13.3%",
           "churned_30d": 83331,
           "churned_30d_rate": 13.6,
+          "churned_60d": 104831,
+          "churned_60d_rate": 17.1,
           "churned_90d": 121886,
           "churned_90d_rate": 19.8
         },
@@ -8773,6 +8798,8 @@
           "clicker_rate": "16.4%",
           "churned_30d": 35707,
           "churned_30d_rate": 10.0,
+          "churned_60d": 49983,
+          "churned_60d_rate": 14.0,
           "churned_90d": 61674,
           "churned_90d_rate": 17.2
         },
@@ -8788,6 +8815,8 @@
           "clicker_rate": "17.6%",
           "churned_30d": 22162,
           "churned_30d_rate": 11.9,
+          "churned_60d": 31065,
+          "churned_60d_rate": 16.7,
           "churned_90d": 37320,
           "churned_90d_rate": 20.0
         },
@@ -8803,6 +8832,8 @@
           "clicker_rate": "14.7%",
           "churned_30d": 20075,
           "churned_30d_rate": 11.3,
+          "churned_60d": 26175,
+          "churned_60d_rate": 14.8,
           "churned_90d": 31828,
           "churned_90d_rate": 18.0
         },
@@ -8818,6 +8849,8 @@
           "clicker_rate": "19.9%",
           "churned_30d": 15706,
           "churned_30d_rate": 12.0,
+          "churned_60d": 23904,
+          "churned_60d_rate": 18.3,
           "churned_90d": 31539,
           "churned_90d_rate": 24.1
         },
@@ -8833,12 +8866,14 @@
           "clicker_rate": "5.6%",
           "churned_30d": 3479,
           "churned_30d_rate": 5.6,
+          "churned_60d": 4897,
+          "churned_60d_rate": 7.9,
           "churned_90d": 5979,
           "churned_90d_rate": 9.6
         },
         {
-          "label": "DailyPuzzle",
-          "subscribers": 61840,
+          "label": "DPCPL1",
+          "subscribers": 61839,
           "clickers": 8556,
           "clicks": 46598,
           "unique_clicks": 46598,
@@ -8848,11 +8883,13 @@
           "clicker_rate": "13.8%",
           "churned_30d": 10094,
           "churned_30d_rate": 16.3,
+          "churned_60d": 12933,
+          "churned_60d_rate": 20.9,
           "churned_90d": 15273,
           "churned_90d_rate": 24.7
         },
         {
-          "label": "HealthFirst",
+          "label": "HFCPL1",
           "subscribers": 60997,
           "clickers": 9439,
           "clicks": 53049,
@@ -8863,11 +8900,13 @@
           "clicker_rate": "15.5%",
           "churned_30d": 8104,
           "churned_30d_rate": 13.3,
+          "churned_60d": 10604,
+          "churned_60d_rate": 17.4,
           "churned_90d": 12951,
           "churned_90d_rate": 21.2
         },
         {
-          "label": "FitConnect",
+          "label": "FCCPL1",
           "subscribers": 46345,
           "clickers": 9003,
           "clicks": 42880,
@@ -8878,6 +8917,8 @@
           "clicker_rate": "19.4%",
           "churned_30d": 4723,
           "churned_30d_rate": 10.2,
+          "churned_60d": 6469,
+          "churned_60d_rate": 14.0,
           "churned_90d": 8139,
           "churned_90d_rate": 17.6
         },
@@ -8893,6 +8934,8 @@
           "clicker_rate": "4.2%",
           "churned_30d": 4397,
           "churned_30d_rate": 13.5,
+          "churned_60d": 4650,
+          "churned_60d_rate": 14.3,
           "churned_90d": 4650,
           "churned_90d_rate": 14.3
         },
@@ -8908,6 +8951,8 @@
           "clicker_rate": "4.4%",
           "churned_30d": 3513,
           "churned_30d_rate": 14.3,
+          "churned_60d": 3535,
+          "churned_60d_rate": 14.4,
           "churned_90d": 3535,
           "churned_90d_rate": 14.4
         },
@@ -8923,6 +8968,8 @@
           "clicker_rate": "23.7%",
           "churned_30d": 2545,
           "churned_30d_rate": 11.5,
+          "churned_60d": 3231,
+          "churned_60d_rate": 14.6,
           "churned_90d": 3793,
           "churned_90d_rate": 17.1
         }
@@ -8940,6 +8987,8 @@
           "clicker_rate": "3.7%",
           "churned_30d": 2282,
           "churned_30d_rate": 13.5,
+          "churned_60d": 2282,
+          "churned_60d_rate": 13.5,
           "churned_90d": 2282,
           "churned_90d_rate": 13.5
         },
@@ -8955,6 +9004,8 @@
           "clicker_rate": "1.9%",
           "churned_30d": 1253,
           "churned_30d_rate": 9.6,
+          "churned_60d": 1253,
+          "churned_60d_rate": 9.6,
           "churned_90d": 1253,
           "churned_90d_rate": 9.6
         },
@@ -8970,6 +9021,8 @@
           "clicker_rate": "9.6%",
           "churned_30d": 262,
           "churned_30d_rate": 8.8,
+          "churned_60d": 262,
+          "churned_60d_rate": 8.8,
           "churned_90d": 262,
           "churned_90d_rate": 8.8
         },
@@ -8985,6 +9038,8 @@
           "clicker_rate": "20.7%",
           "churned_30d": 320,
           "churned_30d_rate": 14.9,
+          "churned_60d": 320,
+          "churned_60d_rate": 14.9,
           "churned_90d": 320,
           "churned_90d_rate": 14.9
         },
@@ -9000,6 +9055,8 @@
           "clicker_rate": "24.0%",
           "churned_30d": 8,
           "churned_30d_rate": 5.2,
+          "churned_60d": 8,
+          "churned_60d_rate": 5.2,
           "churned_90d": 8,
           "churned_90d_rate": 5.2
         },
@@ -9015,6 +9072,8 @@
           "clicker_rate": "8.2%",
           "churned_30d": 12,
           "churned_30d_rate": 24.5,
+          "churned_60d": 12,
+          "churned_60d_rate": 24.5,
           "churned_90d": 12,
           "churned_90d_rate": 24.5
         },
@@ -9030,6 +9089,8 @@
           "clicker_rate": "15.9%",
           "churned_30d": 2,
           "churned_30d_rate": 4.5,
+          "churned_60d": 2,
+          "churned_60d_rate": 4.5,
           "churned_90d": 2,
           "churned_90d_rate": 4.5
         },
@@ -9045,6 +9106,8 @@
           "clicker_rate": "33.3%",
           "churned_30d": 2,
           "churned_30d_rate": 5.1,
+          "churned_60d": 2,
+          "churned_60d_rate": 5.1,
           "churned_90d": 2,
           "churned_90d_rate": 5.1
         },
@@ -9060,6 +9123,8 @@
           "clicker_rate": "66.7%",
           "churned_30d": 0,
           "churned_30d_rate": 0.0,
+          "churned_60d": 0,
+          "churned_60d_rate": 0.0,
           "churned_90d": 0,
           "churned_90d_rate": 0.0
         },
@@ -9075,11 +9140,13 @@
           "clicker_rate": "0.0%",
           "churned_30d": 0,
           "churned_30d_rate": 0.0,
+          "churned_60d": 0,
+          "churned_60d_rate": 0.0,
           "churned_90d": 0,
           "churned_90d_rate": 0.0
         },
         {
-          "label": "HealthFirst",
+          "label": "HFCPL1",
           "subscribers": 1,
           "clickers": 0,
           "clicks": 0,
@@ -9090,6 +9157,8 @@
           "clicker_rate": "0.0%",
           "churned_30d": 0,
           "churned_30d_rate": 0.0,
+          "churned_60d": 0,
+          "churned_60d_rate": 0.0,
           "churned_90d": 0,
           "churned_90d_rate": 0.0
         },
@@ -9105,6 +9174,8 @@
           "clicker_rate": "0.0%",
           "churned_30d": 0,
           "churned_30d_rate": 0.0,
+          "churned_60d": 0,
+          "churned_60d_rate": 0.0,
           "churned_90d": 0,
           "churned_90d_rate": 0.0
         }
@@ -9122,6 +9193,8 @@
           "clicker_rate": "3.9%",
           "churned_30d": 4397,
           "churned_30d_rate": 13.5,
+          "churned_60d": 4650,
+          "churned_60d_rate": 14.3,
           "churned_90d": 4650,
           "churned_90d_rate": 14.3
         },
@@ -9137,6 +9210,8 @@
           "clicker_rate": "4.3%",
           "churned_30d": 3513,
           "churned_30d_rate": 14.3,
+          "churned_60d": 3535,
+          "churned_60d_rate": 14.4,
           "churned_90d": 3535,
           "churned_90d_rate": 14.4
         },
@@ -9152,6 +9227,8 @@
           "clicker_rate": "9.9%",
           "churned_30d": 1636,
           "churned_30d_rate": 12.0,
+          "churned_60d": 1903,
+          "churned_60d_rate": 14.0,
           "churned_90d": 1903,
           "churned_90d_rate": 14.0
         },
@@ -9167,6 +9244,8 @@
           "clicker_rate": "30.4%",
           "churned_30d": 720,
           "churned_30d_rate": 17.3,
+          "churned_60d": 762,
+          "churned_60d_rate": 18.3,
           "churned_90d": 762,
           "churned_90d_rate": 18.3
         },
@@ -9182,6 +9261,8 @@
           "clicker_rate": "29.5%",
           "churned_30d": 23,
           "churned_30d_rate": 7.6,
+          "churned_60d": 24,
+          "churned_60d_rate": 7.9,
           "churned_90d": 24,
           "churned_90d_rate": 7.9
         },
@@ -9197,6 +9278,8 @@
           "clicker_rate": "26.4%",
           "churned_30d": 8,
           "churned_30d_rate": 6.6,
+          "churned_60d": 9,
+          "churned_60d_rate": 7.4,
           "churned_90d": 9,
           "churned_90d_rate": 7.4
         },
@@ -9212,6 +9295,8 @@
           "clicker_rate": "11.7%",
           "churned_30d": 28,
           "churned_30d_rate": 27.2,
+          "churned_60d": 30,
+          "churned_60d_rate": 29.1,
           "churned_90d": 30,
           "churned_90d_rate": 29.1
         },
@@ -9227,6 +9312,8 @@
           "clicker_rate": "29.2%",
           "churned_30d": 3,
           "churned_30d_rate": 6.2,
+          "churned_60d": 3,
+          "churned_60d_rate": 6.2,
           "churned_90d": 3,
           "churned_90d_rate": 6.2
         },
@@ -9242,6 +9329,8 @@
           "clicker_rate": "9.1%",
           "churned_30d": 5,
           "churned_30d_rate": 45.5,
+          "churned_60d": 5,
+          "churned_60d_rate": 45.5,
           "churned_90d": 5,
           "churned_90d_rate": 45.5
         },
@@ -9257,6 +9346,8 @@
           "clicker_rate": "66.7%",
           "churned_30d": 1,
           "churned_30d_rate": 33.3,
+          "churned_60d": 1,
+          "churned_60d_rate": 33.3,
           "churned_90d": 1,
           "churned_90d_rate": 33.3
         },
@@ -9272,6 +9363,8 @@
           "clicker_rate": "66.7%",
           "churned_30d": 0,
           "churned_30d_rate": 0.0,
+          "churned_60d": 0,
+          "churned_60d_rate": 0.0,
           "churned_90d": 0,
           "churned_90d_rate": 0.0
         },
@@ -9287,6 +9380,8 @@
           "clicker_rate": "0.0%",
           "churned_30d": 0,
           "churned_30d_rate": 0.0,
+          "churned_60d": 0,
+          "churned_60d_rate": 0.0,
           "churned_90d": 0,
           "churned_90d_rate": 0.0
         }
@@ -9304,6 +9399,8 @@
           "clicker_rate": "7.4%",
           "churned_30d": 5474,
           "churned_30d_rate": 11.4,
+          "churned_60d": 6698,
+          "churned_60d_rate": 14.0,
           "churned_90d": 7096,
           "churned_90d_rate": 14.8
         },
@@ -9319,6 +9416,8 @@
           "clicker_rate": "4.1%",
           "churned_30d": 4397,
           "churned_30d_rate": 13.5,
+          "churned_60d": 4650,
+          "churned_60d_rate": 14.3,
           "churned_90d": 4650,
           "churned_90d_rate": 14.3
         },
@@ -9334,6 +9433,8 @@
           "clicker_rate": "4.4%",
           "churned_30d": 3513,
           "churned_30d_rate": 14.3,
+          "churned_60d": 3535,
+          "churned_60d_rate": 14.4,
           "churned_90d": 3535,
           "churned_90d_rate": 14.4
         },
@@ -9349,6 +9450,8 @@
           "clicker_rate": "30.9%",
           "churned_30d": 720,
           "churned_30d_rate": 17.3,
+          "churned_60d": 762,
+          "churned_60d_rate": 18.3,
           "churned_90d": 762,
           "churned_90d_rate": 18.3
         },
@@ -9364,6 +9467,8 @@
           "clicker_rate": "29.5%",
           "churned_30d": 23,
           "churned_30d_rate": 7.6,
+          "churned_60d": 24,
+          "churned_60d_rate": 7.9,
           "churned_90d": 24,
           "churned_90d_rate": 7.9
         },
@@ -9379,6 +9484,8 @@
           "clicker_rate": "26.4%",
           "churned_30d": 8,
           "churned_30d_rate": 6.6,
+          "churned_60d": 9,
+          "churned_60d_rate": 7.4,
           "churned_90d": 9,
           "churned_90d_rate": 7.4
         },
@@ -9394,6 +9501,8 @@
           "clicker_rate": "11.7%",
           "churned_30d": 28,
           "churned_30d_rate": 27.2,
+          "churned_60d": 30,
+          "churned_60d_rate": 29.1,
           "churned_90d": 30,
           "churned_90d_rate": 29.1
         },
@@ -9409,6 +9518,8 @@
           "clicker_rate": "29.2%",
           "churned_30d": 3,
           "churned_30d_rate": 6.2,
+          "churned_60d": 3,
+          "churned_60d_rate": 6.2,
           "churned_90d": 3,
           "churned_90d_rate": 6.2
         },
@@ -9424,6 +9535,8 @@
           "clicker_rate": "9.1%",
           "churned_30d": 5,
           "churned_30d_rate": 45.5,
+          "churned_60d": 5,
+          "churned_60d_rate": 45.5,
           "churned_90d": 5,
           "churned_90d_rate": 45.5
         },
@@ -9439,6 +9552,8 @@
           "clicker_rate": "66.7%",
           "churned_30d": 0,
           "churned_30d_rate": 0.0,
+          "churned_60d": 0,
+          "churned_60d_rate": 0.0,
           "churned_90d": 0,
           "churned_90d_rate": 0.0
         },
@@ -9454,6 +9569,8 @@
           "clicker_rate": "66.7%",
           "churned_30d": 1,
           "churned_30d_rate": 33.3,
+          "churned_60d": 1,
+          "churned_60d_rate": 33.3,
           "churned_90d": 1,
           "churned_90d_rate": 33.3
         },
@@ -9469,6 +9586,8 @@
           "clicker_rate": "0.0%",
           "churned_30d": 0,
           "churned_30d_rate": 0.0,
+          "churned_60d": 0,
+          "churned_60d_rate": 0.0,
           "churned_90d": 0,
           "churned_90d_rate": 0.0
         }
@@ -9482,59 +9601,59 @@
       "LivingSimply",
       "AllHealthy",
       "TrueDemocracy",
-      "HealthFirst",
-      "DailyPuzzle",
-      "FitConnect",
+      "HFCPL1",
+      "DPCPL1",
+      "FCCPL1",
       "RecommendedReads",
       "TheAgeist",
       "NNCPL",
       "Refind"
     ],
     "clickers": [
-      80775,
-      57891,
-      32510,
-      25833,
-      25657,
-      9325,
-      8443,
-      8885,
-      5195,
-      2450,
-      1358,
-      3424
+      81040,
+      58119,
+      32589,
+      25900,
+      25733,
+      9358,
+      8472,
+      8912,
+      5206,
+      2454,
+      1360,
+      3438
     ],
     "unique_clicks": [
-      435644,
-      355975,
-      145402,
-      126226,
-      123277,
-      44310,
-      39509,
-      36299,
-      31090,
-      29562,
-      16626,
-      15392
+      439128,
+      359045,
+      146548,
+      127119,
+      124254,
+      44727,
+      39834,
+      36597,
+      31356,
+      29792,
+      16767,
+      15499
     ],
     "total_clicks": [
-      514062,
-      427041,
-      169740,
-      149321,
-      142481,
-      52174,
-      45841,
-      42198,
-      36302,
-      34972,
-      19784,
-      17910
+      518726,
+      431091,
+      171232,
+      150530,
+      143803,
+      52738,
+      46244,
+      42574,
+      36646,
+      35265,
+      19983,
+      18049
     ],
     "avg_per_clicker": [
       5.4,
-      6.1,
+      6.2,
       4.5,
       4.9,
       4.8,
@@ -9543,7 +9662,7 @@
       4.1,
       6.0,
       12.1,
-      12.2,
+      12.3,
       4.5
     ]
   },
@@ -9859,11 +9978,11 @@
       "365d+"
     ],
     "data": [
-      244569,
-      184819,
-      206533,
-      316010,
-      852948
+      244429,
+      184796,
+      206504,
+      316034,
+      852992
     ]
   },
   "survival_curve": {
@@ -10163,7 +10282,7 @@
         ]
       },
       {
-        "label": "FitConnect",
+        "label": "FCCPL1",
         "total": 46345,
         "rates": [
           100.0,
@@ -10182,7 +10301,7 @@
         ]
       },
       {
-        "label": "HealthFirst",
+        "label": "HFCPL1",
         "total": 60997,
         "rates": [
           100.0,
@@ -10239,8 +10358,8 @@
         ]
       },
       {
-        "label": "DailyPuzzle",
-        "total": 61840,
+        "label": "DPCPL1",
+        "total": 61839,
         "rates": [
           100.0,
           83.7,
@@ -10446,9 +10565,9 @@
       "unsub_30d_rate": 13.6,
       "avg_lifespan_days": 129.0,
       "median_lifespan_days": 85.0,
-      "total_unique_clicks": 435644,
-      "clickers": 80775,
-      "clicker_rate": 13.1,
+      "total_unique_clicks": 439128,
+      "clickers": 81040,
+      "clicker_rate": 13.2,
       "avg_clicks_per_clicker": 5.4
     },
     {
@@ -10462,10 +10581,10 @@
       "unsub_30d_rate": 10.0,
       "avg_lifespan_days": 99.2,
       "median_lifespan_days": 65.0,
-      "total_unique_clicks": 355975,
-      "clickers": 57891,
+      "total_unique_clicks": 359045,
+      "clickers": 58119,
       "clicker_rate": 16.2,
-      "avg_clicks_per_clicker": 6.1
+      "avg_clicks_per_clicker": 6.2
     },
     {
       "source": "LivingSimply",
@@ -10478,9 +10597,9 @@
       "unsub_30d_rate": 11.9,
       "avg_lifespan_days": 122.7,
       "median_lifespan_days": 91.0,
-      "total_unique_clicks": 145402,
-      "clickers": 32510,
-      "clicker_rate": 17.4,
+      "total_unique_clicks": 146548,
+      "clickers": 32589,
+      "clicker_rate": 17.5,
       "avg_clicks_per_clicker": 4.5
     },
     {
@@ -10494,8 +10613,8 @@
       "unsub_30d_rate": 11.3,
       "avg_lifespan_days": 128.2,
       "median_lifespan_days": 94.0,
-      "total_unique_clicks": 123277,
-      "clickers": 25657,
+      "total_unique_clicks": 124254,
+      "clickers": 25733,
       "clicker_rate": 14.5,
       "avg_clicks_per_clicker": 4.8
     },
@@ -10510,9 +10629,9 @@
       "unsub_30d_rate": 12.0,
       "avg_lifespan_days": 115.0,
       "median_lifespan_days": 92.0,
-      "total_unique_clicks": 126226,
-      "clickers": 25833,
-      "clicker_rate": 19.7,
+      "total_unique_clicks": 127119,
+      "clickers": 25900,
+      "clicker_rate": 19.8,
       "avg_clicks_per_clicker": 4.9
     },
     {
@@ -10526,14 +10645,14 @@
       "unsub_30d_rate": 5.6,
       "avg_lifespan_days": 140.4,
       "median_lifespan_days": 93.0,
-      "total_unique_clicks": 15392,
-      "clickers": 3424,
+      "total_unique_clicks": 15499,
+      "clickers": 3438,
       "clicker_rate": 5.5,
       "avg_clicks_per_clicker": 4.5
     },
     {
-      "source": "DailyPuzzle",
-      "subscribers": 61840,
+      "source": "DPCPL1",
+      "subscribers": 61839,
       "active_now": 23010,
       "churned": 27975,
       "unsub_15d": 8160,
@@ -10542,13 +10661,13 @@
       "unsub_30d_rate": 16.3,
       "avg_lifespan_days": 114.6,
       "median_lifespan_days": 73.0,
-      "total_unique_clicks": 39509,
-      "clickers": 8443,
+      "total_unique_clicks": 39834,
+      "clickers": 8472,
       "clicker_rate": 13.7,
       "avg_clicks_per_clicker": 4.7
     },
     {
-      "source": "HealthFirst",
+      "source": "HFCPL1",
       "subscribers": 60997,
       "active_now": 21660,
       "churned": 23362,
@@ -10558,13 +10677,13 @@
       "unsub_30d_rate": 13.3,
       "avg_lifespan_days": 109.8,
       "median_lifespan_days": 71.0,
-      "total_unique_clicks": 44310,
-      "clickers": 9325,
+      "total_unique_clicks": 44727,
+      "clickers": 9358,
       "clicker_rate": 15.3,
       "avg_clicks_per_clicker": 4.8
     },
     {
-      "source": "FitConnect",
+      "source": "FCCPL1",
       "subscribers": 46345,
       "active_now": 19504,
       "churned": 17212,
@@ -10574,8 +10693,8 @@
       "unsub_30d_rate": 10.2,
       "avg_lifespan_days": 123.9,
       "median_lifespan_days": 99.0,
-      "total_unique_clicks": 36299,
-      "clickers": 8885,
+      "total_unique_clicks": 36597,
+      "clickers": 8912,
       "clicker_rate": 19.2,
       "avg_clicks_per_clicker": 4.1
     },
@@ -10590,9 +10709,9 @@
       "unsub_30d_rate": 13.5,
       "avg_lifespan_days": 7.4,
       "median_lifespan_days": 3.0,
-      "total_unique_clicks": 2868,
-      "clickers": 1327,
-      "clicker_rate": 4.1,
+      "total_unique_clicks": 2988,
+      "clickers": 1372,
+      "clicker_rate": 4.2,
       "avg_clicks_per_clicker": 2.2
     },
     {
@@ -10606,10 +10725,10 @@
       "unsub_30d_rate": 14.3,
       "avg_lifespan_days": 5.4,
       "median_lifespan_days": 2.0,
-      "total_unique_clicks": 1920,
-      "clickers": 1050,
-      "clicker_rate": 4.3,
-      "avg_clicks_per_clicker": 1.8
+      "total_unique_clicks": 2035,
+      "clickers": 1083,
+      "clicker_rate": 4.4,
+      "avg_clicks_per_clicker": 1.9
     },
     {
       "source": "RecommendedReads",
@@ -10622,8 +10741,8 @@
       "unsub_30d_rate": 11.5,
       "avg_lifespan_days": 136.5,
       "median_lifespan_days": 100.0,
-      "total_unique_clicks": 31090,
-      "clickers": 5195,
+      "total_unique_clicks": 31356,
+      "clickers": 5206,
       "clicker_rate": 23.5,
       "avg_clicks_per_clicker": 6.0
     },
@@ -10638,9 +10757,9 @@
       "unsub_30d_rate": 8.6,
       "avg_lifespan_days": 126.6,
       "median_lifespan_days": 105.0,
-      "total_unique_clicks": 15117,
-      "clickers": 3386,
-      "clicker_rate": 20.1,
+      "total_unique_clicks": 15260,
+      "clickers": 3406,
+      "clicker_rate": 20.2,
       "avg_clicks_per_clicker": 4.5
     },
     {
@@ -10654,8 +10773,8 @@
       "unsub_30d_rate": 9.1,
       "avg_lifespan_days": 157.3,
       "median_lifespan_days": 115.5,
-      "total_unique_clicks": 29562,
-      "clickers": 2450,
+      "total_unique_clicks": 29792,
+      "clickers": 2454,
       "clicker_rate": 44.2,
       "avg_clicks_per_clicker": 12.1
     },
@@ -10670,9 +10789,9 @@
       "unsub_30d_rate": 11.5,
       "avg_lifespan_days": 116.9,
       "median_lifespan_days": 75.5,
-      "total_unique_clicks": 8883,
-      "clickers": 1321,
-      "clicker_rate": 26.2,
+      "total_unique_clicks": 8957,
+      "clickers": 1327,
+      "clicker_rate": 26.3,
       "avg_clicks_per_clicker": 6.7
     }
   ],

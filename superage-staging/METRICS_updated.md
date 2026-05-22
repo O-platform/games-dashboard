@@ -328,7 +328,7 @@ Groups subscribers by join month and tracks % still active at M+1 through M+12.
 
 Charts: Retention Heatmap, 90-Day Churn Rate by Acquisition Source. (The legacy "90-Day Retention by UTM Source" chart was removed; the UTM-cohort SQL no longer runs.)
 
-Cohort Performance Table columns: Cohort, Size, Still Active, Retention Rate, Churn Rate, Early Churn (90d), Campaigns That Month. **"Active Now" / "Retention %"** use the canonical Active rule.
+Cohort Performance Table columns: Cohort, Cohort Size, Total Subscribers, Active (Send-To), Active % (of Cohort Size), Churn %, Campaigns Sent. **"Active (Send-To)" / "Active %"** use the canonical Active rule.
 
 ---
 
@@ -984,10 +984,21 @@ LIMIT 12;
 
 ## Q21 — Audience Persona: Quiz KPIs
 
+The Audience Persona tab surfaces two KPIs sourced separately.
+
+**Total Quiz Takers** — read from `subscribers.has_taken_longevity_quiz` (already computed once in Q1 alongside the headline subscriber counts):
+
 ```sql
-SELECT
-    COUNT(*)                       AS n,
-    ROUND(AVG(age)::numeric, 1)    AS avg_age
+SELECT COUNT(*) FILTER (WHERE has_taken_longevity_quiz = true) AS quiz_takers
+FROM superage.subscribers;
+```
+
+> Same column the Overview "Quiz Takers" KPI uses, so the two cards stay in lockstep. The `subscribers` flag is the canonical "did this person take the quiz" signal; `subscriber_quiz` can carry duplicate or orphaned rows so `COUNT(*)` there overstates real reach.
+
+**Average Age** — averaged over completed quiz rows:
+
+```sql
+SELECT ROUND(AVG(age)::numeric, 1) AS avg_age
 FROM superage.subscriber_quiz
 WHERE longevity_score IS NOT NULL;
 ```
@@ -1506,7 +1517,6 @@ Restricted to cohorts where `date_joined >= '2025-01-01'` so the table focuses o
 | **Active (Send-To)** | Reachable + engaged | `COUNT(*) FILTER (WHERE state = 'Active' AND engagement_segment NOT IN ('Ghosts','Zombies','Dormant'))` |
 | Active % (of Cohort Size) | Active (Send-To) / Cohort Size — canonical Active rule | derived |
 | Churn % | Unsubscribed / Cohort Size | derived |
-| Early Churn (90d) | Unsubscribed within 90 days of joining / Cohort Size | derived |
 | Campaigns Sent | Qualifying campaigns sent during the cohort's join month | `Campaigns` table, `Recipients > 95` |
 
 The earlier heatmap (Q39) still includes pre-2025 cohorts; this table is the only place the cut-off applies.
@@ -1522,23 +1532,11 @@ WITH cohorts AS (
             WHERE state = 'Active'
               AND engagement_segment NOT IN ('Ghosts', 'Zombies', 'Dormant')
         )                                                           AS active_now,
-        COUNT(*) FILTER (WHERE state = 'Unsubscribed')              AS churned,
-        COUNT(*) FILTER (WHERE unsubbed_within_90)                  AS churned_90d
-    FROM (
-        SELECT
-            date_joined,
-            state,
-            engagement_segment,
-            (
-                state = 'Unsubscribed'
-                AND date_unsubscribed IS NOT NULL
-                AND date_unsubscribed::date <= date_joined::date + 90
-            ) AS unsubbed_within_90
-        FROM superage.subscribers
-        WHERE date_joined IS NOT NULL
-          AND date_joined::date < CURRENT_DATE
-          AND date_joined::date >= DATE '2025-01-01'
-    ) x
+        COUNT(*) FILTER (WHERE state = 'Unsubscribed')              AS churned
+    FROM superage.subscribers
+    WHERE date_joined IS NOT NULL
+      AND date_joined::date < CURRENT_DATE
+      AND date_joined::date >= DATE '2025-01-01'
     GROUP BY 1, 2
     HAVING COUNT(*) >= 20
 ),
@@ -1560,9 +1558,8 @@ SELECT
     c.active_now,
     c.churned,
     ROUND(c.active_now::numeric / NULLIF(c.total,0) * 100, 1) AS active_pct,
-    ROUND(c.churned::numeric           / NULLIF(c.total,0) * 100, 1) AS churn_rate_pct,
-    ROUND(c.churned_90d::numeric       / NULLIF(c.total,0) * 100, 1) AS early_churn_pct,
-    COALESCE(k.campaigns_sent, 0)                                    AS campaigns_sent
+    ROUND(c.churned::numeric    / NULLIF(c.total,0) * 100, 1) AS churn_rate_pct,
+    COALESCE(k.campaigns_sent, 0)                             AS campaigns_sent
 FROM cohorts c
 LEFT JOIN camps k ON k.camp_month = c.cohort_month
 ORDER BY c.cohort_month;

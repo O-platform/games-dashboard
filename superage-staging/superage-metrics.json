@@ -38,7 +38,7 @@
   "avg_deal_size_fmt": "$7,004",
   "total_sponsor_deals": 193,
   "quiz_kpis": {
-    "total_takers": 653940,
+    "total_takers": 887947,
     "avg_age": 67.3,
     "fitness_quiz_takers": 662,
     "menu_quiz_takers": 1253
@@ -11189,7 +11189,6 @@
       "churned": 104143,
       "active_pct": "37.0%",
       "churn_rate_pct": "40.8%",
-      "early_churn_pct": "20.2%",
       "campaigns_sent": 10
     },
     {
@@ -11200,7 +11199,6 @@
       "churned": 139537,
       "active_pct": "37.1%",
       "churn_rate_pct": "36.3%",
-      "early_churn_pct": "17.6%",
       "campaigns_sent": 8
     },
     {
@@ -11211,7 +11209,6 @@
       "churned": 73452,
       "active_pct": "37.7%",
       "churn_rate_pct": "37.9%",
-      "early_churn_pct": "19.7%",
       "campaigns_sent": 12
     },
     {
@@ -11222,7 +11219,6 @@
       "churned": 85528,
       "active_pct": "37.0%",
       "churn_rate_pct": "38.0%",
-      "early_churn_pct": "20.3%",
       "campaigns_sent": 14
     },
     {
@@ -11233,7 +11229,6 @@
       "churned": 119902,
       "active_pct": "38.7%",
       "churn_rate_pct": "40.9%",
-      "early_churn_pct": "20.6%",
       "campaigns_sent": 17
     },
     {
@@ -11244,7 +11239,6 @@
       "churned": 58849,
       "active_pct": "38.1%",
       "churn_rate_pct": "43.1%",
-      "early_churn_pct": "21.3%",
       "campaigns_sent": 14
     },
     {
@@ -11255,7 +11249,6 @@
       "churned": 16169,
       "active_pct": "36.8%",
       "churn_rate_pct": "41.1%",
-      "early_churn_pct": "23.3%",
       "campaigns_sent": 14
     },
     {
@@ -11266,7 +11259,6 @@
       "churned": 2280,
       "active_pct": "32.6%",
       "churn_rate_pct": "18.6%",
-      "early_churn_pct": "11.2%",
       "campaigns_sent": 15
     },
     {
@@ -11277,7 +11269,6 @@
       "churned": 1559,
       "active_pct": "33.0%",
       "churn_rate_pct": "18.3%",
-      "early_churn_pct": "12.1%",
       "campaigns_sent": 16
     },
     {
@@ -11288,7 +11279,6 @@
       "churned": 222,
       "active_pct": "53.2%",
       "churn_rate_pct": "22.4%",
-      "early_churn_pct": "15.5%",
       "campaigns_sent": 18
     },
     {
@@ -11299,7 +11289,6 @@
       "churned": 2726,
       "active_pct": "51.0%",
       "churn_rate_pct": "18.8%",
-      "early_churn_pct": "14.1%",
       "campaigns_sent": 15
     },
     {
@@ -11310,7 +11299,6 @@
       "churned": 5944,
       "active_pct": "48.3%",
       "churn_rate_pct": "21.5%",
-      "early_churn_pct": "17.9%",
       "campaigns_sent": 12
     },
     {
@@ -11321,7 +11309,6 @@
       "churned": 7302,
       "active_pct": "49.9%",
       "churn_rate_pct": "20.6%",
-      "early_churn_pct": "18.5%",
       "campaigns_sent": 14
     },
     {
@@ -11332,7 +11319,6 @@
       "churned": 6315,
       "active_pct": "50.6%",
       "churn_rate_pct": "17.3%",
-      "early_churn_pct": "16.8%",
       "campaigns_sent": 12
     },
     {
@@ -11343,7 +11329,6 @@
       "churned": 4930,
       "active_pct": "52.9%",
       "churn_rate_pct": "15.6%",
-      "early_churn_pct": "15.6%",
       "campaigns_sent": 16
     },
     {
@@ -11354,7 +11339,6 @@
       "churned": 6645,
       "active_pct": "48.9%",
       "churn_rate_pct": "15.5%",
-      "early_churn_pct": "15.5%",
       "campaigns_sent": 17
     },
     {
@@ -11365,7 +11349,6 @@
       "churned": 2098,
       "active_pct": "43.2%",
       "churn_rate_pct": "10.2%",
-      "early_churn_pct": "10.2%",
       "campaigns_sent": 11
     }
   ],

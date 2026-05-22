@@ -1239,23 +1239,11 @@ def lambda_handler(event, context):
                         WHERE state = 'Active'
                           AND engagement_segment NOT IN ('Ghosts', 'Zombies', 'Dormant')
                     ) AS active_now,
-                    COUNT(*) FILTER (WHERE state = 'Unsubscribed') AS churned,
-                    COUNT(*) FILTER (WHERE unsubbed_within_90) AS churned_90d
-                FROM (
-                    SELECT
-                        date_joined,
-                        state,
-                        engagement_segment,
-                        (
-                            state = 'Unsubscribed'
-                            AND date_unsubscribed IS NOT NULL
-                            AND date_unsubscribed::date <= date_joined::date + 90
-                        ) AS unsubbed_within_90
-                    FROM {S}.subscribers
-                    WHERE date_joined IS NOT NULL
-                      AND date_joined::date < CURRENT_DATE
-                      AND date_joined::date >= DATE '2025-01-01'
-                ) x
+                    COUNT(*) FILTER (WHERE state = 'Unsubscribed') AS churned
+                FROM {S}.subscribers
+                WHERE date_joined IS NOT NULL
+                  AND date_joined::date < CURRENT_DATE
+                  AND date_joined::date >= DATE '2025-01-01'
                 GROUP BY 1, 2
                 HAVING COUNT(*) >= 20
                 ORDER BY 2
@@ -1274,12 +1262,8 @@ def lambda_handler(event, context):
                 c.*,
                 -- Active % is Total Active / Cohort Size (canonical Active rule:
                 -- state='Active' AND engagement_segment NOT IN Ghosts/Zombies/Dormant).
-                -- Replaces the older "Still on List %" (which used state IN
-                -- Active+Bounced as the numerator) so the table has one
-                -- engagement-quality percentage instead of two near-duplicates.
                 ROUND(c.active_now::numeric / NULLIF(c.total,0) * 100, 1) AS active_pct,
-                ROUND(c.churned::numeric / NULLIF(c.total,0) * 100, 1) AS churn_rate_pct,
-                ROUND(c.churned_90d::numeric / NULLIF(c.total,0) * 100, 1) AS early_churn_pct,
+                ROUND(c.churned::numeric    / NULLIF(c.total,0) * 100, 1) AS churn_rate_pct,
                 COALESCE(k.campaigns_sent, 0) AS campaigns_sent
             FROM cohorts c
             LEFT JOIN camps k ON k.camp_month = c.cohort_month
@@ -1347,10 +1331,13 @@ def lambda_handler(event, context):
     M["avg_deal_size_fmt"]     = f"${avg_deal_size:,.0f}"
     M["total_sponsor_deals"]   = total_sponsor_deals
 
-    # Audience-Persona KPIs (longevity-score fields were removed when the
-    # tab stopped surfacing score visuals).
+    # Audience-Persona KPIs. `total_takers` is sourced from
+    # `subscribers.has_taken_longevity_quiz = true` (same as the Overview
+    # "Quiz Takers" KPI), not from `COUNT(*)` on subscriber_quiz rows —
+    # the subscribers flag is the canonical "did this person take the
+    # quiz" signal; the quiz table can carry duplicate / orphaned rows.
     M["quiz_kpis"] = {
-        "total_takers":        quiz_count,
+        "total_takers":        quiz_takers,
         "avg_age":             avg_age_quiz,
         "fitness_quiz_takers": fitness_quiz_takers,
         "menu_quiz_takers":    menu_quiz_takers,
@@ -1765,7 +1752,6 @@ def lambda_handler(event, context):
             "churned":            safe_int(r["churned"]),
             "active_pct":         f"{safe_float(r['active_pct']):.1f}%",
             "churn_rate_pct":     f"{safe_float(r['churn_rate_pct']):.1f}%",
-            "early_churn_pct":    f"{safe_float(r['early_churn_pct']):.1f}%",
             "campaigns_sent":     safe_int(r["campaigns_sent"]),
         }
         for r in cohort_table_rows

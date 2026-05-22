@@ -3060,7 +3060,6 @@ function renderCohort(M) {
           <th title="Reachable engaged subscribers — state = 'Active' AND engagement_segment NOT IN Ghosts/Zombies/Dormant">Active (Send-To)</th>
           <th title="Active (Send-To) / Cohort Size — canonical Active rule">Active % (of Cohort Size)</th>
           <th title="Churned / Cohort Size">Churn %</th>
-          <th title="Subscribers who unsubscribed within 90 days of joining, as % of cohort">Early Churn (90d)</th>
           <th title="Campaigns with > 95 recipients sent during this cohort's join month">Campaigns Sent</th>
         </tr></thead>
         <tbody>${tableRows.map(r => `<tr>
@@ -3070,7 +3069,6 @@ function renderCohort(M) {
           <td>${fmt(r.active_now)}</td>
           <td>${esc(r.active_pct || r.retention_pct || '—')}</td>
           <td>${esc(r.churn_rate_pct||'—')}</td>
-          <td>${esc(r.early_churn_pct||'—')}</td>
           <td>${fmt(r.campaigns_sent)}</td>
         </tr>`).join('')}</tbody>
       </table></div>

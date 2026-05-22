@@ -631,6 +631,211 @@ Exposed as `M.raw_clicks_monthly` with `clicks` and `clicks_no_ss`
 
 ---
 
+## Section C — Weekly Digest
+
+9 ISO weeks (8 completed + the in-progress current week) of headline
+metrics feeding the **Weekly Digest** tab. WoW deltas are computed
+client-side so the same source drives both the headline tiles and the
+sparklines.
+
+**Recipients threshold:** `>= 200,000` — mass sends only. Segmented /
+dedicated campaigns (e.g. 10–20K newsletters, A/B pilots) have atypical
+rates that skew a simple `AVG(UOpenRate)` over the week; the 200K cutoff
+isolates the main list sends. All other dashboard surfaces keep `> 95`.
+
+```sql
+WITH weeks AS (
+    SELECT generate_series(
+        DATE_TRUNC('week', CURRENT_DATE)::date - INTERVAL '8 weeks',
+        DATE_TRUNC('week', CURRENT_DATE)::date,
+        INTERVAL '1 week'
+    )::date AS week_start
+),
+joins AS (
+    SELECT DATE_TRUNC('week', date_joined::date)::date AS week_start,
+           COUNT(*) AS n
+    FROM superage.subscribers
+    WHERE date_joined IS NOT NULL
+      AND date_joined::date < CURRENT_DATE
+      AND date_joined::date >= DATE_TRUNC('week', CURRENT_DATE)::date - INTERVAL '8 weeks'
+    GROUP BY 1
+),
+unsubs AS (
+    SELECT DATE_TRUNC('week', date_unsubscribed::date)::date AS week_start,
+           COUNT(*) AS n
+    FROM superage.subscribers
+    WHERE date_unsubscribed IS NOT NULL
+      AND date_unsubscribed::date < CURRENT_DATE
+      AND date_unsubscribed::date >= DATE_TRUNC('week', CURRENT_DATE)::date - INTERVAL '8 weeks'
+    GROUP BY 1
+),
+camps AS (
+    SELECT
+        DATE_TRUNC('week', "Sent Date "::date)::date AS week_start,
+        COUNT(*)                                    AS campaigns_sent,
+        COALESCE(SUM("Recipients"), 0)              AS total_sent,
+        ROUND(AVG("UOpenRate")::numeric,  2)        AS avg_open_rate,
+        ROUND(AVG("UClickRate")::numeric, 2)        AS avg_click_rate
+    FROM superage."Campaigns"
+    WHERE "Sent Date " IS NOT NULL
+      AND "Sent Date "::date < CURRENT_DATE
+      AND "Recipients" >= 200000
+      AND "Sent Date "::date >= DATE_TRUNC('week', CURRENT_DATE)::date - INTERVAL '8 weeks'
+    GROUP BY 1
+),
+gh AS (
+    SELECT DATE_TRUNC('week', snapshot_date::date)::date AS week_start,
+           MAX(total_active) AS active_eow
+    FROM superage.growth_history
+    WHERE snapshot_date IS NOT NULL
+      AND snapshot_date <= CURRENT_DATE
+      AND snapshot_date >= DATE_TRUNC('week', CURRENT_DATE)::date - INTERVAL '8 weeks'
+    GROUP BY 1
+)
+SELECT
+    w.week_start,
+    TO_CHAR(w.week_start, 'Mon DD')                         AS label,
+    COALESCE(j.n, 0)                                        AS new_subs,
+    COALESCE(u.n, 0)                                        AS unsubs,
+    COALESCE(c.campaigns_sent, 0)                           AS campaigns_sent,
+    COALESCE(c.total_sent, 0)                               AS total_sent,
+    c.avg_open_rate,
+    c.avg_click_rate,
+    CASE
+        WHEN COALESCE(c.total_sent, 0) = 0 THEN NULL
+        ELSE ROUND(COALESCE(u.n, 0)::numeric / c.total_sent * 100, 4)
+    END                                                     AS churn_pct_of_sends,
+    g.active_eow,
+    (w.week_start = DATE_TRUNC('week', CURRENT_DATE)::date) AS is_current
+FROM weeks w
+LEFT JOIN joins  j ON j.week_start = w.week_start
+LEFT JOIN unsubs u ON u.week_start = w.week_start
+LEFT JOIN camps  c ON c.week_start = w.week_start
+LEFT JOIN gh     g ON g.week_start = w.week_start
+ORDER BY w.week_start;
+```
+
+Exposed as `M.weekly_digest` with parallel arrays:
+
+```json
+{
+  "labels":             ["May 04", "May 11", ...],
+  "week_starts":        ["2026-05-04", ...],
+  "is_current":         [false, ..., true],
+  "new_subs":           [...],
+  "unsubs":             [...],
+  "campaigns_sent":     [...],
+  "total_sent":         [...],
+  "avg_open_rate":      [...],
+  "avg_click_rate":     [...],
+  "churn_pct_of_sends": [...],
+  "active_eow":         [...],
+  "top_sources_by_week": [...],
+  "top_editorial_this_week":  [...],
+  "top_sponsors_this_week":   [...],
+  "top_immersions_this_week": [...]
+}
+```
+
+`churn_pct_of_sends` = `unsubs / total_sent * 100` (NULL when `total_sent = 0`). `active_eow` may be NULL for the in-progress week if the growth_history snapshot hasn't been written yet.
+
+---
+
+## Section C1 — Top Acquisition Source (last 2 completed ISO weeks)
+
+Counts new subscribers by canonical source label for the **last 2 completed
+ISO weeks** (the in-progress current week is excluded). Client picks the
+top-subs entry for the most recent completed week to display on the digest tile.
+
+**Label priority:** `sa.acquisition_utm_source → s.source → 'Organic'`.
+Canonicalisation rules match `_canon_source()` in the metrics lambda and
+`utmLabel()` in `index.html`.
+
+```sql
+WITH sa_acq AS (
+    SELECT LOWER(TRIM(email)) AS email, acquisition_utm_source
+    FROM superage.subscriber_acquisition
+    WHERE acquisition_status IN ('added', 'resubscribed')
+),
+src AS (
+    SELECT
+        DATE_TRUNC('week', s.date_joined::date)::date AS week_start,
+        CASE
+            WHEN LOWER(COALESCE(
+                    NULLIF(TRIM(sa.acquisition_utm_source),''),
+                    NULLIF(TRIM(s.source),''), ''))
+                 IN ('organic','direct','none','null','(none)','(null)','n/a','-','',
+                     'website','homepage','home','web','site')
+                THEN 'Organic'
+            WHEN ... -- full canonicalisation CASE (same rules as metrics lambda)
+            ELSE NULLIF(TRIM(COALESCE(
+                    NULLIF(TRIM(sa.acquisition_utm_source),''),
+                    NULLIF(TRIM(s.source),''))), '')
+        END AS bucket
+    FROM superage.subscribers s
+    LEFT JOIN sa_acq sa ON sa.email = LOWER(TRIM(s.email))
+    WHERE s.date_joined IS NOT NULL
+      AND s.date_joined::date >= DATE_TRUNC('week', CURRENT_DATE)::date - INTERVAL '2 weeks'
+      AND s.date_joined::date <  DATE_TRUNC('week', CURRENT_DATE)::date
+)
+SELECT
+    week_start,
+    COALESCE(bucket, 'Organic') AS bucket,
+    COUNT(*)                    AS subs
+FROM src
+GROUP BY 1, 2
+ORDER BY week_start DESC, subs DESC;
+```
+
+Exposed inside `M.weekly_digest.top_sources_by_week` as a list of
+`{ week_start, bucket, subs }` objects ordered by week DESC then subs DESC.
+
+---
+
+## Section C2 — Article-Level Activity (last completed ISO week)
+
+Article clicks from `articles_clicks` for the **last completed Mon–Sun**,
+restricted to the three placement types the Weekly Digest tab surfaces:
+`editorial`, `sponsor`, `immersion`. Bucketed by `issue_date` (no
+per-click event date on this table). Up to 200 rows; client slices to top 5
+per type.
+
+```sql
+WITH wk AS (
+    SELECT
+        DATE_TRUNC('week', CURRENT_DATE)::date - INTERVAL '1 week' AS wk_start,
+        DATE_TRUNC('week', CURRENT_DATE)::date                      AS wk_end_excl
+)
+SELECT
+    LOWER(TRIM(ac.type))   AS atype,
+    ac.article_title,
+    ac.url,
+    ac.issue_name,
+    ac.issue_date::date    AS issue_date,
+    SUM(ac.unique_clicks)  AS unique_clicks,
+    SUM(ac.non_unique_clicks) AS total_clicks
+FROM superage.articles_clicks ac, wk
+WHERE ac.issue_date IS NOT NULL
+  AND ac.issue_date::date >= wk.wk_start
+  AND ac.issue_date::date <  wk.wk_end_excl
+  AND LOWER(TRIM(ac.type)) IN ('editorial','sponsor','immersion')
+GROUP BY 1, ac.article_title, ac.url, ac.issue_name, ac.issue_date::date
+ORDER BY unique_clicks DESC NULLS LAST
+LIMIT 200;
+```
+
+Exposed inside `M.weekly_digest` as three arrays:
+
+| Key | Filter |
+|---|---|
+| `top_editorial_this_week` | `atype = 'editorial'` |
+| `top_sponsors_this_week` | `atype = 'sponsor'` |
+| `top_immersions_this_week` | `atype = 'immersion'` |
+
+Each entry: `{ title, url, issue_name, issue_date, unique_clicks, total_clicks }`.
+
+---
+
 ## Dashboard Wiring
 
 The dashboard loads both JSON files in parallel and merges:

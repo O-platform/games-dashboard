@@ -6,7 +6,7 @@ Generates week-over-week and day-over-day campaign performance comparisons.
 Output file: superage-staging/superage-comparison.json
 
 Rules:
-  - Only campaigns with Recipients > 1,000 are included.
+  - Only campaigns with Recipients > 95 are included (base dashboard filter).
   - Only campaigns where Sent Date <= today - 2 days are "launched"
     (2-day minimum ensures opens/clicks have had time to accumulate).
   - Week = Monday–Sunday (ISO week).

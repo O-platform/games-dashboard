@@ -290,11 +290,7 @@ function utmLabel(raw) {
   if (s === 'tdcpl1' || s === 'tdcpl2' || s.startsWith('td_cpl2')) return 'TrueDemocracy';
   // LivingSimply: CPL1, CPL2 and the .com variant
   if (['lscpl1','lscpl2','ls_cpl2','livingsimply','livingsimply.com'].includes(s)) return 'LivingSimply';
-  // DailyPuzzle
-  if (s === 'dpcpl1' || s === 'dp_cpl2') return 'DailyPuzzle';
-  // HealthFirst / FitConnect
-  if (s === 'hfcpl1') return 'HealthFirst';
-  if (s === 'fccpl1') return 'FitConnect';
+  // dpcpl / hfcpl / fccpl — real name unknown, surface the raw code as-is
   // Meta: facebook + instagram only (IF / IFCPL1 split out below)
   if (['facebook','meta','fb','ig'].includes(s)) return 'Meta';
   // IFCPL: IF short code + IFCPL1 batch (its own brand, not Meta)

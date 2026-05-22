@@ -2481,12 +2481,16 @@ function _setAcqWindow(win) {
   const showChurn = { '30': win === 'all' || win === '30d' || win === '60d' || win === '90d',
                       '60': win === 'all' || win === '60d' || win === '90d',
                       '90': win === 'all' || win === '90d' };
-  document.querySelectorAll('.churn-col').forEach(el => {
-    const depths = ['30','60','90'].filter(d => el.classList.contains('churn-'+d));
-    // An element is visible if ALL its depth classes are permitted
-    const visible = depths.every(d => showChurn[d]);
-    el.style.display = visible ? '' : 'none';
-  });
+  const applyChurnVisibility = () => {
+    document.querySelectorAll('.churn-col').forEach(el => {
+      const depths = ['30','60','90'].filter(d => el.classList.contains('churn-'+d));
+      // Each depth class on a cell/header means "show in that window".
+      // The cell is visible if ANY of its depth classes is permitted.
+      const visible = depths.length === 0 || depths.some(d => showChurn[d]);
+      el.style.display = visible ? '' : 'none';
+    });
+  };
+  applyChurnVisibility();
 
   // KPI cards — Total Subscribers, Top Source, Top Source %.
   // "Total Subscribers" is the source-table total (= subscribers with an
@@ -2557,6 +2561,9 @@ function _setAcqWindow(win) {
     const c90  = (r.churned_90d_rate != null) ? `${Number(r.churned_90d_rate).toFixed(1)}% <span style="color:var(--text-muted);">(${fmt(r.churned_90d)})</span>` : '—';
     return `<tr><td>${utmLabel(r.label)}</td><td>${fmt(subs)}</td><td>${pct}</td><td>${fmt(r.clickers)}</td><td>${clk}</td><td>${fmt(clicks)}</td><td>${apcS}</td><td class="churn-col churn-30 churn-60 churn-90">${c30}</td><td class="churn-col churn-60 churn-90">${c60}</td><td class="churn-col churn-90">${c90}</td></tr>`;
   }).join('');
+  // Re-apply: the tbody rewrite above creates fresh <td> nodes that lost the
+  // hidden state set earlier in this function.
+  applyChurnVisibility();
 }
 
 /* ═══════════════════════════════════════

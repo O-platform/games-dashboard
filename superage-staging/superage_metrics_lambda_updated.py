@@ -617,6 +617,11 @@ def lambda_handler(event, context):
                     COUNT(*) FILTER (
                         WHERE s.state = 'Unsubscribed'
                           AND s.unsubbed IS NOT NULL AND s.eff_date IS NOT NULL
+                          AND (s.unsubbed - s.eff_date) <= 60
+                    )                                               AS churned_60d,
+                    COUNT(*) FILTER (
+                        WHERE s.state = 'Unsubscribed'
+                          AND s.unsubbed IS NOT NULL AND s.eff_date IS NOT NULL
                           AND (s.unsubbed - s.eff_date) <= 90
                     )                                               AS churned_90d
                 FROM s LEFT JOIN cc ON s.email = cc.email
@@ -1443,12 +1448,13 @@ def lambda_handler(event, context):
     ]
 
     # Acquisition quality — per-source metrics with optional time window.
-    # Returns the per-source rows plus 30d/90d churn fields. Backwards-
+    # Returns the per-source rows plus 30d/60d/90d churn fields. Backwards-
     # compatible aliases (`unique_clicks` etc.) are kept on each row so older
     # HTML reading the legacy field names doesn't break.
     def _row(r):
         subs = safe_int(r["subscribers"])
         c30  = safe_int(r["churned_30d"])
+        c60  = safe_int(r["churned_60d"])
         c90  = safe_int(r["churned_90d"])
         clicks = safe_int(r["clicks"])
         return {
@@ -1467,6 +1473,8 @@ def lambda_handler(event, context):
             "clicker_rate":   f"{safe_float(r['clicker_rate']) or 0:.1f}%",
             "churned_30d":      c30,
             "churned_30d_rate": round((c30 / subs * 100), 1) if subs else 0.0,
+            "churned_60d":      c60,
+            "churned_60d_rate": round((c60 / subs * 100), 1) if subs else 0.0,
             "churned_90d":      c90,
             "churned_90d_rate": round((c90 / subs * 100), 1) if subs else 0.0,
         }

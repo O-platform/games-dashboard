@@ -2376,7 +2376,7 @@ function renderAudience(M) {
   document.getElementById('audience').innerHTML = `
     <div class="section-context-banner">
       <strong>Audience Intelligence</strong> — Where subscribers come from and how engaged they are. Acquisition quality metrics help identify which sources deliver the highest-value contacts.
-      <span style="display:inline-block;margin-left:6px;padding:1px 8px;border-radius:10px;background:var(--card-2);border:1px solid var(--card-border);color:var(--text);font-weight:600;">Click columns (Clickers, Clicker Rate, Clicks, Avg Clicks/Sub) start December 2025 — Subscriber counts, % of Total, and 30/90-Day Churn are full history.</span>
+      <span style="display:inline-block;margin-left:6px;padding:1px 8px;border-radius:10px;background:var(--card-2);border:1px solid var(--card-border);color:var(--text);font-weight:600;">Click columns (Clickers, Clicker Rate, Clicks, Avg Clicks/Sub) start December 2025 — Subscriber counts, % of Total, and churn columns are full history. Churn columns shown match the selected time window (30d → 30-Day only; 60d → 30 + 60-Day; 90d/All → all three).</span>
     </div>
     <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:12px;">
       <div style="font-size:12px;color:var(--text-muted);">
@@ -2411,8 +2411,9 @@ function renderAudience(M) {
         <thead><tr>
           <th>Source</th><th>Subscribers</th><th>% of Total</th><th>Clickers</th><th>Clicker Rate</th>
           <th>Clicks</th><th>Avg Clicks / Subscriber</th>
-          <th title="Subscribers from this source who unsubscribed within 30 days of joining, as a % of the source cohort">30-Day Churn</th>
-          <th title="Subscribers from this source who unsubscribed within 90 days of joining, as a % of the source cohort">90-Day Churn</th>
+          <th class="churn-col churn-30 churn-60 churn-90" title="Subscribers from this source who unsubscribed within 30 days of joining, as a % of the source cohort">30-Day Churn</th>
+          <th class="churn-col churn-60 churn-90" title="Subscribers from this source who unsubscribed within 60 days of joining, as a % of the source cohort">60-Day Churn</th>
+          <th class="churn-col churn-90" title="Subscribers from this source who unsubscribed within 90 days of joining, as a % of the source cohort">90-Day Churn</th>
         </tr></thead>
         <tbody id="aud-acq-tbody"></tbody>
       </table></div>
@@ -2473,6 +2474,20 @@ function _setAcqWindow(win) {
     ? ' — all time'
     : ` — subscribers joined in last ${win.replace('d','')} days, clicks made in that window`;
 
+  // Show churn columns only up to the selected window depth:
+  //   all/90d → 30d + 60d + 90d visible
+  //   60d     → 30d + 60d visible, 90d hidden
+  //   30d     → 30d visible only, 60d + 90d hidden
+  const showChurn = { '30': win === 'all' || win === '30d' || win === '60d' || win === '90d',
+                      '60': win === 'all' || win === '60d' || win === '90d',
+                      '90': win === 'all' || win === '90d' };
+  document.querySelectorAll('.churn-col').forEach(el => {
+    const depths = ['30','60','90'].filter(d => el.classList.contains('churn-'+d));
+    // An element is visible if ALL its depth classes are permitted
+    const visible = depths.every(d => showChurn[d]);
+    el.style.display = visible ? '' : 'none';
+  });
+
   // KPI cards — Total Subscribers, Top Source, Top Source %.
   // "Total Subscribers" is the source-table total (= subscribers with an
   // attribution row); for the all-time view that's smaller than M.total_subscribers
@@ -2527,7 +2542,7 @@ function _setAcqWindow(win) {
   const tbody = document.getElementById('aud-acq-tbody');
   if (!tbody) return;
   if (!rows.length) {
-    tbody.innerHTML = `<tr><td colspan="9" style="text-align:center;color:var(--text-muted);padding:14px;">No data in this window yet — re-run the metrics lambda to populate.</td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="10" style="text-align:center;color:var(--text-muted);padding:14px;">No data in this window yet — re-run the metrics lambda to populate.</td></tr>`;
     return;
   }
   tbody.innerHTML = rows.map(r => {
@@ -2538,8 +2553,9 @@ function _setAcqWindow(win) {
     const apcS = (apc != null && !Number.isNaN(Number(apc))) ? Number(apc).toFixed(2) : '—';
     const clicks = r.clicks != null ? r.clicks : r.unique_clicks;
     const c30  = (r.churned_30d_rate != null) ? `${Number(r.churned_30d_rate).toFixed(1)}% <span style="color:var(--text-muted);">(${fmt(r.churned_30d)})</span>` : '—';
+    const c60  = (r.churned_60d_rate != null) ? `${Number(r.churned_60d_rate).toFixed(1)}% <span style="color:var(--text-muted);">(${fmt(r.churned_60d)})</span>` : '—';
     const c90  = (r.churned_90d_rate != null) ? `${Number(r.churned_90d_rate).toFixed(1)}% <span style="color:var(--text-muted);">(${fmt(r.churned_90d)})</span>` : '—';
-    return `<tr><td>${utmLabel(r.label)}</td><td>${fmt(subs)}</td><td>${pct}</td><td>${fmt(r.clickers)}</td><td>${clk}</td><td>${fmt(clicks)}</td><td>${apcS}</td><td>${c30}</td><td>${c90}</td></tr>`;
+    return `<tr><td>${utmLabel(r.label)}</td><td>${fmt(subs)}</td><td>${pct}</td><td>${fmt(r.clickers)}</td><td>${clk}</td><td>${fmt(clicks)}</td><td>${apcS}</td><td class="churn-col churn-30 churn-60 churn-90">${c30}</td><td class="churn-col churn-60 churn-90">${c60}</td><td class="churn-col churn-90">${c90}</td></tr>`;
   }).join('');
 }
 

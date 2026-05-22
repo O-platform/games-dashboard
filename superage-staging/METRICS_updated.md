@@ -512,11 +512,14 @@ Feeds `campaign_table` (dashboard list, scatter chart) and `campaign_trend` (lin
 
 ```sql
 SELECT
-    COUNT(*) AS placements,
-    COALESCE(SUM(unique_clicks), 0)     AS unique_clicks,
-    COALESCE(SUM(non_unique_clicks), 0) AS non_unique_clicks
+    COUNT(*)                                                          AS placements,
+    COUNT(DISTINCT COALESCE(NULLIF(url,''), article_title))           AS unique_articles,
+    COALESCE(SUM(unique_clicks), 0)                                   AS unique_clicks,
+    COALESCE(SUM(non_unique_clicks), 0)                               AS non_unique_clicks
 FROM superage.articles_clicks ac;
 ```
+
+Feeds `M.content_summary.placements`, `M.content_summary.unique_articles`, `M.content_summary.unique_clicks`, `M.content_summary.non_unique_clicks`.
 
 > **Q12 — Content Type Performance Table** was retired from the lambda. Its JSON outputs (`content_type`, `content_type_table`) weren't consumed by the dashboard — the Content Reference tab's Content Type breakdown is now derived **client-side** from `M.content_drill_table` (Q16b), splitting on `type`.
 
@@ -813,14 +816,25 @@ LIMIT 300;
 
 ## Q18 — Audience: Total Article Clickers
 
-The full bucketed click-distribution query (1 / 2–5 / 6–10 / 11–20 / 20+) was retired because the dashboard never plotted those buckets. The lambda now only runs the simple total to feed the "Unique Clickers" KPI on the Click Analysis tab:
+Single query returns the total clicker count plus repeat-clicker flags and the 5-bucket click-distribution (used by the Click Analysis KPI row and the clicker breakdown chart):
 
 ```sql
-SELECT COUNT(*) AS total_clickers
+SELECT
+    COUNT(*)                                                  AS total_clickers,
+    COUNT(*) FILTER (WHERE clicked_7d_2x_plus  IS TRUE)       AS repeat_7d,
+    COUNT(*) FILTER (WHERE clicked_30d_2x_plus IS TRUE)       AS repeat_30d,
+    COUNT(*) FILTER (WHERE unique_clicks = 1)                 AS bucket_1,
+    COUNT(*) FILTER (WHERE unique_clicks BETWEEN 2  AND 5)    AS bucket_2_5,
+    COUNT(*) FILTER (WHERE unique_clicks BETWEEN 6  AND 10)   AS bucket_6_10,
+    COUNT(*) FILTER (WHERE unique_clicks BETWEEN 11 AND 20)   AS bucket_11_20,
+    COUNT(*) FILTER (WHERE unique_clicks > 20)                AS bucket_20_plus
 FROM superage.subscriber_clicks;
 ```
 
-Feeds `M.total_article_clickers`.
+Feeds:
+- `M.total_article_clickers` ← `total_clickers`
+- `M.clicker_repeat` ← `{ repeat_7d, repeat_30d }`
+- `M.clicker_buckets` ← `{ b_1, b_2_5, b_6_10, b_11_20, b_20_plus }`
 
 ## Q19 — Audience: Acquisition Quality by Source (Engagement Table)
 
@@ -1055,7 +1069,8 @@ SELECT
     AVG(NULLIF("$_line_amount", '')::numeric)  AS avg_deal,
     MAX(NULLIF("$_line_amount", '')::numeric)  AS max_deal
 FROM superage.sa_airtable_sales
-WHERE "$_line_amount" IS NOT NULL AND "$_line_amount" != '';
+WHERE "$_line_amount" IS NOT NULL AND "$_line_amount" != ''
+  AND sponsor_type IS NOT NULL AND TRIM(sponsor_type) != '';
 ```
 
 ## Q31 — Revenue & Sponsors: Monthly Revenue & Deal Volume (Bar+Line Chart)
@@ -1070,6 +1085,7 @@ FROM superage.sa_airtable_sales
 WHERE issue_date IS NOT NULL
   AND TRIM(CAST(issue_date AS TEXT)) != ''
   AND "$_line_amount" IS NOT NULL AND "$_line_amount" != ''
+  AND sponsor_type IS NOT NULL AND TRIM(sponsor_type) != ''
 GROUP BY 1, 2
 ORDER BY 1;
 ```
@@ -1082,12 +1098,14 @@ ORDER BY 1;
 SELECT
     COALESCE("sponsor_name"->>0, "sponsor_name"::text, 'Unknown') AS sponsor,
     COUNT(*) AS deals,
-    SUM(NULLIF("$_line_amount", '')::numeric)  AS revenue,
-    AVG(NULLIF(ecpm, '')::numeric)             AS avg_ecpm
+    SUM(NULLIF("$_line_amount", '')::numeric)  AS revenue
 FROM superage.sa_airtable_sales
 WHERE "$_line_amount" IS NOT NULL AND "$_line_amount" != ''
+  AND sponsor_type IS NOT NULL AND TRIM(sponsor_type) != ''
 GROUP BY 1 ORDER BY 3 DESC NULLS LAST LIMIT 10;
 ```
+
+> `avg_ecpm` was removed — see the ECPM retirement note below.
 
 ## Q33 — Revenue & Sponsors: Sponsor Type Distribution (Donut Chart)
 
@@ -1376,8 +1394,9 @@ WITH unsubs AS (
 sends AS (
     SELECT
         DATE_TRUNC('month', "Sent Date "::date)::date AS month,
-        SUM("Recipients") AS total_sent,
-        COUNT(*)          AS campaigns
+        SUM("Recipients")                              AS total_sent,
+        COUNT(*)                                       AS campaigns,
+        COALESCE(SUM("Unsubscribed"), 0)               AS campaign_unsubs
     FROM superage."Campaigns"
     WHERE "Sent Date " IS NOT NULL
       AND "Sent Date "::date < CURRENT_DATE
@@ -1385,14 +1404,19 @@ sends AS (
     GROUP BY 1
 )
 SELECT
-    COALESCE(u.month, s.month)                                      AS month,
-    COALESCE(u.churned, 0)                                          AS churned,
-    COALESCE(s.total_sent, 0)                                       AS total_sent,
-    COALESCE(s.campaigns, 0)                                        AS campaigns,
+    COALESCE(u.month, s.month)              AS month,
+    COALESCE(u.churned, 0)                  AS churned,
+    COALESCE(s.total_sent, 0)               AS total_sent,
+    COALESCE(s.campaigns, 0)                AS campaigns,
+    COALESCE(s.campaign_unsubs, 0)          AS campaign_unsubs,
     CASE
         WHEN COALESCE(s.total_sent, 0) = 0 THEN NULL
         ELSE ROUND(COALESCE(u.churned, 0)::numeric / s.total_sent * 100, 4)
-    END                                                             AS churn_pct
+    END                                     AS churn_pct,
+    CASE
+        WHEN COALESCE(s.total_sent, 0) = 0 THEN NULL
+        ELSE ROUND(COALESCE(s.campaign_unsubs, 0)::numeric / s.total_sent * 100, 4)
+    END                                     AS campaign_unsub_pct
 FROM unsubs u
 FULL OUTER JOIN sends s ON u.month = s.month
 ORDER BY 1;
@@ -1402,13 +1426,19 @@ Exposed as:
 
 ```json
 M.monthly_churn = {
-  "labels":     ["YYYY-MM-01", ...],
-  "data":       [<churned per month>],
-  "total_sent": [<sum of Recipients per month, 0 if no qualifying send>],
-  "campaigns":  [<count of qualifying campaigns per month>],
-  "churn_pct":  [<churned / total_sent * 100, or null when no sends>]
+  "labels":              ["YYYY-MM-01", ...],
+  "data":                [<churned per month (subscribers.date_unsubscribed)>],
+  "total_sent":          [<sum of Recipients per month, 0 if no qualifying send>],
+  "campaigns":           [<count of qualifying campaigns per month>],
+  "churn_pct":           [<churned / total_sent * 100, or null when no sends>],
+  "campaign_unsubs":     [<SUM(Campaigns.Unsubscribed) per month>],
+  "campaign_unsub_pct":  [<campaign_unsubs / total_sent * 100, or null when no sends>]
 }
 ```
+
+**Two rate variants:**
+- `churn_pct` — list churn: `subscribers.date_unsubscribed` count ÷ `SUM(Recipients)`. Measures actual list damage.
+- `campaign_unsub_pct` — campaign-reported unsub clicks: `SUM(Campaigns.Unsubscribed)` ÷ `SUM(Recipients)`. Measured at the Campaign Monitor level (button clicks); can differ from list churn due to processing lag and multi-campaign months.
 
 > **Why total_sent rather than total_subscribers?** A small dedicated 20K-recipient send can generate 200 unsubs (1%) while a 1M-recipient send can produce 10K unsubs (1%). Both should read as the same churn rate. Aggregating *all* unsubscribes and dividing by *all emails sent* in the month gives the per-impression damage signal regardless of how the month's volume was distributed across campaigns.
 >
@@ -1421,8 +1451,12 @@ WITH cohorts AS (
     SELECT
         DATE_TRUNC('month', date_joined::date)::date AS cohort_month,
         email,
-        date_joined::date     AS joined,
-        date_unsubscribed::date AS unsubbed
+        date_joined::date AS joined,
+        -- Gate by state: resubscribed subs keep the OLD date_unsubscribed in the
+        -- subscribers row even after date_joined is updated to the new join date.
+        -- Without this gate those rows produce a stale unsubbed < joined and are
+        -- falsely counted as churned at every milestone.
+        CASE WHEN state = 'Unsubscribed' THEN date_unsubscribed::date END AS unsubbed
     FROM superage.subscribers
     WHERE date_joined IS NOT NULL AND date_joined::date < CURRENT_DATE
 )
@@ -1442,7 +1476,7 @@ GROUP BY 1 ORDER BY 1;
 ```
 
 > **Reading the heatmap:** `alive_m3 / cohort_size * 100` = % still active 90 days after joining.
-> Cells where `cohort_month + offset_days > CURRENT_DATE` are marked null — the cohort hasn't aged enough yet.
+> Cells where `cohort_month + offset_days > CURRENT_DATE` are set to `None` in Python post-processing (not in SQL) — the cohort hasn't aged enough to reach that milestone yet, so the cell is suppressed rather than showing a misleading rate.
 > Note: "alive" here means *not yet unsubscribed* — i.e. lifespan-style survival. The
 > per-cohort `active_now` figure in the cohort *table* (Q40) is stricter — it uses the
 > canonical Active rule (state='Active' AND engagement_segment NOT IN Ghosts/Zombies/Dormant).

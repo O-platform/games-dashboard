@@ -33,8 +33,8 @@
     "b_11_20": 22644,
     "b_20_plus": 13295
   },
-  "total_revenue": 1351850.0,
-  "total_revenue_fmt": "$1,351,850",
+  "total_line_amount": 1351850.0,
+  "total_line_amount_fmt": "$1,351,850",
   "avg_deal_size_fmt": "$7,004",
   "total_sponsor_deals": 193,
   "quiz_kpis": {
@@ -9950,7 +9950,7 @@
       "#fbbf24"
     ]
   },
-  "revenue_monthly": {
+  "line_amount_monthly": {
     "labels": [
       "May 2025",
       "Jun 2025",
@@ -9973,7 +9973,7 @@
       "Nov 2026",
       "Dec 2026"
     ],
-    "revenue": [
+    "line_amount": [
       25350.0,
       66500.0,
       60200.0,
@@ -10022,61 +10022,61 @@
     {
       "name": "Pendulum",
       "deals": 38,
-      "revenue": "$302,600",
+      "line_amount": "$302,600",
       "bar_width": "100%"
     },
     {
       "name": "Athletic Greens (AG-1)",
       "deals": 20,
-      "revenue": "$170,350",
+      "line_amount": "$170,350",
       "bar_width": "56%"
     },
     {
       "name": "TimeLine",
       "deals": 15,
-      "revenue": "$144,000",
+      "line_amount": "$144,000",
       "bar_width": "48%"
     },
     {
       "name": "Fatty15",
       "deals": 24,
-      "revenue": "$137,500",
+      "line_amount": "$137,500",
       "bar_width": "45%"
     },
     {
       "name": "Berkeley Life",
       "deals": 11,
-      "revenue": "$64,000",
+      "line_amount": "$64,000",
       "bar_width": "21%"
     },
     {
       "name": "Noom",
       "deals": 6,
-      "revenue": "$60,000",
+      "line_amount": "$60,000",
       "bar_width": "20%"
     },
     {
       "name": "OneSkin",
       "deals": 10,
-      "revenue": "$49,000",
+      "line_amount": "$49,000",
       "bar_width": "16%"
     },
     {
       "name": "Maui Nui",
       "deals": 5,
-      "revenue": "$37,500",
+      "line_amount": "$37,500",
       "bar_width": "12%"
     },
     {
       "name": "BTL",
       "deals": 3,
-      "revenue": "$32,400",
+      "line_amount": "$32,400",
       "bar_width": "11%"
     },
     {
       "name": "NativePath",
       "deals": 7,
-      "revenue": "$31,000",
+      "line_amount": "$31,000",
       "bar_width": "10%"
     }
   ],

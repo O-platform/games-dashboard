@@ -2644,7 +2644,7 @@ function renderRevenue(M) {
       <strong>Revenue &amp; Sponsors</strong> — Advertising and sponsorship performance, sourced from <code>sa_airtable_sales</code> rows with a non-null <code>sponsor_type</code>. Headline numbers are sums of the <code>$_line_amount</code> Airtable column. The Monthly Line Amount chart includes future-dated rows (booked but not yet run); the current month and any not-yet-closed months render as faded bars.
     </div>
     <div class="kpi-row">
-      <div class="kpi-card gold"><div class="label">Total Line Amount</div><div class="value">${esc(M.total_revenue_fmt||'—')}</div><div class="sub">Sum of <code>$_line_amount</code></div></div>
+      <div class="kpi-card gold"><div class="label">Total Line Amount</div><div class="value">${esc(M.total_line_amount_fmt||'—')}</div><div class="sub">Sum of <code>$_line_amount</code></div></div>
       <div class="kpi-card green"><div class="label">Total Deals</div><div class="value">${fmt(M.total_sponsor_deals)}</div><div class="sub">Sponsorship placements</div></div>
       <div class="kpi-card cyan"><div class="label">Avg Deal Size</div><div class="value">${esc(M.avg_deal_size_fmt||'—')}</div><div class="sub">Mean line amount per deal</div></div>
       <div class="kpi-card orange"><div class="label">Top Sponsor</div><div class="value" style="font-size:14px;">${esc(topName)}</div><div class="sub">By line amount</div></div>
@@ -2666,22 +2666,22 @@ function renderRevenue(M) {
       <div class="tbl-wrap"><table class="dash-table">
         <thead><tr><th>#</th><th>Sponsor</th><th>Deals</th><th>Line Amount</th><th>Avg Line / Deal</th><th>Share of Total</th></tr></thead>
         <tbody>${ts.map((s,i)=>{
-          const rev = parseFloat((s.revenue||'').replace(/[$,]/g,'')) || 0;
+          const la = parseFloat((s.line_amount||'').replace(/[$,]/g,'')) || 0;
           const deals = s.deals || 1;
-          const avgRev = rev ? '$' + (rev/deals).toLocaleString(undefined,{maximumFractionDigits:0}) : '—';
-          const totalRev = parseFloat(M.total_revenue) || 0;
-          const share = (totalRev && rev) ? (rev/totalRev*100).toFixed(1)+'%' : '—';
-          return `<tr><td>${i+1}</td><td>${esc(s.name||'')}</td><td>${fmt(s.deals)}</td><td>${esc(s.revenue||'—')}</td><td>${avgRev}</td><td>${share}</td></tr>`;
+          const avgLa = la ? '$' + (la/deals).toLocaleString(undefined,{maximumFractionDigits:0}) : '—';
+          const totalLa = parseFloat(M.total_line_amount) || 0;
+          const share = (totalLa && la) ? (la/totalLa*100).toFixed(1)+'%' : '—';
+          return `<tr><td>${i+1}</td><td>${esc(s.name||'')}</td><td>${fmt(s.deals)}</td><td>${esc(s.line_amount||'—')}</td><td>${avgLa}</td><td>${share}</td></tr>`;
         }).join('')}</tbody>
       </table></div>
     </div>
   `;
 
-  // Monthly revenue + deals — styled to match the Monthly Campaign Clicks
+  // Monthly line amount + deals — styled to match the Monthly Campaign Clicks
   // chart (single green bar series; current / future months use the same
   // colour but at 40% alpha to read as "in-progress"). The deals line stays
   // as one continuous overlay, no past/future split, no "Future →" label.
-  const rm = M.revenue_monthly || {labels:[],revenue:[],deals:[]};
+  const rm = M.line_amount_monthly || {labels:[],line_amount:[],deals:[]};
   const today = new Date();
   const monthStart = new Date(today.getFullYear(), today.getMonth(), 1);
   const _MON = {Jan:0,Feb:1,Mar:2,Apr:3,May:4,Jun:5,Jul:6,Aug:7,Sep:8,Oct:9,Nov:10,Dec:11};
@@ -2693,14 +2693,14 @@ function renderRevenue(M) {
     return d >= monthStart;
   };
   const BAR_COLOR = '#1a7f37';
-  const revColors  = (rm.labels||[]).map(l => isInProgress(l) ? BAR_COLOR + '66' : BAR_COLOR);
-  const revBorders = (rm.labels||[]).map(l => isInProgress(l) ? BAR_COLOR        : 'transparent');
+  const laColors  = (rm.labels||[]).map(l => isInProgress(l) ? BAR_COLOR + '66' : BAR_COLOR);
+  const laBorders = (rm.labels||[]).map(l => isInProgress(l) ? BAR_COLOR        : 'transparent');
   new Chart(document.getElementById('rev-monthly'), {
     data: {
       labels: rm.labels||[],
       datasets: [
-        { type:'bar', label:'Revenue ($)', data: rm.revenue||[],
-          backgroundColor: revColors, borderColor: revBorders, borderWidth: 2, borderRadius: 4,
+        { type:'bar', label:'Line Amount ($)', data: rm.line_amount||[],
+          backgroundColor: laColors, borderColor: laBorders, borderWidth: 2, borderRadius: 4,
           yAxisID:'y' },
         { type:'line', label:'Deals', data: rm.deals||[],
           borderColor:'#0969da', backgroundColor:'transparent',

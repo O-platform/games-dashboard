@@ -776,9 +776,8 @@ def lambda_handler(event, context):
         # sponsor type don't pollute totals, monthly chart, top sponsors, or
         # the donut. Source-of-truth column is `$_line_amount` (Airtable's
         # line-item dollar value); the public KPI is labelled "Total Line
-        # Amount" in the dashboard, but the JSON field stays `total_revenue`
-        # / `total_revenue_fmt` for backwards-compat with anything reading
-        # the metrics JSON directly.
+        # Amount" on the dashboard and the JSON fields follow suit
+        # (`total_line_amount` / `total_line_amount_fmt`).
         _sponsor_filter = (
             "\"$_line_amount\" IS NOT NULL AND \"$_line_amount\" != ''\n"
             "              AND sponsor_type IS NOT NULL AND TRIM(sponsor_type) != ''"
@@ -786,22 +785,22 @@ def lambda_handler(event, context):
         cur.execute(f"""
             SELECT
                 COUNT(*) AS n,
-                SUM(NULLIF("$_line_amount", '')::numeric) AS total_revenue,
+                SUM(NULLIF("$_line_amount", '')::numeric) AS total_line_amount,
                 AVG(NULLIF("$_line_amount", '')::numeric) AS avg_deal,
                 MAX(NULLIF("$_line_amount", '')::numeric) AS max_deal
             FROM {S}.sa_airtable_sales
             WHERE {_sponsor_filter}
         """)
         rs = cur.fetchone() or {}
-        total_revenue    = safe_float(rs.get("total_revenue"))
-        avg_deal_size    = safe_float(rs.get("avg_deal"))
+        total_line_amount   = safe_float(rs.get("total_line_amount"))
+        avg_deal_size       = safe_float(rs.get("avg_deal"))
         total_sponsor_deals = safe_int(rs.get("n"))
 
         cur.execute(f"""
             SELECT
                 DATE_TRUNC('month', issue_date::date)::date AS month_start,
                 TO_CHAR(DATE_TRUNC('month', issue_date::date), 'Mon YYYY') AS month_label,
-                SUM(NULLIF("$_line_amount", '')::numeric) AS revenue,
+                SUM(NULLIF("$_line_amount", '')::numeric) AS line_amount,
                 COUNT(*) AS deals
             FROM {S}.sa_airtable_sales
             WHERE issue_date IS NOT NULL
@@ -816,7 +815,7 @@ def lambda_handler(event, context):
             SELECT
                 COALESCE("sponsor_name"->>0, "sponsor_name"::text, 'Unknown') AS sponsor,
                 COUNT(*) AS deals,
-                SUM(NULLIF("$_line_amount", '')::numeric) AS revenue
+                SUM(NULLIF("$_line_amount", '')::numeric) AS line_amount
             FROM {S}.sa_airtable_sales
             WHERE {_sponsor_filter}
             GROUP BY 1 ORDER BY 3 DESC NULLS LAST LIMIT 10
@@ -830,8 +829,6 @@ def lambda_handler(event, context):
             GROUP BY 1 ORDER BY 2 DESC
         """)
         sponsor_type_rows = cur.fetchall()
-        # ECPM retired (2026-05): the dedicated avg-ecpm query and the
-        # per-sponsor avg_ecpm column were removed from the dashboard.
 
         # ─────────────────────────────────────────────────────
         # 8. Retention
@@ -1308,11 +1305,12 @@ def lambda_handler(event, context):
         "b_20_plus": safe_int(clicker_summary.get("bucket_20_plus")),
     }
 
-    # Revenue KPIs
-    M["total_revenue"]      = total_revenue
-    M["total_revenue_fmt"]  = f"${total_revenue:,.0f}"
-    M["avg_deal_size_fmt"]  = f"${avg_deal_size:,.0f}"
-    M["total_sponsor_deals"]= total_sponsor_deals
+    # Revenue & Sponsors KPIs (headline value is "Total Line Amount" — sum of
+    # the Airtable `$_line_amount` column across sponsor_type-categorised rows)
+    M["total_line_amount"]     = total_line_amount
+    M["total_line_amount_fmt"] = f"${total_line_amount:,.0f}"
+    M["avg_deal_size_fmt"]     = f"${avg_deal_size:,.0f}"
+    M["total_sponsor_deals"]   = total_sponsor_deals
 
     # Audience-Persona KPIs (longevity-score fields were removed when the
     # tab stopped surfacing score visuals).
@@ -1550,19 +1548,19 @@ def lambda_handler(event, context):
         "colors": color_list(len(obesity_rows)),
     }
 
-    # Revenue
-    M["revenue_monthly"] = {
-        "labels":  [r["month_label"] for r in rev_monthly_rows],
-        "revenue": [safe_float(r["revenue"]) for r in rev_monthly_rows],
-        "deals":   [safe_int(r["deals"]) for r in rev_monthly_rows],
+    # Revenue & Sponsors — monthly + top sponsors (line-amount based)
+    M["line_amount_monthly"] = {
+        "labels":      [r["month_label"] for r in rev_monthly_rows],
+        "line_amount": [safe_float(r["line_amount"]) for r in rev_monthly_rows],
+        "deals":       [safe_int(r["deals"]) for r in rev_monthly_rows],
     }
-    max_sp = max((safe_float(r["revenue"]) for r in sponsor_rows if r.get("revenue") is not None), default=1) or 1
+    max_sp = max((safe_float(r["line_amount"]) for r in sponsor_rows if r.get("line_amount") is not None), default=1) or 1
     M["top_sponsors"] = [
         {
-            "name":      str(r["sponsor"] or "Unknown")[:35],
-            "deals":     safe_int(r["deals"]),
-            "revenue":   f"${safe_float(r['revenue']):,.0f}",
-            "bar_width": f"{round(safe_float(r['revenue']) / max_sp * 100)}%",
+            "name":        str(r["sponsor"] or "Unknown")[:35],
+            "deals":       safe_int(r["deals"]),
+            "line_amount": f"${safe_float(r['line_amount']):,.0f}",
+            "bar_width":   f"{round(safe_float(r['line_amount']) / max_sp * 100)}%",
         }
         for r in sponsor_rows
     ]
@@ -1756,8 +1754,8 @@ def lambda_handler(event, context):
     commit_to_github(body)
 
     logger.info(
-        "Done — subscribers=%d campaigns=%d revenue=%.0f quiz=%d article_clicks=%d",
-        total_subscribers, total_campaigns, total_revenue, quiz_count, total_article_clicks,
+        "Done — subscribers=%d campaigns=%d line_amount=%.0f quiz=%d article_clicks=%d",
+        total_subscribers, total_campaigns, total_line_amount, quiz_count, total_article_clicks,
     )
     return {
         "statusCode": 200,
@@ -1766,7 +1764,7 @@ def lambda_handler(event, context):
             "data_as_of": M["data_as_of"],
             "total_subscribers": total_subscribers,
             "total_campaigns": total_campaigns,
-            "total_revenue": total_revenue,
+            "total_line_amount": total_line_amount,
             "quiz_count": quiz_count,
         }),
     }

@@ -281,14 +281,12 @@ Source: `superage.sa_airtable_sales`. Every query in this section requires both 
 
 | Metric (dashboard label) | What it measures | JSON field |
 |---|---|---|
-| Total Line Amount | Sum of `$_line_amount` across the filtered rows | `total_revenue_fmt` |
+| Total Line Amount | Sum of `$_line_amount` across the filtered rows | `total_line_amount_fmt` |
 | Total Deals | Count of sponsorship placements | `total_sponsor_deals` |
 | Avg Deal Size | Average `$_line_amount` per placement | `avg_deal_size_fmt` |
 | Top Sponsor | Highest-line-amount sponsor | `top_sponsors[0].name` |
 
-> The Airtable column is `$_line_amount`, so the user-facing labels on the Revenue & Sponsors tab read **"Line Amount"** (not "Revenue") to match the source. The internal JSON fields stay named `total_revenue` / `total_revenue_fmt` for backwards-compat with anything downstream reading the metrics JSON — only the UI strings changed.
-
-> **ECPM retired (2026-05).** The `Avg ECPM` KPI card, the dedicated `avg_ecpm` SQL (old Q34), and the `Avg ECPM` column on the Top Sponsors table were all removed. The lambda no longer emits `M.avg_ecpm` or per-row `avg_ecpm` on `top_sponsors[]`.
+> The Airtable column is `$_line_amount`, so both the user-facing labels on the Revenue & Sponsors tab and the JSON contract use **"Line Amount"** (not "Revenue"): the headline KPI ships as `total_line_amount` / `total_line_amount_fmt`, the monthly chart as `line_amount_monthly` (inner key `line_amount`), and each row of `top_sponsors[]` carries `line_amount` rather than `revenue`.
 
 ---
 
@@ -1060,12 +1058,12 @@ FROM superage.subscriber_quiz
 GROUP BY 1 ORDER BY 2 DESC;
 ```
 
-## Q30 — Revenue & Sponsors: Revenue KPIs
+## Q30 — Revenue & Sponsors: Line Amount KPIs
 
 ```sql
 SELECT
     COUNT(*) AS n,
-    SUM(NULLIF("$_line_amount", '')::numeric)  AS total_revenue,
+    SUM(NULLIF("$_line_amount", '')::numeric)  AS total_line_amount,
     AVG(NULLIF("$_line_amount", '')::numeric)  AS avg_deal,
     MAX(NULLIF("$_line_amount", '')::numeric)  AS max_deal
 FROM superage.sa_airtable_sales
@@ -1073,13 +1071,13 @@ WHERE "$_line_amount" IS NOT NULL AND "$_line_amount" != ''
   AND sponsor_type IS NOT NULL AND TRIM(sponsor_type) != '';
 ```
 
-## Q31 — Revenue & Sponsors: Monthly Revenue & Deal Volume (Bar+Line Chart)
+## Q31 — Revenue & Sponsors: Monthly Line Amount & Deal Volume (Bar+Line Chart)
 
 ```sql
 SELECT
     DATE_TRUNC('month', issue_date::date)::date         AS month_start,
     TO_CHAR(DATE_TRUNC('month', issue_date::date), 'Mon YYYY') AS month_label,
-    SUM(NULLIF("$_line_amount", '')::numeric)           AS revenue,
+    SUM(NULLIF("$_line_amount", '')::numeric)           AS line_amount,
     COUNT(*)                                            AS deals
 FROM superage.sa_airtable_sales
 WHERE issue_date IS NOT NULL
@@ -1090,22 +1088,20 @@ GROUP BY 1, 2
 ORDER BY 1;
 ```
 
-**Future-month treatment (dashboard-side):** months whose `month_label` parses to a date strictly later than the current calendar month are rendered with **red bars** (`rgba(207,34,46,0.55)`) instead of the past/current gold (`#7d4e00`) and a dashed line segment (deals). Past + current months render solid gold. A **vertical dashed separator line** is drawn between the last past/current month and the first future month, labelled `Future →`, via an inline Chart.js plugin (`futureSeparator`). The split is computed client-side from the same array — the lambda emits the full series without partitioning.
+**Future-month treatment (dashboard-side):** months whose `month_label` parses to a date strictly later than the current calendar month are rendered with a faded green bar (`#1a7f3766`) instead of the solid green (`#1a7f37`) used for past and current months. The deals line is one continuous overlay — no past/future split, no `Future →` annotation. The split is computed client-side from the same array; the lambda emits the full series without partitioning.
 
-## Q32 — Revenue & Sponsors: Top Sponsors by Revenue (Table)
+## Q32 — Revenue & Sponsors: Top Sponsors by Line Amount (Table)
 
 ```sql
 SELECT
     COALESCE("sponsor_name"->>0, "sponsor_name"::text, 'Unknown') AS sponsor,
     COUNT(*) AS deals,
-    SUM(NULLIF("$_line_amount", '')::numeric)  AS revenue
+    SUM(NULLIF("$_line_amount", '')::numeric)  AS line_amount
 FROM superage.sa_airtable_sales
 WHERE "$_line_amount" IS NOT NULL AND "$_line_amount" != ''
   AND sponsor_type IS NOT NULL AND TRIM(sponsor_type) != ''
 GROUP BY 1 ORDER BY 3 DESC NULLS LAST LIMIT 10;
 ```
-
-> `avg_ecpm` was removed — see the ECPM retirement note below.
 
 ## Q33 — Revenue & Sponsors: Sponsor Type Distribution (Donut Chart)
 
@@ -1114,8 +1110,6 @@ SELECT COALESCE(NULLIF(sponsor_type, ''), 'Unknown') AS stype, COUNT(*) AS cnt
 FROM superage.sa_airtable_sales
 GROUP BY 1 ORDER BY 2 DESC;
 ```
-
-> **Q34 — Avg ECPM** was retired (2026-05). The dedicated `AVG(NULLIF(ecpm,'')::numeric)` query, the `M.avg_ecpm` JSON field, and the per-row `avg_ecpm` on the Top Sponsors table are all gone. The Revenue tab still shows Total Revenue / Total Deals / Avg Deal Size / Top Sponsor; ECPM was deemed too noisy at the per-sponsor level given the small deal counts.
 
 ## Q35 — Subscriber Retention: Retention KPIs (all subscribers)
 
@@ -1606,7 +1600,7 @@ ORDER BY c.cohort_month;
 15. **Cohort campaigns-per-month**: Joined from `superage."Campaigns"` by matching `DATE_TRUNC('month', "Sent Date "::date)` to the cohort join month. Only campaigns with `Recipients > 95` counted.
 16. **articles_clicks date filter removed**: No `created_at` filter on any `articles_clicks` query. All rows included regardless of date.
 17. **games/waitlist exclusion**: `LOWER(COALESCE(type,'')) NOT IN ('games','waitlist')` applied to content type, category, and tag breakdown queries.
-18. **CTOR removed from Revenue**: Avg Issue CTOR and Avg Sponsor CTOR KPI cards removed. `avg_ctor` column removed from Top Sponsors table. Q34 now only computes `avg_ecpm`.
+18. **CTOR removed from Revenue**: Avg Issue CTOR and Avg Sponsor CTOR KPI cards removed. `avg_ctor` column removed from Top Sponsors table.
 19. **Hidden Gems removed**: Section, query, and the `low_position_winners` JSON field are all gone (Q17 deleted from this doc).
 20. **Overview sponsor revenue removed**: Sponsor Revenue KPI card removed from Overview tab (still available in Revenue & Sponsors tab).
 21. **Logo background**: `.sa-logo` badge background changed to `#000` (black).
@@ -1636,10 +1630,10 @@ ORDER BY c.cohort_month;
 45. **Overview donut switched to "Current Subscriber Engagement Mix" (2026-05)**: the four-state CreateSend donut (Active / Unsubscribed / Bounced / Deleted) was replaced with a three-slice engagement view computed off the **current list only** — i.e. subscribers we still hold (state='Active' or 'Bounced'); Unsubscribed and Deleted are excluded because those records have left the list and were diluting the engagement picture. New JSON field `M.subscriber_engagement_mix = {labels:["Send-To","Dormant / Ghost / Zombie","Bounced"], data:[…], colors:[…]}` is emitted by the lambda from existing variables (no extra SQL — derived from `send_to_active`, `total_subscribers`, `bounced_count`). The Overview chart now reads the new field and falls back to the legacy `subscriber_states` shape only if the lambda hasn't re-run yet. Insight strip rewritten to describe Send-To / Dormant / Bounced rather than the four CreateSend states. Q2 in METRICS_updated.md and the Section 1 KPI table were rewritten in lockstep.
 46. **Survival Curve — multi-select "Filter sources" dropdown (2026-05)**: the per-source overlay (Q37b) was opened up from "top 8 by cohort" to "every canonical bucket with ≥ 100 subscribers" — no LIMIT — and the toggle UI was rebuilt as a **multi-select dropdown panel** instead of relying on Chart.js's built-in legend. Chart.js's legend is now disabled (`plugins.legend.display = false`); a "Filter sources" button above the chart opens a checkbox panel populated dynamically with one entry per per-source dataset (colour swatch + canonical label) plus All / None bulk buttons at the top. Each checkbox calls `_retCurveToggleSrc(idx, visible)` to flip a single dataset; the All / None routes through `_retCurveAll(visible)` which also syncs the checkbox states. The button's summary text ("— all N selected", "— 4 of 12 selected", "— none selected (baseline only)") updates via `_retCurveUpdateSummary()`. The menu closes on outside-click. The "All subscribers" baseline (dataset 0) is always visible and isn't represented in the dropdown so the reference line can't be hidden accidentally. Palette expanded from 8 to 16 distinct colours to cover the longer source list.
 49. **LTV renamed to Lifespan (2026-05)**: the per-source Retention table column headers "Avg LTV (days)" / "Median LTV" were renamed to "Avg Lifespan (days)" / "Median Lifespan" (the underlying field names `avg_lifespan_days` / `median_lifespan_days` stay the same — the formula was never revenue-based, just `date_unsubscribed - date_joined` in days across churned subscribers). Banner copy + insight string + Section 7 KPI table updated; the calculation in Q35 / Q35b is unchanged.
-47. **Revenue & Sponsors: ECPM retired (2026-05)**: the "Avg ECPM" KPI card on the Revenue & Sponsors tab and the "Avg ECPM" column on the Top Sponsors table were removed. The dedicated `AVG(NULLIF(ecpm,'')::numeric)` SQL block was deleted from the lambda, along with the `AVG(NULLIF(ecpm,'')::numeric)` aggregate on the per-sponsor query. `M.avg_ecpm` no longer ships in the JSON, and `top_sponsors[].avg_ecpm` is gone. Q34 marked retired; Section 6 of METRICS_updated.md updated. Future-dated rows in `sa_airtable_sales` are intentionally **kept** — the Monthly Revenue chart shows them as faded bars (the `isInProgress(label)` helper in `index.html` flags any month ≥ current month and reduces its bar alpha), so booked-but-not-yet-run placements stay visible alongside historical revenue.
+47. **Revenue & Sponsors: future-dated rows kept (2026-05)**: future-dated rows in `sa_airtable_sales` are intentionally retained — the Monthly Line Amount chart shows them as faded bars (the `isInProgress(label)` helper in `index.html` flags any month ≥ current month and reduces its bar alpha), so booked-but-not-yet-run placements stay visible alongside historical line amounts.
 48. **Cohort Performance Table reshaped — 2025+ only with three explicit cohort counts (2026-05)**: Q40 was restricted to cohorts with `date_joined >= '2025-01-01'` so the table focuses on recent acquisition quality (the heatmap above keeps its longer history). Columns rebuilt around three primary counts derived from the same scan: **Cohort Size** (subscribers who joined the month — `COUNT(*)`), **Total Subscribers** (still on the list today — `COUNT(*) FILTER (WHERE state IN ('Active','Bounced'))`), and **Total Active** (state='Active' AND engagement_segment NOT IN Ghosts/Zombies/Dormant). Derived rates: **Still on List %**, **Retention %**, **Churn %**, **Early Churn (90d)**. Existing **Campaigns Sent** column kept for context. Lambda now emits `cohort_table[].total_subscribers` + `cohort_table[].still_on_list_pct`; the dashboard table renders the new shape and tooltips document each column's formula.
 50. **Overview donut → engagement-segment split within state='Active' (2026-05)**: the Current Subscriber Mix donut was rescoped again — denominator is now **current subscribers only** (`state = 'Active'`) rather than every row in `subscribers`. Five slices now show how that active base breaks down by engagement segment: **Send-To** (the canonical reachable bucket — engagement_segment NOT IN Ghosts/Zombies/Dormant), **Zombies**, **Ghosts**, **Dormant**, **Other** (residual — null / empty / unrecognised segment). The SQL gained per-segment FILTER counts inside the existing Active-only query; the lambda still emits the unified `M.subscriber_engagement_mix = {labels, data, colors}` shape so the dashboard chart didn't need restructuring. Unsubscribed / Bounced / Deleted no longer appear in this donut — they're tracked elsewhere (subscriber-status KPIs, retention table). Banner copy + Q2 + Section 1 KPI bullet rewritten in lockstep.
-51. **Revenue tab: sponsor_type filter + Line Amount relabel (2026-05)**: every query against `sa_airtable_sales` (totals KPIs, Monthly Line Amount chart, Top Sponsors aggregation, Sponsor Type donut) now requires `sponsor_type IS NOT NULL AND TRIM(sponsor_type) != ''` — rows missing a sponsor type previously inflated totals and contributed a phantom "Unknown" slice in the donut, both gone now. In the same pass the user-facing wording on the tab was changed from "Revenue" → "Line Amount" to match the underlying Airtable column name (`$_line_amount`): KPI card "Total Revenue" → "Total Line Amount", chart heading "Monthly Revenue & Deal Volume" → "Monthly Line Amount & Deal Volume", Top Sponsors columns "Revenue" + "Avg Rev / Deal" + "Revenue Share" → "Line Amount" + "Avg Line / Deal" + "Share of Total". JSON field names (`total_revenue`, `total_revenue_fmt`, `top_sponsors[].revenue`) stay untouched for backwards-compat.
+51. **Revenue tab: sponsor_type filter + Line Amount rename, end-to-end (2026-05)**: every query against `sa_airtable_sales` (totals KPIs, Monthly Line Amount chart, Top Sponsors aggregation, Sponsor Type donut) now requires `sponsor_type IS NOT NULL AND TRIM(sponsor_type) != ''` — rows missing a sponsor type previously inflated totals and contributed a phantom "Unknown" slice in the donut, both gone now. In the same pass the wording was switched from "Revenue" to "Line Amount" everywhere (matching the source column `$_line_amount`), and — unlike the initial relabel — the JSON contract followed: `total_revenue` / `total_revenue_fmt` → `total_line_amount` / `total_line_amount_fmt`, `revenue_monthly` → `line_amount_monthly` (with inner key `revenue` → `line_amount`), and each row of `top_sponsors[]` ships `line_amount` instead of `revenue`. Headings and column labels match: "Total Line Amount", "Monthly Line Amount & Deal Volume", "Line Amount" + "Avg Line / Deal" + "Share of Total".
 52. **Cohort table: "Still on List %" + "Retention %" → single "Active %" column (2026-05)**: the Cohort Performance Table previously carried two near-duplicate percentage columns — Still on List % (`total_subscribers / cohort_size`, where total_subscribers = state IN Active+Bounced) and Retention % (`active_now / cohort_size`). Consolidated into one column called **Active %** with formula `total_active / cohort_size` (canonical Active rule: state='Active' AND engagement_segment NOT IN Ghosts/Zombies/Dormant). The lambda now emits `cohort_table[].active_pct`; the HTML reads that field and falls back to the legacy `retention_pct` if the lambda hasn't re-run yet. The deprecated `still_on_list_pct` JSON field is no longer emitted.
 53. **Click Analysis: Sunday Spotlight toggle now drives the KPIs + moved above the cards (2026-05)**: the Click Analysis toolbar (Include Sunday Spotlight switch + Section 1 metric dropdown) was lifted to the top of the tab — sits **above** the four KPI cards now — and the KPIs themselves were rewired to react to it. The card set was rebuilt around campaign-level aggregates that can be filtered by name: **Campaigns Sent**, **Total Recipients**, **Total Clicks**, **Avg Clicks / Campaign**, all summed from `M.campaign_table` rows filtered with the same `name NOT ILIKE '%sunday spotlight%'` predicate the chart re-aggregators use. `_renderClickKpis()` (new) runs in `_refreshClicksTab()` and on initial render so the numbers stay in sync with the bars below. The legacy article-level KPI fields (`total_article_clicks` / `unique_article_clickers` / `articles_clicked_count` / `avg_clicks_per_article`) couldn't be filtered by Sunday Spotlight at the SQL layer (no campaign name on `articles_clicks`), so they're no longer surfaced on this tab; the JSON fields still ship as backwards-compat for any external consumer.
 54. **Overview donut: merge Dormant / Ghost / Zombie into one slice (2026-05)**: the Current Subscriber Mix donut on the Overview tab was reduced from five slices to **three** — the three disengaged segments (`Zombies`, `Ghosts`, `Dormant`) now sum into a single **Dormant / Ghost / Zombie** bucket. The SQL still produces per-segment FILTER counts (kept for future reuse), but `M.subscriber_engagement_mix.data` ships `[send_to, zombies + ghosts + dormant, other_residual]` and the chart's three slices are coloured green / amber / grey. Insight strip + Q2 docs + Section 1 KPI bullet updated to match.

@@ -664,12 +664,6 @@ def lambda_handler(event, context):
                                  IN ('lscpl1','lscpl2','ls_cpl2','livingsimply','livingsimply.com')
                                                                                         THEN 'LivingSimply'
                             WHEN LOWER(TRIM(COALESCE(NULLIF(TRIM(sa.acquisition_utm_source),''), NULLIF(TRIM(s.source),''))))
-                                 IN ('dpcpl1','dp_cpl2')                                THEN 'DailyPuzzle'
-                            WHEN LOWER(TRIM(COALESCE(NULLIF(TRIM(sa.acquisition_utm_source),''), NULLIF(TRIM(s.source),''))))
-                                 = 'hfcpl1'                                             THEN 'HealthFirst'
-                            WHEN LOWER(TRIM(COALESCE(NULLIF(TRIM(sa.acquisition_utm_source),''), NULLIF(TRIM(s.source),''))))
-                                 = 'fccpl1'                                             THEN 'FitConnect'
-                            WHEN LOWER(TRIM(COALESCE(NULLIF(TRIM(sa.acquisition_utm_source),''), NULLIF(TRIM(s.source),''))))
                                  IN ('facebook','meta','fb','ig')                       THEN 'Meta'
                             WHEN LOWER(TRIM(COALESCE(NULLIF(TRIM(sa.acquisition_utm_source),''), NULLIF(TRIM(s.source),''))))
                                  IN ('if','ifcpl1')                                     THEN 'IFCPL'

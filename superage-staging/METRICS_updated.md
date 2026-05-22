@@ -233,9 +233,9 @@ Comparisons use `LOWER(TRIM(value))`, so case + whitespace differences collapse 
 | **AllHealthy** | `ahcpl1`, `allhealthy`, `allhealthy.com` | AH brand family |
 | **TrueDemocracy** | `tdcpl1`, `tdcpl2`, `td_cpl2*` *(LIKE prefix — every date-stamped batch)* | every `TD_CPL2_YYYYMMDD` batch rolls up here |
 | **LivingSimply** | `lscpl1`, `lscpl2`, `ls_cpl2`, `livingsimply`, `livingsimply.com` | LS family |
-| **DailyPuzzle** | `dpcpl1`, `dp_cpl2` | DP family |
-| **HealthFirst** | `hfcpl1` | |
-| **FitConnect** | `fccpl1` | |
+| *(raw)* | `dpcpl1`, `dp_cpl2` | Real name unknown — displayed as raw code |
+| *(raw)* | `hfcpl1` | Real name unknown — displayed as raw code |
+| *(raw)* | `fccpl1` | Real name unknown — displayed as raw code |
 | **Meta** | `facebook`, `meta`, `fb`, `ig` | Facebook + Instagram only; `if`/`ifcpl1` are split out below |
 | **IFCPL** | `if`, `ifcpl1` | own brand — used to be folded into Meta but split out in commit `d106efe` |
 | **Taboola** | `taboola` *(LOWER handles every casing)* | |

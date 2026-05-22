@@ -454,7 +454,6 @@ def lambda_handler(event, context):
             FROM ac
             INNER JOIN wa ON ac.norm_url = wa.norm_url
             ORDER BY ac.unique_clicks DESC NULLS LAST
-            LIMIT 300
         """)
         content_drill_rows = cur.fetchall()
 

@@ -64,7 +64,13 @@
     box-shadow: 0 1px 4px rgba(0,0,0,.2);
     padding: 5px;
   }
-  .sa-logo img, .sa-logo svg { width: 100%; height: 100%; filter: brightness(0) invert(1); }
+  .sa-logo img, .sa-logo svg { width: 100%; height: 100%; }
+  /* Dark mode: invert the dark-variant logo to white; hide the light-mode logo */
+  body.dark  .sa-logo .logo-dark  { filter: brightness(0) invert(1); }
+  body.dark  .sa-logo .logo-light { display: none; }
+  /* Light mode: show the light logo (black), hide the dark-variant logo */
+  body:not(.dark) .sa-logo .logo-dark  { display: none; }
+  body:not(.dark) .sa-logo .logo-light { display: block; }
   .header h1 { font-size: 19px; font-weight: 700; color: var(--text); }
   .header .sub { font-size: 11px; color: var(--text-muted); margin-top: 1px; }
   .header-right { display: flex; align-items: center; gap: 18px; }
@@ -187,7 +193,10 @@
 
 <header class="header">
   <div class="header-left">
-    <div class="sa-logo"><img src="./svg-sa.svg" alt="SuperAge"></div>
+    <div class="sa-logo">
+      <img src="./svg-sa.svg"       alt="SuperAge" class="logo-dark">
+      <img src="./svg-sa-light.svg" alt="SuperAge" class="logo-light">
+    </div>
     <div>
       <h1>SuperAge — Brand Pulse</h1>
       <div class="sub">Campaign &amp; Audience Intelligence</div>

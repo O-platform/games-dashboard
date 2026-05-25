@@ -607,7 +607,7 @@ def lambda_handler(event, context):
                     SELECT
                         LOWER(TRIM(email))           AS email,
                         acquisition_utm_source,
-                        acquisition_date::date        AS acquisition_date
+                        (acquisition_date AT TIME ZONE 'UTC' AT TIME ZONE 'America/Denver')::date AS acquisition_date
                     FROM {S}.subscriber_acquisition
                     WHERE acquisition_status IN ('added', 'resubscribed')
                 ),
@@ -964,7 +964,7 @@ def lambda_handler(event, context):
                 SELECT
                     LOWER(TRIM(email))           AS email,
                     acquisition_utm_source,
-                    acquisition_date::date        AS acquisition_date
+                    (acquisition_date AT TIME ZONE 'UTC' AT TIME ZONE 'America/Denver')::date AS acquisition_date
                 FROM {S}.subscriber_acquisition
                 WHERE acquisition_status IN ('added', 'resubscribed')
             ),
@@ -1120,7 +1120,7 @@ def lambda_handler(event, context):
                 SELECT
                     LOWER(TRIM(email))           AS email,
                     acquisition_utm_source,
-                    acquisition_date::date        AS acquisition_date
+                    (acquisition_date AT TIME ZONE 'UTC' AT TIME ZONE 'America/Denver')::date AS acquisition_date
                 FROM {S}.subscriber_acquisition
                 WHERE acquisition_status IN ('added', 'resubscribed')
             ),

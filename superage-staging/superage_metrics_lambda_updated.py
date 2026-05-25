@@ -533,8 +533,8 @@ def lambda_handler(event, context):
                 WHEN {lc} = 'tdcpl1'                                    THEN 'TDCPL'
                 WHEN {lc} = 'tdcpl2'                                    THEN 'TDCPL'
                 WHEN {lc} LIKE 'td_cpl2%%'                              THEN 'TDCPL'
-                -- LivingSimply: CPL1, CPL2 and the .com variant
-                WHEN {lc} IN ('lscpl1', 'lscpl2', 'ls_cpl2', 'livingsimply', 'livingsimply.com') THEN 'LivingSimply'
+                -- LSCPL: CPL1, CPL2 and the .com variant
+                WHEN {lc} IN ('lscpl1', 'lscpl2', 'ls_cpl2', 'livingsimply', 'livingsimply.com') THEN 'LSCPL'
                 -- Meta: facebook + instagram only (IF / IFCPL1 split out below)
                 WHEN {lc} IN ('facebook', 'meta', 'fb', 'ig')           THEN 'Meta'
                 -- IFCPL: IF short code + IFCPL1 batch (its own brand, not Meta)

@@ -8610,7 +8610,7 @@
       "labels": [
         "SuperAge Quiz",
         "Organic",
-        "LivingSimply",
+        "LSCPL",
         "TDCPL",
         "AllHealthy",
         "Refind",
@@ -8741,7 +8741,7 @@
           "churned_90d_rate": 17.2
         },
         {
-          "label": "LivingSimply",
+          "label": "LSCPL",
           "subscribers": 186387,
           "clickers": 32902,
           "clicks": 173372,
@@ -8947,7 +8947,7 @@
           "churned_90d_rate": 17.2
         },
         {
-          "label": "LivingSimply",
+          "label": "LSCPL",
           "subscribers": 186387,
           "clickers": 32902,
           "clicks": 173372,
@@ -9306,7 +9306,7 @@
           "churned_90d_rate": 0.0
         },
         {
-          "label": "LivingSimply",
+          "label": "LSCPL",
           "subscribers": 1,
           "clickers": 0,
           "clicks": 0,
@@ -9718,7 +9718,7 @@
           "churned_90d_rate": 33.3
         },
         {
-          "label": "LivingSimply",
+          "label": "LSCPL",
           "subscribers": 2,
           "clickers": 0,
           "clicks": 0,
@@ -9741,7 +9741,7 @@
     "labels": [
       "SuperAge Quiz",
       "Organic",
-      "LivingSimply",
+      "LSCPL",
       "AllHealthy",
       "TDCPL",
       "HFCPL1",
@@ -10463,7 +10463,7 @@
         ]
       },
       {
-        "label": "LivingSimply",
+        "label": "LSCPL",
         "total": 186387,
         "rates": [
           100.0,
@@ -10730,7 +10730,7 @@
       "avg_clicks_per_clicker": 6.2
     },
     {
-      "source": "LivingSimply",
+      "source": "LSCPL",
       "subscribers": 186387,
       "active_now": 69955,
       "churned": 74923,

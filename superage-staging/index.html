@@ -315,9 +315,9 @@ function utmLabel(raw) {
   // TheAgeist
   if (['theageist','theageist001','ageist'].includes(s)) return 'TheAgeist';
   if (s.startsWith('ageist_') || s.startsWith('ageistrequest')) return 'TheAgeist';
-  // RecommendedReads
-  if (['recommendedreads.com','rr_cpl2'].includes(s)) return 'RecommendedReads';
-  if (s.startsWith('rrcpl1')) return 'RecommendedReads';
+  // RRCPL
+  if (['recommendedreads.com','rr_cpl2'].includes(s)) return 'RRCPL';
+  if (s.startsWith('rrcpl1')) return 'RRCPL';
   // Campaign Monitor / Welcome Flow (case + URL-encoded collapse)
   if (s === 'campaign_monitor') return 'Campaign Monitor';
   if (['welcome flow','welcome+flow'].includes(s)) return 'Welcome Flow';
@@ -2875,6 +2875,37 @@ function renderRetention(M) {
       <div class="chart-container h340"><canvas id="ret-curve"></canvas></div>
       <div class="insight">Overall — Month 1: <strong>${pct(findRate('Month 1'))}</strong> &middot; Month 3: <strong>${pct(findRate('Month 3'))}</strong> &middot; Month 6: <strong>${pct(findRate('Month 6'))}</strong> &middot; Month 12: <strong>${pct(findRate('Month 12'))}</strong>. Thick green line = all subscribers (always visible); each thin coloured line = one canonical source bucket (≥ 100 subscribers). Use <strong>Filter sources</strong> above to pick which sources to overlay — checkbox per source, plus All / None for bulk control.</div>
     </div>
+
+    <div class="chart-card" style="margin-top:18px;">
+      <h3>Meta — Sub-source Breakdown <span class="badge-inline">survival rates by sub_source batch</span></h3>
+      <div class="tbl-wrap"><table class="dash-table">
+        <thead><tr>
+          <th>Sub-source</th>
+          <th>Attributed via</th>
+          <th>Subscribers</th>
+          <th title="% still active at Month 1">M1 Survival</th>
+          <th title="% still active at Month 3">M3 Survival</th>
+          <th title="% still active at Month 6">M6 Survival</th>
+          <th title="% still active at Month 12">M12 Survival</th>
+        </tr></thead>
+        <tbody>${(M.meta_subsource_breakdown||[]).map(r => {
+          const sv = v => v == null ? '<span style="color:var(--text-muted)">—</span>'
+                        : `<span style="color:${v>=80?'var(--green)':v>=65?'var(--text)':'var(--red)'}">${v.toFixed(1)}%</span>`;
+          return `<tr>
+            <td><strong>${esc(r.subsource)}</strong></td>
+            <td><span style="color:var(--text-muted);font-size:11px;">${esc(r.attribution_level)}</span></td>
+            <td>${fmt(r.total)}</td>
+            <td>${sv(r.sv_30)}</td>
+            <td>${sv(r.sv_90)}</td>
+            <td>${sv(r.sv_180)}</td>
+            <td>${sv(r.sv_365)}</td>
+          </tr>`;
+        }).join('')}
+        </tbody>
+      </table></div>
+      <div class="insight">Each row = one <code>sub_source</code> value within the Meta bucket (≥ 50 subscribers). <strong>Attributed via</strong> shows which priority level assigned the subscriber to Meta (L1 = <code>acquisition_utm_source</code>, L2 = <code>url_variables</code>, L3 = <code>sub_source</code>, L4 = <code>source</code>). Rows sorted by subscriber count. Use this table to spot sub-batches with anomalous retention — sub-sources concentrated in recent months will show inflated M6/M12 survival because their cohort hasn't had enough time to churn yet.</div>
+    </div>
+
     <div class="grid-2">
       <div class="chart-card">
         <h3>Lifespan Distribution</h3>
@@ -2892,6 +2923,12 @@ function renderRetention(M) {
       <h3>Campaign Unsubscribe Rate <span class="badge-inline">— pure-Campaigns, both sides from <code>Campaigns</code></span></h3>
       <div class="chart-container h300"><canvas id="ret-camp-unsub-rate"></canvas></div>
       <div class="insight">Line = <strong>SUM(<code>Unsubscribed</code>) ÷ SUM(<code>Recipients</code>) × 100</strong> per month, both columns from <code>Campaigns</code> (filter <code>Recipients &gt; 95</code>). Counts only subscribers who clicked the unsub link in a campaign sent that month — distinct from the list-churn-per-send rate (which includes hard bounces and manual deletions). Months with no qualifying send show no point. <em>Note: <code>Recipients</code> is per-send and not deduplicated across campaigns — a subscriber receiving 4 emails contributes 4× to the denominator, so the rate is per-impression, not per-unique-person.</em></div>
+    </div>
+
+    <div class="chart-card" style="margin-top:18px;">
+      <h3>Campaign Complaint Rate <span class="badge-inline">— pure-Campaigns, <code>SpamComplaints ÷ Recipients</code></span></h3>
+      <div class="chart-container h300"><canvas id="ret-camp-complaint-rate"></canvas></div>
+      <div class="insight">Line = <strong>SUM(<code>SpamComplaints</code>) ÷ SUM(<code>Recipients</code>) × 100</strong> per month, both columns from <code>Campaigns</code> (filter <code>Recipients &gt; 95</code>). Counts spam/abuse reports filed against a campaign sent that month. Industry benchmark for mailbox-provider health is <strong>&lt; 0.08%</strong> (Google/Yahoo threshold); above 0.10% risks deliverability. Months with no qualifying send show no point.</div>
     </div>
     <h2 style="font-size:14px;font-weight:600;color:var(--text);margin:22px 0 10px;">Retention by Acquisition Source <span class="badge-inline" style="text-transform:none;">acquisition source → source → 'Organic'</span></h2>
     <div class="chart-card">
@@ -3116,6 +3153,53 @@ function renderRetention(M) {
         scales:{
           y:{ beginAtZero:true, title:{ display:true, text:'Campaign unsub rate' },
               ticks:{ callback: v => Number(v).toFixed(2) + '%' } }
+        }
+      }
+    });
+  }
+
+  // Campaign Complaint Rate — SUM(SpamComplaints) / SUM(Recipients) * 100.
+  // Threshold reference lines at 0.08% (warning) and 0.10% (danger).
+  const complaintRate   = (mc.campaign_complaint_pct || []).map(v => v == null ? null : Number(v));
+  const campComplaints  = mc.campaign_complaints || [];
+  const complaintTarget = document.getElementById('ret-camp-complaint-rate');
+  if (complaintTarget) {
+    new Chart(complaintTarget, {
+      type: 'line',
+      data: { labels, datasets: [
+        { label: 'Campaign complaint rate', data: complaintRate,
+          borderColor: '#cf222e', backgroundColor: 'rgba(207,34,46,.10)',
+          tension: 0.3, pointRadius: 3, borderWidth: 2, fill: true, spanGaps: true }
+      ]},
+      options: { responsive:true, maintainAspectRatio:false,
+        plugins:{
+          legend:{ display:false },
+          annotation: {
+            annotations: {
+              warnLine: { type:'line', yMin:0.08, yMax:0.08,
+                borderColor:'rgba(210,153,34,.7)', borderWidth:1, borderDash:[4,4],
+                label:{ content:'0.08% warning', display:true, position:'end', font:{size:10}, color:'rgba(210,153,34,.9)' } },
+              dangerLine: { type:'line', yMin:0.10, yMax:0.10,
+                borderColor:'rgba(207,34,46,.6)', borderWidth:1, borderDash:[4,4],
+                label:{ content:'0.10% danger', display:true, position:'end', font:{size:10}, color:'rgba(207,34,46,.9)' } }
+            }
+          },
+          tooltip:{ callbacks:{
+            label: c => {
+              const v = c.parsed.y;
+              const i = c.dataIndex;
+              const comp = campComplaints[i] || 0;
+              const s = sends[i] || 0;
+              return [
+                `Rate: ${v == null ? '—' : v.toFixed(4) + '%'}`,
+                s ? `${comp.toLocaleString()} complaints / ${s.toLocaleString()} sends` : 'No qualifying sends this month'
+              ];
+            }
+          }}
+        },
+        scales:{
+          y:{ beginAtZero:true, title:{ display:true, text:'Complaint rate' },
+              ticks:{ callback: v => Number(v).toFixed(3) + '%' } }
         }
       }
     });

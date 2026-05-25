@@ -8619,7 +8619,7 @@
         "FCCPL1",
         "Meta",
         "Taboola",
-        "RecommendedReads"
+        "RRCPL"
       ],
       "subscribers": [
         614742,
@@ -8894,7 +8894,7 @@
           "churned_90d_rate": 14.4
         },
         {
-          "label": "RecommendedReads",
+          "label": "RRCPL",
           "subscribers": 22118,
           "clickers": 5251,
           "clicks": 36960,
@@ -9100,7 +9100,7 @@
           "churned_90d_rate": 14.4
         },
         {
-          "label": "RecommendedReads",
+          "label": "RRCPL",
           "subscribers": 22118,
           "clickers": 5251,
           "clicks": 36960,
@@ -9747,7 +9747,7 @@
       "HFCPL1",
       "DPCPL1",
       "FCCPL1",
-      "RecommendedReads",
+      "RRCPL",
       "TheAgeist",
       "NNCPL",
       "Refind"
@@ -10368,7 +10368,7 @@
         ]
       },
       {
-        "label": "RecommendedReads",
+        "label": "RRCPL",
         "total": 22118,
         "rates": [
           100.0,
@@ -10874,7 +10874,7 @@
       "avg_clicks_per_clicker": 1.9
     },
     {
-      "source": "RecommendedReads",
+      "source": "RRCPL",
       "subscribers": 22118,
       "active_now": 10220,
       "churned": 8016,

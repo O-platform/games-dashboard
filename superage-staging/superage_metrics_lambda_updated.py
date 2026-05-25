@@ -521,11 +521,12 @@ def lambda_handler(event, context):
             lc = f"LOWER(TRIM({col_sql}))"
             return f"""
             CASE
-                -- Literal placeholder strings — treat as missing so the
-                -- caller's COALESCE chain falls through to the next layer
-                -- (e.g. s.source) or the final 'Organic' fallback.
-                WHEN {lc} IN ('none', 'null', '(none)', '(null)', '-', 'n/a', 'organic', 'direct',
-                             'website', 'homepage', 'home', 'web', 'site') THEN NULL
+                -- True empty/placeholder strings — fall through to next priority level.
+                WHEN {lc} IN ('none', 'null', '(none)', '(null)', '-', 'n/a') THEN NULL
+                -- Organic: null-equivalent intent or explicit direct traffic.
+                WHEN {lc} IN ('organic', 'direct') THEN 'Organic'
+                -- Website: subscribers who joined via a web property (not a partner).
+                WHEN {lc} IN ('website', 'homepage', 'home', 'web', 'site', 'games_website') THEN 'Website'
                 -- AllHealthy
                 WHEN {lc} IN ('ahcpl1', 'allhealthy', 'allhealthy.com') THEN 'AllHealthy'
                 -- TrueDemocracy: TDCPL1, TDCPL2, and every TD_CPL2_YYYYMMDD batch
@@ -569,8 +570,26 @@ def lambda_handler(event, context):
                 ELSE NULLIF(TRIM({col_sql}), '')
             END
             """
+        def _priority_source(sub_alias: str = 's', sa_alias: str = 'sa') -> str:
+            """4-level canonical source COALESCE:
+            acquisition_utm_source >> url_variables (Meta only) >> sub_source >> source >> 'Organic'
+            sub_alias: subscribers table alias; sa_alias: subscriber_acquisition CTE alias."""
+            url_meta = (
+                f"CASE WHEN LOWER(TRIM(SUBSTRING({sub_alias}.url_variables "
+                f"FROM 'utm_source=([^,&]+'))) = 'meta' THEN 'Meta' ELSE NULL END"
+            )
+            return (
+                f"COALESCE(\n"
+                f"                        {_canon_source(f'{sa_alias}.acquisition_utm_source')},\n"
+                f"                        {url_meta},\n"
+                f"                        {_canon_source(f'{sub_alias}.sub_source')},\n"
+                f"                        {_canon_source(f'{sub_alias}.source')},\n"
+                f"                        'Organic'\n"
+                f"                    )"
+            )
+
         def fetch_acquisition_rows(fallback_label: str, since_days=None, limit: int = 12):
-            # Label priority: sa.acquisition_utm_source >> s.source >> fallback
+            # Label priority: acquisition_utm_source >> url_variables (Meta) >> sub_source >> source >> fallback
             # Effective join date: COALESCE(sa.acquisition_date, s.date_joined).
             # Taboola rows are excluded from results (canonical label = 'Taboola').
             eff_date_filter = ""
@@ -594,8 +613,7 @@ def lambda_handler(event, context):
                     SELECT
                         LOWER(TRIM(s.email))         AS email,
                         COALESCE(
-                            {_canon_source('sa.acquisition_utm_source')},
-                            {_canon_source('s.source')},
+                            {_priority_source('s', 'sa')},
                             %s
                         )                            AS label,
                         s.state,
@@ -668,11 +686,7 @@ def lambda_handler(event, context):
             ),
             labeled AS (
                 SELECT
-                    COALESCE(
-                        {_canon_source('sa.acquisition_utm_source')},
-                        {_canon_source('s.source')},
-                        'Organic'
-                    )                                 AS label,
+                    {_priority_source('s', 'sa')}     AS label,
                     sc.email_address,
                     sc.unique_clicks,
                     sc.non_unique_clicks
@@ -954,10 +968,7 @@ def lambda_handler(event, context):
             ),
             s AS (
                 SELECT
-                    COALESCE(
-                        {_canon_source("COALESCE(NULLIF(TRIM(sa.acquisition_utm_source),''), NULLIF(TRIM(sub.source),''))")},
-                        'Organic'
-                    ) AS bucket,
+                    {_priority_source('sub', 'sa')} AS bucket,
                     -- Use acquisition_date when available (set by partner at real acquisition
                     -- time); fall back to date_joined when absent.
                     -- Gate date_unsubscribed by state='Unsubscribed' — resubscribed
@@ -1114,11 +1125,7 @@ def lambda_handler(event, context):
                     CASE WHEN sub.state = 'Unsubscribed' THEN sub.date_unsubscribed::date END AS unsubbed,
                     sub.state,
                     sub.engagement_segment,
-                    COALESCE(
-                        NULLIF(TRIM(sa.acquisition_utm_source), ''),
-                        NULLIF(TRIM(sub.source), ''),
-                        'Organic'
-                    )                                                  AS source_raw
+                    {_priority_source('sub', 'sa')}                    AS source_raw
                 FROM {S}.subscribers sub
                 LEFT JOIN sa_acq sa ON sa.email = LOWER(TRIM(sub.email))
                 WHERE sub.date_joined IS NOT NULL AND sub.date_joined::date < CURRENT_DATE
@@ -1126,7 +1133,7 @@ def lambda_handler(event, context):
             mapped AS (
                 SELECT
                     s.*,
-                    COALESCE({_canon_source('source_raw')}, 'Organic') AS bucket,
+                    source_raw                                         AS bucket,
                     CASE WHEN unsubbed IS NOT NULL THEN (unsubbed - eff_joined) END AS lifespan_days
                 FROM s
             ),

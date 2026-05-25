@@ -676,38 +676,111 @@ def lambda_handler(event, context):
                     WHERE acquisition_status IN ('added', 'resubscribed')
                 ),
                 src AS (
+                    -- Priority: acquisition_utm_source >> url_variables (Meta only)
+                    --           >> sub_source >> source >> 'Organic'
                     SELECT
                         DATE_TRUNC('week', s.date_joined::date)::date AS week_start,
-                        CASE
-                            WHEN LOWER(COALESCE(
-                                    NULLIF(TRIM(sa.acquisition_utm_source),''),
-                                    NULLIF(TRIM(s.source),''), ''))
-                                 IN ('organic','direct','none','null','(none)','(null)','n/a','-','',
-                                     'website','homepage','home','web','site')
-                                THEN 'Organic'
-                            WHEN LOWER(TRIM(COALESCE(NULLIF(TRIM(sa.acquisition_utm_source),''), NULLIF(TRIM(s.source),''))))
-                                 IN ('ahcpl1','allhealthy','allhealthy.com')           THEN 'AllHealthy'
-                            WHEN LOWER(TRIM(COALESCE(NULLIF(TRIM(sa.acquisition_utm_source),''), NULLIF(TRIM(s.source),''))))
-                                 LIKE 'td_cpl2%%'                                       THEN 'TrueDemocracy'
-                            WHEN LOWER(TRIM(COALESCE(NULLIF(TRIM(sa.acquisition_utm_source),''), NULLIF(TRIM(s.source),''))))
-                                 IN ('tdcpl1','tdcpl2')                                 THEN 'TrueDemocracy'
-                            WHEN LOWER(TRIM(COALESCE(NULLIF(TRIM(sa.acquisition_utm_source),''), NULLIF(TRIM(s.source),''))))
-                                 IN ('lscpl1','lscpl2','ls_cpl2','livingsimply','livingsimply.com')
-                                                                                        THEN 'LivingSimply'
-                            WHEN LOWER(TRIM(COALESCE(NULLIF(TRIM(sa.acquisition_utm_source),''), NULLIF(TRIM(s.source),''))))
-                                 IN ('facebook','meta','fb','ig')                       THEN 'Meta'
-                            WHEN LOWER(TRIM(COALESCE(NULLIF(TRIM(sa.acquisition_utm_source),''), NULLIF(TRIM(s.source),''))))
-                                 IN ('if','ifcpl1')                                     THEN 'IFCPL'
-                            WHEN LOWER(TRIM(COALESCE(NULLIF(TRIM(sa.acquisition_utm_source),''), NULLIF(TRIM(s.source),''))))
-                                 = 'taboola'                                            THEN 'Taboola'
-                            WHEN LOWER(TRIM(COALESCE(NULLIF(TRIM(sa.acquisition_utm_source),''), NULLIF(TRIM(s.source),''))))
-                                 IN ('superagequiz','longevity_quiz')                   THEN 'SuperAge Quiz'
-                            WHEN LOWER(TRIM(COALESCE(NULLIF(TRIM(sa.acquisition_utm_source),''), NULLIF(TRIM(s.source),''))))
-                                 = 'refind'                                             THEN 'Refind'
-                            ELSE NULLIF(TRIM(COALESCE(
-                                    NULLIF(TRIM(sa.acquisition_utm_source),''),
-                                    NULLIF(TRIM(s.source),''))), '')
-                        END AS bucket
+                        COALESCE(
+                            -- Level 1: acquisition_utm_source
+                            CASE
+                                WHEN LOWER(TRIM(sa.acquisition_utm_source)) IN ('none','null','(none)','(null)','-','n/a') OR TRIM(sa.acquisition_utm_source) IS NULL OR TRIM(sa.acquisition_utm_source) = '' THEN NULL
+                                WHEN LOWER(TRIM(sa.acquisition_utm_source)) IN ('organic','direct')                        THEN 'Organic'
+                                WHEN LOWER(TRIM(sa.acquisition_utm_source)) IN ('website','homepage','home','web','site','games_website') THEN 'Website'
+                                WHEN LOWER(TRIM(sa.acquisition_utm_source)) IN ('facebook','meta','fb','ig')               THEN 'Meta'
+                                WHEN LOWER(TRIM(sa.acquisition_utm_source)) IN ('ahcpl1','allhealthy','allhealthy.com')     THEN 'AllHealthy'
+                                WHEN LOWER(TRIM(sa.acquisition_utm_source)) = 'tdcpl1'                                     THEN 'TrueDemocracy'
+                                WHEN LOWER(TRIM(sa.acquisition_utm_source)) = 'tdcpl2'                                     THEN 'TrueDemocracy'
+                                WHEN LOWER(TRIM(sa.acquisition_utm_source)) LIKE 'td_cpl2%%'                               THEN 'TrueDemocracy'
+                                WHEN LOWER(TRIM(sa.acquisition_utm_source)) IN ('lscpl1','lscpl2','ls_cpl2','livingsimply','livingsimply.com') THEN 'LivingSimply'
+                                WHEN LOWER(TRIM(sa.acquisition_utm_source)) IN ('if','ifcpl1')                             THEN 'IFCPL'
+                                WHEN LOWER(TRIM(sa.acquisition_utm_source)) = 'taboola'                                    THEN 'Taboola'
+                                WHEN LOWER(TRIM(sa.acquisition_utm_source)) = 'healthbrief'                                THEN 'HealthBrief'
+                                WHEN LOWER(TRIM(sa.acquisition_utm_source)) IN ('superagequiz','longevity_quiz')           THEN 'SuperAge Quiz'
+                                WHEN LOWER(TRIM(sa.acquisition_utm_source)) IN ('theageist','theageist001','ageist')       THEN 'TheAgeist'
+                                WHEN LOWER(TRIM(sa.acquisition_utm_source)) LIKE 'ageist_%%'                               THEN 'TheAgeist'
+                                WHEN LOWER(TRIM(sa.acquisition_utm_source)) LIKE 'ageistrequest%%'                         THEN 'TheAgeist'
+                                WHEN LOWER(TRIM(sa.acquisition_utm_source)) IN ('recommendedreads.com','rr_cpl2')          THEN 'RecommendedReads'
+                                WHEN LOWER(TRIM(sa.acquisition_utm_source)) LIKE 'rrcpl1%%'                                THEN 'RecommendedReads'
+                                WHEN LOWER(TRIM(sa.acquisition_utm_source)) = 'campaign_monitor'                          THEN 'Campaign Monitor'
+                                WHEN LOWER(TRIM(sa.acquisition_utm_source)) IN ('welcome flow','welcome+flow')             THEN 'Welcome Flow'
+                                WHEN LOWER(TRIM(sa.acquisition_utm_source)) = 'nncpl1'                                    THEN 'NNCPL'
+                                WHEN LOWER(TRIM(sa.acquisition_utm_source)) LIKE 'nn_cpl2%%'                              THEN 'NNCPL'
+                                WHEN LOWER(TRIM(sa.acquisition_utm_source)) LIKE 'nn1_cpl2%%'                             THEN 'NNCPL'
+                                WHEN LOWER(TRIM(sa.acquisition_utm_source)) IN ('is','iscpl1')                            THEN 'ISCPL'
+                                WHEN LOWER(TRIM(sa.acquisition_utm_source)) IN ('chatgpt.com','perplexity','nbot.ai')      THEN 'AI'
+                                WHEN LOWER(TRIM(sa.acquisition_utm_source)) = 'refind'                                    THEN 'Refind'
+                                WHEN LOWER(TRIM(sa.acquisition_utm_source)) = 'superage'                                  THEN 'SuperAge'
+                                ELSE NULLIF(TRIM(sa.acquisition_utm_source), '')
+                            END,
+                            -- Level 2: url_variables — Meta only; any other utm_source value is ignored
+                            CASE
+                                WHEN LOWER(TRIM(SUBSTRING(s.url_variables FROM 'utm_source=([^,&]+)'))) = 'meta' THEN 'Meta'
+                                ELSE NULL
+                            END,
+                            -- Level 3: sub_source
+                            CASE
+                                WHEN LOWER(TRIM(s.sub_source)) IN ('none','null','(none)','(null)','-','n/a') OR TRIM(s.sub_source) IS NULL OR TRIM(s.sub_source) = '' THEN NULL
+                                WHEN LOWER(TRIM(s.sub_source)) IN ('organic','direct')                        THEN 'Organic'
+                                WHEN LOWER(TRIM(s.sub_source)) IN ('website','homepage','home','web','site','games_website') THEN 'Website'
+                                WHEN LOWER(TRIM(s.sub_source)) IN ('facebook','meta','fb','ig')               THEN 'Meta'
+                                WHEN LOWER(TRIM(s.sub_source)) IN ('ahcpl1','allhealthy','allhealthy.com')     THEN 'AllHealthy'
+                                WHEN LOWER(TRIM(s.sub_source)) = 'tdcpl1'                                     THEN 'TrueDemocracy'
+                                WHEN LOWER(TRIM(s.sub_source)) = 'tdcpl2'                                     THEN 'TrueDemocracy'
+                                WHEN LOWER(TRIM(s.sub_source)) LIKE 'td_cpl2%%'                               THEN 'TrueDemocracy'
+                                WHEN LOWER(TRIM(s.sub_source)) IN ('lscpl1','lscpl2','ls_cpl2','livingsimply','livingsimply.com') THEN 'LivingSimply'
+                                WHEN LOWER(TRIM(s.sub_source)) IN ('if','ifcpl1')                             THEN 'IFCPL'
+                                WHEN LOWER(TRIM(s.sub_source)) = 'taboola'                                    THEN 'Taboola'
+                                WHEN LOWER(TRIM(s.sub_source)) = 'healthbrief'                                THEN 'HealthBrief'
+                                WHEN LOWER(TRIM(s.sub_source)) IN ('superagequiz','longevity_quiz')           THEN 'SuperAge Quiz'
+                                WHEN LOWER(TRIM(s.sub_source)) IN ('theageist','theageist001','ageist')       THEN 'TheAgeist'
+                                WHEN LOWER(TRIM(s.sub_source)) LIKE 'ageist_%%'                               THEN 'TheAgeist'
+                                WHEN LOWER(TRIM(s.sub_source)) LIKE 'ageistrequest%%'                         THEN 'TheAgeist'
+                                WHEN LOWER(TRIM(s.sub_source)) IN ('recommendedreads.com','rr_cpl2')          THEN 'RecommendedReads'
+                                WHEN LOWER(TRIM(s.sub_source)) LIKE 'rrcpl1%%'                                THEN 'RecommendedReads'
+                                WHEN LOWER(TRIM(s.sub_source)) = 'campaign_monitor'                          THEN 'Campaign Monitor'
+                                WHEN LOWER(TRIM(s.sub_source)) IN ('welcome flow','welcome+flow')             THEN 'Welcome Flow'
+                                WHEN LOWER(TRIM(s.sub_source)) = 'nncpl1'                                    THEN 'NNCPL'
+                                WHEN LOWER(TRIM(s.sub_source)) LIKE 'nn_cpl2%%'                              THEN 'NNCPL'
+                                WHEN LOWER(TRIM(s.sub_source)) LIKE 'nn1_cpl2%%'                             THEN 'NNCPL'
+                                WHEN LOWER(TRIM(s.sub_source)) IN ('is','iscpl1')                            THEN 'ISCPL'
+                                WHEN LOWER(TRIM(s.sub_source)) IN ('chatgpt.com','perplexity','nbot.ai')      THEN 'AI'
+                                WHEN LOWER(TRIM(s.sub_source)) = 'refind'                                    THEN 'Refind'
+                                WHEN LOWER(TRIM(s.sub_source)) = 'superage'                                  THEN 'SuperAge'
+                                ELSE NULLIF(TRIM(s.sub_source), '')
+                            END,
+                            -- Level 4: source
+                            CASE
+                                WHEN LOWER(TRIM(s.source)) IN ('none','null','(none)','(null)','-','n/a') OR TRIM(s.source) IS NULL OR TRIM(s.source) = '' THEN NULL
+                                WHEN LOWER(TRIM(s.source)) IN ('organic','direct')                        THEN 'Organic'
+                                WHEN LOWER(TRIM(s.source)) IN ('website','homepage','home','web','site','games_website') THEN 'Website'
+                                WHEN LOWER(TRIM(s.source)) IN ('facebook','meta','fb','ig')               THEN 'Meta'
+                                WHEN LOWER(TRIM(s.source)) IN ('ahcpl1','allhealthy','allhealthy.com')     THEN 'AllHealthy'
+                                WHEN LOWER(TRIM(s.source)) = 'tdcpl1'                                     THEN 'TrueDemocracy'
+                                WHEN LOWER(TRIM(s.source)) = 'tdcpl2'                                     THEN 'TrueDemocracy'
+                                WHEN LOWER(TRIM(s.source)) LIKE 'td_cpl2%%'                               THEN 'TrueDemocracy'
+                                WHEN LOWER(TRIM(s.source)) IN ('lscpl1','lscpl2','ls_cpl2','livingsimply','livingsimply.com') THEN 'LivingSimply'
+                                WHEN LOWER(TRIM(s.source)) IN ('if','ifcpl1')                             THEN 'IFCPL'
+                                WHEN LOWER(TRIM(s.source)) = 'taboola'                                    THEN 'Taboola'
+                                WHEN LOWER(TRIM(s.source)) = 'healthbrief'                                THEN 'HealthBrief'
+                                WHEN LOWER(TRIM(s.source)) IN ('superagequiz','longevity_quiz')           THEN 'SuperAge Quiz'
+                                WHEN LOWER(TRIM(s.source)) IN ('theageist','theageist001','ageist')       THEN 'TheAgeist'
+                                WHEN LOWER(TRIM(s.source)) LIKE 'ageist_%%'                               THEN 'TheAgeist'
+                                WHEN LOWER(TRIM(s.source)) LIKE 'ageistrequest%%'                         THEN 'TheAgeist'
+                                WHEN LOWER(TRIM(s.source)) IN ('recommendedreads.com','rr_cpl2')          THEN 'RecommendedReads'
+                                WHEN LOWER(TRIM(s.source)) LIKE 'rrcpl1%%'                                THEN 'RecommendedReads'
+                                WHEN LOWER(TRIM(s.source)) = 'campaign_monitor'                          THEN 'Campaign Monitor'
+                                WHEN LOWER(TRIM(s.source)) IN ('welcome flow','welcome+flow')             THEN 'Welcome Flow'
+                                WHEN LOWER(TRIM(s.source)) = 'nncpl1'                                    THEN 'NNCPL'
+                                WHEN LOWER(TRIM(s.source)) LIKE 'nn_cpl2%%'                              THEN 'NNCPL'
+                                WHEN LOWER(TRIM(s.source)) LIKE 'nn1_cpl2%%'                             THEN 'NNCPL'
+                                WHEN LOWER(TRIM(s.source)) IN ('is','iscpl1')                            THEN 'ISCPL'
+                                WHEN LOWER(TRIM(s.source)) IN ('chatgpt.com','perplexity','nbot.ai')      THEN 'AI'
+                                WHEN LOWER(TRIM(s.source)) = 'refind'                                    THEN 'Refind'
+                                WHEN LOWER(TRIM(s.source)) = 'superage'                                  THEN 'SuperAge'
+                                ELSE NULLIF(TRIM(s.source), '')
+                            END,
+                            'Organic'
+                        ) AS bucket
                     FROM {S}.subscribers s
                     LEFT JOIN sa_acq sa ON sa.email = LOWER(TRIM(s.email))
                     WHERE s.date_joined IS NOT NULL

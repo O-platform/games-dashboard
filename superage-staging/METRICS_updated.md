@@ -1,6 +1,6 @@
 # SuperAge Analytics Dashboard — Metrics Reference
 
-_Last updated: **2026-05-21** — acquisition source priority chain simplified to `sa.acquisition_utm_source >> s.source >> 'Organic'` (subscriber-level `utm_source` step dropped). Click Analysis tab gained Section 3 — Subscriber Click Behaviour (Unique Email Clickers + Repeat-7d / Repeat-30d + Click Volume Distribution). Weekly Digest "Net Change" tile renamed to "Subscribers Net Change". See per-section last-updated notes below._
+_Last updated: **2026-05-25** — acquisition source priority chain expanded to 4 levels: `acquisition_utm_source >> url_variables (Meta only) >> sub_source >> source >> 'Organic'`. `website`/`games_website`/`homepage`/`home`/`web`/`site` moved out of the Organic bucket into a new **Website** bucket. `organic` and `direct` are now explicit Organic stops (no longer fall-through NULLs). `sub_source` column added as Level 3 in all acquisition queries. See per-section last-updated notes below._
 
 This document describes every metric, chart, and data source used in the SuperAge dashboard,
 including the exact SQL queries run by the Lambda so anomalies can be reproduced and debugged directly in RDS.
@@ -204,7 +204,7 @@ Total subscribers (or in-window cohort), active rate, top source, top source sha
 
 ### Acquisition by Source
 
-The dashboard label is **Source** (UTM is treated as an internal term in the SQL only). Grouped by the fallback `COALESCE(NULLIF(TRIM(sa.acquisition_utm_source),''), NULLIF(TRIM(s.source),''), 'Organic')` — the `subscriber_acquisition` UTM wins (when the email has an SA row with `acquisition_status IN ('added','resubscribed')`), otherwise the legacy `source` column, then the literal `Organic`. `s.utm_source` is no longer part of the chain. Both the pie chart and the table consume `M.acquisition_quality.utm_source.rows_all / rows_30d / rows_60d / rows_90d` (Q19).
+The dashboard label is **Source** (UTM is treated as an internal term in the SQL only). Both the pie chart and the table consume `M.acquisition_quality.utm_source.rows_all / rows_30d / rows_60d / rows_90d` (Q19). Source is resolved through a 4-level priority chain — see "Source priority chain" below.
 
 The Audience tab table renders these columns per source: **Subscribers**, **% of Total**, **Clickers**, **Clicker Rate**, **Clicks**, **Avg Clicks / Subscriber**, **30-Day Churn**, **90-Day Churn**. (Avg Sponsor Click / Sub and Open Rate % were removed — see `FEEDBACK_REPLIES.md`.)
 
@@ -214,15 +214,24 @@ For the **All time** window, the bar chart uses `M.utm_clicks_performance` (Q20 
 
 ### Source label canonicalisation (source of truth)
 
-Raw source values are normalised to a canonical display label **before** the `GROUP BY` in Q19 / Q20 / Q35b / Q37b. The mapping lives in two places that must stay in sync:
+Raw source values are normalised to a canonical display label **before** the `GROUP BY` in Q19 / Q20 / Q35b / Q37b. The mapping lives in three places that must stay in sync:
 
-- **`_canon_source(col_sql)`** in `superage_metrics_lambda_updated.py` — SQL `CASE` statement, runs server-side so duplicate display rows collapse in the rollup itself.
-- **`utmLabel(raw)`** in `index.html` — JS fallback that hits any raw value that slipped through (e.g. a brand-new source the lambda hasn't been updated for).
+- **`_canon_source(col_sql)`** + **`_priority_source(sub_alias, sa_alias)`** in `superage_metrics_lambda_updated.py` — SQL helpers, run server-side so duplicate rows collapse in the rollup itself.
+- Inline 4-level `COALESCE` CASE block in `superage_comparison_lambda.py` (top_sources_by_week query).
+- **`utmLabel(raw)`** in `index.html` — JS fallback for any raw value that slips through (e.g. a new source not yet in the lambda).
 
-**Source priority chain (applied in all acquisition queries):**
-`sa.acquisition_utm_source` (from `subscriber_acquisition`) → `s.source` → `'Organic'`
+**Source priority chain (applied in all acquisition queries) — changed 2026-05-25:**
 
-> Changed 2026-05-21: `s.utm_source` was dropped from the chain. Earlier the order was `sa.acquisition_utm_source >> s.utm_source >> s.source >> 'Organic'`; the subscriber-level `utm_source` column is no longer consulted.
+| Level | Column | Rule |
+|---|---|---|
+| 1 | `sa.acquisition_utm_source` | Full canonical mapping; placeholder strings (`none`, `null`, `-`, `n/a`, `(none)`, `(null)`) → NULL (fall through) |
+| 2 | `s.url_variables` | **Meta only** — extract `utm_source=…` via regex; if value is `meta` (case-insensitive) → `'Meta'`; anything else is ignored (fall through) |
+| 3 | `s.sub_source` | Full canonical mapping (same rules as Level 1) |
+| 4 | `s.source` | Full canonical mapping (same rules as Level 1) |
+| 5 | *(fallback)* | `'Organic'` |
+
+> Changed 2026-05-21: `s.utm_source` was dropped from the chain.
+> Changed 2026-05-25: `url_variables` (Meta only) and `sub_source` added as Levels 2 and 3. `organic`/`direct` changed from fall-through NULLs to explicit `'Organic'` stops. `website`/`games_website` etc. separated into new `'Website'` bucket.
 
 The `subscriber_acquisition` table (`superage.subscriber_acquisition`) is LEFT JOINed on `LOWER(TRIM(email))` with filter `acquisition_status IN ('added', 'resubscribed')`. When a matching SA row has a non-NULL `acquisition_date`, it is used as the **effective join date** via `COALESCE(sa.acquisition_date, s.date_joined)` for lifespan and churn-window calculations.
 
@@ -230,13 +239,15 @@ Comparisons use `LOWER(TRIM(value))`, so case + whitespace differences collapse 
 
 | Canonical label | Matches (lowercased) | Notes |
 |---|---|---|
+| **Organic** | `organic`, `direct` — or all 4 levels empty/NULL | Explicit organic intent or no source data |
+| **Website** | `website`, `homepage`, `home`, `web`, `site`, `games_website` | Subscriber joined through a web property — **not** folded into Organic |
+| **Meta** | `facebook`, `meta`, `fb`, `ig` — or `utm_source=meta` in `url_variables` | Facebook + Instagram; `if`/`ifcpl1` are split out below |
 | **AllHealthy** | `ahcpl1`, `allhealthy`, `allhealthy.com` | AH brand family |
 | **TrueDemocracy** | `tdcpl1`, `tdcpl2`, `td_cpl2*` *(LIKE prefix — every date-stamped batch)* | every `TD_CPL2_YYYYMMDD` batch rolls up here |
 | **LivingSimply** | `lscpl1`, `lscpl2`, `ls_cpl2`, `livingsimply`, `livingsimply.com` | LS family |
 | *(raw)* | `dpcpl1`, `dp_cpl2` | Real name unknown — displayed as raw code |
 | *(raw)* | `hfcpl1` | Real name unknown — displayed as raw code |
 | *(raw)* | `fccpl1` | Real name unknown — displayed as raw code |
-| **Meta** | `facebook`, `meta`, `fb`, `ig` | Facebook + Instagram only; `if`/`ifcpl1` are split out below |
 | **IFCPL** | `if`, `ifcpl1` | own brand — used to be folded into Meta but split out in commit `d106efe` |
 | **Taboola** | `taboola` *(LOWER handles every casing)* | |
 | **HealthBrief** | `healthbrief` | |
@@ -250,11 +261,10 @@ Comparisons use `LOWER(TRIM(value))`, so case + whitespace differences collapse 
 | **AI** | `chatgpt.com`, `perplexity`, `nbot.ai` | aggregated AI-referrer bucket |
 | **Refind** | `refind` | own label (just the casing fix) |
 | **SuperAge** | `superage` | own label — **distinct from SuperAge Quiz** |
-| **Organic** | both `sa.acquisition_utm_source` and `s.source` empty / NULL | final `COALESCE` fallback in Q19's label_expr |
 
-> Adding a new entry: add a `WHEN` branch to `_canon_source(col_sql)` in `superage_metrics_lambda_updated.py` **and** a matching `if (...) return '<label>';` block in `utmLabel(raw)` in `index.html`. Both files have cross-reference comments calling out the requirement.
+> Adding a new entry: add a `WHEN` branch to `_canon_source(col_sql)` **and** the inline CASE blocks in `_priority_source` / comparison lambda, **and** a matching `if (...) return '<label>';` in `utmLabel(raw)`. All three files must stay in sync.
 
-The same canonicaliser also runs in **Q35b — Retention by Acquisition Source**, where the canonical buckets (Meta, AllHealthy, TrueDemocracy, IFCPL, RecommendedReads, NNCPL, ISCPL, …) plus a synthetic `Direct` bucket (for `organic` / `direct` / empty UTM) drive the per-source lifespan / unsubscribe-window table. The Q35b CASE coerces `'organic' / 'direct' / ''` to `Direct` and routes everything else through `_canon_source` — see the SQL itself or the matching insight string in `renderRetention()`.
+The same canonicaliser runs in **Q35b — Retention by Acquisition Source** and **Q37b — Survival by Source**. The `_priority_source()` helper is used at every call site.
 
 ---
 

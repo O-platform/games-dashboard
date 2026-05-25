@@ -385,7 +385,7 @@ def lambda_handler(event, context):
 
         cur.execute(f"""
             SELECT
-                article_title, issue_name, url, type,
+                article_title, issue_name, issue_date, url, type,
                 story_position, position_category,
                 unique_clicks, non_unique_clicks
             FROM {S}.articles_clicks ac
@@ -1418,6 +1418,7 @@ def lambda_handler(event, context):
                 "rank":             i + 1,
                 "title":            str(r["article_title"] or "Unknown"),
                 "issue":            str(r.get("issue_name") or ""),
+                "issue_date":       str(r.get("issue_date"))[:10] if r.get("issue_date") else "",
                 "url":              str(r["url"] or ""),
                 "type":             str(r.get("type") or "unknown").title(),
                 "story_position":   safe_int(r["story_position"]),

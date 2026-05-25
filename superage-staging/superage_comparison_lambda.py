@@ -407,9 +407,19 @@ def lambda_handler(event, context):
 
             # (B.1) Raw clicks — same weekday across last 5 occurrences (today's weekday).
             # Kept for backwards compatibility; the dashboard now prefers raw_clicks_by_weekday below.
-            # clicks_no_ss = clicks excluding Sunday Spotlight (issue_name match).
+            # clicks_no_ss = clicks whose originating campaign was NOT sent on
+            # a Sunday. The Sunday-Spotlight test is "what day of the week did
+            # the source campaign go out?" — the literal "sunday spotlight"
+            # substring on issue_name was misclassifying any Sunday send that
+            # wasn't named that way.
             cur.execute(f"""
-                WITH clicks AS (
+                WITH sunday_campaigns AS (
+                    SELECT "Campaign Name" AS name
+                    FROM {S}."Campaigns"
+                    WHERE "Sent Date " IS NOT NULL
+                      AND EXTRACT(DOW FROM "Sent Date "::date) = 0
+                ),
+                clicks AS (
                     SELECT "Date"::date AS d, issue_name
                     FROM {S}."Campaigns_Clicks"
                     WHERE "Date" IS NOT NULL
@@ -428,7 +438,7 @@ def lambda_handler(event, context):
                     TO_CHAR(d.day, 'Dy Mon DD')   AS label,
                     COUNT(c.d)                    AS clicks,
                     COUNT(c.d) FILTER (
-                        WHERE c.issue_name NOT ILIKE '%sunday spotlight%'
+                        WHERE c.issue_name NOT IN (SELECT name FROM sunday_campaigns)
                     )                             AS clicks_no_ss,
                     (d.day = CURRENT_DATE)        AS is_current
                 FROM d
@@ -442,7 +452,13 @@ def lambda_handler(event, context):
             # The dashboard's "Same Weekday" chart lets the user pick which
             # weekday to view, so we materialise 7×5 = 35 day buckets at once.
             cur.execute(f"""
-                WITH d AS (
+                WITH sunday_campaigns AS (
+                    SELECT "Campaign Name" AS name
+                    FROM {S}."Campaigns"
+                    WHERE "Sent Date " IS NOT NULL
+                      AND EXTRACT(DOW FROM "Sent Date "::date) = 0
+                ),
+                d AS (
                     SELECT day::date AS day
                     FROM generate_series(
                         CURRENT_DATE - INTERVAL '6 weeks',
@@ -473,7 +489,7 @@ def lambda_handler(event, context):
                     TO_CHAR(r.day, 'Dy Mon DD')        AS label,
                     COUNT(c.d)                         AS clicks,
                     COUNT(c.d) FILTER (
-                        WHERE c.issue_name NOT ILIKE '%sunday spotlight%'
+                        WHERE c.issue_name NOT IN (SELECT name FROM sunday_campaigns)
                     )                                  AS clicks_no_ss,
                     (r.day = CURRENT_DATE)             AS is_current
                 FROM ranked r
@@ -486,7 +502,13 @@ def lambda_handler(event, context):
 
             # (B.2) Raw clicks — last 12 ISO weeks (HTML defaults to 8w view; user can switch 4w/8w/12w).
             cur.execute(f"""
-                WITH clicks AS (
+                WITH sunday_campaigns AS (
+                    SELECT "Campaign Name" AS name
+                    FROM {S}."Campaigns"
+                    WHERE "Sent Date " IS NOT NULL
+                      AND EXTRACT(DOW FROM "Sent Date "::date) = 0
+                ),
+                clicks AS (
                     SELECT DATE_TRUNC('week', "Date"::date)::date AS w, issue_name
                     FROM {S}."Campaigns_Clicks"
                     WHERE "Date" IS NOT NULL
@@ -505,7 +527,7 @@ def lambda_handler(event, context):
                     TO_CHAR(w.week_start, 'Mon DD')                          AS label,
                     COUNT(c.w)                                               AS clicks,
                     COUNT(c.w) FILTER (
-                        WHERE c.issue_name NOT ILIKE '%sunday spotlight%'
+                        WHERE c.issue_name NOT IN (SELECT name FROM sunday_campaigns)
                     )                                                        AS clicks_no_ss,
                     (w.week_start = DATE_TRUNC('week', CURRENT_DATE)::date)  AS is_current
                 FROM weeks w
@@ -517,7 +539,13 @@ def lambda_handler(event, context):
 
             # (B.3) Raw clicks — last 6 calendar months
             cur.execute(f"""
-                WITH clicks AS (
+                WITH sunday_campaigns AS (
+                    SELECT "Campaign Name" AS name
+                    FROM {S}."Campaigns"
+                    WHERE "Sent Date " IS NOT NULL
+                      AND EXTRACT(DOW FROM "Sent Date "::date) = 0
+                ),
+                clicks AS (
                     SELECT DATE_TRUNC('month', "Date"::date)::date AS m, issue_name
                     FROM {S}."Campaigns_Clicks"
                     WHERE "Date" IS NOT NULL
@@ -536,7 +564,7 @@ def lambda_handler(event, context):
                     TO_CHAR(m.month_start, 'Mon YYYY')                         AS label,
                     COUNT(c.m)                                                 AS clicks,
                     COUNT(c.m) FILTER (
-                        WHERE c.issue_name NOT ILIKE '%sunday spotlight%'
+                        WHERE c.issue_name NOT IN (SELECT name FROM sunday_campaigns)
                     )                                                          AS clicks_no_ss,
                     (m.month_start = DATE_TRUNC('month', CURRENT_DATE)::date)  AS is_current
                 FROM months m

@@ -2905,7 +2905,7 @@ function renderRetention(M) {
         <thead><tr>
           <th>Source</th><th>Subscribers</th><th>Active Now</th><th>Churned</th>
           <th>Unsub ≤ 15 d</th><th>Unsub ≤ 30 d</th>
-          <th title="Average lifespan in days, across churned subscribers only">Avg Lifespan (days)</th><th title="Median lifespan in days, across churned subscribers only">Median Lifespan</th>
+          <th title="Average lifespan in days, across churned subscribers only">Avg Lifespan (days)<br><span style="font-weight:400;font-size:10px;color:var(--text-muted);">unsubscribed only</span></th><th title="Median lifespan in days, across churned subscribers only">Median Lifespan<br><span style="font-weight:400;font-size:10px;color:var(--text-muted);">unsubscribed only</span></th>
           <th>Clickers</th><th>Clicker Rate</th><th>Unique Clicks</th><th>Clicks / Clicker</th>
         </tr></thead>
         <tbody>${(M.retention_by_source||[]).map(r => {

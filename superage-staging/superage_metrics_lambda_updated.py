@@ -1,8 +1,9 @@
 """
 SuperAge Dashboard — superage-metrics.json Refresh Lambda
 =========================================================
-Queries SuperAge dashboard tables, computes metrics, and commits
-superage-staging/superage-metrics.json to GitHub.
+Queries SuperAge dashboard tables, computes metrics, and uploads
+`superage-dashboard/superage-metrics.json` to Cloudflare R2 (served to the
+dashboard via the `dashboard.pardon-ventures-06b.workers.dev` Worker).
 
 Changes in this version:
   - Campaigns filter: requires Recipients > 95 (removes test/small sends).
@@ -11,7 +12,8 @@ Changes in this version:
     clicks and unique clicks from subscriber_clicks joined to subscribers.
   - Column marital_status used for marital status in subscriber_quiz.
   - Revenue table uses issue_date (not invoice_month).
-  - GITHUB_FILE_PATH defaults to superage-staging/superage-metrics.json.
+  - Output target switched from GitHub Contents API to Cloudflare R2;
+    `R2_FILE_PATH` defaults to `superage-dashboard/superage-metrics.json`.
 
 "Active" definition (used wherever the dashboard reports an "Active" count
 — send-to KPI, retention KPI, retention-by-source, cohort table, 90-day
@@ -20,25 +22,21 @@ retention by source):
 
 Required env vars:
   DB_SECRET_ARN   — Secrets Manager ARN (JSON: host/port/dbname/username/password)
-  GITHUB_TOKEN    — Fine-grained PAT (Contents read+write on the repo)
-  GITHUB_REPO     — "O-platform/retention-dshb"
-  GITHUB_BRANCH   — target branch (e.g. "main")
+  R2_SECRET_ARN   — Secrets Manager ARN; secret must carry the keys
+                    account_id, access_key_id, secret_access_key, bucket_name
 
 Optional env vars:
   DB_HOST / DB_PORT / DB_NAME / DB_USER / DB_SSLMODE
-  GITHUB_FILE_PATH  (default: superage-staging/superage-metrics.json)
-  SA_SCHEMA         (default: superage)
-  COMMIT_TO_GITHUB  (default: true; set false for local/test run)
+  R2_FILE_PATH     (default: superage-dashboard/superage-metrics.json)
+  SA_SCHEMA        (default: superage)
+  WRITE_TO_R2      (default: true; set false for local/test run)
 
 Runtime: Python 3.12 | Layer: psycopg2
 """
 
-import base64
 import json
 import logging
 import os
-import urllib.error
-import urllib.request
 from datetime import date, datetime
 
 import boto3
@@ -49,79 +47,65 @@ logger = logging.getLogger()
 logger.setLevel(logging.INFO)
 
 _db_secret_cache = None
+_r2_secret_cache = None
+_r2_client_cache = None
 
-GITHUB_TOKEN    = os.environ.get("GITHUB_TOKEN", "")
-GITHUB_REPO     = os.environ.get("GITHUB_REPO", "O-platform/retention-dshb")
-GITHUB_FILE_PATH = os.environ.get("GITHUB_FILE_PATH", "superage-staging/superage-metrics.json")
-GITHUB_BRANCH   = os.environ.get("GITHUB_BRANCH", "main")
+R2_FILE_PATH    = os.environ.get("R2_FILE_PATH", "superage-dashboard/superage-metrics.json")
 SA_SCHEMA       = os.environ.get("SA_SCHEMA", "superage")
-COMMIT_TO_GITHUB = os.environ.get("COMMIT_TO_GITHUB", "true").strip().lower() not in {"0", "false", "no"}
+WRITE_TO_R2     = os.environ.get("WRITE_TO_R2", "true").strip().lower() not in {"0", "false", "no"}
 
 
 # ─────────────────────────────────────────────────────────────
-# GitHub helpers
+# R2 helpers
 # ─────────────────────────────────────────────────────────────
 
 def _date_label() -> str:
     return date.today().strftime("%b %d, %Y").replace(" 0", " ")
 
 
-def commit_to_github(content: str):
-    if not COMMIT_TO_GITHUB:
-        logger.info("COMMIT_TO_GITHUB=false — skipping GitHub commit.")
-        return
-    if not GITHUB_TOKEN or not GITHUB_REPO:
-        logger.warning("GITHUB_TOKEN or GITHUB_REPO not set — skipping GitHub commit.")
-        return
+def _get_r2_client():
+    """Cached (boto3 S3 client pointed at R2, bucket_name) tuple."""
+    global _r2_client_cache, _r2_secret_cache
+    if _r2_client_cache is not None:
+        return _r2_client_cache
 
-    api_base = f"https://api.github.com/repos/{GITHUB_REPO}/contents/{GITHUB_FILE_PATH}"
-    headers = {
-        "Authorization": f"Bearer {GITHUB_TOKEN}",
-        "Accept": "application/vnd.github+json",
-        "X-GitHub-Api-Version": "2022-11-28",
-        "User-Agent": "superage-metrics-lambda",
-    }
+    arn = os.environ["R2_SECRET_ARN"]
+    sm  = boto3.client(
+        "secretsmanager",
+        region_name=os.environ.get("AWS_REGION", "us-east-1"),
+    )
+    _r2_secret_cache = json.loads(sm.get_secret_value(SecretId=arn)["SecretString"])
 
-    sha = None
+    client = boto3.client(
+        "s3",
+        endpoint_url=f"https://{_r2_secret_cache['account_id']}.r2.cloudflarestorage.com",
+        aws_access_key_id=_r2_secret_cache["access_key_id"],
+        aws_secret_access_key=_r2_secret_cache["secret_access_key"],
+        region_name="auto",
+    )
+    _r2_client_cache = (client, _r2_secret_cache["bucket_name"])
+    return _r2_client_cache
+
+
+def write_to_r2(content: str):
+    """Uploads the JSON string to R2. No-op when WRITE_TO_R2=false (local dev)."""
+    if not WRITE_TO_R2:
+        logger.info("WRITE_TO_R2=false — skipping R2 upload.")
+        return {"written": False, "skipped": True}
     try:
-        req = urllib.request.Request(f"{api_base}?ref={GITHUB_BRANCH}", headers=headers, method="GET")
-        with urllib.request.urlopen(req, timeout=15) as resp:
-            data = json.loads(resp.read())
-            sha = data.get("sha")
-            logger.info("File exists SHA=%s branch=%s", (sha or "")[:12], GITHUB_BRANCH)
-    except urllib.error.HTTPError as e:
-        if e.code == 404:
-            logger.info("File not found — will create on branch=%s", GITHUB_BRANCH)
-        else:
-            logger.error("GET failed: %s %s", e.code, e.read().decode())
-            return
-    except Exception as e:
-        logger.error("GET error: %s", e)
-        return
-
-    payload = {
-        "message": f"Update superage-metrics.json — {_date_label()}",
-        "content": base64.b64encode(content.encode("utf-8")).decode("ascii"),
-        "branch": GITHUB_BRANCH,
-    }
-    if sha:
-        payload["sha"] = sha
-
-    try:
-        req = urllib.request.Request(
-            api_base,
-            data=json.dumps(payload).encode("utf-8"),
-            headers={**headers, "Content-Type": "application/json"},
-            method="PUT",
+        client, bucket = _get_r2_client()
+        client.put_object(
+            Bucket=bucket,
+            Key=R2_FILE_PATH,
+            Body=content.encode("utf-8"),
+            ContentType="application/json",
+            CacheControl="no-store",
         )
-        with urllib.request.urlopen(req, timeout=30) as resp:
-            result = json.loads(resp.read())
-            new_sha = result.get("content", {}).get("sha", "")[:12]
-            logger.info("GitHub commit OK — SHA=%s branch=%s", new_sha, GITHUB_BRANCH)
-    except urllib.error.HTTPError as e:
-        logger.error("PUT failed: %s %s", e.code, e.read().decode())
+        logger.info("R2 write OK — bucket=%s key=%s", bucket, R2_FILE_PATH)
+        return {"written": True, "bucket": bucket, "key": R2_FILE_PATH}
     except Exception as e:
-        logger.error("PUT error: %s", e)
+        logger.error("R2 write failed: %s", e)
+        return {"written": False, "error": str(e)}
 
 
 # ─────────────────────────────────────────────────────────────
@@ -201,7 +185,7 @@ def color_list(n):
 
 def lambda_handler(event, context):
     S = SA_SCHEMA
-    logger.info("SuperAge metrics Lambda starting — branch=%s schema=%s", GITHUB_BRANCH, S)
+    logger.info("SuperAge metrics Lambda starting — r2_key=%s schema=%s", R2_FILE_PATH, S)
 
     conn = get_connection()
     cur = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
@@ -401,7 +385,7 @@ def lambda_handler(event, context):
 
         cur.execute(f"""
             SELECT
-                article_title, issue_name, url, type,
+                article_title, issue_name, issue_date, url, type,
                 story_position, position_category,
                 unique_clicks, non_unique_clicks
             FROM {S}.articles_clicks ac
@@ -537,11 +521,12 @@ def lambda_handler(event, context):
             lc = f"LOWER(TRIM({col_sql}))"
             return f"""
             CASE
-                -- Literal placeholder strings — treat as missing so the
-                -- caller's COALESCE chain falls through to the next layer
-                -- (e.g. s.source) or the final 'Organic' fallback.
-                WHEN {lc} IN ('none', 'null', '(none)', '(null)', '-', 'n/a', 'organic', 'direct',
-                             'website', 'homepage', 'home', 'web', 'site') THEN NULL
+                -- True empty/placeholder strings — fall through to next priority level.
+                WHEN {lc} IN ('none', 'null', '(none)', '(null)', '-', 'n/a') THEN NULL
+                -- Organic: null-equivalent intent or explicit direct traffic.
+                WHEN {lc} IN ('organic', 'direct') THEN 'Organic'
+                -- Website: subscribers who joined via a web property (not a partner).
+                WHEN {lc} IN ('website', 'homepage', 'home', 'web', 'site', 'games_website') THEN 'Website'
                 -- AllHealthy
                 WHEN {lc} IN ('ahcpl1', 'allhealthy', 'allhealthy.com') THEN 'AllHealthy'
                 -- TrueDemocracy: TDCPL1, TDCPL2, and every TD_CPL2_YYYYMMDD batch
@@ -585,8 +570,26 @@ def lambda_handler(event, context):
                 ELSE NULLIF(TRIM({col_sql}), '')
             END
             """
+        def _priority_source(sub_alias: str = 's', sa_alias: str = 'sa') -> str:
+            """4-level canonical source COALESCE:
+            acquisition_utm_source >> url_variables (Meta only) >> sub_source >> source >> 'Organic'
+            sub_alias: subscribers table alias; sa_alias: subscriber_acquisition CTE alias."""
+            url_meta = (
+                f"CASE WHEN LOWER(TRIM(SUBSTRING({sub_alias}.url_variables "
+                f"FROM 'utm_source=([^,&]+'))) = 'meta' THEN 'Meta' ELSE NULL END"
+            )
+            return (
+                f"COALESCE(\n"
+                f"                        {_canon_source(f'{sa_alias}.acquisition_utm_source')},\n"
+                f"                        {url_meta},\n"
+                f"                        {_canon_source(f'{sub_alias}.sub_source')},\n"
+                f"                        {_canon_source(f'{sub_alias}.source')},\n"
+                f"                        'Organic'\n"
+                f"                    )"
+            )
+
         def fetch_acquisition_rows(fallback_label: str, since_days=None, limit: int = 12):
-            # Label priority: sa.acquisition_utm_source >> s.source >> fallback
+            # Label priority: acquisition_utm_source >> url_variables (Meta) >> sub_source >> source >> fallback
             # Effective join date: COALESCE(sa.acquisition_date, s.date_joined).
             # Taboola rows are excluded from results (canonical label = 'Taboola').
             eff_date_filter = ""
@@ -610,8 +613,7 @@ def lambda_handler(event, context):
                     SELECT
                         LOWER(TRIM(s.email))         AS email,
                         COALESCE(
-                            {_canon_source('sa.acquisition_utm_source')},
-                            {_canon_source('s.source')},
+                            {_priority_source('s', 'sa')},
                             %s
                         )                            AS label,
                         s.state,
@@ -684,11 +686,7 @@ def lambda_handler(event, context):
             ),
             labeled AS (
                 SELECT
-                    COALESCE(
-                        {_canon_source('sa.acquisition_utm_source')},
-                        {_canon_source('s.source')},
-                        'Organic'
-                    )                                 AS label,
+                    {_priority_source('s', 'sa')}     AS label,
                     sc.email_address,
                     sc.unique_clicks,
                     sc.non_unique_clicks
@@ -970,10 +968,7 @@ def lambda_handler(event, context):
             ),
             s AS (
                 SELECT
-                    COALESCE(
-                        {_canon_source("COALESCE(NULLIF(TRIM(sa.acquisition_utm_source),''), NULLIF(TRIM(sub.source),''))")},
-                        'Organic'
-                    ) AS bucket,
+                    {_priority_source('sub', 'sa')} AS bucket,
                     -- Use acquisition_date when available (set by partner at real acquisition
                     -- time); fall back to date_joined when absent.
                     -- Gate date_unsubscribed by state='Unsubscribed' — resubscribed
@@ -1130,11 +1125,7 @@ def lambda_handler(event, context):
                     CASE WHEN sub.state = 'Unsubscribed' THEN sub.date_unsubscribed::date END AS unsubbed,
                     sub.state,
                     sub.engagement_segment,
-                    COALESCE(
-                        NULLIF(TRIM(sa.acquisition_utm_source), ''),
-                        NULLIF(TRIM(sub.source), ''),
-                        'Organic'
-                    )                                                  AS source_raw
+                    {_priority_source('sub', 'sa')}                    AS source_raw
                 FROM {S}.subscribers sub
                 LEFT JOIN sa_acq sa ON sa.email = LOWER(TRIM(sub.email))
                 WHERE sub.date_joined IS NOT NULL AND sub.date_joined::date < CURRENT_DATE
@@ -1142,7 +1133,7 @@ def lambda_handler(event, context):
             mapped AS (
                 SELECT
                     s.*,
-                    COALESCE({_canon_source('source_raw')}, 'Organic') AS bucket,
+                    source_raw                                         AS bucket,
                     CASE WHEN unsubbed IS NOT NULL THEN (unsubbed - eff_joined) END AS lifespan_days
                 FROM s
             ),
@@ -1434,6 +1425,7 @@ def lambda_handler(event, context):
                 "rank":             i + 1,
                 "title":            str(r["article_title"] or "Unknown"),
                 "issue":            str(r.get("issue_name") or ""),
+                "issue_date":       str(r.get("issue_date"))[:10] if r.get("issue_date") else "",
                 "url":              str(r["url"] or ""),
                 "type":             str(r.get("type") or "unknown").title(),
                 "story_position":   safe_int(r["story_position"]),
@@ -1772,7 +1764,7 @@ def lambda_handler(event, context):
     }
 
     body = json.dumps(M, indent=2, default=str)
-    commit_to_github(body)
+    r2_result = write_to_r2(body)
 
     logger.info(
         "Done — subscribers=%d campaigns=%d line_amount=%.0f quiz=%d article_clicks=%d",
@@ -1782,6 +1774,7 @@ def lambda_handler(event, context):
         "statusCode": 200,
         "body": json.dumps({
             "status": "ok",
+            "r2":     r2_result,
             "data_as_of": M["data_as_of"],
             "total_subscribers": total_subscribers,
             "total_campaigns": total_campaigns,

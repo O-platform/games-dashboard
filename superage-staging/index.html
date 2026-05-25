@@ -281,9 +281,12 @@ function utmLabel(raw) {
   // function is the fallback for any raw values that still slip through.
   if (!raw) return '—';
   const s = String(raw).trim().toLowerCase();
-  // Literal placeholder strings — surface as '—' rather than rendering 'none' as its own source
-  if (['none', 'null', '(none)', '(null)', 'n/a', '-', '',
-       'organic', 'direct', 'website', 'homepage', 'home', 'web', 'site'].includes(s)) return 'Organic';
+  // True placeholder strings — no data, surface as '—'
+  if (['none', 'null', '(none)', '(null)', 'n/a', '-', ''].includes(s)) return '—';
+  // Organic: null-equivalent intent or direct traffic
+  if (['organic', 'direct'].includes(s)) return 'Organic';
+  // Website: subscribers who joined via a web property
+  if (['website', 'homepage', 'home', 'web', 'site', 'games_website'].includes(s)) return 'Website';
   // AllHealthy
   if (['ahcpl1', 'allhealthy', 'allhealthy.com'].includes(s)) return 'AllHealthy';
   // TrueDemocracy: TDCPL1, TDCPL2, and every TD_CPL2_YYYYMMDD batch
@@ -323,10 +326,15 @@ function utmLabel(raw) {
 
 /* ═══════════════════════════════════════
    DATA LOAD
+   ───────────────────────────────────────
+   JSON is served from a Cloudflare Worker fronting an R2 bucket. The
+   `superage-dashboard/*.json` keys are written by the two refresh
+   Lambdas (see superage_metrics_lambda_updated.py + superage_comparison_lambda.py).
 ═══════════════════════════════════════ */
+const DASHBOARD_API = 'https://dashboard.pardon-ventures-06b.workers.dev';
 Promise.all([
-  fetch('./superage-metrics.json').then(r => r.json()),
-  fetch('./superage-comparison.json').then(r => r.ok ? r.json() : {}).catch(() => ({}))
+  fetch(`${DASHBOARD_API}/superage-dashboard/superage-metrics.json`).then(r => r.json()),
+  fetch(`${DASHBOARD_API}/superage-dashboard/superage-comparison.json`).then(r => r.ok ? r.json() : {}).catch(() => ({}))
 ])
   .then(([metrics, comparison]) => {
     const M = Object.assign({}, metrics, comparison);
@@ -363,9 +371,9 @@ function renderOverview(M) {
 
 
     <div class="kpi-row" style="grid-template-columns:repeat(4,1fr);">
-      <div class="kpi-card green"><div class="label">Active (Send-to)</div><div class="value">${fmt(M.send_to_active)}</div><div class="sub">${M.send_to_rate} of subscribers whose state is Active</div></div>
-      <div class="kpi-card cyan"><div class="label">Avg Open Rate</div><div class="value">${M.avg_open_rate}</div><div class="sub">Best: ${M.best_open_rate}</div></div>
-      <div class="kpi-card blue"><div class="label">Avg Click Rate</div><div class="value">${M.avg_click_rate}</div><div class="sub">Best: ${M.best_click_rate}</div></div>
+      <div class="kpi-card green"><div class="label">Active (Send-to)</div><div class="value">${fmt(M.send_to_active)}</div><div class="sub">&nbsp;</div></div>
+      <div class="kpi-card cyan"><div class="label">Avg Open Rate</div><div class="value">${M.avg_open_rate}</div><div class="sub">&nbsp;</div></div>
+      <div class="kpi-card blue"><div class="label">Avg Click Rate</div><div class="value">${M.avg_click_rate}</div><div class="sub">&nbsp;</div></div>
       <div class="kpi-card orange"><div class="label">Campaigns Sent</div><div class="value">${fmt(M.total_campaigns)}</div><div class="sub">${fmt(M.total_recipients)} total recipients</div></div>
     </div>
 
@@ -593,7 +601,7 @@ function _renderOvCampTrend() {
   // Date-window filter is applied here too — keep only campaigns whose
   // sent_date falls within the last N days (or all if "all" is selected).
   const rows = (window._ovCampData || [])
-    .filter(c => includeSS ? true : !((c.name || '').toLowerCase().includes('sunday spotlight')))
+    .filter(c => includeSS ? true : !_isSundayCampaign(c))
     .filter(c => c.sent_date && !isNaN(Date.parse(c.sent_date)))
     .filter(c => cutoff == null || new Date(c.sent_date).getTime() >= cutoff)
     .sort((a, b) => new Date(a.sent_date) - new Date(b.sent_date));
@@ -835,15 +843,35 @@ function renderDigest(M) {
     const magnitude = t.isRate ? `${Math.abs(diff).toFixed(2)} pp`
                                 : `${Math.abs(diff).toLocaleString()}`;
     return `<span style="font-size:12px;font-weight:600;color:${color};">${arrow} ${magnitude}</span>
-            <span style="font-size:11px;color:var(--text-muted);"> vs prior week</span>`;
+            <span style="font-size:11px;color:var(--text-muted);"> vs ${esc(_priorRangeShort)}</span>`;
+  };
+  const _priorRangeShort = priorCompletedIdx != null ? _weekRange(priorCompletedIdx) : 'prior';
+
+  // Format an ISO Monday date as "Mon DD – Mon DD" covering Mon → Sun of that
+  // ISO week. Falls back to the lambda's plain label if the week_start string
+  // can't be parsed (e.g. lambda hasn't been re-run since week_starts was
+  // added). Same month is collapsed: "May 11 – 17"; cross-month stays
+  // "Apr 27 – May 3".
+  const _MON_SHORT = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  const _weekRange = (idx) => {
+    const ws = wd.week_starts && wd.week_starts[idx];
+    if (!ws) return wd.labels && wd.labels[idx] ? wd.labels[idx] : '—';
+    const start = new Date(ws + 'T00:00:00');
+    if (isNaN(start)) return wd.labels[idx] || '—';
+    const end = new Date(start.getTime() + 6 * 86400000);
+    const sMon = _MON_SHORT[start.getMonth()];
+    const eMon = _MON_SHORT[end.getMonth()];
+    return sMon === eMon
+      ? `${sMon} ${start.getDate()} – ${end.getDate()}`
+      : `${sMon} ${start.getDate()} – ${eMon} ${end.getDate()}`;
   };
 
-  const lastLabel  = wd.labels[lastCompletedIdx]  || '—';
-  const priorLabel = priorCompletedIdx != null ? wd.labels[priorCompletedIdx] : '—';
+  const lastLabel  = _weekRange(lastCompletedIdx);
+  const priorLabel = priorCompletedIdx != null ? _weekRange(priorCompletedIdx) : '—';
 
   root.innerHTML = `
     <div class="section-context-banner">
-      <strong>Weekly Digest</strong> — Headline metrics for <strong>${esc(lastLabel)}</strong> (last completed Mon–Sun), compared against <strong>${esc(priorLabel)}</strong>. Sparklines show the 8 prior completed weeks (excluding the in-progress current week). <strong>Campaign aggregates count mass sends only — <code>Recipients ≥ 200,000</code></strong>; small dedicated / segmented sends are excluded so their atypical open / click rates don't drag the weekly averages.
+      <strong>Weekly Digest</strong> — Headline metrics for <strong>${esc(lastLabel)}</strong> (last completed Mon–Sun) compared against <strong>${esc(priorLabel)}</strong>. Sparklines show the 8 prior completed weeks (excluding the in-progress current week). <strong>Campaign aggregates count mass sends only — <code>Recipients ≥ 200,000</code></strong>; small dedicated / segmented sends are excluded so their atypical open / click rates don't drag the weekly averages.
     </div>
 
     <div class="kpi-row" style="grid-template-columns:repeat(auto-fit,minmax(220px,1fr));">
@@ -1138,7 +1166,7 @@ const CAMP_PAGE_SIZE = 20;
 function _filterCampaigns() {
   const showSS = document.getElementById('hideSundaySpotlight').checked;
   let rows = window._campData || [];
-  if (!showSS) rows = rows.filter(r => !(r.name||'').toLowerCase().includes('sunday spotlight'));
+  if (!showSS) rows = rows.filter(r => !_isSundayCampaign(r));
   window._campFiltered = rows;
   window._campFilteredCount = rows.length;
   window._campPage = 1;
@@ -1356,6 +1384,23 @@ function _ssOn() {
   const el = document.getElementById('clicksIncludeSS');
   return el ? el.checked : false;
 }
+/* Sunday-Spotlight detection — by send-date day-of-week, not by campaign
+ * name. Sunday Spotlight is the digest blast that goes out on Sunday, so
+ * the canonical test is "was this campaign sent on a Sunday?". The
+ * previous implementation matched campaign names containing the literal
+ * string "sunday spotlight", which silently misclassified any Sunday send
+ * that wasn't named that way (and would also catch a non-Sunday send
+ * that happened to have the words in its name).
+ *
+ * Expects a campaign-table row `c` with a `sent_date` string in
+ * "YYYY-MM-DD" form (the shape the lambda emits). Parses at noon to dodge
+ * timezone / DST edges. Returns false for missing / unparseable dates so
+ * orphaned rows default to "kept in scope". */
+function _isSundayCampaign(c) {
+  if (!c || !c.sent_date) return false;
+  const d = new Date(c.sent_date + 'T12:00:00');
+  return !isNaN(d) && d.getDay() === 0; /* 0 = Sunday */
+}
 function _rawMetric(series) {
   if (_ssOn()) return 'clicks';
   return (series && Array.isArray(series.clicks_no_ss)) ? 'clicks_no_ss' : 'clicks';
@@ -1419,7 +1464,7 @@ function _renderClickSection1() {
   const stateEl   = document.getElementById('clicks-ss-state');
   if (stateEl) stateEl.textContent = includeSS ? 'Including branded digest sends' : 'Excluding branded digest sends';
   const table = (_rawClicksData && _rawClicksData.campaign_table) || [];
-  const rows  = table.filter(c => includeSS ? true : !((c.name||'').toLowerCase().includes('sunday spotlight')));
+  const rows  = table.filter(c => includeSS ? true : !_isSundayCampaign(c));
   const weekly  = _buildCampaignSeries(rows, _isoWeekStart, _fmtWeekLabel,  8);
   const monthly = _buildCampaignSeries(rows, _monthStart,  _fmtMonthLabel, 6);
   const isCtor    = metric === 'ctor';
@@ -1482,7 +1527,7 @@ function _setWeekdayWindow(n) {
   const table = (_rawClicksData && _rawClicksData.campaign_table) || [];
   const byDow = { Mon:[], Tue:[], Wed:[], Thu:[], Fri:[], Sat:[], Sun:[] };
   table.forEach(c => {
-    if (!ssOn && (c.name||'').toLowerCase().includes('sunday spotlight')) return;
+    if (!ssOn && _isSundayCampaign(c)) return;
     const d = new Date(c.sent_date || '');
     if (isNaN(d)) return;
     const dow = dows[((d.getDay()+6) % 7)];   // 0=Mon … 6=Sun
@@ -1583,6 +1628,7 @@ function _setWeekdayWindow(n) {
           }
         }}
       },
+      interaction: { mode: 'index', intersect: false },
       scales: { y: { beginAtZero: true, ticks: { callback: v => v.toLocaleString() } } }
     }
   });
@@ -1596,7 +1642,40 @@ function _setWeekdayWindow(n) {
                  + `<span style="display:inline-block;width:10px;height:10px;background:${INP_GREY};border:1px solid ${INP_BORDER};border-radius:2px;vertical-align:middle;margin:0 4px 1px 6px;"></span>in progress (&lt; 2 days since send)`;
     ins.innerHTML = weekdaysWithData < 7
       ? `Showing campaigns for <strong>${weekdaysWithData} of 7</strong> weekdays — only weekdays with at least one send appear. <br>${legend}`
-      : `Hover a bar for the campaign name, send date and how it compares to that weekday's average. <br>${legend}`;
+      : `Hover anywhere in a column to see its tooltip. <br>${legend}`;
+  }
+
+  // Compact data table — one row per send slot (most-recent first), columns = weekdays.
+  const tbl = document.getElementById('cnt-raw-weekday-table');
+  if (tbl) {
+    const activeDows = dows.filter(d => byDow[d].length > 0);
+    let html = `<table style="width:100%;border-collapse:collapse;font-size:11px;margin-top:8px;">`;
+    html += `<thead><tr><th style="text-align:left;padding:3px 6px;color:var(--text-muted);font-weight:500;border-bottom:1px solid var(--card-border);">Send slot</th>`;
+    activeDows.forEach(d => {
+      html += `<th style="text-align:right;padding:3px 6px;color:var(--text-muted);font-weight:500;border-bottom:1px solid var(--card-border);">${d}</th>`;
+    });
+    html += `</tr></thead><tbody>`;
+    for (let i = 0; i < n; i++) {
+      const positionFromEnd = n - 1 - i;
+      const rowLabel = positionFromEnd === 0 ? 'Most recent'
+                     : positionFromEnd === 1 ? '1 week back'
+                     : `${positionFromEnd} weeks back`;
+      html += `<tr>`;
+      html += `<td style="padding:3px 6px;color:var(--text-muted);">${rowLabel}</td>`;
+      activeDows.forEach(d => {
+        const row = byDow[d][positionFromEnd];
+        if (!row) { html += `<td style="padding:3px 6px;text-align:right;color:var(--text-muted);">—</td>`; return; }
+        const color = row.inProgress ? INP_GREY
+                    : row.clicks >= avgs[d] ? GREEN : RED;
+        const tip = `${row.name}${row.label ? ' ('+row.label+')' : ''}`;
+        html += `<td style="padding:3px 6px;text-align:right;font-weight:500;" title="${tip.replace(/"/g,'&quot;')}">`;
+        html += `<span style="display:inline-block;width:7px;height:7px;background:${color};border-radius:50%;margin-right:4px;vertical-align:middle;"></span>`;
+        html += `${row.clicks.toLocaleString()}</td>`;
+      });
+      html += `</tr>`;
+    }
+    html += `</tbody></table>`;
+    tbl.innerHTML = html;
   }
 }
 
@@ -1659,7 +1738,7 @@ function _renderClickKpis() {
   const includeSS = _ssOn();
   const table = (_rawClicksData && _rawClicksData.campaign_table) || [];
   const rows  = table.filter(c => includeSS ? true
-                                            : !((c.name||'').toLowerCase().includes('sunday spotlight')));
+                                            : !_isSundayCampaign(c));
   let camps = 0, recip = 0, clicks = 0;
   rows.forEach(c => {
     camps  += 1;
@@ -1809,6 +1888,7 @@ function renderContent(M) {
       </div>
       <div class="chart-container h300"><canvas id="cnt-raw-weekday-bar"></canvas></div>
       <div class="insight" id="cnt-raw-weekday-insight"></div>
+      <div id="cnt-raw-weekday-table"></div>
     </div>
     <div class="grid-2">
       <div class="chart-card">
@@ -1841,7 +1921,7 @@ function renderContent(M) {
       <h3 style="margin-bottom:12px;">Top Articles by Unique Clicks <span class="badge-inline">— top 10 all-time</span></h3>
       <div class="tbl-wrap" id="art-table-wrap">
         <table class="dash-table" id="art-main-table">
-          <thead><tr><th>#</th><th>Article</th><th>Category</th><th>Author</th><th>Position</th><th>Unique Clicks</th><th>Total Clicks</th></tr></thead>
+          <thead><tr><th>#</th><th>Article</th><th title="The campaign / issue this article appeared in. Date = send date of that issue.">Issue (date)</th><th>Category</th><th>Author</th><th>Position</th><th>Unique Clicks</th><th>Total Clicks</th></tr></thead>
           <tbody id="art-main-tbody"></tbody>
         </table>
       </div>
@@ -1872,9 +1952,14 @@ function _renderArtTable(rows) {
     const titleCell = r.url
       ? `<a href="${esc(r.url)}" target="_blank" rel="noopener">${esc(r.title||'')}</a>`
       : esc(r.title||'');
+    const issueDate = (r.issue_date || '').slice(0, 10);
+    const issueCell = r.issue
+      ? `${esc(r.issue)}${issueDate ? ` <span style="color:var(--text-muted);font-size:11px;">(${esc(issueDate)})</span>` : ''}`
+      : '<span style="color:var(--text-muted);">—</span>';
     return `<tr class="art-row-expand">
       <td>${i+1}</td>
       <td>${titleCell}</td>
+      <td>${issueCell}</td>
       <td>${esc(r.category||'')}</td>
       <td>${esc(r.author||'')}</td>
       <td>${posCell}</td>
@@ -1936,7 +2021,7 @@ function renderContentRef(M) {
           <option value="">All tags</option>
         </select>
         <label>Title search:</label>
-        <input type="text" id="cr-search" placeholder="Search titles…" oninput="_crFilter()" style="width:160px;">
+        <input type="text" id="cr-search" placeholder="Search articles…" oninput="_crFilter()" style="width:200px;" title="Search across title, issue, author, category and tags">
         <button onclick="_crReset()" style="padding:5px 14px;border-radius:6px;border:1px solid var(--card-border);background:transparent;color:var(--text-muted);font-size:12px;cursor:pointer;">Reset</button>
         <span id="cr-scope-label" style="font-size:12px;color:var(--text-muted);margin-left:auto;"></span>
       </div>
@@ -2043,7 +2128,17 @@ function _crFilter() {
   if (author) rows = rows.filter(r => _crAuthor(r) === author);
   if (cat)    rows = rows.filter(r => _crSplit(_crCategory(r)).includes(cat));
   if (tag)    rows = rows.filter(r => _crSplit(_crTags(r)).includes(tag));
-  if (q)      rows = rows.filter(r => (r.title||'').toLowerCase().includes(q));
+  if (q) {
+    // Search across every text field that a human-readable description of
+    // the article might be in — title, issue name, author, category, tags.
+    // Each row is matched if ANY field contains the query as a substring.
+    rows = rows.filter(r => {
+      const hay = [
+        r.title, r.issue_name, _crAuthor(r), _crCategory(r), _crTags(r),
+      ].map(x => String(x || '').toLowerCase()).join(' | ');
+      return hay.includes(q);
+    });
+  }
 
   window._crFiltered = rows;
   window._crPage = 1;
@@ -2641,7 +2736,7 @@ function renderRevenue(M) {
   const topName = ts[0] ? ts[0].name : '—';
   document.getElementById('revenue').innerHTML = `
     <div class="section-context-banner">
-      <strong>Revenue &amp; Sponsors</strong> — Advertising and sponsorship performance, sourced from <code>sa_airtable_sales</code> rows with a non-null <code>sponsor_type</code>. Headline numbers are sums of the <code>$_line_amount</code> Airtable column. The Monthly Line Amount chart includes future-dated rows (booked but not yet run); the current month and any not-yet-closed months render as faded bars.
+      <strong>Revenue &amp; Sponsors</strong> — <strong>Source: Airtable.</strong> All figures on this tab come from the Airtable <code>Sales</code> table (synced into RDS as <code>sa_airtable_sales</code>); rows without a <code>sponsor_type</code> categorisation are excluded. Headline numbers are sums of the Airtable <code>$_line_amount</code> column. The Monthly Line Amount chart includes future-dated rows that are booked but not yet run — the current month and any not-yet-closed months render as faded bars.
     </div>
     <div class="kpi-row">
       <div class="kpi-card gold"><div class="label">Total Line Amount</div><div class="value">${esc(M.total_line_amount_fmt||'—')}</div><div class="sub">Sum of <code>$_line_amount</code></div></div>
@@ -2847,14 +2942,72 @@ function renderRetention(M) {
     // cohorts don't draw a misleading flat line to Day 365.
     spanGaps: false,
   })));
+  // External HTML tooltip — rendered as a positioned <div> so it can grow
+  // past the chart canvas. The built-in canvas tooltip caps at the canvas
+  // height; with 15+ acquisition-source lines visible, the list overflows
+  // and the bottom rows get clipped. Switching to `enabled:false` +
+  // `external` callback writes the same content into a DOM node we control,
+  // with overflow-y:auto so every source stays readable.
+  const _retTipId = 'ret-curve-tooltip';
+  const _retTipEl = () => {
+    let el = document.getElementById(_retTipId);
+    if (el) return el;
+    el = document.createElement('div');
+    el.id = _retTipId;
+    el.style.cssText =
+      'position:absolute;background:rgba(15,20,28,0.96);color:#fff;' +
+      'padding:8px 12px;border:1px solid rgba(255,255,255,0.08);' +
+      'border-radius:6px;pointer-events:none;font-size:12px;line-height:1.5;' +
+      'z-index:1000;max-height:70vh;overflow-y:auto;min-width:200px;' +
+      'box-shadow:0 6px 24px rgba(0,0,0,0.45);opacity:0;transition:opacity .12s;';
+    document.body.appendChild(el);
+    return el;
+  };
   window._retCurveChart = new Chart(document.getElementById('ret-curve'), {
     type: 'line',
     data: { labels: overlayLabels, datasets },
     options: { responsive:true, maintainAspectRatio:false,
-      // Legend is replaced by the "Filter sources" dropdown above the chart
-      // — that gives a multi-select panel with checkboxes plus All / None.
-      plugins:{ legend:{ display: false },
-                tooltip:{ callbacks:{ label: c => c.parsed.y == null ? null : `${c.dataset.label}: ${Number(c.parsed.y).toFixed(1)}%` } } },
+      plugins:{
+        legend:{ display: false },
+        tooltip:{
+          enabled: false,
+          external: (ctx) => {
+            const tt = ctx.tooltip;
+            const el = _retTipEl();
+            if (!tt || tt.opacity === 0) { el.style.opacity = '0'; return; }
+            const items = (tt.dataPoints || []).filter(p => p.parsed && p.parsed.y != null);
+            if (!items.length) { el.style.opacity = '0'; return; }
+            const title = tt.title && tt.title[0] ? tt.title[0] : '';
+            const rows = items
+              .sort((a, b) => b.parsed.y - a.parsed.y)
+              .map(p => {
+                const c = p.dataset.borderColor || '#888';
+                return `<div style="display:flex;align-items:center;gap:8px;white-space:nowrap;">
+                  <span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:${c};"></span>
+                  <span style="flex:1;">${esc(p.dataset.label || '')}</span>
+                  <strong style="margin-left:10px;">${Number(p.parsed.y).toFixed(1)}%</strong>
+                </div>`;
+              }).join('');
+            el.innerHTML = `<div style="font-weight:600;margin-bottom:6px;color:#bdc7d3;">${esc(title)}</div>${rows}`;
+            // Position next to the cursor; keep it on-screen by flipping left
+            // when there's not enough room on the right.
+            const canvasRect = ctx.chart.canvas.getBoundingClientRect();
+            const left = canvasRect.left + window.pageXOffset + tt.caretX + 12;
+            const top  = canvasRect.top  + window.pageYOffset + tt.caretY + 12;
+            el.style.left = `${left}px`;
+            el.style.top  = `${top}px`;
+            el.style.opacity = '1';
+            // After it's laid out, nudge back if it overflows the viewport
+            // right edge.
+            requestAnimationFrame(() => {
+              const r = el.getBoundingClientRect();
+              if (r.right > window.innerWidth - 8) {
+                el.style.left = `${canvasRect.left + window.pageXOffset + tt.caretX - r.width - 12}px`;
+              }
+            });
+          }
+        }
+      },
       interaction: { mode:'index', intersect:false },
       scales:{ y:{ min:0, max:100, ticks:{ callback: v => v+'%' } } } }
   });

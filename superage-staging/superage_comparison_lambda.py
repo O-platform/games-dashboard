@@ -3,7 +3,8 @@ SuperAge Dashboard — superage-comparison.json Refresh Lambda
 =============================================================
 Generates week-over-week and day-over-day campaign performance comparisons.
 
-Output file: superage-staging/superage-comparison.json
+Output target: Cloudflare R2 — default key `superage-dashboard/superage-comparison.json`,
+served to the dashboard via the `dashboard.pardon-ventures-06b.workers.dev` Worker.
 
 Rules:
   - Only campaigns with Recipients > 95 are included (base dashboard filter).
@@ -17,25 +18,21 @@ Rules:
 
 Required env vars:
   DB_SECRET_ARN   — Secrets Manager ARN (JSON: host/port/dbname/username/password)
-  GITHUB_TOKEN    — Fine-grained PAT (Contents read+write on the repo)
-  GITHUB_REPO     — "O-platform/retention-dshb"
-  GITHUB_BRANCH   — target branch (e.g. "main")
+  R2_SECRET_ARN   — Secrets Manager ARN; secret must carry the keys
+                    account_id, access_key_id, secret_access_key, bucket_name
 
 Optional env vars:
   DB_HOST / DB_PORT / DB_NAME / DB_USER / DB_SSLMODE
-  GITHUB_FILE_PATH  (default: superage-staging/superage-comparison.json)
-  SA_SCHEMA         (default: superage)
-  COMMIT_TO_GITHUB  (default: true; set false for local/test run)
+  R2_FILE_PATH     (default: superage-dashboard/superage-comparison.json)
+  SA_SCHEMA        (default: superage)
+  WRITE_TO_R2      (default: true; set false for local/test run)
 
 Runtime: Python 3.12 | Layer: psycopg2
 """
 
-import base64
 import json
 import logging
 import os
-import urllib.error
-import urllib.request
 from datetime import date, datetime, timedelta
 
 import boto3
@@ -46,59 +43,65 @@ logger = logging.getLogger()
 logger.setLevel(logging.INFO)
 
 _db_secret_cache = None
+_r2_secret_cache = None
+_r2_client_cache = None
 
-GITHUB_TOKEN     = os.environ.get("GITHUB_TOKEN", "")
-GITHUB_REPO      = os.environ.get("GITHUB_REPO", "O-platform/retention-dshb")
-GITHUB_FILE_PATH = os.environ.get("GITHUB_FILE_PATH", "superage-staging/superage-comparison.json")
-GITHUB_BRANCH    = os.environ.get("GITHUB_BRANCH", "main")
-SA_SCHEMA        = os.environ.get("SA_SCHEMA", "superage")
-COMMIT_TO_GITHUB = os.environ.get("COMMIT_TO_GITHUB", "true").strip().lower() not in {"0", "false", "no"}
+R2_FILE_PATH    = os.environ.get("R2_FILE_PATH", "superage-dashboard/superage-comparison.json")
+SA_SCHEMA       = os.environ.get("SA_SCHEMA", "superage")
+WRITE_TO_R2     = os.environ.get("WRITE_TO_R2", "true").strip().lower() not in {"0", "false", "no"}
 
 
 # ─────────────────────────────────────────────────────────────
-# GitHub helpers
+# R2 helpers
 # ─────────────────────────────────────────────────────────────
 
 def _date_label() -> str:
     return date.today().strftime("%b %d, %Y").replace(" 0", " ")
 
 
-def commit_to_github(content: str):
-    if not COMMIT_TO_GITHUB:
-        logger.info("COMMIT_TO_GITHUB=false — skipping GitHub commit.")
-        return
-    if not GITHUB_TOKEN or not GITHUB_REPO:
-        logger.warning("GITHUB_TOKEN or GITHUB_REPO not set — skipping GitHub commit.")
-        return
+def _get_r2_client():
+    """Cached (boto3 S3 client pointed at R2, bucket_name) tuple."""
+    global _r2_client_cache, _r2_secret_cache
+    if _r2_client_cache is not None:
+        return _r2_client_cache
 
-    api_base = f"https://api.github.com/repos/{GITHUB_REPO}/contents/{GITHUB_FILE_PATH}"
-    headers = {
-        "Authorization": f"Bearer {GITHUB_TOKEN}",
-        "Accept": "application/vnd.github+json",
-        "X-GitHub-Api-Version": "2022-11-28",
-        "User-Agent": "superage-comparison-lambda",
-    }
+    arn = os.environ["R2_SECRET_ARN"]
+    sm  = boto3.client(
+        "secretsmanager",
+        region_name=os.environ.get("AWS_REGION", "us-east-1"),
+    )
+    _r2_secret_cache = json.loads(sm.get_secret_value(SecretId=arn)["SecretString"])
 
-    sha = None
+    client = boto3.client(
+        "s3",
+        endpoint_url=f"https://{_r2_secret_cache['account_id']}.r2.cloudflarestorage.com",
+        aws_access_key_id=_r2_secret_cache["access_key_id"],
+        aws_secret_access_key=_r2_secret_cache["secret_access_key"],
+        region_name="auto",
+    )
+    _r2_client_cache = (client, _r2_secret_cache["bucket_name"])
+    return _r2_client_cache
+
+
+def write_to_r2(content: str):
+    """Uploads the JSON string to R2. No-op when WRITE_TO_R2=false (local dev)."""
+    if not WRITE_TO_R2:
+        logger.info("WRITE_TO_R2=false — skipping R2 upload.")
+        return {"written": False, "skipped": True}
     try:
-        req = urllib.request.Request(f"{api_base}?ref={GITHUB_BRANCH}", headers=headers, method="GET")
-        with urllib.request.urlopen(req, timeout=15) as resp:
-            sha = json.loads(resp.read()).get("sha")
-    except urllib.error.HTTPError as e:
-        if e.code != 404:
-            logger.warning(f"GitHub GET failed: {e.code} {e.reason}")
-
-    payload = {"message": f"Update superage-comparison.json — {_date_label()}", "content": base64.b64encode(content.encode()).decode(), "branch": GITHUB_BRANCH}
-    if sha:
-        payload["sha"] = sha
-
-    req = urllib.request.Request(api_base, data=json.dumps(payload).encode(), headers={**headers, "Content-Type": "application/json"}, method="PUT")
-    try:
-        with urllib.request.urlopen(req, timeout=30) as resp:
-            logger.info(f"GitHub commit OK: {resp.status}")
-    except urllib.error.HTTPError as e:
-        logger.error(f"GitHub PUT failed: {e.code} {e.read().decode()[:300]}")
-        raise
+        client, bucket = _get_r2_client()
+        client.put_object(
+            Bucket=bucket,
+            Key=R2_FILE_PATH,
+            Body=content.encode("utf-8"),
+            ContentType="application/json",
+            CacheControl="no-store",
+        )
+        logger.info("R2 write OK — bucket=%s key=%s", bucket, R2_FILE_PATH)
+        return {"written": True, "bucket": bucket, "key": R2_FILE_PATH}
+    except Exception as e:
+        logger.error("R2 write failed: %s", e)
+        return {"written": False, "error": str(e)}
 
 
 # ─────────────────────────────────────────────────────────────
@@ -404,9 +407,19 @@ def lambda_handler(event, context):
 
             # (B.1) Raw clicks — same weekday across last 5 occurrences (today's weekday).
             # Kept for backwards compatibility; the dashboard now prefers raw_clicks_by_weekday below.
-            # clicks_no_ss = clicks excluding Sunday Spotlight (issue_name match).
+            # clicks_no_ss = clicks whose originating campaign was NOT sent on
+            # a Sunday. The Sunday-Spotlight test is "what day of the week did
+            # the source campaign go out?" — the literal "sunday spotlight"
+            # substring on issue_name was misclassifying any Sunday send that
+            # wasn't named that way.
             cur.execute(f"""
-                WITH clicks AS (
+                WITH sunday_campaigns AS (
+                    SELECT "Campaign Name" AS name
+                    FROM {S}."Campaigns"
+                    WHERE "Sent Date " IS NOT NULL
+                      AND EXTRACT(DOW FROM "Sent Date "::date) = 0
+                ),
+                clicks AS (
                     SELECT "Date"::date AS d, issue_name
                     FROM {S}."Campaigns_Clicks"
                     WHERE "Date" IS NOT NULL
@@ -425,7 +438,7 @@ def lambda_handler(event, context):
                     TO_CHAR(d.day, 'Dy Mon DD')   AS label,
                     COUNT(c.d)                    AS clicks,
                     COUNT(c.d) FILTER (
-                        WHERE c.issue_name NOT ILIKE '%sunday spotlight%'
+                        WHERE c.issue_name NOT IN (SELECT name FROM sunday_campaigns)
                     )                             AS clicks_no_ss,
                     (d.day = CURRENT_DATE)        AS is_current
                 FROM d
@@ -439,7 +452,13 @@ def lambda_handler(event, context):
             # The dashboard's "Same Weekday" chart lets the user pick which
             # weekday to view, so we materialise 7×5 = 35 day buckets at once.
             cur.execute(f"""
-                WITH d AS (
+                WITH sunday_campaigns AS (
+                    SELECT "Campaign Name" AS name
+                    FROM {S}."Campaigns"
+                    WHERE "Sent Date " IS NOT NULL
+                      AND EXTRACT(DOW FROM "Sent Date "::date) = 0
+                ),
+                d AS (
                     SELECT day::date AS day
                     FROM generate_series(
                         CURRENT_DATE - INTERVAL '6 weeks',
@@ -470,7 +489,7 @@ def lambda_handler(event, context):
                     TO_CHAR(r.day, 'Dy Mon DD')        AS label,
                     COUNT(c.d)                         AS clicks,
                     COUNT(c.d) FILTER (
-                        WHERE c.issue_name NOT ILIKE '%sunday spotlight%'
+                        WHERE c.issue_name NOT IN (SELECT name FROM sunday_campaigns)
                     )                                  AS clicks_no_ss,
                     (r.day = CURRENT_DATE)             AS is_current
                 FROM ranked r
@@ -483,7 +502,13 @@ def lambda_handler(event, context):
 
             # (B.2) Raw clicks — last 12 ISO weeks (HTML defaults to 8w view; user can switch 4w/8w/12w).
             cur.execute(f"""
-                WITH clicks AS (
+                WITH sunday_campaigns AS (
+                    SELECT "Campaign Name" AS name
+                    FROM {S}."Campaigns"
+                    WHERE "Sent Date " IS NOT NULL
+                      AND EXTRACT(DOW FROM "Sent Date "::date) = 0
+                ),
+                clicks AS (
                     SELECT DATE_TRUNC('week', "Date"::date)::date AS w, issue_name
                     FROM {S}."Campaigns_Clicks"
                     WHERE "Date" IS NOT NULL
@@ -502,7 +527,7 @@ def lambda_handler(event, context):
                     TO_CHAR(w.week_start, 'Mon DD')                          AS label,
                     COUNT(c.w)                                               AS clicks,
                     COUNT(c.w) FILTER (
-                        WHERE c.issue_name NOT ILIKE '%sunday spotlight%'
+                        WHERE c.issue_name NOT IN (SELECT name FROM sunday_campaigns)
                     )                                                        AS clicks_no_ss,
                     (w.week_start = DATE_TRUNC('week', CURRENT_DATE)::date)  AS is_current
                 FROM weeks w
@@ -514,7 +539,13 @@ def lambda_handler(event, context):
 
             # (B.3) Raw clicks — last 6 calendar months
             cur.execute(f"""
-                WITH clicks AS (
+                WITH sunday_campaigns AS (
+                    SELECT "Campaign Name" AS name
+                    FROM {S}."Campaigns"
+                    WHERE "Sent Date " IS NOT NULL
+                      AND EXTRACT(DOW FROM "Sent Date "::date) = 0
+                ),
+                clicks AS (
                     SELECT DATE_TRUNC('month', "Date"::date)::date AS m, issue_name
                     FROM {S}."Campaigns_Clicks"
                     WHERE "Date" IS NOT NULL
@@ -533,7 +564,7 @@ def lambda_handler(event, context):
                     TO_CHAR(m.month_start, 'Mon YYYY')                         AS label,
                     COUNT(c.m)                                                 AS clicks,
                     COUNT(c.m) FILTER (
-                        WHERE c.issue_name NOT ILIKE '%sunday spotlight%'
+                        WHERE c.issue_name NOT IN (SELECT name FROM sunday_campaigns)
                     )                                                          AS clicks_no_ss,
                     (m.month_start = DATE_TRUNC('month', CURRENT_DATE)::date)  AS is_current
                 FROM months m
@@ -645,38 +676,111 @@ def lambda_handler(event, context):
                     WHERE acquisition_status IN ('added', 'resubscribed')
                 ),
                 src AS (
+                    -- Priority: acquisition_utm_source >> url_variables (Meta only)
+                    --           >> sub_source >> source >> 'Organic'
                     SELECT
                         DATE_TRUNC('week', s.date_joined::date)::date AS week_start,
-                        CASE
-                            WHEN LOWER(COALESCE(
-                                    NULLIF(TRIM(sa.acquisition_utm_source),''),
-                                    NULLIF(TRIM(s.source),''), ''))
-                                 IN ('organic','direct','none','null','(none)','(null)','n/a','-','',
-                                     'website','homepage','home','web','site')
-                                THEN 'Organic'
-                            WHEN LOWER(TRIM(COALESCE(NULLIF(TRIM(sa.acquisition_utm_source),''), NULLIF(TRIM(s.source),''))))
-                                 IN ('ahcpl1','allhealthy','allhealthy.com')           THEN 'AllHealthy'
-                            WHEN LOWER(TRIM(COALESCE(NULLIF(TRIM(sa.acquisition_utm_source),''), NULLIF(TRIM(s.source),''))))
-                                 LIKE 'td_cpl2%%'                                       THEN 'TrueDemocracy'
-                            WHEN LOWER(TRIM(COALESCE(NULLIF(TRIM(sa.acquisition_utm_source),''), NULLIF(TRIM(s.source),''))))
-                                 IN ('tdcpl1','tdcpl2')                                 THEN 'TrueDemocracy'
-                            WHEN LOWER(TRIM(COALESCE(NULLIF(TRIM(sa.acquisition_utm_source),''), NULLIF(TRIM(s.source),''))))
-                                 IN ('lscpl1','lscpl2','ls_cpl2','livingsimply','livingsimply.com')
-                                                                                        THEN 'LivingSimply'
-                            WHEN LOWER(TRIM(COALESCE(NULLIF(TRIM(sa.acquisition_utm_source),''), NULLIF(TRIM(s.source),''))))
-                                 IN ('facebook','meta','fb','ig')                       THEN 'Meta'
-                            WHEN LOWER(TRIM(COALESCE(NULLIF(TRIM(sa.acquisition_utm_source),''), NULLIF(TRIM(s.source),''))))
-                                 IN ('if','ifcpl1')                                     THEN 'IFCPL'
-                            WHEN LOWER(TRIM(COALESCE(NULLIF(TRIM(sa.acquisition_utm_source),''), NULLIF(TRIM(s.source),''))))
-                                 = 'taboola'                                            THEN 'Taboola'
-                            WHEN LOWER(TRIM(COALESCE(NULLIF(TRIM(sa.acquisition_utm_source),''), NULLIF(TRIM(s.source),''))))
-                                 IN ('superagequiz','longevity_quiz')                   THEN 'SuperAge Quiz'
-                            WHEN LOWER(TRIM(COALESCE(NULLIF(TRIM(sa.acquisition_utm_source),''), NULLIF(TRIM(s.source),''))))
-                                 = 'refind'                                             THEN 'Refind'
-                            ELSE NULLIF(TRIM(COALESCE(
-                                    NULLIF(TRIM(sa.acquisition_utm_source),''),
-                                    NULLIF(TRIM(s.source),''))), '')
-                        END AS bucket
+                        COALESCE(
+                            -- Level 1: acquisition_utm_source
+                            CASE
+                                WHEN LOWER(TRIM(sa.acquisition_utm_source)) IN ('none','null','(none)','(null)','-','n/a') OR TRIM(sa.acquisition_utm_source) IS NULL OR TRIM(sa.acquisition_utm_source) = '' THEN NULL
+                                WHEN LOWER(TRIM(sa.acquisition_utm_source)) IN ('organic','direct')                        THEN 'Organic'
+                                WHEN LOWER(TRIM(sa.acquisition_utm_source)) IN ('website','homepage','home','web','site','games_website') THEN 'Website'
+                                WHEN LOWER(TRIM(sa.acquisition_utm_source)) IN ('facebook','meta','fb','ig')               THEN 'Meta'
+                                WHEN LOWER(TRIM(sa.acquisition_utm_source)) IN ('ahcpl1','allhealthy','allhealthy.com')     THEN 'AllHealthy'
+                                WHEN LOWER(TRIM(sa.acquisition_utm_source)) = 'tdcpl1'                                     THEN 'TrueDemocracy'
+                                WHEN LOWER(TRIM(sa.acquisition_utm_source)) = 'tdcpl2'                                     THEN 'TrueDemocracy'
+                                WHEN LOWER(TRIM(sa.acquisition_utm_source)) LIKE 'td_cpl2%%'                               THEN 'TrueDemocracy'
+                                WHEN LOWER(TRIM(sa.acquisition_utm_source)) IN ('lscpl1','lscpl2','ls_cpl2','livingsimply','livingsimply.com') THEN 'LivingSimply'
+                                WHEN LOWER(TRIM(sa.acquisition_utm_source)) IN ('if','ifcpl1')                             THEN 'IFCPL'
+                                WHEN LOWER(TRIM(sa.acquisition_utm_source)) = 'taboola'                                    THEN 'Taboola'
+                                WHEN LOWER(TRIM(sa.acquisition_utm_source)) = 'healthbrief'                                THEN 'HealthBrief'
+                                WHEN LOWER(TRIM(sa.acquisition_utm_source)) IN ('superagequiz','longevity_quiz')           THEN 'SuperAge Quiz'
+                                WHEN LOWER(TRIM(sa.acquisition_utm_source)) IN ('theageist','theageist001','ageist')       THEN 'TheAgeist'
+                                WHEN LOWER(TRIM(sa.acquisition_utm_source)) LIKE 'ageist_%%'                               THEN 'TheAgeist'
+                                WHEN LOWER(TRIM(sa.acquisition_utm_source)) LIKE 'ageistrequest%%'                         THEN 'TheAgeist'
+                                WHEN LOWER(TRIM(sa.acquisition_utm_source)) IN ('recommendedreads.com','rr_cpl2')          THEN 'RecommendedReads'
+                                WHEN LOWER(TRIM(sa.acquisition_utm_source)) LIKE 'rrcpl1%%'                                THEN 'RecommendedReads'
+                                WHEN LOWER(TRIM(sa.acquisition_utm_source)) = 'campaign_monitor'                          THEN 'Campaign Monitor'
+                                WHEN LOWER(TRIM(sa.acquisition_utm_source)) IN ('welcome flow','welcome+flow')             THEN 'Welcome Flow'
+                                WHEN LOWER(TRIM(sa.acquisition_utm_source)) = 'nncpl1'                                    THEN 'NNCPL'
+                                WHEN LOWER(TRIM(sa.acquisition_utm_source)) LIKE 'nn_cpl2%%'                              THEN 'NNCPL'
+                                WHEN LOWER(TRIM(sa.acquisition_utm_source)) LIKE 'nn1_cpl2%%'                             THEN 'NNCPL'
+                                WHEN LOWER(TRIM(sa.acquisition_utm_source)) IN ('is','iscpl1')                            THEN 'ISCPL'
+                                WHEN LOWER(TRIM(sa.acquisition_utm_source)) IN ('chatgpt.com','perplexity','nbot.ai')      THEN 'AI'
+                                WHEN LOWER(TRIM(sa.acquisition_utm_source)) = 'refind'                                    THEN 'Refind'
+                                WHEN LOWER(TRIM(sa.acquisition_utm_source)) = 'superage'                                  THEN 'SuperAge'
+                                ELSE NULLIF(TRIM(sa.acquisition_utm_source), '')
+                            END,
+                            -- Level 2: url_variables — Meta only; any other utm_source value is ignored
+                            CASE
+                                WHEN LOWER(TRIM(SUBSTRING(s.url_variables FROM 'utm_source=([^,&]+)'))) = 'meta' THEN 'Meta'
+                                ELSE NULL
+                            END,
+                            -- Level 3: sub_source
+                            CASE
+                                WHEN LOWER(TRIM(s.sub_source)) IN ('none','null','(none)','(null)','-','n/a') OR TRIM(s.sub_source) IS NULL OR TRIM(s.sub_source) = '' THEN NULL
+                                WHEN LOWER(TRIM(s.sub_source)) IN ('organic','direct')                        THEN 'Organic'
+                                WHEN LOWER(TRIM(s.sub_source)) IN ('website','homepage','home','web','site','games_website') THEN 'Website'
+                                WHEN LOWER(TRIM(s.sub_source)) IN ('facebook','meta','fb','ig')               THEN 'Meta'
+                                WHEN LOWER(TRIM(s.sub_source)) IN ('ahcpl1','allhealthy','allhealthy.com')     THEN 'AllHealthy'
+                                WHEN LOWER(TRIM(s.sub_source)) = 'tdcpl1'                                     THEN 'TrueDemocracy'
+                                WHEN LOWER(TRIM(s.sub_source)) = 'tdcpl2'                                     THEN 'TrueDemocracy'
+                                WHEN LOWER(TRIM(s.sub_source)) LIKE 'td_cpl2%%'                               THEN 'TrueDemocracy'
+                                WHEN LOWER(TRIM(s.sub_source)) IN ('lscpl1','lscpl2','ls_cpl2','livingsimply','livingsimply.com') THEN 'LivingSimply'
+                                WHEN LOWER(TRIM(s.sub_source)) IN ('if','ifcpl1')                             THEN 'IFCPL'
+                                WHEN LOWER(TRIM(s.sub_source)) = 'taboola'                                    THEN 'Taboola'
+                                WHEN LOWER(TRIM(s.sub_source)) = 'healthbrief'                                THEN 'HealthBrief'
+                                WHEN LOWER(TRIM(s.sub_source)) IN ('superagequiz','longevity_quiz')           THEN 'SuperAge Quiz'
+                                WHEN LOWER(TRIM(s.sub_source)) IN ('theageist','theageist001','ageist')       THEN 'TheAgeist'
+                                WHEN LOWER(TRIM(s.sub_source)) LIKE 'ageist_%%'                               THEN 'TheAgeist'
+                                WHEN LOWER(TRIM(s.sub_source)) LIKE 'ageistrequest%%'                         THEN 'TheAgeist'
+                                WHEN LOWER(TRIM(s.sub_source)) IN ('recommendedreads.com','rr_cpl2')          THEN 'RecommendedReads'
+                                WHEN LOWER(TRIM(s.sub_source)) LIKE 'rrcpl1%%'                                THEN 'RecommendedReads'
+                                WHEN LOWER(TRIM(s.sub_source)) = 'campaign_monitor'                          THEN 'Campaign Monitor'
+                                WHEN LOWER(TRIM(s.sub_source)) IN ('welcome flow','welcome+flow')             THEN 'Welcome Flow'
+                                WHEN LOWER(TRIM(s.sub_source)) = 'nncpl1'                                    THEN 'NNCPL'
+                                WHEN LOWER(TRIM(s.sub_source)) LIKE 'nn_cpl2%%'                              THEN 'NNCPL'
+                                WHEN LOWER(TRIM(s.sub_source)) LIKE 'nn1_cpl2%%'                             THEN 'NNCPL'
+                                WHEN LOWER(TRIM(s.sub_source)) IN ('is','iscpl1')                            THEN 'ISCPL'
+                                WHEN LOWER(TRIM(s.sub_source)) IN ('chatgpt.com','perplexity','nbot.ai')      THEN 'AI'
+                                WHEN LOWER(TRIM(s.sub_source)) = 'refind'                                    THEN 'Refind'
+                                WHEN LOWER(TRIM(s.sub_source)) = 'superage'                                  THEN 'SuperAge'
+                                ELSE NULLIF(TRIM(s.sub_source), '')
+                            END,
+                            -- Level 4: source
+                            CASE
+                                WHEN LOWER(TRIM(s.source)) IN ('none','null','(none)','(null)','-','n/a') OR TRIM(s.source) IS NULL OR TRIM(s.source) = '' THEN NULL
+                                WHEN LOWER(TRIM(s.source)) IN ('organic','direct')                        THEN 'Organic'
+                                WHEN LOWER(TRIM(s.source)) IN ('website','homepage','home','web','site','games_website') THEN 'Website'
+                                WHEN LOWER(TRIM(s.source)) IN ('facebook','meta','fb','ig')               THEN 'Meta'
+                                WHEN LOWER(TRIM(s.source)) IN ('ahcpl1','allhealthy','allhealthy.com')     THEN 'AllHealthy'
+                                WHEN LOWER(TRIM(s.source)) = 'tdcpl1'                                     THEN 'TrueDemocracy'
+                                WHEN LOWER(TRIM(s.source)) = 'tdcpl2'                                     THEN 'TrueDemocracy'
+                                WHEN LOWER(TRIM(s.source)) LIKE 'td_cpl2%%'                               THEN 'TrueDemocracy'
+                                WHEN LOWER(TRIM(s.source)) IN ('lscpl1','lscpl2','ls_cpl2','livingsimply','livingsimply.com') THEN 'LivingSimply'
+                                WHEN LOWER(TRIM(s.source)) IN ('if','ifcpl1')                             THEN 'IFCPL'
+                                WHEN LOWER(TRIM(s.source)) = 'taboola'                                    THEN 'Taboola'
+                                WHEN LOWER(TRIM(s.source)) = 'healthbrief'                                THEN 'HealthBrief'
+                                WHEN LOWER(TRIM(s.source)) IN ('superagequiz','longevity_quiz')           THEN 'SuperAge Quiz'
+                                WHEN LOWER(TRIM(s.source)) IN ('theageist','theageist001','ageist')       THEN 'TheAgeist'
+                                WHEN LOWER(TRIM(s.source)) LIKE 'ageist_%%'                               THEN 'TheAgeist'
+                                WHEN LOWER(TRIM(s.source)) LIKE 'ageistrequest%%'                         THEN 'TheAgeist'
+                                WHEN LOWER(TRIM(s.source)) IN ('recommendedreads.com','rr_cpl2')          THEN 'RecommendedReads'
+                                WHEN LOWER(TRIM(s.source)) LIKE 'rrcpl1%%'                                THEN 'RecommendedReads'
+                                WHEN LOWER(TRIM(s.source)) = 'campaign_monitor'                          THEN 'Campaign Monitor'
+                                WHEN LOWER(TRIM(s.source)) IN ('welcome flow','welcome+flow')             THEN 'Welcome Flow'
+                                WHEN LOWER(TRIM(s.source)) = 'nncpl1'                                    THEN 'NNCPL'
+                                WHEN LOWER(TRIM(s.source)) LIKE 'nn_cpl2%%'                              THEN 'NNCPL'
+                                WHEN LOWER(TRIM(s.source)) LIKE 'nn1_cpl2%%'                             THEN 'NNCPL'
+                                WHEN LOWER(TRIM(s.source)) IN ('is','iscpl1')                            THEN 'ISCPL'
+                                WHEN LOWER(TRIM(s.source)) IN ('chatgpt.com','perplexity','nbot.ai')      THEN 'AI'
+                                WHEN LOWER(TRIM(s.source)) = 'refind'                                    THEN 'Refind'
+                                WHEN LOWER(TRIM(s.source)) = 'superage'                                  THEN 'SuperAge'
+                                ELSE NULLIF(TRIM(s.source), '')
+                            END,
+                            'Organic'
+                        ) AS bucket
                     FROM {S}.subscribers s
                     LEFT JOIN sa_acq sa ON sa.email = LOWER(TRIM(s.email))
                     WHERE s.date_joined IS NOT NULL
@@ -727,7 +831,7 @@ def lambda_handler(event, context):
 
     if not all_rows:
         result = {"data_as_of": today.isoformat(), "error": "no qualifying campaigns found"}
-        commit_to_github(json.dumps(result, indent=2, default=str))
+        write_to_r2(json.dumps(result, indent=2, default=str))
         return {"statusCode": 200, "body": "no data"}
 
     # ── Determine current and previous week ─────────────────────────
@@ -922,9 +1026,9 @@ def lambda_handler(event, context):
     }
 
     payload = json.dumps(M, indent=2, default=str)
-    commit_to_github(payload)
-    logger.info("Done — comparison JSON committed.")
-    return {"statusCode": 200, "body": "ok"}
+    r2_result = write_to_r2(payload)
+    logger.info("Done — comparison JSON uploaded to R2.")
+    return {"statusCode": 200, "body": json.dumps({"status": "ok", "r2": r2_result})}
 
 
 def _campaign_detail(rows):

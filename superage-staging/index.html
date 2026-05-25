@@ -1625,6 +1625,7 @@ function _setWeekdayWindow(n) {
           }
         }}
       },
+      interaction: { mode: 'index', intersect: false },
       scales: { y: { beginAtZero: true, ticks: { callback: v => v.toLocaleString() } } }
     }
   });
@@ -1638,7 +1639,40 @@ function _setWeekdayWindow(n) {
                  + `<span style="display:inline-block;width:10px;height:10px;background:${INP_GREY};border:1px solid ${INP_BORDER};border-radius:2px;vertical-align:middle;margin:0 4px 1px 6px;"></span>in progress (&lt; 2 days since send)`;
     ins.innerHTML = weekdaysWithData < 7
       ? `Showing campaigns for <strong>${weekdaysWithData} of 7</strong> weekdays — only weekdays with at least one send appear. <br>${legend}`
-      : `Hover a bar for the campaign name, send date and how it compares to that weekday's average. <br>${legend}`;
+      : `Hover anywhere in a column to see its tooltip. <br>${legend}`;
+  }
+
+  // Compact data table — one row per send slot (most-recent first), columns = weekdays.
+  const tbl = document.getElementById('cnt-raw-weekday-table');
+  if (tbl) {
+    const activeDows = dows.filter(d => byDow[d].length > 0);
+    let html = `<table style="width:100%;border-collapse:collapse;font-size:11px;margin-top:8px;">`;
+    html += `<thead><tr><th style="text-align:left;padding:3px 6px;color:var(--text-muted);font-weight:500;border-bottom:1px solid var(--card-border);">Send slot</th>`;
+    activeDows.forEach(d => {
+      html += `<th style="text-align:right;padding:3px 6px;color:var(--text-muted);font-weight:500;border-bottom:1px solid var(--card-border);">${d}</th>`;
+    });
+    html += `</tr></thead><tbody>`;
+    for (let i = 0; i < n; i++) {
+      const positionFromEnd = n - 1 - i;
+      const rowLabel = positionFromEnd === 0 ? 'Most recent'
+                     : positionFromEnd === 1 ? '1 week back'
+                     : `${positionFromEnd} weeks back`;
+      html += `<tr>`;
+      html += `<td style="padding:3px 6px;color:var(--text-muted);">${rowLabel}</td>`;
+      activeDows.forEach(d => {
+        const row = byDow[d][positionFromEnd];
+        if (!row) { html += `<td style="padding:3px 6px;text-align:right;color:var(--text-muted);">—</td>`; return; }
+        const color = row.inProgress ? INP_GREY
+                    : row.clicks >= avgs[d] ? GREEN : RED;
+        const tip = `${row.name}${row.label ? ' ('+row.label+')' : ''}`;
+        html += `<td style="padding:3px 6px;text-align:right;font-weight:500;" title="${tip.replace(/"/g,'&quot;')}">`;
+        html += `<span style="display:inline-block;width:7px;height:7px;background:${color};border-radius:50%;margin-right:4px;vertical-align:middle;"></span>`;
+        html += `${row.clicks.toLocaleString()}</td>`;
+      });
+      html += `</tr>`;
+    }
+    html += `</tbody></table>`;
+    tbl.innerHTML = html;
   }
 }
 
@@ -1851,6 +1885,7 @@ function renderContent(M) {
       </div>
       <div class="chart-container h300"><canvas id="cnt-raw-weekday-bar"></canvas></div>
       <div class="insight" id="cnt-raw-weekday-insight"></div>
+      <div id="cnt-raw-weekday-table"></div>
     </div>
     <div class="grid-2">
       <div class="chart-card">

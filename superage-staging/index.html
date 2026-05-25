@@ -845,13 +845,6 @@ function renderDigest(M) {
     return `<span style="font-size:12px;font-weight:600;color:${color};">${arrow} ${magnitude}</span>
             <span style="font-size:11px;color:var(--text-muted);"> vs ${esc(_priorRangeShort)}</span>`;
   };
-  const _priorRangeShort = priorCompletedIdx != null ? _weekRange(priorCompletedIdx) : 'prior';
-
-  // Format an ISO Monday date as "Mon DD – Mon DD" covering Mon → Sun of that
-  // ISO week. Falls back to the lambda's plain label if the week_start string
-  // can't be parsed (e.g. lambda hasn't been re-run since week_starts was
-  // added). Same month is collapsed: "May 11 – 17"; cross-month stays
-  // "Apr 27 – May 3".
   const _MON_SHORT = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
   const _weekRange = (idx) => {
     const ws = wd.week_starts && wd.week_starts[idx];
@@ -865,6 +858,13 @@ function renderDigest(M) {
       ? `${sMon} ${start.getDate()} – ${end.getDate()}`
       : `${sMon} ${start.getDate()} – ${eMon} ${end.getDate()}`;
   };
+  const _priorRangeShort = priorCompletedIdx != null ? _weekRange(priorCompletedIdx) : 'prior';
+
+  // Format an ISO Monday date as "Mon DD – Mon DD" covering Mon → Sun of that
+  // ISO week. Falls back to the lambda's plain label if the week_start string
+  // can't be parsed (e.g. lambda hasn't been re-run since week_starts was
+  // added). Same month is collapsed: "May 11 – 17"; cross-month stays
+  // "Apr 27 – May 3".
 
   const lastLabel  = _weekRange(lastCompletedIdx);
   const priorLabel = priorCompletedIdx != null ? _weekRange(priorCompletedIdx) : '—';

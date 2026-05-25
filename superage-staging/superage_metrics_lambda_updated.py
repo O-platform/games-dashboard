@@ -576,7 +576,7 @@ def lambda_handler(event, context):
             sub_alias: subscribers table alias; sa_alias: subscriber_acquisition CTE alias."""
             url_meta = (
                 f"CASE WHEN LOWER(TRIM(SUBSTRING({sub_alias}.url_variables "
-                f"FROM 'utm_source=([^,&]+'))) = 'meta' THEN 'Meta' ELSE NULL END"
+                f"FROM 'utm_source=([^,&]+)'))) = 'meta' THEN 'Meta' ELSE NULL END"
             )
             return (
                 f"COALESCE(\n"

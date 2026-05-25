@@ -8611,7 +8611,7 @@
         "SuperAge Quiz",
         "Organic",
         "LivingSimply",
-        "TrueDemocracy",
+        "TDCPL",
         "AllHealthy",
         "Refind",
         "DPCPL1",
@@ -8758,7 +8758,7 @@
           "churned_90d_rate": 20.0
         },
         {
-          "label": "TrueDemocracy",
+          "label": "TDCPL",
           "subscribers": 177167,
           "clickers": 26007,
           "clicks": 145290,
@@ -8964,7 +8964,7 @@
           "churned_90d_rate": 20.0
         },
         {
-          "label": "TrueDemocracy",
+          "label": "TDCPL",
           "subscribers": 177167,
           "clickers": 26007,
           "clicks": 145290,
@@ -9743,7 +9743,7 @@
       "Organic",
       "LivingSimply",
       "AllHealthy",
-      "TrueDemocracy",
+      "TDCPL",
       "HFCPL1",
       "DPCPL1",
       "FCCPL1",
@@ -10387,7 +10387,7 @@
         ]
       },
       {
-        "label": "TrueDemocracy",
+        "label": "TDCPL",
         "total": 177167,
         "rates": [
           100.0,
@@ -10746,7 +10746,7 @@
       "avg_clicks_per_clicker": 4.5
     },
     {
-      "source": "TrueDemocracy",
+      "source": "TDCPL",
       "subscribers": 177167,
       "active_now": 77841,
       "churned": 65171,

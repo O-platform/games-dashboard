@@ -298,8 +298,8 @@ function utmLabel(raw) {
   if (['website', 'homepage', 'home', 'web', 'site', 'games_website'].includes(s)) return 'Website';
   // AllHealthy
   if (['ahcpl1', 'allhealthy', 'allhealthy.com'].includes(s)) return 'AllHealthy';
-  // TrueDemocracy: TDCPL1, TDCPL2, and every TD_CPL2_YYYYMMDD batch
-  if (s === 'tdcpl1' || s === 'tdcpl2' || s.startsWith('td_cpl2')) return 'TrueDemocracy';
+  // TDCPL: TDCPL1, TDCPL2, and every TD_CPL2_YYYYMMDD batch
+  if (s === 'tdcpl1' || s === 'tdcpl2' || s.startsWith('td_cpl2')) return 'TDCPL';
   // LivingSimply: CPL1, CPL2 and the .com variant
   if (['lscpl1','lscpl2','ls_cpl2','livingsimply','livingsimply.com'].includes(s)) return 'LivingSimply';
   // dpcpl / hfcpl / fccpl — real name unknown, surface the raw code as-is

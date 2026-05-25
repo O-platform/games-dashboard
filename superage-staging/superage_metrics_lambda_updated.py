@@ -529,10 +529,10 @@ def lambda_handler(event, context):
                 WHEN {lc} IN ('website', 'homepage', 'home', 'web', 'site', 'games_website') THEN 'Website'
                 -- AllHealthy
                 WHEN {lc} IN ('ahcpl1', 'allhealthy', 'allhealthy.com') THEN 'AllHealthy'
-                -- TrueDemocracy: TDCPL1, TDCPL2, and every TD_CPL2_YYYYMMDD batch
-                WHEN {lc} = 'tdcpl1'                                    THEN 'TrueDemocracy'
-                WHEN {lc} = 'tdcpl2'                                    THEN 'TrueDemocracy'
-                WHEN {lc} LIKE 'td_cpl2%%'                              THEN 'TrueDemocracy'
+                -- TDCPL: TDCPL1, TDCPL2, and every TD_CPL2_YYYYMMDD batch
+                WHEN {lc} = 'tdcpl1'                                    THEN 'TDCPL'
+                WHEN {lc} = 'tdcpl2'                                    THEN 'TDCPL'
+                WHEN {lc} LIKE 'td_cpl2%%'                              THEN 'TDCPL'
                 -- LivingSimply: CPL1, CPL2 and the .com variant
                 WHEN {lc} IN ('lscpl1', 'lscpl2', 'ls_cpl2', 'livingsimply', 'livingsimply.com') THEN 'LivingSimply'
                 -- Meta: facebook + instagram only (IF / IFCPL1 split out below)

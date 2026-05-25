@@ -712,9 +712,11 @@ def lambda_handler(event, context):
                                 WHEN LOWER(TRIM(sa.acquisition_utm_source)) = 'superage'                                  THEN 'SuperAge'
                                 ELSE NULLIF(TRIM(sa.acquisition_utm_source), '')
                             END,
-                            -- Level 2: url_variables — Meta only; any other utm_source value is ignored
+                            -- Level 2: url_variables — Meta only; gated to 2025-11-01+ to exclude
+                            -- pre-campaign subs whose url_variables contain stale/misattributed meta values
                             CASE
-                                WHEN LOWER(TRIM(SUBSTRING(s.url_variables FROM 'utm_source=([^,&]+)'))) = 'meta' THEN 'Meta'
+                                WHEN LOWER(TRIM(SUBSTRING(s.url_variables FROM 'utm_source=([^,&]+)'))) = 'meta'
+                                 AND s.date_joined::date >= '2025-11-01' THEN 'Meta'
                                 ELSE NULL
                             END,
                             -- Level 3: sub_source

@@ -1026,56 +1026,6 @@ def lambda_handler(event, context):
         """)
         survival_by_source_rows = cur.fetchall()
 
-        # Meta sub-source breakdown — survival stats for Meta-attributed subs,
-        # grouped by sub_source so outlier batches can be spotted. Minimum
-        # cohort of 50 (lower than global threshold — Meta batches can be small).
-        cur.execute(f"""
-            WITH sa_acq AS (
-                SELECT
-                    LOWER(TRIM(email))           AS email,
-                    acquisition_utm_source,
-                    acquisition_date::date        AS acquisition_date
-                FROM {S}.subscriber_acquisition
-                WHERE acquisition_status IN ('added', 'resubscribed')
-            ),
-            meta_subs AS (
-                SELECT
-                    COALESCE(NULLIF(TRIM(sub.sub_source), ''), '(no sub_source)') AS subsource,
-                    CASE
-                        WHEN {_canon_source('sa.acquisition_utm_source')} = 'Meta'   THEN 'L1: acquisition'
-                        WHEN LOWER(TRIM(SUBSTRING(sub.url_variables FROM 'utm_source=([^,&]+)'))) = 'meta' THEN 'L2: url_variables'
-                        WHEN {_canon_source('sub.sub_source')} = 'Meta'              THEN 'L3: sub_source'
-                        ELSE                                                               'L4: source'
-                    END AS attribution_level,
-                    ((CASE WHEN sub.state = 'Unsubscribed' THEN sub.date_unsubscribed::date END)
-                        - COALESCE(sa.acquisition_date::date, sub.date_joined::date)) AS days_to_unsub,
-                    (CURRENT_DATE
-                        - COALESCE(sa.acquisition_date::date, sub.date_joined::date))::integer AS cohort_age_days
-                FROM {S}.subscribers sub
-                LEFT JOIN sa_acq sa ON sa.email = LOWER(TRIM(sub.email))
-                WHERE sub.date_joined IS NOT NULL AND sub.date_joined::date < CURRENT_DATE
-                  AND (sub.date_unsubscribed IS NULL OR sub.date_unsubscribed::date < CURRENT_DATE)
-                  AND {_priority_source('sub', 'sa')} = 'Meta'
-            )
-            SELECT
-                subsource,
-                attribution_level,
-                COUNT(*)                                                                               AS total,
-                COUNT(*) FILTER (WHERE cohort_age_days >= 30  AND (days_to_unsub IS NULL OR days_to_unsub > 30))  AS alive_30,
-                COUNT(*) FILTER (WHERE cohort_age_days >= 30)                                                      AS eligible_30,
-                COUNT(*) FILTER (WHERE cohort_age_days >= 90  AND (days_to_unsub IS NULL OR days_to_unsub > 90))  AS alive_90,
-                COUNT(*) FILTER (WHERE cohort_age_days >= 90)                                                      AS eligible_90,
-                COUNT(*) FILTER (WHERE cohort_age_days >= 180 AND (days_to_unsub IS NULL OR days_to_unsub > 180)) AS alive_180,
-                COUNT(*) FILTER (WHERE cohort_age_days >= 180)                                                     AS eligible_180,
-                COUNT(*) FILTER (WHERE cohort_age_days >= 365 AND (days_to_unsub IS NULL OR days_to_unsub > 365)) AS alive_365,
-                COUNT(*) FILTER (WHERE cohort_age_days >= 365)                                                     AS eligible_365
-            FROM meta_subs
-            GROUP BY 1, 2
-            HAVING COUNT(*) >= 50
-            ORDER BY total DESC
-        """)
-        meta_subsource_rows = cur.fetchall()
-
         # Monthly churn volume + two churn-rate flavours.
         #
         # The bar chart counts subscribers who unsubscribed in each month
@@ -1722,19 +1672,6 @@ def lambda_handler(event, context):
             for r in survival_by_source_rows
         ],
     }
-
-    M["meta_subsource_breakdown"] = [
-        {
-            "subsource":         str(r["subsource"]),
-            "attribution_level": str(r["attribution_level"]),
-            "total":             safe_int(r["total"]),
-            "sv_30":  _sv_rate(r["alive_30"],  r["eligible_30"]),
-            "sv_90":  _sv_rate(r["alive_90"],  r["eligible_90"]),
-            "sv_180": _sv_rate(r["alive_180"], r["eligible_180"]),
-            "sv_365": _sv_rate(r["alive_365"], r["eligible_365"]),
-        }
-        for r in meta_subsource_rows
-    ]
 
     M["monthly_churn"] = {
         "labels":     [str(r["month"]) for r in churn_monthly_rows],

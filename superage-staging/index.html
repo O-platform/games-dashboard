@@ -2875,37 +2875,6 @@ function renderRetention(M) {
       <div class="chart-container h340"><canvas id="ret-curve"></canvas></div>
       <div class="insight">Overall — Month 1: <strong>${pct(findRate('Month 1'))}</strong> &middot; Month 3: <strong>${pct(findRate('Month 3'))}</strong> &middot; Month 6: <strong>${pct(findRate('Month 6'))}</strong> &middot; Month 12: <strong>${pct(findRate('Month 12'))}</strong>. Thick green line = all subscribers (always visible); each thin coloured line = one canonical source bucket (≥ 100 subscribers). Use <strong>Filter sources</strong> above to pick which sources to overlay — checkbox per source, plus All / None for bulk control.</div>
     </div>
-
-    <div class="chart-card" style="margin-top:18px;">
-      <h3>Meta — Sub-source Breakdown <span class="badge-inline">survival rates by sub_source batch</span></h3>
-      <div class="tbl-wrap"><table class="dash-table">
-        <thead><tr>
-          <th>Sub-source</th>
-          <th>Attributed via</th>
-          <th>Subscribers</th>
-          <th title="% still active at Month 1">M1 Survival</th>
-          <th title="% still active at Month 3">M3 Survival</th>
-          <th title="% still active at Month 6">M6 Survival</th>
-          <th title="% still active at Month 12">M12 Survival</th>
-        </tr></thead>
-        <tbody>${(M.meta_subsource_breakdown||[]).map(r => {
-          const sv = v => v == null ? '<span style="color:var(--text-muted)">—</span>'
-                        : `<span style="color:${v>=80?'var(--green)':v>=65?'var(--text)':'var(--red)'}">${v.toFixed(1)}%</span>`;
-          return `<tr>
-            <td><strong>${esc(r.subsource)}</strong></td>
-            <td><span style="color:var(--text-muted);font-size:11px;">${esc(r.attribution_level)}</span></td>
-            <td>${fmt(r.total)}</td>
-            <td>${sv(r.sv_30)}</td>
-            <td>${sv(r.sv_90)}</td>
-            <td>${sv(r.sv_180)}</td>
-            <td>${sv(r.sv_365)}</td>
-          </tr>`;
-        }).join('')}
-        </tbody>
-      </table></div>
-      <div class="insight">Each row = one <code>sub_source</code> value within the Meta bucket (≥ 50 subscribers). <strong>Attributed via</strong> shows which priority level assigned the subscriber to Meta (L1 = <code>acquisition_utm_source</code>, L2 = <code>url_variables</code>, L3 = <code>sub_source</code>, L4 = <code>source</code>). Rows sorted by subscriber count. Use this table to spot sub-batches with anomalous retention — sub-sources concentrated in recent months will show inflated M6/M12 survival because their cohort hasn't had enough time to churn yet.</div>
-    </div>
-
     <div class="grid-2">
       <div class="chart-card">
         <h3>Lifespan Distribution</h3>

@@ -577,7 +577,7 @@ def lambda_handler(event, context):
             # (C) Weekly digest — 9 ISO weeks (8 completed + the in-progress
             # current week) of headline metrics for the Weekly Digest tab.
             # Each row produces values for one ISO Mon-Sun bucket:
-            #   • new_subs   — count of subscribers.date_joined in week
+            #   • new_subs   — count of subscribers.date_subscribed in week
             #   • unsubs     — count of subscribers.date_unsubscribed in week
             #   • campaigns_sent / total_sent — Campaigns rows with
             #     **Recipients >= 200,000** whose Sent Date falls in week.
@@ -601,12 +601,12 @@ def lambda_handler(event, context):
                     )::date AS week_start
                 ),
                 joins AS (
-                    SELECT DATE_TRUNC('week', date_joined::date)::date AS week_start,
+                    SELECT DATE_TRUNC('week', date_subscribed::date)::date AS week_start,
                            COUNT(*) AS n
                     FROM {S}.subscribers
-                    WHERE date_joined IS NOT NULL
-                      AND date_joined::date < CURRENT_DATE
-                      AND date_joined::date >= DATE_TRUNC('week', CURRENT_DATE)::date - INTERVAL '8 weeks'
+                    WHERE date_subscribed IS NOT NULL
+                      AND date_subscribed::date < CURRENT_DATE
+                      AND date_subscribed::date >= DATE_TRUNC('week', CURRENT_DATE)::date - INTERVAL '8 weeks'
                     GROUP BY 1
                 ),
                 unsubs AS (
@@ -679,7 +679,7 @@ def lambda_handler(event, context):
                     -- Priority: acquisition_utm_source >> url_variables (Meta only)
                     --           >> sub_source >> source >> 'Organic'
                     SELECT
-                        DATE_TRUNC('week', s.date_joined::date)::date AS week_start,
+                        DATE_TRUNC('week', s.date_subscribed::date)::date AS week_start,
                         COALESCE(
                             -- Level 1: acquisition_utm_source
                             CASE
@@ -716,7 +716,7 @@ def lambda_handler(event, context):
                             -- pre-campaign subs whose url_variables contain stale/misattributed meta values
                             CASE
                                 WHEN LOWER(TRIM(SUBSTRING(s.url_variables FROM 'utm_source=([^,&]+)'))) = 'meta'
-                                 AND s.date_joined::date >= '2025-11-01' THEN 'Meta'
+                                 AND s.date_subscribed::date >= '2025-11-01' THEN 'Meta'
                                 ELSE NULL
                             END,
                             -- Level 3: sub_source
@@ -785,9 +785,9 @@ def lambda_handler(event, context):
                         ) AS bucket
                     FROM {S}.subscribers s
                     LEFT JOIN sa_acq sa ON sa.email = LOWER(TRIM(s.email))
-                    WHERE s.date_joined IS NOT NULL
-                      AND s.date_joined::date >= DATE_TRUNC('week', CURRENT_DATE)::date - INTERVAL '2 weeks'
-                      AND s.date_joined::date <  DATE_TRUNC('week', CURRENT_DATE)::date
+                    WHERE s.date_subscribed IS NOT NULL
+                      AND s.date_subscribed::date >= DATE_TRUNC('week', CURRENT_DATE)::date - INTERVAL '2 weeks'
+                      AND s.date_subscribed::date <  DATE_TRUNC('week', CURRENT_DATE)::date
                 )
                 SELECT
                     week_start,

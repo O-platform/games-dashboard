@@ -573,19 +573,22 @@ def lambda_handler(event, context):
         def _priority_source(sub_alias: str = 's', sa_alias: str = 'sa') -> str:
             """4-level canonical source COALESCE:
             acquisition_utm_source >> url_variables (Meta only) >> sub_source >> source >> 'Organic'
-            sub_alias: subscribers table alias; sa_alias: subscriber_acquisition CTE alias."""
+            sub_alias: subscribers table alias; sa_alias: subscriber_acquisition CTE alias.
+            Taboola is gated to L1 only — sub_source/source matches on 'taboola' fall through
+            (acquisition_utm_source is the only trustworthy Taboola signal)."""
             url_meta = (
                 f"CASE WHEN LOWER(TRIM(SUBSTRING({sub_alias}.url_variables "
                 f"FROM 'utm_source=([^,&]+)'))) = 'meta' "
                 f"AND {sub_alias}.date_joined::date >= '2025-11-01' "
                 f"THEN 'Meta' ELSE NULL END"
             )
+            no_taboola = lambda expr: f"CASE WHEN {expr} = 'Taboola' THEN NULL ELSE {expr} END"
             return (
                 f"COALESCE(\n"
                 f"                        {_canon_source(f'{sa_alias}.acquisition_utm_source')},\n"
                 f"                        {url_meta},\n"
-                f"                        {_canon_source(f'{sub_alias}.sub_source')},\n"
-                f"                        {_canon_source(f'{sub_alias}.source')},\n"
+                f"                        {no_taboola(_canon_source(f'{sub_alias}.sub_source'))},\n"
+                f"                        {no_taboola(_canon_source(f'{sub_alias}.source'))},\n"
                 f"                        'Organic'\n"
                 f"                    )"
             )

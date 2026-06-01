@@ -731,7 +731,7 @@ def lambda_handler(event, context):
                                 WHEN LOWER(TRIM(s.sub_source)) LIKE 'td_cpl2%%'                               THEN 'TDCPL'
                                 WHEN LOWER(TRIM(s.sub_source)) IN ('lscpl1','lscpl2','ls_cpl2','livingsimply','livingsimply.com') THEN 'LSCPL'
                                 WHEN LOWER(TRIM(s.sub_source)) IN ('if','ifcpl1')                             THEN 'IFCPL'
-                                WHEN LOWER(TRIM(s.sub_source)) = 'taboola'                                    THEN 'Taboola'
+                                -- Taboola intentionally only matched at L1 (acquisition_utm_source) — sub_source matches drop through
                                 WHEN LOWER(TRIM(s.sub_source)) = 'healthbrief'                                THEN 'HealthBrief'
                                 WHEN LOWER(TRIM(s.sub_source)) IN ('superagequiz','longevity_quiz')           THEN 'SuperAge Quiz'
                                 WHEN LOWER(TRIM(s.sub_source)) IN ('theageist','theageist001','ageist')       THEN 'TheAgeist'
@@ -762,7 +762,7 @@ def lambda_handler(event, context):
                                 WHEN LOWER(TRIM(s.source)) LIKE 'td_cpl2%%'                               THEN 'TDCPL'
                                 WHEN LOWER(TRIM(s.source)) IN ('lscpl1','lscpl2','ls_cpl2','livingsimply','livingsimply.com') THEN 'LSCPL'
                                 WHEN LOWER(TRIM(s.source)) IN ('if','ifcpl1')                             THEN 'IFCPL'
-                                WHEN LOWER(TRIM(s.source)) = 'taboola'                                    THEN 'Taboola'
+                                -- Taboola intentionally only matched at L1 (acquisition_utm_source) — source matches drop through
                                 WHEN LOWER(TRIM(s.source)) = 'healthbrief'                                THEN 'HealthBrief'
                                 WHEN LOWER(TRIM(s.source)) IN ('superagequiz','longevity_quiz')           THEN 'SuperAge Quiz'
                                 WHEN LOWER(TRIM(s.source)) IN ('theageist','theageist001','ageist')       THEN 'TheAgeist'

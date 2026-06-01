@@ -2872,6 +2872,15 @@ function renderRetention(M) {
           </div>
         </div>
       </div>
+      <div id="ret-cohort-bar" style="display:flex;align-items:center;gap:5px;flex-wrap:wrap;margin-bottom:10px;padding:2px 0;">
+        <span style="font-size:11px;font-weight:600;color:var(--text-muted);white-space:nowrap;margin-right:2px;">Cohort:</span>
+        <button type="button" data-cohort-btn="" onclick="_retCurveSetCohort('')"
+          style="font-size:11px;padding:3px 10px;border-radius:99px;border:1px solid var(--accent);background:var(--accent);color:#fff;cursor:pointer;white-space:nowrap;">All</button>
+        ${(M.survival_curve_cohorts&&M.survival_curve_cohorts.cohorts||[]).map(c =>
+          `<button type="button" data-cohort-btn="${esc(c.month)}" onclick="_retCurveSetCohort('${esc(c.month)}')"
+            style="font-size:11px;padding:3px 10px;border-radius:99px;border:1px solid var(--card-border);background:var(--card-2);color:var(--text);cursor:pointer;white-space:nowrap;">${esc(c.label)}</button>`
+        ).join('')}
+      </div>
       <div class="chart-container h340"><canvas id="ret-curve"></canvas></div>
       <div class="insight">Overall — Month 1: <strong>${pct(findRate('Month 1'))}</strong> &middot; Month 3: <strong>${pct(findRate('Month 3'))}</strong> &middot; Month 6: <strong>${pct(findRate('Month 6'))}</strong> &middot; Month 12: <strong>${pct(findRate('Month 12'))}</strong>. Thick green line = all subscribers (always visible); each thin coloured line = one canonical source bucket (≥ 100 subscribers). Use <strong>Filter sources</strong> above to pick which sources to overlay — checkbox per source, plus All / None for bulk control.</div>
     </div>
@@ -2942,13 +2951,18 @@ function renderRetention(M) {
   ];
   const bySource = (M.survival_curve_by_source && M.survival_curve_by_source.series) || [];
   const overlayLabels = (M.survival_curve_by_source && M.survival_curve_by_source.labels) || sc.labels || [];
+  const _scTotal = sc.total || 0;
   const datasets = [
     { label: 'All subscribers', data: sc.rates || [],
+      alive_counts: sc.alive_counts || [],
+      eligible_counts: (sc.rates||[]).map((_, i) => i === 0 ? _scTotal : _scTotal),
       borderColor: '#1a7f37', backgroundColor: 'rgba(26,127,55,.10)',
       tension:.3, fill:true, pointRadius:4, borderWidth:3, order:99 }
   ].concat(bySource.map((s, i) => ({
     label: `${s.label} (${(s.total||0).toLocaleString()})`,
     data: s.rates || [],
+    alive_counts: s.alive_counts || [],
+    eligible_counts: s.eligible_counts || [],
     borderColor: sourcePalette[i % sourcePalette.length],
     backgroundColor: 'transparent',
     tension: .3, fill: false, pointRadius: 3, borderWidth: 2, order: i,
@@ -2996,10 +3010,20 @@ function renderRetention(M) {
               .sort((a, b) => b.parsed.y - a.parsed.y)
               .map(p => {
                 const c = p.dataset.borderColor || '#888';
+                const di = p.dataIndex;
+                const alive = p.dataset.alive_counts && p.dataset.alive_counts[di] != null
+                  ? Number(p.dataset.alive_counts[di]).toLocaleString() : null;
+                const elig = p.dataset.eligible_counts && p.dataset.eligible_counts[di] != null
+                  ? Number(p.dataset.eligible_counts[di]).toLocaleString() : null;
+                const countStr = alive != null
+                  ? (elig && elig !== alive
+                    ? `<span style="color:#8b949e;font-size:10px;margin-left:8px;">${alive}&thinsp;/&thinsp;${elig}</span>`
+                    : `<span style="color:#8b949e;font-size:10px;margin-left:8px;">${alive}</span>`)
+                  : '';
                 return `<div style="display:flex;align-items:center;gap:8px;white-space:nowrap;">
                   <span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:${c};"></span>
                   <span style="flex:1;">${esc(p.dataset.label || '')}</span>
-                  <strong style="margin-left:10px;">${Number(p.parsed.y).toFixed(1)}%</strong>
+                  <strong style="margin-left:10px;">${Number(p.parsed.y).toFixed(1)}%</strong>${countStr}
                 </div>`;
               }).join('');
             el.innerHTML = `<div style="font-weight:600;margin-bottom:6px;color:#bdc7d3;">${esc(title)}</div>${rows}`;
@@ -3042,6 +3066,11 @@ function renderRetention(M) {
     }).join('');
   }
   _retCurveUpdateSummary();
+
+  // Store cross-sectional state for cohort switching
+  window._retXsecDatasets  = datasets;
+  window._retCohortData    = (M.survival_curve_cohorts && M.survival_curve_cohorts.cohorts) || [];
+  window._retCohortPalette = sourcePalette;
 
   const ld = M.lifespan_dist || {labels:[],data:[]};
   new Chart(document.getElementById('ret-lifespan'), {
@@ -3239,6 +3268,56 @@ function _retCurveUpdateSummary() {
                   : on === total ? `— all ${total} selected`
                   : on === 0     ? `— none selected (baseline only)`
                                  : `— ${on} of ${total} selected`;
+}
+
+function _retCurveSetCohort(monthStr) {
+  const c = window._retCurveChart;
+  if (!c) return;
+  const pal = window._retCohortPalette || [];
+  let newDatasets;
+  if (!monthStr) {
+    newDatasets = window._retXsecDatasets || [];
+  } else {
+    const cohortObj = (window._retCohortData || []).find(x => x.month === monthStr);
+    if (!cohortObj) return;
+    let srcIdx = 0;
+    newDatasets = (cohortObj.series || []).map((s, i) => {
+      const isAll = s.label === 'All (cohort)';
+      const color = isAll ? '#1a7f37' : pal[srcIdx++ % pal.length];
+      return {
+        label: s.label + ' (' + (s.total||0).toLocaleString() + ')',
+        data: s.rates || [],
+        alive_counts: s.alive_counts || [],
+        eligible_counts: (s.rates||[]).map(() => s.total || 0),
+        borderColor: color,
+        backgroundColor: isAll ? 'rgba(26,127,55,.10)' : 'transparent',
+        tension: .3, fill: isAll, pointRadius: isAll ? 4 : 3,
+        borderWidth: isAll ? 3 : 2, order: isAll ? 99 : i, spanGaps: false,
+      };
+    });
+  }
+  c.data.datasets = newDatasets;
+  c.update();
+  // Rebuild filter dropdown for new source set
+  const srcList = document.getElementById('ret-src-list');
+  if (srcList) {
+    srcList.innerHTML = newDatasets.slice(1).map((d, idx) => {
+      const i = idx + 1;
+      const lbl = String(d.label || '').replace(/&/g,'&amp;').replace(/</g,'&lt;');
+      const sw = '<span style="display:inline-block;width:10px;height:10px;border-radius:2px;background:' + d.borderColor + ';margin-right:8px;vertical-align:middle;"></span>';
+      return '<label style="display:flex;align-items:center;gap:8px;padding:5px 8px;cursor:pointer;border-radius:4px;" onmouseover="this.style.background=\'var(--card-2)\'" onmouseout="this.style.background=\'\'">'
+        + '<input type="checkbox" checked onchange="_retCurveToggleSrc(' + i + ', this.checked)" style="cursor:pointer;">'
+        + sw + '<span style="flex:1;color:var(--text);">' + lbl + '</span></label>';
+    }).join('');
+  }
+  _retCurveUpdateSummary();
+  // Update active state on cohort buttons
+  document.querySelectorAll('[data-cohort-btn]').forEach(btn => {
+    const active = btn.dataset.cohortBtn === monthStr;
+    btn.style.background = active ? 'var(--accent)' : 'var(--card-2)';
+    btn.style.color = active ? '#fff' : 'var(--text)';
+    btn.style.borderColor = active ? 'var(--accent)' : 'var(--card-border)';
+  });
 }
 
 /* ═══════════════════════════════════════

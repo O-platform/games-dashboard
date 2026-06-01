@@ -1031,6 +1031,58 @@ def lambda_handler(event, context):
         """)
         survival_by_source_rows = cur.fetchall()
 
+        # Cohort survival: same source bucketing but grouped by (join-month, bucket).
+        # Python nulls out milestones the cohort hasn't fully aged into yet so the
+        # chart line stops naturally rather than drawing a misleading flat segment.
+        cur.execute(f"""
+            WITH sa_acq AS (
+                SELECT
+                    LOWER(TRIM(email))           AS email,
+                    acquisition_utm_source,
+                    (acquisition_date AT TIME ZONE 'UTC' AT TIME ZONE 'America/Denver')::date AS acquisition_date
+                FROM {S}.subscriber_acquisition
+                WHERE acquisition_status IN ('added', 'resubscribed')
+            ),
+            s AS (
+                SELECT
+                    {_priority_source('sub', 'sa')} AS bucket,
+                    DATE_TRUNC('month',
+                        COALESCE(sa.acquisition_date::date,
+                                 COALESCE(sub.date_subscribed, sub.date_joined)::date)
+                    )::date AS cohort_month,
+                    ((CASE WHEN sub.state = 'Unsubscribed' THEN sub.date_unsubscribed::date END)
+                        - COALESCE(sa.acquisition_date::date,
+                                   COALESCE(sub.date_subscribed, sub.date_joined)::date)) AS days_to_unsub
+                FROM {S}.subscribers sub
+                LEFT JOIN sa_acq sa ON sa.email = LOWER(TRIM(sub.email))
+                WHERE COALESCE(sub.date_subscribed, sub.date_joined) IS NOT NULL
+                  AND COALESCE(sub.date_subscribed, sub.date_joined)::date < CURRENT_DATE
+                  AND (sub.date_unsubscribed IS NULL OR sub.date_unsubscribed::date < CURRENT_DATE)
+                  AND sub.state IN ('Active', 'Unsubscribed')
+            )
+            SELECT
+                cohort_month,
+                bucket,
+                COUNT(*) AS total,
+                COUNT(*) FILTER (WHERE days_to_unsub IS NULL OR days_to_unsub > 30)  AS alive_30,
+                COUNT(*) FILTER (WHERE days_to_unsub IS NULL OR days_to_unsub > 60)  AS alive_60,
+                COUNT(*) FILTER (WHERE days_to_unsub IS NULL OR days_to_unsub > 90)  AS alive_90,
+                COUNT(*) FILTER (WHERE days_to_unsub IS NULL OR days_to_unsub > 120) AS alive_120,
+                COUNT(*) FILTER (WHERE days_to_unsub IS NULL OR days_to_unsub > 150) AS alive_150,
+                COUNT(*) FILTER (WHERE days_to_unsub IS NULL OR days_to_unsub > 180) AS alive_180,
+                COUNT(*) FILTER (WHERE days_to_unsub IS NULL OR days_to_unsub > 210) AS alive_210,
+                COUNT(*) FILTER (WHERE days_to_unsub IS NULL OR days_to_unsub > 240) AS alive_240,
+                COUNT(*) FILTER (WHERE days_to_unsub IS NULL OR days_to_unsub > 270) AS alive_270,
+                COUNT(*) FILTER (WHERE days_to_unsub IS NULL OR days_to_unsub > 300) AS alive_300,
+                COUNT(*) FILTER (WHERE days_to_unsub IS NULL OR days_to_unsub > 330) AS alive_330,
+                COUNT(*) FILTER (WHERE days_to_unsub IS NULL OR days_to_unsub > 365) AS alive_365
+            FROM s
+            GROUP BY 1, 2
+            HAVING COUNT(*) >= 50
+            ORDER BY 1 DESC, 3 DESC
+        """)
+        survival_cohort_rows = cur.fetchall()
+
         # Monthly churn volume + two churn-rate flavours.
         #
         # The bar chart counts subscribers who unsubscribed in each month
@@ -1624,6 +1676,7 @@ def lambda_handler(event, context):
     M["survival_curve"] = {
         "labels": ["Month 0", "Month 1", "Month 2", "Month 3", "Month 4", "Month 5",
                    "Month 6", "Month 7", "Month 8", "Month 9", "Month 10", "Month 11", "Month 12"],
+        "total": sv_total,
         "rates":  [
             100.0,
             round(safe_int(sv.get("alive_30"))  / sv_total * 100, 1),
@@ -1638,6 +1691,15 @@ def lambda_handler(event, context):
             round(safe_int(sv.get("alive_300")) / sv_total * 100, 1),
             round(safe_int(sv.get("alive_330")) / sv_total * 100, 1),
             round(safe_int(sv.get("alive_365")) / sv_total * 100, 1),
+        ],
+        "alive_counts": [
+            sv_total,
+            safe_int(sv.get("alive_30")),  safe_int(sv.get("alive_60")),
+            safe_int(sv.get("alive_90")),  safe_int(sv.get("alive_120")),
+            safe_int(sv.get("alive_150")), safe_int(sv.get("alive_180")),
+            safe_int(sv.get("alive_210")), safe_int(sv.get("alive_240")),
+            safe_int(sv.get("alive_270")), safe_int(sv.get("alive_300")),
+            safe_int(sv.get("alive_330")), safe_int(sv.get("alive_365")),
         ],
     }
 
@@ -1674,9 +1736,91 @@ def lambda_handler(event, context):
                     _sv_rate(r["alive_330"], r["eligible_330"]),
                     _sv_rate(r["alive_365"], r["eligible_365"]),
                 ],
+                "alive_counts": [
+                    safe_int(r["total"]),
+                    safe_int(r["alive_30"]),  safe_int(r["alive_60"]),
+                    safe_int(r["alive_90"]),  safe_int(r["alive_120"]),
+                    safe_int(r["alive_150"]), safe_int(r["alive_180"]),
+                    safe_int(r["alive_210"]), safe_int(r["alive_240"]),
+                    safe_int(r["alive_270"]), safe_int(r["alive_300"]),
+                    safe_int(r["alive_330"]), safe_int(r["alive_365"]),
+                ],
+                "eligible_counts": [
+                    safe_int(r["total"]),
+                    safe_int(r["eligible_30"]),  safe_int(r["eligible_60"]),
+                    safe_int(r["eligible_90"]),  safe_int(r["eligible_120"]),
+                    safe_int(r["eligible_150"]), safe_int(r["eligible_180"]),
+                    safe_int(r["eligible_210"]), safe_int(r["eligible_240"]),
+                    safe_int(r["eligible_270"]), safe_int(r["eligible_300"]),
+                    safe_int(r["eligible_330"]), safe_int(r["eligible_365"]),
+                ],
             }
             for r in survival_by_source_rows
         ],
+    }
+
+    # Cohort survival output — group rows by cohort_month, null out milestones
+    # that the full cohort month hasn't aged into yet.
+    from collections import defaultdict
+    from datetime import timedelta as _td
+    _today = date.today()
+    _sv_milestones = [30, 60, 90, 120, 150, 180, 210, 240, 270, 300, 330, 365]
+
+    def _cohort_eligible(cm, milestone_days):
+        next_m = date(cm.year + 1, 1, 1) if cm.month == 12 else date(cm.year, cm.month + 1, 1)
+        return (next_m - _td(days=1) + _td(days=milestone_days)) <= _today
+
+    def _cohort_rate(alive, total, cm, milestone_days):
+        if not _cohort_eligible(cm, milestone_days):
+            return None
+        t = safe_int(total)
+        return round(safe_int(alive) / t * 100, 1) if t else None
+
+    _cohort_map = defaultdict(list)
+    for _r in survival_cohort_rows:
+        _cohort_map[_r["cohort_month"]].append(_r)
+
+    _cohorts_out = []
+    for _cm in sorted(_cohort_map.keys(), reverse=True):
+        _rows = _cohort_map[_cm]
+        _total_all = sum(safe_int(r["total"]) for r in _rows)
+        _series = []
+        if _total_all > 0:
+            _series.append({
+                "label": "All (cohort)",
+                "total": _total_all,
+                "rates": [100.0] + [
+                    _cohort_rate(sum(safe_int(r[f"alive_{m}"]) for r in _rows), _total_all, _cm, m)
+                    for m in _sv_milestones
+                ],
+                "alive_counts": [_total_all] + [
+                    sum(safe_int(r[f"alive_{m}"]) for r in _rows) if _cohort_eligible(_cm, m) else None
+                    for m in _sv_milestones
+                ],
+            })
+        for _r in _rows:
+            _series.append({
+                "label": str(_r["bucket"]),
+                "total": safe_int(_r["total"]),
+                "rates": [100.0] + [
+                    _cohort_rate(_r[f"alive_{m}"], _r["total"], _cm, m)
+                    for m in _sv_milestones
+                ],
+                "alive_counts": [safe_int(_r["total"])] + [
+                    safe_int(_r[f"alive_{m}"]) if _cohort_eligible(_cm, m) else None
+                    for m in _sv_milestones
+                ],
+            })
+        _cohorts_out.append({
+            "month": _cm.strftime("%Y-%m"),
+            "label": _cm.strftime("%b %Y"),
+            "series": _series,
+        })
+
+    M["survival_curve_cohorts"] = {
+        "labels": ["Month 0", "Month 1", "Month 2", "Month 3", "Month 4", "Month 5",
+                   "Month 6", "Month 7", "Month 8", "Month 9", "Month 10", "Month 11", "Month 12"],
+        "cohorts": _cohorts_out,
     }
 
     M["monthly_churn"] = {

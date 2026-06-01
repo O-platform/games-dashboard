@@ -679,7 +679,7 @@ def lambda_handler(event, context):
                     -- Priority: acquisition_utm_source >> url_variables (Meta only)
                     --           >> sub_source >> source >> 'Organic'
                     SELECT
-                        DATE_TRUNC('week', s.COALESCE(date_subscribed, date_joined)::date)::date AS week_start,
+                        DATE_TRUNC('week', COALESCE(s.date_subscribed, s.date_joined)::date)::date AS week_start,
                         COALESCE(
                             -- Level 1: acquisition_utm_source
                             CASE
@@ -716,7 +716,7 @@ def lambda_handler(event, context):
                             -- pre-campaign subs whose url_variables contain stale/misattributed meta values
                             CASE
                                 WHEN LOWER(TRIM(SUBSTRING(s.url_variables FROM 'utm_source=([^,&]+)'))) = 'meta'
-                                 AND s.COALESCE(date_subscribed, date_joined)::date >= '2025-11-01' THEN 'Meta'
+                                 AND COALESCE(s.date_subscribed, s.date_joined)::date >= '2025-11-01' THEN 'Meta'
                                 ELSE NULL
                             END,
                             -- Level 3: sub_source
@@ -785,9 +785,9 @@ def lambda_handler(event, context):
                         ) AS bucket
                     FROM {S}.subscribers s
                     LEFT JOIN sa_acq sa ON sa.email = LOWER(TRIM(s.email))
-                    WHERE s.COALESCE(date_subscribed, date_joined) IS NOT NULL
-                      AND s.COALESCE(date_subscribed, date_joined)::date >= DATE_TRUNC('week', CURRENT_DATE)::date - INTERVAL '2 weeks'
-                      AND s.COALESCE(date_subscribed, date_joined)::date <  DATE_TRUNC('week', CURRENT_DATE)::date
+                    WHERE COALESCE(s.date_subscribed, s.date_joined) IS NOT NULL
+                      AND COALESCE(s.date_subscribed, s.date_joined)::date >= DATE_TRUNC('week', CURRENT_DATE)::date - INTERVAL '2 weeks'
+                      AND COALESCE(s.date_subscribed, s.date_joined)::date <  DATE_TRUNC('week', CURRENT_DATE)::date
                 )
                 SELECT
                     week_start,

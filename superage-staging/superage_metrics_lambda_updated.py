@@ -579,7 +579,7 @@ def lambda_handler(event, context):
             url_meta = (
                 f"CASE WHEN LOWER(TRIM(SUBSTRING({sub_alias}.url_variables "
                 f"FROM 'utm_source=([^,&]+)'))) = 'meta' "
-                f"AND {sub_alias}.COALESCE(date_subscribed, date_joined)::date >= '2025-11-01' "
+                f"AND COALESCE({sub_alias}.date_subscribed, {sub_alias}.date_joined)::date >= '2025-11-01' "
                 f"THEN 'Meta' ELSE NULL END"
             )
             no_taboola = lambda expr: f"CASE WHEN {expr} = 'Taboola' THEN NULL ELSE {expr} END"
@@ -601,7 +601,7 @@ def lambda_handler(event, context):
             click_filter = ""
             if since_days is not None:
                 eff_date_filter = (
-                    f"AND COALESCE(sa.acquisition_date::date, s.COALESCE(date_subscribed, date_joined)::date)"
+                    f"AND COALESCE(sa.acquisition_date::date, COALESCE(s.date_subscribed, s.date_joined)::date)"
                     f" >= CURRENT_DATE - INTERVAL '{int(since_days)} days'"
                 )
                 click_filter = f"AND cc.\"Date\"::date >= CURRENT_DATE - INTERVAL '{int(since_days)} days'"
@@ -622,12 +622,12 @@ def lambda_handler(event, context):
                             %s
                         )                            AS label,
                         s.state,
-                        COALESCE(sa.acquisition_date, s.COALESCE(date_subscribed, date_joined)::date) AS eff_date,
+                        COALESCE(sa.acquisition_date, COALESCE(s.date_subscribed, s.date_joined)::date) AS eff_date,
                         s.date_unsubscribed::date    AS unsubbed
                     FROM {S}.subscribers s
                     LEFT JOIN sa_acq sa ON sa.email = LOWER(TRIM(s.email))
                     WHERE s.email IS NOT NULL AND TRIM(s.email) != ''
-                      AND s.COALESCE(date_subscribed, date_joined)::date < CURRENT_DATE
+                      AND COALESCE(s.date_subscribed, s.date_joined)::date < CURRENT_DATE
                       {eff_date_filter}
                 ),
                 cc AS (
@@ -982,12 +982,12 @@ def lambda_handler(event, context):
                     -- otherwise yield a negative days_to_unsub and silently count
                     -- them as churned at every milestone.
                     ((CASE WHEN sub.state = 'Unsubscribed' THEN sub.date_unsubscribed::date END)
-                        - COALESCE(sa.acquisition_date::date, sub.COALESCE(date_subscribed, date_joined)::date)) AS days_to_unsub,
+                        - COALESCE(sa.acquisition_date::date, COALESCE(sub.date_subscribed, sub.date_joined)::date)) AS days_to_unsub,
                     (CURRENT_DATE
-                        - COALESCE(sa.acquisition_date::date, sub.COALESCE(date_subscribed, date_joined)::date))::integer AS cohort_age_days
+                        - COALESCE(sa.acquisition_date::date, COALESCE(sub.date_subscribed, sub.date_joined)::date))::integer AS cohort_age_days
                 FROM {S}.subscribers sub
                 LEFT JOIN sa_acq sa ON sa.email = LOWER(TRIM(sub.email))
-                WHERE sub.COALESCE(date_subscribed, date_joined) IS NOT NULL AND sub.COALESCE(date_subscribed, date_joined)::date < CURRENT_DATE
+                WHERE COALESCE(sub.date_subscribed, sub.date_joined) IS NOT NULL AND COALESCE(sub.date_subscribed, sub.date_joined)::date < CURRENT_DATE
                   AND (sub.date_unsubscribed IS NULL OR sub.date_unsubscribed::date < CURRENT_DATE)
             )
             SELECT
@@ -1130,7 +1130,7 @@ def lambda_handler(event, context):
             s AS (
                 SELECT
                     LOWER(TRIM(sub.email))                             AS email,
-                    COALESCE(sa.acquisition_date, sub.COALESCE(date_subscribed, date_joined)::date) AS eff_joined,
+                    COALESCE(sa.acquisition_date, COALESCE(sub.date_subscribed, sub.date_joined)::date) AS eff_joined,
                     -- Gate by state — see survival_by_source (Q37b) for the resub
                     -- explanation; old date_unsubscribed on a resub-Active row would
                     -- otherwise produce a negative lifespan_days that skews the avg.
@@ -1140,7 +1140,7 @@ def lambda_handler(event, context):
                     {_priority_source('sub', 'sa')}                    AS source_raw
                 FROM {S}.subscribers sub
                 LEFT JOIN sa_acq sa ON sa.email = LOWER(TRIM(sub.email))
-                WHERE sub.COALESCE(date_subscribed, date_joined) IS NOT NULL AND sub.COALESCE(date_subscribed, date_joined)::date < CURRENT_DATE
+                WHERE COALESCE(sub.date_subscribed, sub.date_joined) IS NOT NULL AND COALESCE(sub.date_subscribed, sub.date_joined)::date < CURRENT_DATE
                   AND sub.state IN ('Active', 'Unsubscribed')
             ),
             mapped AS (

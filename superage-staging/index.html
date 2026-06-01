@@ -2957,7 +2957,7 @@ function renderRetention(M) {
       alive_counts: sc.alive_counts || [],
       eligible_counts: (sc.rates||[]).map((_, i) => i === 0 ? _scTotal : _scTotal),
       borderColor: '#1a7f37', backgroundColor: 'rgba(26,127,55,.10)',
-      tension:.3, fill:true, pointRadius:4, borderWidth:3, order:99 }
+      tension:.3, fill:true, pointRadius:6, pointHoverRadius:8, borderWidth:3, order:99 }
   ].concat(bySource.map((s, i) => ({
     label: `${s.label} (${(s.total||0).toLocaleString()})`,
     data: s.rates || [],
@@ -2965,9 +2965,7 @@ function renderRetention(M) {
     eligible_counts: s.eligible_counts || [],
     borderColor: sourcePalette[i % sourcePalette.length],
     backgroundColor: 'transparent',
-    tension: .3, fill: false, pointRadius: 3, borderWidth: 2, order: i,
-    // spanGaps:false (Chart.js default) — null values break the line so young
-    // cohorts don't draw a misleading flat line to Day 365.
+    tension: .3, fill: false, pointRadius: 5, pointHoverRadius: 7, borderWidth: 2.5, order: i,
     spanGaps: false,
   })));
   // External HTML tooltip — rendered as a positioned <div> so it can grow
@@ -3291,8 +3289,9 @@ function _retCurveSetCohort(monthStr) {
         eligible_counts: (s.rates||[]).map(() => s.total || 0),
         borderColor: color,
         backgroundColor: isAll ? 'rgba(26,127,55,.10)' : 'transparent',
-        tension: .3, fill: isAll, pointRadius: isAll ? 4 : 3,
-        borderWidth: isAll ? 3 : 2, order: isAll ? 99 : i, spanGaps: false,
+        tension: .3, fill: isAll,
+        pointRadius: isAll ? 6 : 5, pointHoverRadius: isAll ? 8 : 7,
+        borderWidth: isAll ? 3 : 2.5, order: isAll ? 99 : i, spanGaps: false,
       };
     });
   }

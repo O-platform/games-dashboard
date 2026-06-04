@@ -993,33 +993,21 @@ def lambda_handler(event, context):
             SELECT
                 bucket,
                 COUNT(*)                                                                         AS total,
-                -- alive_N  = subscribers who reached day N AND hadn't churned by then
-                -- eligible_N = subscribers who have been in the cohort >= N days
-                -- Rate = alive / eligible (NULL when eligible = 0 → line stops at that point)
-                COUNT(*) FILTER (WHERE cohort_age_days >= 30  AND (days_to_unsub IS NULL OR days_to_unsub > 30))  AS alive_30,
-                COUNT(*) FILTER (WHERE cohort_age_days >= 30)                                                      AS eligible_30,
-                COUNT(*) FILTER (WHERE cohort_age_days >= 60  AND (days_to_unsub IS NULL OR days_to_unsub > 60))  AS alive_60,
-                COUNT(*) FILTER (WHERE cohort_age_days >= 60)                                                      AS eligible_60,
-                COUNT(*) FILTER (WHERE cohort_age_days >= 90  AND (days_to_unsub IS NULL OR days_to_unsub > 90))  AS alive_90,
-                COUNT(*) FILTER (WHERE cohort_age_days >= 90)                                                      AS eligible_90,
-                COUNT(*) FILTER (WHERE cohort_age_days >= 120 AND (days_to_unsub IS NULL OR days_to_unsub > 120)) AS alive_120,
-                COUNT(*) FILTER (WHERE cohort_age_days >= 120)                                                     AS eligible_120,
-                COUNT(*) FILTER (WHERE cohort_age_days >= 150 AND (days_to_unsub IS NULL OR days_to_unsub > 150)) AS alive_150,
-                COUNT(*) FILTER (WHERE cohort_age_days >= 150)                                                     AS eligible_150,
-                COUNT(*) FILTER (WHERE cohort_age_days >= 180 AND (days_to_unsub IS NULL OR days_to_unsub > 180)) AS alive_180,
-                COUNT(*) FILTER (WHERE cohort_age_days >= 180)                                                     AS eligible_180,
-                COUNT(*) FILTER (WHERE cohort_age_days >= 210 AND (days_to_unsub IS NULL OR days_to_unsub > 210)) AS alive_210,
-                COUNT(*) FILTER (WHERE cohort_age_days >= 210)                                                     AS eligible_210,
-                COUNT(*) FILTER (WHERE cohort_age_days >= 240 AND (days_to_unsub IS NULL OR days_to_unsub > 240)) AS alive_240,
-                COUNT(*) FILTER (WHERE cohort_age_days >= 240)                                                     AS eligible_240,
-                COUNT(*) FILTER (WHERE cohort_age_days >= 270 AND (days_to_unsub IS NULL OR days_to_unsub > 270)) AS alive_270,
-                COUNT(*) FILTER (WHERE cohort_age_days >= 270)                                                     AS eligible_270,
-                COUNT(*) FILTER (WHERE cohort_age_days >= 300 AND (days_to_unsub IS NULL OR days_to_unsub > 300)) AS alive_300,
-                COUNT(*) FILTER (WHERE cohort_age_days >= 300)                                                     AS eligible_300,
-                COUNT(*) FILTER (WHERE cohort_age_days >= 330 AND (days_to_unsub IS NULL OR days_to_unsub > 330)) AS alive_330,
-                COUNT(*) FILTER (WHERE cohort_age_days >= 330)                                                     AS eligible_330,
-                COUNT(*) FILTER (WHERE cohort_age_days >= 365 AND (days_to_unsub IS NULL OR days_to_unsub > 365)) AS alive_365,
-                COUNT(*) FILTER (WHERE cohort_age_days >= 365)                                                     AS eligible_365
+                -- Fixed-denominator survival: alive_N counts every sub who hasn't
+                -- churned by day N (subs too young are counted as alive / censored).
+                -- Rate = alive_N / total — monotonically non-increasing, no denominator shift.
+                COUNT(*) FILTER (WHERE days_to_unsub IS NULL OR days_to_unsub > 30)  AS alive_30,
+                COUNT(*) FILTER (WHERE days_to_unsub IS NULL OR days_to_unsub > 60)  AS alive_60,
+                COUNT(*) FILTER (WHERE days_to_unsub IS NULL OR days_to_unsub > 90)  AS alive_90,
+                COUNT(*) FILTER (WHERE days_to_unsub IS NULL OR days_to_unsub > 120) AS alive_120,
+                COUNT(*) FILTER (WHERE days_to_unsub IS NULL OR days_to_unsub > 150) AS alive_150,
+                COUNT(*) FILTER (WHERE days_to_unsub IS NULL OR days_to_unsub > 180) AS alive_180,
+                COUNT(*) FILTER (WHERE days_to_unsub IS NULL OR days_to_unsub > 210) AS alive_210,
+                COUNT(*) FILTER (WHERE days_to_unsub IS NULL OR days_to_unsub > 240) AS alive_240,
+                COUNT(*) FILTER (WHERE days_to_unsub IS NULL OR days_to_unsub > 270) AS alive_270,
+                COUNT(*) FILTER (WHERE days_to_unsub IS NULL OR days_to_unsub > 300) AS alive_300,
+                COUNT(*) FILTER (WHERE days_to_unsub IS NULL OR days_to_unsub > 330) AS alive_330,
+                COUNT(*) FILTER (WHERE days_to_unsub IS NULL OR days_to_unsub > 365) AS alive_365
             FROM s
             GROUP BY 1
             HAVING COUNT(*) >= 100
@@ -1703,17 +1691,15 @@ def lambda_handler(event, context):
         ],
     }
 
-    def _sv_rate(alive, eligible):
-        e = safe_int(eligible)
-        if e == 0:
+    def _sv_rate_fixed(alive, total):
+        t = safe_int(total)
+        if t == 0:
             return None
-        return round(safe_int(alive) / e * 100, 1)
+        return round(safe_int(alive) / t * 100, 1)
 
-    # Per-source overlay: one rates[] per acquisition source bucket.
-    # Rates use cohort-age-gated denominators (eligible_N = subs who have been
-    # subscribed >= N days), so young cohorts like Taboola produce null for
-    # milestones they haven't reached yet — Chart.js stops drawing the line there
-    # instead of extending a misleading flat line to Day 365.
+    # Per-source overlay — fixed denominator (total per bucket).
+    # alive_N = subs who haven't churned by day N (young subs counted as
+    # censored / alive). Rate = alive_N / total → monotonically non-increasing.
     M["survival_curve_by_source"] = {
         "labels": ["Month 0", "Month 1", "Month 2", "Month 3", "Month 4", "Month 5",
                    "Month 6", "Month 7", "Month 8", "Month 9", "Month 10", "Month 11", "Month 12"],
@@ -1723,18 +1709,18 @@ def lambda_handler(event, context):
                 "total": safe_int(r["total"]),
                 "rates": [
                     100.0,
-                    _sv_rate(r["alive_30"],  r["eligible_30"]),
-                    _sv_rate(r["alive_60"],  r["eligible_60"]),
-                    _sv_rate(r["alive_90"],  r["eligible_90"]),
-                    _sv_rate(r["alive_120"], r["eligible_120"]),
-                    _sv_rate(r["alive_150"], r["eligible_150"]),
-                    _sv_rate(r["alive_180"], r["eligible_180"]),
-                    _sv_rate(r["alive_210"], r["eligible_210"]),
-                    _sv_rate(r["alive_240"], r["eligible_240"]),
-                    _sv_rate(r["alive_270"], r["eligible_270"]),
-                    _sv_rate(r["alive_300"], r["eligible_300"]),
-                    _sv_rate(r["alive_330"], r["eligible_330"]),
-                    _sv_rate(r["alive_365"], r["eligible_365"]),
+                    _sv_rate_fixed(r["alive_30"],  r["total"]),
+                    _sv_rate_fixed(r["alive_60"],  r["total"]),
+                    _sv_rate_fixed(r["alive_90"],  r["total"]),
+                    _sv_rate_fixed(r["alive_120"], r["total"]),
+                    _sv_rate_fixed(r["alive_150"], r["total"]),
+                    _sv_rate_fixed(r["alive_180"], r["total"]),
+                    _sv_rate_fixed(r["alive_210"], r["total"]),
+                    _sv_rate_fixed(r["alive_240"], r["total"]),
+                    _sv_rate_fixed(r["alive_270"], r["total"]),
+                    _sv_rate_fixed(r["alive_300"], r["total"]),
+                    _sv_rate_fixed(r["alive_330"], r["total"]),
+                    _sv_rate_fixed(r["alive_365"], r["total"]),
                 ],
                 "alive_counts": [
                     safe_int(r["total"]),
@@ -1744,15 +1730,6 @@ def lambda_handler(event, context):
                     safe_int(r["alive_210"]), safe_int(r["alive_240"]),
                     safe_int(r["alive_270"]), safe_int(r["alive_300"]),
                     safe_int(r["alive_330"]), safe_int(r["alive_365"]),
-                ],
-                "eligible_counts": [
-                    safe_int(r["total"]),
-                    safe_int(r["eligible_30"]),  safe_int(r["eligible_60"]),
-                    safe_int(r["eligible_90"]),  safe_int(r["eligible_120"]),
-                    safe_int(r["eligible_150"]), safe_int(r["eligible_180"]),
-                    safe_int(r["eligible_210"]), safe_int(r["eligible_240"]),
-                    safe_int(r["eligible_270"]), safe_int(r["eligible_300"]),
-                    safe_int(r["eligible_330"]), safe_int(r["eligible_365"]),
                 ],
             }
             for r in survival_by_source_rows
@@ -1767,8 +1744,7 @@ def lambda_handler(event, context):
     _sv_milestones = [30, 60, 90, 120, 150, 180, 210, 240, 270, 300, 330, 365]
 
     def _cohort_eligible(cm, milestone_days):
-        next_m = date(cm.year + 1, 1, 1) if cm.month == 12 else date(cm.year, cm.month + 1, 1)
-        return (next_m - _td(days=1) + _td(days=milestone_days)) <= _today
+        return (cm + _td(days=milestone_days)) <= _today
 
     def _cohort_rate(alive, total, cm, milestone_days):
         if not _cohort_eligible(cm, milestone_days):

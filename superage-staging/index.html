@@ -2954,15 +2954,13 @@ function renderRetention(M) {
   const _scTotal = sc.total || 0;
   const datasets = [
     { label: 'All subscribers', data: sc.rates || [],
-      alive_counts: sc.alive_counts || [],
-      eligible_counts: (sc.rates||[]).map((_, i) => i === 0 ? _scTotal : _scTotal),
+      alive_counts: sc.alive_counts || [], _srcTotal: _scTotal,
       borderColor: '#1a7f37', backgroundColor: 'rgba(26,127,55,.10)',
       tension:.3, fill:true, pointRadius:6, pointHoverRadius:8, borderWidth:3, order:99 }
   ].concat(bySource.map((s, i) => ({
     label: `${s.label} (${(s.total||0).toLocaleString()})`,
     data: s.rates || [],
-    alive_counts: s.alive_counts || [],
-    eligible_counts: s.eligible_counts || [],
+    alive_counts: s.alive_counts || [], _srcTotal: s.total || 0,
     borderColor: sourcePalette[i % sourcePalette.length],
     backgroundColor: 'transparent',
     tension: .3, fill: false, pointRadius: 5, pointHoverRadius: 7, borderWidth: 2.5, order: i,
@@ -3013,10 +3011,9 @@ function renderRetention(M) {
                   ? Number(p.dataset.alive_counts[di]).toLocaleString() : null;
                 const elig = p.dataset.eligible_counts && p.dataset.eligible_counts[di] != null
                   ? Number(p.dataset.eligible_counts[di]).toLocaleString() : null;
+                const total = p.dataset._srcTotal != null ? Number(p.dataset._srcTotal).toLocaleString() : elig;
                 const countStr = alive != null
-                  ? (elig && elig !== alive
-                    ? `<span style="color:#8b949e;font-size:10px;margin-left:8px;">${alive}&thinsp;/&thinsp;${elig}</span>`
-                    : `<span style="color:#8b949e;font-size:10px;margin-left:8px;">${alive}</span>`)
+                  ? `<span style="color:#8b949e;font-size:10px;margin-left:8px;">${alive} of ${total || elig || '?'}</span>`
                   : '';
                 return `<div style="display:flex;align-items:center;gap:8px;white-space:nowrap;">
                   <span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:${c};"></span>
@@ -3285,8 +3282,7 @@ function _retCurveSetCohort(monthStr) {
       return {
         label: s.label + ' (' + (s.total||0).toLocaleString() + ')',
         data: s.rates || [],
-        alive_counts: s.alive_counts || [],
-        eligible_counts: (s.rates||[]).map(() => s.total || 0),
+        alive_counts: s.alive_counts || [], _srcTotal: s.total || 0,
         borderColor: color,
         backgroundColor: isAll ? 'rgba(26,127,55,.10)' : 'transparent',
         tension: .3, fill: isAll,

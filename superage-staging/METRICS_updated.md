@@ -1323,72 +1323,94 @@ FROM (
 
 Exposed as `M.survival_curve = { labels: ['Month 0','Month 1',...,'Month 12'], rates: [100, %, ...] }` — single series (Month 0 = 100%, Month 1 = ~Day 30, ..., Month 12 = ~Day 365). Last updated: 2026-05-21.
 
-## Q37b — Subscriber Retention: Survival Curve per Acquisition Source
+## Q37b — Subscriber Retention: Survival Curve per Acquisition Source (fixed-denominator)
 
-Same monthly shape as Q37 (Month 0–12, ~30-day intervals) but split by acquisition-source bucket. Powers the overlay on the Retention tab: the all-subscriber baseline (filled green, Q37) plus one thin line per source. Source buckets use the **canonical mapping** (§4 → "Source label canonicalisation") so labels here match the Audience tab and Q35b. Minimum cohort 100 subscribers; **no `LIMIT`** — every canonical bucket with a non-trivial cohort ships as a series so the user can decide which to keep visible. The dashboard exposes per-source toggling via the "Filter sources" dropdown above the chart plus **All / None** bulk buttons. Young cohorts (e.g. Taboola) emit `null` for milestones they haven't reached yet — Chart.js `spanGaps: false` stops the line there rather than drawing a flat extrapolation.
+Same monthly shape as Q37 (Month 0–12, ~30-day intervals) but split by acquisition-source bucket. Powers the overlay on the Retention tab: the all-subscriber baseline (filled green, Q37) plus one thin line per source. Source buckets use the **canonical 4-level COALESCE chain** (§4 → `_priority_source()`) so labels here match the Audience tab and Q35b. Minimum cohort 100 subscribers; **no `LIMIT`** — every canonical bucket with a non-trivial cohort ships as a series so the user can decide which to keep visible. The dashboard exposes per-source toggling via the "Filter sources" dropdown above the chart plus **All / None** bulk buttons.
 
-**Important — date anchor**: effective entry date = `COALESCE(sa.acquisition_date::date, sub.date_joined::date)`. Use `acquisition_date` when the row has one (set by the partner at real acquisition time); fall back to `date_joined` when absent. Note: for Meta, `acquisition_date` is a batch-import timestamp rather than a real backdated date — the resulting survival curve will appear inflated until that data-pipeline issue is corrected upstream. Last updated: 2026-05-21.
+### Denominator approach: fixed (total)
+
+**Previous approach (removed):** `eligible_N` = subs whose `cohort_age >= N` days; `rate = alive_N / eligible_N`. This produced **non-monotonic (upward-kinking) curves** because the eligible pool composition changed at each milestone — when younger, lower-quality subs fell out of the denominator, the rate could jump UP, violating the fundamental property of a survival curve.
+
+**Current approach:** `rate = alive_N / total` where:
+- `alive_N` = subs who haven't churned by day N. Subs younger than N days who are still active count as alive (censored — they haven't churned yet).
+- `total` = fixed denominator (all subs in the source bucket).
+- Guarantees **monotonically non-increasing** curves.
+
+**Known tradeoff:** for very young source buckets, early-milestone rates appear optimistic because young subs are counted as "not yet churned". The **cohort month filter** (Q37c) solves this by showing a fixed cohort where every sub has the same age basis.
+
+### Worked example
+
+Source "Acme" with 100 subs: 40 joined < 30 days ago (still active), 30 joined 30–59 days ago (6 churned by day 30), 20 joined 60–89 days ago (4 churned by day 30), 10 joined ≥ 90 days ago (1 churned by day 30, 1 churned by day 60).
+
+| Milestone | alive_N | total | Rate | Monotonic? |
+|-----------|---------|-------|------|------------|
+| Month 0   | 100     | 100   | 100% | —          |
+| Month 1   | 89      | 100   | 89%  | ✓ (down)   |
+| Month 2   | 88      | 100   | 88%  | ✓ (down)   |
+| Month 3   | 88      | 100   | 88%  | ✓ (flat)   |
+
+The 40 young subs (< 30 days old) count as alive at every milestone because they haven't churned. Once they age past 30 days and some churn, Month 1 rate will tick down — but it will never go back up.
+
+### Date anchors
+
+- **Effective join date**: `COALESCE(sa.acquisition_date::date, COALESCE(sub.date_subscribed, sub.date_joined)::date)`
+- **acquisition_date converted UTC → MT**: `(acquisition_date AT TIME ZONE 'UTC' AT TIME ZONE 'America/Denver')::date`
+- **date_unsubscribed gated by state**: `CASE WHEN sub.state = 'Unsubscribed' THEN sub.date_unsubscribed::date END` — prevents resubscribed subs (state='Active') from counting as churned via their stale old unsub date.
+- **State filter**: `sub.state IN ('Active', 'Unsubscribed')` — excludes Bounced/Deleted.
+
+### Source attribution (canonical 4-level chain)
+
+```
+COALESCE(
+    L1: _canon(sa.acquisition_utm_source),       -- most authoritative
+    L2: url_variables Meta (gated ≥ 2025-11-01),  -- url_variables unreliable before this date
+    L3: _canon(sub.sub_source),                   -- Taboola EXCLUDED (falls through)
+    L4: _canon(sub.source),                       -- Taboola EXCLUDED (falls through)
+    'Organic'
+)
+```
+
+### SQL
 
 ```sql
--- Label priority: sa.acquisition_utm_source >> s.source.
--- Effective join date: COALESCE(sa.acquisition_date, s.date_joined).
--- Sorted by 365-day survival rate DESC.
 WITH sa_acq AS (
     SELECT
-        LOWER(TRIM(email))    AS email,
+        LOWER(TRIM(email))           AS email,
         acquisition_utm_source,
-        acquisition_date::date AS acquisition_date
+        (acquisition_date AT TIME ZONE 'UTC' AT TIME ZONE 'America/Denver')::date AS acquisition_date
     FROM superage.subscriber_acquisition
     WHERE acquisition_status IN ('added', 'resubscribed')
 ),
 s AS (
     SELECT
-        CASE
-            WHEN LOWER(COALESCE(
-                    NULLIF(TRIM(sa.acquisition_utm_source),''),
-                    NULLIF(TRIM(sub.source),''), '')) IN ('organic','direct','') THEN 'Direct'
-            ELSE COALESCE(
-                _canon(COALESCE(NULLIF(TRIM(sa.acquisition_utm_source),''),
-                                NULLIF(TRIM(sub.source),''))),
-                'Direct'
-            )
-        END AS bucket,
-        (sub.date_unsubscribed::date
-            - COALESCE(sa.acquisition_date, sub.date_joined::date)) AS days_to_unsub
+        <_priority_source()> AS bucket,
+        ((CASE WHEN sub.state = 'Unsubscribed' THEN sub.date_unsubscribed::date END)
+            - COALESCE(sa.acquisition_date::date,
+                       COALESCE(sub.date_subscribed, sub.date_joined)::date)) AS days_to_unsub
     FROM superage.subscribers sub
     LEFT JOIN sa_acq sa ON sa.email = LOWER(TRIM(sub.email))
-    WHERE sub.date_joined IS NOT NULL AND sub.date_joined::date < CURRENT_DATE
+    WHERE COALESCE(sub.date_subscribed, sub.date_joined) IS NOT NULL
+      AND COALESCE(sub.date_subscribed, sub.date_joined)::date < CURRENT_DATE
       AND (sub.date_unsubscribed IS NULL OR sub.date_unsubscribed::date < CURRENT_DATE)
+      AND sub.state IN ('Active', 'Unsubscribed')
 )
 SELECT
     bucket,
-    COUNT(*)                                                                            AS total,
-    -- Month 1 (Day 30) through Month 12 (Day 365) — alive_N / eligible_N pairs
-    -- eligible_N = subscribers whose cohort age >= N days (cohort-age-gated denominator)
-    COUNT(*) FILTER (WHERE cohort_age_days >= 30  AND (days_to_unsub IS NULL OR days_to_unsub > 30))  AS alive_30,
-    COUNT(*) FILTER (WHERE cohort_age_days >= 30)                                                      AS eligible_30,
-    COUNT(*) FILTER (WHERE cohort_age_days >= 60  AND (days_to_unsub IS NULL OR days_to_unsub > 60))  AS alive_60,
-    COUNT(*) FILTER (WHERE cohort_age_days >= 60)                                                      AS eligible_60,
-    COUNT(*) FILTER (WHERE cohort_age_days >= 90  AND (days_to_unsub IS NULL OR days_to_unsub > 90))  AS alive_90,
-    COUNT(*) FILTER (WHERE cohort_age_days >= 90)                                                      AS eligible_90,
-    COUNT(*) FILTER (WHERE cohort_age_days >= 120 AND (days_to_unsub IS NULL OR days_to_unsub > 120)) AS alive_120,
-    COUNT(*) FILTER (WHERE cohort_age_days >= 120)                                                     AS eligible_120,
-    COUNT(*) FILTER (WHERE cohort_age_days >= 150 AND (days_to_unsub IS NULL OR days_to_unsub > 150)) AS alive_150,
-    COUNT(*) FILTER (WHERE cohort_age_days >= 150)                                                     AS eligible_150,
-    COUNT(*) FILTER (WHERE cohort_age_days >= 180 AND (days_to_unsub IS NULL OR days_to_unsub > 180)) AS alive_180,
-    COUNT(*) FILTER (WHERE cohort_age_days >= 180)                                                     AS eligible_180,
-    COUNT(*) FILTER (WHERE cohort_age_days >= 210 AND (days_to_unsub IS NULL OR days_to_unsub > 210)) AS alive_210,
-    COUNT(*) FILTER (WHERE cohort_age_days >= 210)                                                     AS eligible_210,
-    COUNT(*) FILTER (WHERE cohort_age_days >= 240 AND (days_to_unsub IS NULL OR days_to_unsub > 240)) AS alive_240,
-    COUNT(*) FILTER (WHERE cohort_age_days >= 240)                                                     AS eligible_240,
-    COUNT(*) FILTER (WHERE cohort_age_days >= 270 AND (days_to_unsub IS NULL OR days_to_unsub > 270)) AS alive_270,
-    COUNT(*) FILTER (WHERE cohort_age_days >= 270)                                                     AS eligible_270,
-    COUNT(*) FILTER (WHERE cohort_age_days >= 300 AND (days_to_unsub IS NULL OR days_to_unsub > 300)) AS alive_300,
-    COUNT(*) FILTER (WHERE cohort_age_days >= 300)                                                     AS eligible_300,
-    COUNT(*) FILTER (WHERE cohort_age_days >= 330 AND (days_to_unsub IS NULL OR days_to_unsub > 330)) AS alive_330,
-    COUNT(*) FILTER (WHERE cohort_age_days >= 330)                                                     AS eligible_330,
-    COUNT(*) FILTER (WHERE cohort_age_days >= 365 AND (days_to_unsub IS NULL OR days_to_unsub > 365)) AS alive_365,
-    COUNT(*) FILTER (WHERE cohort_age_days >= 365)                                                     AS eligible_365
+    COUNT(*) AS total,
+    -- Fixed denominator: alive_N = subs not churned by day N (young subs = censored/alive)
+    -- Rate = alive_N / total → monotonically non-increasing
+    COUNT(*) FILTER (WHERE days_to_unsub IS NULL OR days_to_unsub > 30)  AS alive_30,
+    COUNT(*) FILTER (WHERE days_to_unsub IS NULL OR days_to_unsub > 60)  AS alive_60,
+    COUNT(*) FILTER (WHERE days_to_unsub IS NULL OR days_to_unsub > 90)  AS alive_90,
+    COUNT(*) FILTER (WHERE days_to_unsub IS NULL OR days_to_unsub > 120) AS alive_120,
+    COUNT(*) FILTER (WHERE days_to_unsub IS NULL OR days_to_unsub > 150) AS alive_150,
+    COUNT(*) FILTER (WHERE days_to_unsub IS NULL OR days_to_unsub > 180) AS alive_180,
+    COUNT(*) FILTER (WHERE days_to_unsub IS NULL OR days_to_unsub > 210) AS alive_210,
+    COUNT(*) FILTER (WHERE days_to_unsub IS NULL OR days_to_unsub > 240) AS alive_240,
+    COUNT(*) FILTER (WHERE days_to_unsub IS NULL OR days_to_unsub > 270) AS alive_270,
+    COUNT(*) FILTER (WHERE days_to_unsub IS NULL OR days_to_unsub > 300) AS alive_300,
+    COUNT(*) FILTER (WHERE days_to_unsub IS NULL OR days_to_unsub > 330) AS alive_330,
+    COUNT(*) FILTER (WHERE days_to_unsub IS NULL OR days_to_unsub > 365) AS alive_365
 FROM s
 GROUP BY 1
 HAVING COUNT(*) >= 100
@@ -1398,18 +1420,89 @@ ORDER BY
     total DESC;
 ```
 
-Exposed as:
+### JSON output
 
 ```json
 M.survival_curve_by_source = {
-  "labels": ["Month 0","Month 1","Month 2","Month 3","Month 4","Month 5","Month 6","Month 7","Month 8","Month 9","Month 10","Month 11","Month 12"],
+  "labels": ["Month 0","Month 1", ... ,"Month 12"],
   "series": [
-    { "label": "<Source>", "total": <int>, "rates": [100.0, %M1, %M2, %M3, %M4, %M5, %M6, %M7, %M8, %M9, %M10, %M11, %M12] },
-    …
+    {
+      "label": "<Source>",
+      "total": 12345,
+      "rates": [100.0, 89.0, 88.0, ...],
+      "alive_counts": [12345, 10981, 10858, ...]
+    }, ...
   ]
 }
 ```
-`null` at any position = cohort hasn't reached that age yet (Chart.js `spanGaps:false` stops the line there).
+
+### Tooltip display
+
+The hover tooltip shows: `89.0%  10,981 of 12,345` — always `alive of total` so the reader can gauge significance.
+
+## Q37c — Subscriber Retention: Survival Curve by Cohort Month
+
+Same source bucketing as Q37b but grouped by join-month cohort. The UI presents a row of pill buttons (one per cohort month); selecting a month shows only subs who joined that month, with one line per source.
+
+### Denominator approach: fixed (cohort total per source per month)
+
+Each series uses `alive_N / cohort_total` where `cohort_total` is the number of subs who joined in that calendar month for that source. Milestones the cohort hasn't reached yet emit `null` (line stops). Eligibility check: `cohort_month_first_day + milestone_days <= today`.
+
+### Why this matters
+
+The cross-sectional view (Q37b) mixes subs of all ages. A source that gained 10k subs last month will look great at Month 6 because those 10k haven't had time to churn yet (counted as "alive"). The cohort view eliminates this: select "Nov 2025" and every sub in the chart is ≥ 7 months old. The curve can only extend to milestones the entire cohort has reached.
+
+### SQL
+
+```sql
+-- Same sa_acq CTE as Q37b
+-- Same _priority_source() for bucket
+SELECT
+    DATE_TRUNC('month',
+        COALESCE(sa.acquisition_date::date,
+                 COALESCE(sub.date_subscribed, sub.date_joined)::date)
+    )::date AS cohort_month,
+    bucket,
+    COUNT(*) AS total,
+    COUNT(*) FILTER (WHERE days_to_unsub IS NULL OR days_to_unsub > 30)  AS alive_30,
+    COUNT(*) FILTER (WHERE days_to_unsub IS NULL OR days_to_unsub > 60)  AS alive_60,
+    ...
+    COUNT(*) FILTER (WHERE days_to_unsub IS NULL OR days_to_unsub > 365) AS alive_365
+FROM s
+GROUP BY 1, 2
+HAVING COUNT(*) >= 50
+ORDER BY 1 DESC, 3 DESC;
+```
+
+### Milestone eligibility (Python-side)
+
+```python
+def _cohort_eligible(cohort_month, milestone_days):
+    return (cohort_month + timedelta(days=milestone_days)) <= today
+```
+
+Uses the **first day** of the cohort month. If at least the earliest joiner in that month could have reached the milestone, the data point is shown. This means a "May 2026" cohort with milestone M1 (30 days) becomes visible once June 1 arrives (May 1 + 30 = May 31 ≤ today).
+
+### JSON output
+
+```json
+M.survival_curve_cohorts = {
+  "labels": ["Month 0","Month 1", ... ,"Month 12"],
+  "cohorts": [
+    {
+      "month": "2025-11",
+      "label": "Nov 2025",
+      "series": [
+        { "label": "All (cohort)", "total": 35000, "rates": [100.0, 88.5, ...], "alive_counts": [35000, 30975, ...] },
+        { "label": "Meta",         "total": 12000, "rates": [100.0, 90.2, ...], "alive_counts": [12000, 10824, ...] },
+        ...
+      ]
+    }, ...
+  ]
+}
+```
+
+The first series in each cohort is always `"All (cohort)"` — an aggregate across all sources for that month — shown as the thick green baseline when viewing a cohort.
 
 ## Q38 — Subscriber Retention: Monthly Churn Volume + Churn % of Sends
 

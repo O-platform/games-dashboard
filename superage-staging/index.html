@@ -2506,14 +2506,18 @@ function renderAudience(M) {
       </div>
     </div>
     <div class="chart-card">
-      <h3 style="margin:0 0 10px;">Acquisition Quality by Source</h3>
+      <h3 style="margin:0 0 6px;">Acquisition Quality by Source</h3>
+      <div style="font-size:12px;color:var(--text-muted);margin-bottom:10px;line-height:1.5;">
+        <strong>Churn columns</strong> are <em>per-subscriber-cohort</em>: each subscriber's 30 / 60 / 90-day window is counted from <strong>their own subscribe date</strong> (<code>date_subscribed</code>), not a fixed calendar window.
+        Subscribers who joined fewer than N days ago haven't completed the N-day window yet, so recent cohorts contribute less to that column.
+      </div>
       <div class="tbl-wrap"><table class="dash-table" id="aud-acq-table">
         <thead><tr>
           <th>Source</th><th>Subscribers</th><th>% of Total</th><th>Clickers</th><th>Clicker Rate</th>
           <th>Clicks</th><th>Avg Clicks / Subscriber</th>
-          <th class="churn-col churn-30 churn-60 churn-90" title="Subscribers from this source who unsubscribed within 30 days of joining, as a % of the source cohort">30-Day Churn</th>
-          <th class="churn-col churn-60 churn-90" title="Subscribers from this source who unsubscribed within 60 days of joining, as a % of the source cohort">60-Day Churn</th>
-          <th class="churn-col churn-90" title="Subscribers from this source who unsubscribed within 90 days of joining, as a % of the source cohort">90-Day Churn</th>
+          <th class="churn-col churn-30 churn-60 churn-90" title="% of this source's subscribers who unsubscribed within 30 days of their own subscribe date (date_subscribed). Each subscriber's clock starts on the day they joined — not a fixed calendar window.">30-Day Churn <span style="font-weight:400;color:var(--text-muted);font-size:10px;">(from subscribe date)</span></th>
+          <th class="churn-col churn-60 churn-90" title="% of this source's subscribers who unsubscribed within 60 days of their own subscribe date (date_subscribed). Each subscriber's clock starts on the day they joined — not a fixed calendar window.">60-Day Churn <span style="font-weight:400;color:var(--text-muted);font-size:10px;">(from subscribe date)</span></th>
+          <th class="churn-col churn-90" title="% of this source's subscribers who unsubscribed within 90 days of their own subscribe date (date_subscribed). Each subscriber's clock starts on the day they joined — not a fixed calendar window.">90-Day Churn <span style="font-weight:400;color:var(--text-muted);font-size:10px;">(from subscribe date)</span></th>
         </tr></thead>
         <tbody id="aud-acq-tbody"></tbody>
       </table></div>

@@ -715,6 +715,53 @@ def lambda_handler(event, context):
         sub_clicks_utm_rows = cur.fetchall()
 
         # ─────────────────────────────────────────────────────
+        # 5b. Acquisition trend — MoM (6 months) + WoW (8 weeks) per source
+        # ─────────────────────────────────────────────────────
+        # Uses the same 4-level COALESCE source chain as acquisition_quality.
+        # Groups new subscribers by join month / join week and source bucket.
+        # Output rows: [{period, source, new_subs}, ...]
+        cur.execute(f"""
+            WITH sa_acq AS (
+                SELECT
+                    LOWER(TRIM(email)) AS email,
+                    acquisition_utm_source,
+                    (acquisition_date AT TIME ZONE 'UTC' AT TIME ZONE 'America/Denver')::date AS acquisition_date
+                FROM {S}.subscriber_acquisition
+                WHERE acquisition_status IN ('added', 'resubscribed')
+            ),
+            classified AS (
+                SELECT
+                    {_priority_source('sub', 'sa')} AS source_bucket,
+                    DATE_TRUNC('month',
+                        COALESCE(sa.acquisition_date,
+                                 COALESCE(sub.date_subscribed, sub.date_joined)::date)
+                    )::date AS join_month,
+                    DATE_TRUNC('week',
+                        COALESCE(sa.acquisition_date,
+                                 COALESCE(sub.date_subscribed, sub.date_joined)::date)
+                    )::date AS join_week
+                FROM {S}.subscribers sub
+                LEFT JOIN sa_acq sa ON sa.email = LOWER(TRIM(sub.email))
+                WHERE COALESCE(sub.date_subscribed, sub.date_joined) IS NOT NULL
+                  AND COALESCE(sub.date_subscribed, sub.date_joined)::date < CURRENT_DATE
+                  AND sub.state IN ('Active', 'Unsubscribed')
+            )
+            SELECT 'month' AS grain, join_month::text AS period, source_bucket, COUNT(*) AS new_subs
+            FROM classified
+            WHERE join_month >= DATE_TRUNC('month', CURRENT_DATE - INTERVAL '6 months')
+              AND join_month < DATE_TRUNC('month', CURRENT_DATE)
+            GROUP BY 1, 2, 3
+            UNION ALL
+            SELECT 'week' AS grain, join_week::text AS period, source_bucket, COUNT(*) AS new_subs
+            FROM classified
+            WHERE join_week >= DATE_TRUNC('week', CURRENT_DATE) - INTERVAL '8 weeks'
+              AND join_week < DATE_TRUNC('week', CURRENT_DATE)
+            GROUP BY 1, 2, 3
+            ORDER BY grain, period, new_subs DESC
+        """)
+        acq_trend_rows = cur.fetchall()
+
+        # ─────────────────────────────────────────────────────
         # 6. Longevity quiz
         # ─────────────────────────────────────────────────────
         # `avg_score` / `max_score` / `min_score` and the score-bucket
@@ -935,7 +982,19 @@ def lambda_handler(event, context):
                 COUNT(*) FILTER (WHERE days_to_unsub IS NULL OR days_to_unsub > 270) AS alive_270,
                 COUNT(*) FILTER (WHERE days_to_unsub IS NULL OR days_to_unsub > 300) AS alive_300,
                 COUNT(*) FILTER (WHERE days_to_unsub IS NULL OR days_to_unsub > 330) AS alive_330,
-                COUNT(*) FILTER (WHERE days_to_unsub IS NULL OR days_to_unsub > 365) AS alive_365
+                COUNT(*) FILTER (WHERE days_to_unsub IS NULL OR days_to_unsub > 365) AS alive_365,
+                COUNT(*) FILTER (WHERE days_to_unsub IS NULL OR days_to_unsub > 395) AS alive_395,
+                COUNT(*) FILTER (WHERE days_to_unsub IS NULL OR days_to_unsub > 425) AS alive_425,
+                COUNT(*) FILTER (WHERE days_to_unsub IS NULL OR days_to_unsub > 455) AS alive_455,
+                COUNT(*) FILTER (WHERE days_to_unsub IS NULL OR days_to_unsub > 485) AS alive_485,
+                COUNT(*) FILTER (WHERE days_to_unsub IS NULL OR days_to_unsub > 515) AS alive_515,
+                COUNT(*) FILTER (WHERE days_to_unsub IS NULL OR days_to_unsub > 545) AS alive_545,
+                COUNT(*) FILTER (WHERE days_to_unsub IS NULL OR days_to_unsub > 575) AS alive_575,
+                COUNT(*) FILTER (WHERE days_to_unsub IS NULL OR days_to_unsub > 606) AS alive_606,
+                COUNT(*) FILTER (WHERE days_to_unsub IS NULL OR days_to_unsub > 636) AS alive_636,
+                COUNT(*) FILTER (WHERE days_to_unsub IS NULL OR days_to_unsub > 666) AS alive_666,
+                COUNT(*) FILTER (WHERE days_to_unsub IS NULL OR days_to_unsub > 696) AS alive_696,
+                COUNT(*) FILTER (WHERE days_to_unsub IS NULL OR days_to_unsub > 730) AS alive_730
             FROM (
                 SELECT
                     -- Gate date_unsubscribed by state='Unsubscribed' — resubscribed
@@ -1007,7 +1066,19 @@ def lambda_handler(event, context):
                 COUNT(*) FILTER (WHERE days_to_unsub IS NULL OR days_to_unsub > 270) AS alive_270,
                 COUNT(*) FILTER (WHERE days_to_unsub IS NULL OR days_to_unsub > 300) AS alive_300,
                 COUNT(*) FILTER (WHERE days_to_unsub IS NULL OR days_to_unsub > 330) AS alive_330,
-                COUNT(*) FILTER (WHERE days_to_unsub IS NULL OR days_to_unsub > 365) AS alive_365
+                COUNT(*) FILTER (WHERE days_to_unsub IS NULL OR days_to_unsub > 365) AS alive_365,
+                COUNT(*) FILTER (WHERE days_to_unsub IS NULL OR days_to_unsub > 395) AS alive_395,
+                COUNT(*) FILTER (WHERE days_to_unsub IS NULL OR days_to_unsub > 425) AS alive_425,
+                COUNT(*) FILTER (WHERE days_to_unsub IS NULL OR days_to_unsub > 455) AS alive_455,
+                COUNT(*) FILTER (WHERE days_to_unsub IS NULL OR days_to_unsub > 485) AS alive_485,
+                COUNT(*) FILTER (WHERE days_to_unsub IS NULL OR days_to_unsub > 515) AS alive_515,
+                COUNT(*) FILTER (WHERE days_to_unsub IS NULL OR days_to_unsub > 545) AS alive_545,
+                COUNT(*) FILTER (WHERE days_to_unsub IS NULL OR days_to_unsub > 575) AS alive_575,
+                COUNT(*) FILTER (WHERE days_to_unsub IS NULL OR days_to_unsub > 606) AS alive_606,
+                COUNT(*) FILTER (WHERE days_to_unsub IS NULL OR days_to_unsub > 636) AS alive_636,
+                COUNT(*) FILTER (WHERE days_to_unsub IS NULL OR days_to_unsub > 666) AS alive_666,
+                COUNT(*) FILTER (WHERE days_to_unsub IS NULL OR days_to_unsub > 696) AS alive_696,
+                COUNT(*) FILTER (WHERE days_to_unsub IS NULL OR days_to_unsub > 730) AS alive_730
             FROM s
             GROUP BY 1
             HAVING COUNT(*) >= 100
@@ -1063,7 +1134,19 @@ def lambda_handler(event, context):
                 COUNT(*) FILTER (WHERE days_to_unsub IS NULL OR days_to_unsub > 270) AS alive_270,
                 COUNT(*) FILTER (WHERE days_to_unsub IS NULL OR days_to_unsub > 300) AS alive_300,
                 COUNT(*) FILTER (WHERE days_to_unsub IS NULL OR days_to_unsub > 330) AS alive_330,
-                COUNT(*) FILTER (WHERE days_to_unsub IS NULL OR days_to_unsub > 365) AS alive_365
+                COUNT(*) FILTER (WHERE days_to_unsub IS NULL OR days_to_unsub > 365) AS alive_365,
+                COUNT(*) FILTER (WHERE days_to_unsub IS NULL OR days_to_unsub > 395) AS alive_395,
+                COUNT(*) FILTER (WHERE days_to_unsub IS NULL OR days_to_unsub > 425) AS alive_425,
+                COUNT(*) FILTER (WHERE days_to_unsub IS NULL OR days_to_unsub > 455) AS alive_455,
+                COUNT(*) FILTER (WHERE days_to_unsub IS NULL OR days_to_unsub > 485) AS alive_485,
+                COUNT(*) FILTER (WHERE days_to_unsub IS NULL OR days_to_unsub > 515) AS alive_515,
+                COUNT(*) FILTER (WHERE days_to_unsub IS NULL OR days_to_unsub > 545) AS alive_545,
+                COUNT(*) FILTER (WHERE days_to_unsub IS NULL OR days_to_unsub > 575) AS alive_575,
+                COUNT(*) FILTER (WHERE days_to_unsub IS NULL OR days_to_unsub > 606) AS alive_606,
+                COUNT(*) FILTER (WHERE days_to_unsub IS NULL OR days_to_unsub > 636) AS alive_636,
+                COUNT(*) FILTER (WHERE days_to_unsub IS NULL OR days_to_unsub > 666) AS alive_666,
+                COUNT(*) FILTER (WHERE days_to_unsub IS NULL OR days_to_unsub > 696) AS alive_696,
+                COUNT(*) FILTER (WHERE days_to_unsub IS NULL OR days_to_unsub > 730) AS alive_730
             FROM s
             GROUP BY 1, 2
             HAVING COUNT(*) >= 50
@@ -1570,6 +1653,19 @@ def lambda_handler(event, context):
         ),
     }
 
+    # Acquisition trend — rows shaped for the MoM/WoW stacked bar in Audience tab.
+    # Format: { monthly: [{period, source, new_subs}, ...], weekly: [...] }
+    M["acq_trend"] = {
+        "monthly": [
+            {"period": str(r["period"]), "source": str(r["source_bucket"]), "new_subs": safe_int(r["new_subs"])}
+            for r in acq_trend_rows if r["grain"] == "month"
+        ],
+        "weekly": [
+            {"period": str(r["period"]), "source": str(r["source_bucket"]), "new_subs": safe_int(r["new_subs"])}
+            for r in acq_trend_rows if r["grain"] == "week"
+        ],
+    }
+
     # UTM source subscriber click performance
     M["utm_clicks_performance"] = {
         "labels":        [r["label"] for r in sub_clicks_utm_rows],
@@ -1661,33 +1757,18 @@ def lambda_handler(event, context):
 
     sv = survival_row
     sv_total = safe_int(sv.get("total")) or 1
+    _sv_all_milestones = [30, 60, 90, 120, 150, 180, 210, 240, 270, 300, 330, 365,
+                          395, 425, 455, 485, 515, 545, 575, 606, 636, 666, 696, 730]
+    _sv_labels = ["Month 0"] + [f"Month {i}" for i in range(1, 25)]
     M["survival_curve"] = {
-        "labels": ["Month 0", "Month 1", "Month 2", "Month 3", "Month 4", "Month 5",
-                   "Month 6", "Month 7", "Month 8", "Month 9", "Month 10", "Month 11", "Month 12"],
+        "labels": _sv_labels,
         "total": sv_total,
-        "rates":  [
-            100.0,
-            round(safe_int(sv.get("alive_30"))  / sv_total * 100, 1),
-            round(safe_int(sv.get("alive_60"))  / sv_total * 100, 1),
-            round(safe_int(sv.get("alive_90"))  / sv_total * 100, 1),
-            round(safe_int(sv.get("alive_120")) / sv_total * 100, 1),
-            round(safe_int(sv.get("alive_150")) / sv_total * 100, 1),
-            round(safe_int(sv.get("alive_180")) / sv_total * 100, 1),
-            round(safe_int(sv.get("alive_210")) / sv_total * 100, 1),
-            round(safe_int(sv.get("alive_240")) / sv_total * 100, 1),
-            round(safe_int(sv.get("alive_270")) / sv_total * 100, 1),
-            round(safe_int(sv.get("alive_300")) / sv_total * 100, 1),
-            round(safe_int(sv.get("alive_330")) / sv_total * 100, 1),
-            round(safe_int(sv.get("alive_365")) / sv_total * 100, 1),
+        "rates": [100.0] + [
+            round(safe_int(sv.get(f"alive_{m}")) / sv_total * 100, 1)
+            for m in _sv_all_milestones
         ],
-        "alive_counts": [
-            sv_total,
-            safe_int(sv.get("alive_30")),  safe_int(sv.get("alive_60")),
-            safe_int(sv.get("alive_90")),  safe_int(sv.get("alive_120")),
-            safe_int(sv.get("alive_150")), safe_int(sv.get("alive_180")),
-            safe_int(sv.get("alive_210")), safe_int(sv.get("alive_240")),
-            safe_int(sv.get("alive_270")), safe_int(sv.get("alive_300")),
-            safe_int(sv.get("alive_330")), safe_int(sv.get("alive_365")),
+        "alive_counts": [sv_total] + [
+            safe_int(sv.get(f"alive_{m}")) for m in _sv_all_milestones
         ],
     }
 
@@ -1701,35 +1782,17 @@ def lambda_handler(event, context):
     # alive_N = subs who haven't churned by day N (young subs counted as
     # censored / alive). Rate = alive_N / total → monotonically non-increasing.
     M["survival_curve_by_source"] = {
-        "labels": ["Month 0", "Month 1", "Month 2", "Month 3", "Month 4", "Month 5",
-                   "Month 6", "Month 7", "Month 8", "Month 9", "Month 10", "Month 11", "Month 12"],
+        "labels": _sv_labels,
         "series": [
             {
                 "label": str(r["bucket"]),
                 "total": safe_int(r["total"]),
-                "rates": [
-                    100.0,
-                    _sv_rate_fixed(r["alive_30"],  r["total"]),
-                    _sv_rate_fixed(r["alive_60"],  r["total"]),
-                    _sv_rate_fixed(r["alive_90"],  r["total"]),
-                    _sv_rate_fixed(r["alive_120"], r["total"]),
-                    _sv_rate_fixed(r["alive_150"], r["total"]),
-                    _sv_rate_fixed(r["alive_180"], r["total"]),
-                    _sv_rate_fixed(r["alive_210"], r["total"]),
-                    _sv_rate_fixed(r["alive_240"], r["total"]),
-                    _sv_rate_fixed(r["alive_270"], r["total"]),
-                    _sv_rate_fixed(r["alive_300"], r["total"]),
-                    _sv_rate_fixed(r["alive_330"], r["total"]),
-                    _sv_rate_fixed(r["alive_365"], r["total"]),
+                "rates": [100.0] + [
+                    _sv_rate_fixed(r[f"alive_{m}"], r["total"])
+                    for m in _sv_all_milestones
                 ],
-                "alive_counts": [
-                    safe_int(r["total"]),
-                    safe_int(r["alive_30"]),  safe_int(r["alive_60"]),
-                    safe_int(r["alive_90"]),  safe_int(r["alive_120"]),
-                    safe_int(r["alive_150"]), safe_int(r["alive_180"]),
-                    safe_int(r["alive_210"]), safe_int(r["alive_240"]),
-                    safe_int(r["alive_270"]), safe_int(r["alive_300"]),
-                    safe_int(r["alive_330"]), safe_int(r["alive_365"]),
+                "alive_counts": [safe_int(r["total"])] + [
+                    safe_int(r[f"alive_{m}"]) for m in _sv_all_milestones
                 ],
             }
             for r in survival_by_source_rows
@@ -1741,7 +1804,8 @@ def lambda_handler(event, context):
     from collections import defaultdict
     from datetime import timedelta as _td
     _today = date.today()
-    _sv_milestones = [30, 60, 90, 120, 150, 180, 210, 240, 270, 300, 330, 365]
+    _sv_milestones = [30, 60, 90, 120, 150, 180, 210, 240, 270, 300, 330, 365,
+                      395, 425, 455, 485, 515, 545, 575, 606, 636, 666, 696, 730]
 
     def _cohort_eligible(cm, milestone_days):
         return (cm + _td(days=milestone_days)) <= _today
@@ -1794,8 +1858,7 @@ def lambda_handler(event, context):
         })
 
     M["survival_curve_cohorts"] = {
-        "labels": ["Month 0", "Month 1", "Month 2", "Month 3", "Month 4", "Month 5",
-                   "Month 6", "Month 7", "Month 8", "Month 9", "Month 10", "Month 11", "Month 12"],
+        "labels": _sv_labels,
         "cohorts": _cohorts_out,
     }
 

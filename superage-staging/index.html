@@ -2518,6 +2518,20 @@ function renderAudience(M) {
         <tbody id="aud-acq-tbody"></tbody>
       </table></div>
     </div>
+
+    <div class="chart-card" style="margin-top:18px;">
+      <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;margin-bottom:14px;">
+        <h3 style="margin:0;">New Subscribers by Source <span class="badge-inline" id="acq-trend-badge">— last 6 months</span></h3>
+        <div style="display:flex;gap:6px;">
+          <button id="acq-trend-mom" onclick="window._acqTrendSetGrain('month')"
+            style="font-size:12px;padding:3px 10px;border:1px solid var(--card-border);border-radius:5px;cursor:pointer;background:var(--accent);color:#fff;">MoM</button>
+          <button id="acq-trend-wow" onclick="window._acqTrendSetGrain('week')"
+            style="font-size:12px;padding:3px 10px;border:1px solid var(--card-border);border-radius:5px;cursor:pointer;background:var(--card);color:var(--text-muted);">WoW</button>
+        </div>
+      </div>
+      <div class="chart-container h340"><canvas id="acq-trend-chart"></canvas></div>
+      <div class="insight">Stacked bars show new subscribers per acquisition source. MoM = last 6 complete months; WoW = last 8 complete ISO weeks. Partial current period excluded. Toggle MoM / WoW to switch granularity.</div>
+    </div>
   `;
   // Build pie + bar with empty data; _setAcqWindow fills them.
   window._audPieChart = new Chart(document.getElementById('aud-source-pie'), {
@@ -2541,6 +2555,93 @@ function renderAudience(M) {
   window._acqBarAllTime = M.utm_clicks_performance || null;
   window._M_total_subscribers = M.total_subscribers || 0;
   _setAcqWindow('all');
+
+  // ── Acquisition Trend (MoM / WoW stacked bar) ──
+  const _acqTrend = M.acq_trend || { monthly: [], weekly: [] };
+
+  function _buildAcqTrend(grain) {
+    const rows = grain === 'month' ? (_acqTrend.monthly || []) : (_acqTrend.weekly || []);
+    // Collect ordered periods and sources
+    const periods = [...new Set(rows.map(r => r.period))].sort();
+    const sources = [];
+    const seen = new Set();
+    rows.forEach(r => { if (!seen.has(r.source)) { seen.add(r.source); sources.push(r.source); } });
+
+    // Period label formatter
+    const fmtPeriod = p => {
+      if (grain === 'month') {
+        const d = new Date(p + 'T00:00:00');
+        return isNaN(d) ? p : d.toLocaleDateString('en-US', { month: 'short', year: '2-digit' });
+      }
+      const d = new Date(p + 'T00:00:00');
+      if (isNaN(d)) return p;
+      const end = new Date(d.getTime() + 6 * 86400000);
+      const m = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+      return m[d.getMonth()] + ' ' + d.getDate() + '–' + (d.getMonth() !== end.getMonth() ? m[end.getMonth()] + ' ' : '') + end.getDate();
+    };
+
+    // Source → colour map (reuse palette)
+    const palette = ['#0969da','#cf222e','#8250df','#9a6700','#bf3989','#1b7c83','#1a7f37','#58a6ff','#fb8500','#3fb950','#fb6f92','#7d4e00','#a78bfa','#34d399','#f87171','#fbbf24'];
+    const srcColor = {};
+    sources.forEach((s, i) => { srcColor[s] = palette[i % palette.length]; });
+
+    // Build lookup: period+source → new_subs
+    const lookup = {};
+    rows.forEach(r => { lookup[r.period + '|' + r.source] = r.new_subs || 0; });
+
+    const datasets = sources.map(src => ({
+      label: utmLabel(src),
+      data: periods.map(p => lookup[p + '|' + src] || 0),
+      backgroundColor: srcColor[src],
+      stack: 'acq',
+    }));
+
+    return { labels: periods.map(fmtPeriod), datasets };
+  }
+
+  const _acqTrendCanvas = document.getElementById('acq-trend-chart');
+  if (_acqTrendCanvas) {
+    const initData = _buildAcqTrend('month');
+    window._acqTrendChart = new Chart(_acqTrendCanvas, {
+      type: 'bar',
+      data: initData,
+      options: {
+        responsive: true, maintainAspectRatio: false,
+        plugins: {
+          legend: { position: 'bottom', labels: { font: { size: 11 }, padding: 6, boxWidth: 12 } },
+          tooltip: {
+            callbacks: {
+              footer: items => {
+                const total = items.reduce((s, i) => s + (Number(i.raw) || 0), 0);
+                return 'Total: ' + total.toLocaleString();
+              }
+            }
+          }
+        },
+        scales: {
+          x: { stacked: true, ticks: { font: { size: 11 } } },
+          y: { stacked: true, beginAtZero: true, ticks: { font: { size: 11 } } }
+        }
+      }
+    });
+  }
+
+  window._acqTrendSetGrain = function(grain) {
+    ['acq-trend-mom','acq-trend-wow'].forEach(id => {
+      const btn = document.getElementById(id);
+      if (!btn) return;
+      const active = (grain === 'month' && id === 'acq-trend-mom') || (grain === 'week' && id === 'acq-trend-wow');
+      btn.style.background = active ? 'var(--accent)' : 'var(--card)';
+      btn.style.color      = active ? '#fff'          : 'var(--text-muted)';
+    });
+    const badge = document.getElementById('acq-trend-badge');
+    if (badge) badge.textContent = grain === 'month' ? '— last 6 months' : '— last 8 weeks';
+    if (!window._acqTrendChart) return;
+    const d = _buildAcqTrend(grain);
+    window._acqTrendChart.data.labels   = d.labels;
+    window._acqTrendChart.data.datasets = d.datasets;
+    window._acqTrendChart.update();
+  };
 }
 
 /* Single shared time-window driver for the whole Audience tab.

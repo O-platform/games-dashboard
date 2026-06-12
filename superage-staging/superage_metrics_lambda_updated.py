@@ -18,7 +18,13 @@ Changes in this version:
 "Active" definition (used wherever the dashboard reports an "Active" count
 — send-to KPI, retention KPI, retention-by-source, cohort table, 90-day
 retention by source):
-    state = 'Active' AND engagement_segment NOT IN ('Ghosts', 'Zombies', 'Dormant')
+    state = 'Active'
+      AND (engagement_segment IS NULL
+           OR engagement_segment NOT IN ('Ghosts', 'Zombies', 'Dormant'))
+
+NULL engagement_segment is treated as "not disengaged" — NULL never satisfies
+NOT IN, so without the NULL guard every active subscriber without a computed
+segment label would be silently excluded from the Active base.
 
 Required env vars:
   DB_SECRET_ARN   — Secrets Manager ARN (JSON: host/port/dbname/username/password)
@@ -226,7 +232,8 @@ def lambda_handler(event, context):
             SELECT
                 COUNT(*) FILTER (
                     WHERE state = 'Active'
-                      AND engagement_segment NOT IN ('Ghosts', 'Zombies', 'Dormant')
+                      AND (engagement_segment IS NULL
+                           OR engagement_segment NOT IN ('Ghosts', 'Zombies', 'Dormant'))
                 ) AS send_to_active,
                 COUNT(*) FILTER (WHERE state = 'Active' AND engagement_segment = 'Zombies') AS zombies,
                 COUNT(*) FILTER (WHERE state = 'Active' AND engagement_segment = 'Ghosts')  AS ghosts,
@@ -924,7 +931,8 @@ def lambda_handler(event, context):
                 COUNT(*) AS total,
                 COUNT(*) FILTER (
                     WHERE state = 'Active'
-                      AND engagement_segment NOT IN ('Ghosts', 'Zombies', 'Dormant')
+                      AND (engagement_segment IS NULL
+                           OR engagement_segment NOT IN ('Ghosts', 'Zombies', 'Dormant'))
                 )                                              AS active,
                 COUNT(*) FILTER (WHERE state = 'Unsubscribed') AS churned,
                 ROUND(AVG(
@@ -1285,7 +1293,8 @@ def lambda_handler(event, context):
                 COUNT(*)                                              AS subscribers,
                 COUNT(*) FILTER (
                     WHERE m.state = 'Active'
-                      AND m.engagement_segment NOT IN ('Ghosts', 'Zombies', 'Dormant')
+                      AND (m.engagement_segment IS NULL
+                           OR m.engagement_segment NOT IN ('Ghosts', 'Zombies', 'Dormant'))
                 )                                                     AS active_now,
                 COUNT(*) FILTER (WHERE m.state = 'Unsubscribed')      AS churned,
                 COUNT(*) FILTER (
@@ -1364,7 +1373,8 @@ def lambda_handler(event, context):
                     COUNT(*) FILTER (WHERE state IN ('Active', 'Bounced')) AS total_subscribers,
                     COUNT(*) FILTER (
                         WHERE state = 'Active'
-                          AND engagement_segment NOT IN ('Ghosts', 'Zombies', 'Dormant')
+                          AND (engagement_segment IS NULL
+                               OR engagement_segment NOT IN ('Ghosts', 'Zombies', 'Dormant'))
                     ) AS active_now,
                     COUNT(*) FILTER (WHERE state = 'Unsubscribed') AS churned
                 FROM {S}.subscribers

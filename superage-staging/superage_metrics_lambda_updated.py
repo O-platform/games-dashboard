@@ -504,12 +504,18 @@ def lambda_handler(event, context):
             SELECT
                 (SELECT COUNT(*) FROM per_email_7d  WHERE clicks >= 2) AS repeat_7d,
                 (SELECT COUNT(*) FROM per_email_30d WHERE clicks >= 2) AS repeat_30d,
-                (SELECT COUNT(*) FROM per_email_90d WHERE clicks >= 2) AS repeat_90d
+                (SELECT COUNT(*) FROM per_email_90d WHERE clicks >= 2) AS repeat_90d,
+                (SELECT COUNT(*) FROM per_email_7d  WHERE clicks >= 1) AS total_1plus_7d,
+                (SELECT COUNT(*) FROM per_email_30d WHERE clicks >= 1) AS total_1plus_30d,
+                (SELECT COUNT(*) FROM per_email_90d WHERE clicks >= 1) AS total_1plus_90d
         """)
         repeat_row = cur.fetchone() or {}
-        clicker_summary["repeat_7d"]  = safe_int(repeat_row.get("repeat_7d"))
-        clicker_summary["repeat_30d"] = safe_int(repeat_row.get("repeat_30d"))
-        clicker_summary["repeat_90d"] = safe_int(repeat_row.get("repeat_90d"))
+        clicker_summary["repeat_7d"]       = safe_int(repeat_row.get("repeat_7d"))
+        clicker_summary["repeat_30d"]      = safe_int(repeat_row.get("repeat_30d"))
+        clicker_summary["repeat_90d"]      = safe_int(repeat_row.get("repeat_90d"))
+        clicker_summary["total_1plus_7d"]  = safe_int(repeat_row.get("total_1plus_7d"))
+        clicker_summary["total_1plus_30d"] = safe_int(repeat_row.get("total_1plus_30d"))
+        clicker_summary["total_1plus_90d"] = safe_int(repeat_row.get("total_1plus_90d"))
 
         # ─────────────────────────────────────────────────────
         # 4. Acquisition quality — utm_source only
@@ -1458,9 +1464,12 @@ def lambda_handler(event, context):
     M["total_article_clicks"]   = total_article_clicks
     M["total_article_clickers"] = total_article_clickers
     M["clicker_repeat"] = {
-        "repeat_7d":  safe_int(clicker_summary.get("repeat_7d")),
-        "repeat_30d": safe_int(clicker_summary.get("repeat_30d")),
-        "repeat_90d": safe_int(clicker_summary.get("repeat_90d")),
+        "repeat_7d":       safe_int(clicker_summary.get("repeat_7d")),
+        "repeat_30d":      safe_int(clicker_summary.get("repeat_30d")),
+        "repeat_90d":      safe_int(clicker_summary.get("repeat_90d")),
+        "total_1plus_7d":  safe_int(clicker_summary.get("total_1plus_7d")),
+        "total_1plus_30d": safe_int(clicker_summary.get("total_1plus_30d")),
+        "total_1plus_90d": safe_int(clicker_summary.get("total_1plus_90d")),
     }
     M["clicker_buckets"] = {
         "b_1":       safe_int(clicker_summary.get("bucket_1")),

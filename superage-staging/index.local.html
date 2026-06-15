@@ -793,9 +793,12 @@ function _renderOvRateChart() {
     return mo[d.getMonth()] + ' ' + d.getDate();
   };
   const labels = rawLblSlice.map(fmtLabel);
-  const absVals = pctSlice.filter(v => v != null).map(Math.abs).sort((a,b) => a-b);
-  const p95idx  = Math.floor(absVals.length * 0.95);
-  const CAP     = Math.max(0.5, (absVals[p95idx] || absVals[absVals.length - 1] || 2) * 1.3);
+  const absVals  = pctSlice.filter(v => v != null).map(Math.abs).sort((a,b) => a-b);
+  const p95idx   = Math.floor(absVals.length * 0.95);
+  const rawCap   = Math.max(0.5, (absVals[p95idx] || absVals[absVals.length - 1] || 2) * 1.3);
+  const niceSteps = [0.05, 0.1, 0.2, 0.25, 0.5, 1, 2, 5, 10];
+  const STEP  = niceSteps.find(s => rawCap / s <= 4) || 1;
+  const CAP   = STEP * Math.ceil(rawCap / STEP);
   const cappedPct = pctSlice.map(v => v == null ? null : Math.max(-CAP, Math.min(CAP, v)));
   ['monthly','weekly','daily'].forEach(g => {
     const idMap = { monthly:'ovgr-monthly', weekly:'ovgr-weekly', daily:'ovgr-daily' };
@@ -830,7 +833,7 @@ function _renderOvRateChart() {
         x: { ticks: { font: { size: 10 }, maxTicksLimit: gran === 'daily' ? 20 : 14, maxRotation: 45 } },
         y: { beginAtZero: false, min: -CAP, max: CAP,
              grid: { color: c => c.tick.value === 0 ? 'rgba(127,127,127,.55)' : 'rgba(127,127,127,.12)', lineWidth: c => c.tick.value === 0 ? 2 : 1 },
-             ticks: { font: { size: 11 }, callback: v => (v > 0 ? '+' : '') + v.toFixed(1) + '%' },
+             ticks: { font: { size: 11 }, stepSize: STEP, callback: v => (v > 0 ? '+' : '') + v.toFixed(STEP < 0.1 ? 2 : STEP < 1 ? 1 : 0) + '%' },
              title: { display: true, text: '% Change vs previous period', font: { size: 11 } } }
       }
     }

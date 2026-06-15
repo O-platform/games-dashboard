@@ -1096,9 +1096,22 @@ function _initDigestCharts() {
                      backgroundColor: sorted.map((_, i) => palette[i % palette.length]),
                      borderRadius: 3 }]
       },
+      plugins: [{ id: 'barLabels', afterDatasetsDraw(chart) {
+        const { ctx } = chart;
+        chart.data.datasets.forEach((ds, i) => {
+          chart.getDatasetMeta(i).data.forEach((bar, idx) => {
+            const v = ds.data[idx]; if (!v) return;
+            ctx.save(); ctx.fillStyle = '#ccc'; ctx.font = '11px sans-serif';
+            ctx.textAlign = 'left'; ctx.textBaseline = 'middle';
+            ctx.fillText(Number(v).toLocaleString(), bar.x + 4, bar.y);
+            ctx.restore();
+          });
+        });
+      }}],
       options: {
         responsive: true, maintainAspectRatio: false,
         indexAxis: 'y',
+        layout: { padding: { right: 60 } },
         plugins: {
           legend: { display: false },
           tooltip: { callbacks: { label: c => {
@@ -2550,12 +2563,26 @@ function renderAudience(M) {
     </div>
   `;
   // Build pie + bar with empty data; _setAcqWindow fills them.
+  const _barLabelPlugin = { id: 'barLabels', afterDatasetsDraw(chart) {
+    const { ctx } = chart;
+    chart.data.datasets.forEach((ds, i) => {
+      chart.getDatasetMeta(i).data.forEach((bar, idx) => {
+        const v = ds.data[idx]; if (!v) return;
+        ctx.save(); ctx.fillStyle = '#ccc'; ctx.font = '11px sans-serif';
+        ctx.textAlign = 'left'; ctx.textBaseline = 'middle';
+        ctx.fillText(Number(v).toLocaleString(), bar.x + 4, bar.y);
+        ctx.restore();
+      });
+    });
+  }};
   window._audPieChart = new Chart(document.getElementById('aud-source-pie'), {
     type: 'bar',
     data: { labels: [], datasets: [{ label: 'New Subscribers', data: [], backgroundColor: '#0969da', borderRadius: 3 }] },
+    plugins: [_barLabelPlugin],
     options: {
       responsive: true, maintainAspectRatio: false,
       indexAxis: 'y',
+      layout: { padding: { right: 60 } },
       plugins: { legend: { display: false } },
       scales: {
         x: { beginAtZero: true, ticks: { font: { size: 11 } } },

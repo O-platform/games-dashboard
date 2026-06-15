@@ -1772,6 +1772,7 @@ function _renderSubscriberClickKpis(M) {
   set('sc-kpi-total', total ? total.toLocaleString() : '—');
   set('sc-kpi-7d',    r.repeat_7d  != null ? Number(r.repeat_7d).toLocaleString()  : '—');
   set('sc-kpi-30d',   r.repeat_30d != null ? Number(r.repeat_30d).toLocaleString() : '—');
+  set('sc-kpi-90d',   r.repeat_90d != null ? Number(r.repeat_90d).toLocaleString() : '—');
 }
 
 /* Click-volume distribution bar — buckets subscribers by their lifetime
@@ -1867,8 +1868,9 @@ function renderContent(M) {
     </div>
     <div class="kpi-row" style="grid-template-columns:repeat(auto-fit,minmax(180px,1fr));margin-top:8px;">
       <div class="kpi-card accent"><div class="label">Unique Email Clickers</div><div class="value" id="sc-kpi-total">—</div><div class="sub">Distinct subscribers in <code>subscriber_clicks</code></div></div>
-      <div class="kpi-card green"><div class="label">Repeat Clickers — Last 7d</div><div class="value" id="sc-kpi-7d">—</div><div class="sub">Clicked 2+ times in last 7 days</div></div>
-      <div class="kpi-card blue"><div class="label">Repeat Clickers — Last 30d</div><div class="value" id="sc-kpi-30d">—</div><div class="sub">Clicked 2+ times in last 30 days</div></div>
+      <div class="kpi-card green"><div class="label">Repeat Clickers — Last 7d</div><div class="value" id="sc-kpi-7d">—</div><div class="sub">2+ unique campaign clicks in last 7 days</div></div>
+      <div class="kpi-card blue"><div class="label">Repeat Clickers — Last 30d</div><div class="value" id="sc-kpi-30d">—</div><div class="sub">2+ unique campaign clicks in last 30 days</div></div>
+      <div class="kpi-card orange"><div class="label">Repeat Clickers — Last 90d</div><div class="value" id="sc-kpi-90d">—</div><div class="sub">2+ unique campaign clicks in last 90 days</div></div>
     </div>
 
     <h3 style="margin:18px 0 10px;font-size:13px;text-transform:uppercase;letter-spacing:.5px;color:var(--text-muted);">Section 1 — Campaign-Level Aggregated</h3>

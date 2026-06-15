@@ -837,32 +837,37 @@ SELECT
 FROM superage.subscriber_clicks;
 ```
 
-## Q18b — Audience: Repeat Clickers (rolling 7d / 30d)
+## Q18b — Audience: Repeat Clickers (rolling 7d / 30d / 90d)
 
-Computed directly from the raw `Campaigns_Clicks` events table — a distinct email that produced **2 or more** click events inside the rolling window:
+Computed directly from the raw `Campaigns_Clicks` events table. A **unique click** is one distinct `(email, issue_name, issue_date)` tuple — multiple clicks on the same campaign by the same address collapse to one. A **repeat clicker in the last N days** is an email with **2 or more** unique clicks inside the window:
 
 ```sql
 WITH cc_recent AS (
-    SELECT LOWER(TRIM("EmailAddress ")) AS email,
-           "Date"::date                  AS click_date
+    SELECT DISTINCT
+        LOWER(TRIM("EmailAddress ")) AS email,
+        issue_name,
+        issue_date::date              AS issue_date,
+        "Date"::date                  AS click_date
     FROM superage."Campaigns_Clicks"
     WHERE "Date" IS NOT NULL
       AND "EmailAddress " IS NOT NULL AND TRIM("EmailAddress ") != ''
-      AND "Date"::date >= CURRENT_DATE - INTERVAL '30 days'
+      AND "Date"::date >= CURRENT_DATE - INTERVAL '90 days'
 ),
-per_email_7d  AS (SELECT email, COUNT(*) AS clicks FROM cc_recent WHERE click_date >= CURRENT_DATE - INTERVAL '7 days' GROUP BY 1),
-per_email_30d AS (SELECT email, COUNT(*) AS clicks FROM cc_recent                                                        GROUP BY 1)
+per_email_7d  AS (SELECT email, COUNT(*) AS clicks FROM cc_recent WHERE click_date >= CURRENT_DATE - INTERVAL '7 days'  GROUP BY 1),
+per_email_30d AS (SELECT email, COUNT(*) AS clicks FROM cc_recent WHERE click_date >= CURRENT_DATE - INTERVAL '30 days' GROUP BY 1),
+per_email_90d AS (SELECT email, COUNT(*) AS clicks FROM cc_recent                                                          GROUP BY 1)
 SELECT
     (SELECT COUNT(*) FROM per_email_7d  WHERE clicks >= 2) AS repeat_7d,
-    (SELECT COUNT(*) FROM per_email_30d WHERE clicks >= 2) AS repeat_30d;
+    (SELECT COUNT(*) FROM per_email_30d WHERE clicks >= 2) AS repeat_30d,
+    (SELECT COUNT(*) FROM per_email_90d WHERE clicks >= 2) AS repeat_90d;
 ```
 
-> Sourced from `Campaigns_Clicks` (not the `subscriber_clicks` rollup) so the window genuinely scopes recent activity instead of relying on the rollup's `clicked_7d_2x_plus` / `clicked_30d_2x_plus` flags. The `EmailAddress ` column has a literal trailing space — keep the double quotes.
+> Sourced from `Campaigns_Clicks` (not the `subscriber_clicks` rollup) so the window genuinely scopes recent activity. The `DISTINCT (email, issue_name, issue_date)` in `cc_recent` is what defines a "unique click" — multiple events on the same campaign by the same email count as one. The `EmailAddress ` column has a literal trailing space — keep the double quotes.
 
 Feeds:
 - `M.total_article_clickers` ← `total_clickers` (Q18)
 - `M.clicker_buckets` ← `{ b_1, b_2_5, b_6_10, b_11_20, b_20_plus }` (Q18)
-- `M.clicker_repeat` ← `{ repeat_7d, repeat_30d }` (Q18b)
+- `M.clicker_repeat` ← `{ repeat_7d, repeat_30d, repeat_90d }` (Q18b)
 
 ## Q19 — Audience: Acquisition Quality by Source (Engagement Table)
 

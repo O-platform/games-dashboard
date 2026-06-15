@@ -787,7 +787,7 @@ function _renderOvRateChart() {
   const rawLblSlice = rawLabels.slice(1, trim);
   const mo = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
   const fmtLabel = l => {
-    if (gran === 'monthly') { const d = new Date(l + '-01T00:00:00'); return isNaN(d) ? l : d.toLocaleDateString('en-US', { month: 'short', year: '2-digit' }); }
+    if (gran === 'monthly') { const d = new Date(l + '-01T00:00:00'); return isNaN(d) ? l : d.toLocaleDateString('en-US', { month: 'short', year: 'numeric' }); }
     const d = new Date(l + 'T00:00:00'); if (isNaN(d)) return l;
     if (gran === 'weekly') { const end = new Date(d.getTime() + 6 * 86400000); return mo[d.getMonth()] + ' ' + d.getDate() + '–' + (d.getMonth() !== end.getMonth() ? mo[end.getMonth()] + ' ' : '') + end.getDate(); }
     return mo[d.getMonth()] + ' ' + d.getDate();

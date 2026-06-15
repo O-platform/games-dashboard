@@ -2527,7 +2527,7 @@ function renderAudience(M) {
 
     <div class="chart-card" style="margin-top:18px;">
       <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;margin-bottom:14px;">
-        <h3 style="margin:0;">Subscriber Growth <span class="badge-inline" id="growth-trend-badge">— last 6 months</span></h3>
+        <h3 style="margin:0;">Subscriber Growth Rate <span class="badge-inline" id="growth-trend-badge">— last 12 months</span></h3>
         <div style="display:flex;gap:6px;">
           <button id="growth-trend-mom" onclick="window._growthTrendSetGrain('month')"
             style="font-size:12px;padding:3px 10px;border:1px solid var(--card-border);border-radius:5px;cursor:pointer;background:var(--accent);color:#fff;">MoM</button>
@@ -2536,7 +2536,7 @@ function renderAudience(M) {
         </div>
       </div>
       <div class="chart-container h340"><canvas id="growth-trend-chart"></canvas></div>
-      <div class="insight">Green bars = new subscribers gained; red bars = unsubscribes lost; blue line = total active at period end. MoM = last 18 months; WoW = last 52 weeks. Sourced from <code>growth_history</code> snapshots.</div>
+      <div class="insight">% change in <code>total_active</code> vs the previous period. Green = growth, red = contraction. MoM = last 12 months; WoW = last 12 weeks. Sourced from <code>growth_history</code> snapshots. Hover for the absolute Total Active.</div>
     </div>
   `;
   // Build pie + bar with empty data; _setAcqWindow fills them.
@@ -2562,15 +2562,27 @@ function renderAudience(M) {
   window._M_total_subscribers = M.total_subscribers || 0;
   _setAcqWindow('all');
 
-  // ── Subscriber Growth Total (MoM / WoW) ──
-  const _growthSeries = (M.subscriber_growth_series) || { monthly: { labels:[], new_subs:[], unsubs:[], active_count:[] }, weekly: { labels:[], new_subs:[], unsubs:[], active_count:[] } };
+  // ── Subscriber Growth % Change (MoM / WoW) ──
+  // Period-over-period % change in total_active. Overview already shows the
+  // gained/lost bar chart — this chart is the growth-rate view (e.g. +0.56% MoM).
+  const _growthSeries = (M.subscriber_growth_series) || { monthly: { labels:[], active_count:[] }, weekly: { labels:[], active_count:[] } };
 
   function _buildGrowthTrend(grain) {
     const s = grain === 'month' ? _growthSeries.monthly : _growthSeries.weekly;
     const rawLabels = s.labels || [];
+    const rawActive = s.active_count || [];
     // Trim current incomplete period (last label)
     const trim = rawLabels.length > 1 ? rawLabels.length - 1 : rawLabels.length;
-    const labels = rawLabels.slice(0, trim).map(l => {
+    const cap = grain === 'month' ? 12 : 12;  // last 12 periods for readability
+    const labelsAll = rawLabels.slice(0, trim);
+    const activeAll = rawActive.slice(0, trim);
+    // Compute % change vs previous period
+    const pct = activeAll.map((v, i) => {
+      if (i === 0 || !activeAll[i - 1]) return null;
+      return ((v - activeAll[i - 1]) / activeAll[i - 1]) * 100;
+    });
+    // Slice to last `cap` periods AFTER computing % so first bar isn't lost
+    const labelsCapped = labelsAll.slice(-cap).map(l => {
       if (grain === 'month') {
         const d = new Date(l + '-01T00:00:00');
         return isNaN(d) ? l : d.toLocaleDateString('en-US', { month: 'short', year: '2-digit' });
@@ -2581,14 +2593,10 @@ function renderAudience(M) {
       const mo = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
       return mo[d.getMonth()] + ' ' + d.getDate() + '–' + (d.getMonth() !== end.getMonth() ? mo[end.getMonth()] + ' ' : '') + end.getDate();
     });
-    // For monthly cap to last 18 periods, weekly to last 52
-    const cap = grain === 'month' ? 18 : 52;
-    const sl = l => (l || []).slice(0, trim).slice(-cap);
     return {
-      labels: labels.slice(-cap),
-      gained:       sl(s.new_subs),
-      lost:         sl(s.unsubs),
-      active_count: sl(s.active_count),
+      labels: labelsCapped,
+      pct:    pct.slice(-cap),
+      active: activeAll.slice(-cap),
     };
   }
 
@@ -2599,29 +2607,44 @@ function renderAudience(M) {
       type: 'bar',
       data: {
         labels: initData.labels,
-        datasets: [
-          { label: 'Gained',       data: initData.gained,       backgroundColor: '#1a7f37', yAxisID: 'yBar', order: 2 },
-          { label: 'Lost',         data: initData.lost.map(v => -(v||0)), backgroundColor: '#cf222e', yAxisID: 'yBar', order: 2 },
-          { label: 'Total Active', data: initData.active_count, type: 'line', borderColor: '#0969da', backgroundColor: 'transparent', pointRadius: 2, borderWidth: 2, yAxisID: 'yLine', order: 1 },
-        ]
+        datasets: [{
+          label: '% Change',
+          data: initData.pct,
+          backgroundColor: ctx => {
+            const v = Number(ctx.raw);
+            return (v != null && v < 0) ? '#cf222e' : '#1a7f37';
+          },
+          borderRadius: 4,
+        }]
       },
       options: {
         responsive: true, maintainAspectRatio: false,
         plugins: {
-          legend: { position: 'bottom', labels: { font: { size: 11 }, padding: 6, boxWidth: 12 } },
+          legend: { display: false },
           tooltip: {
             callbacks: {
               label: item => {
-                const v = Math.abs(Number(item.raw) || 0);
-                return item.dataset.label + ': ' + v.toLocaleString();
+                const v = Number(item.raw);
+                const sign = v >= 0 ? '+' : '';
+                const active = initData.active[item.dataIndex];
+                return [
+                  '% Change: ' + sign + v.toFixed(2) + '%',
+                  'Total Active: ' + (active != null ? active.toLocaleString() : '—'),
+                ];
               }
             }
           }
         },
         scales: {
-          yBar:  { type: 'linear', position: 'left',  beginAtZero: true, ticks: { font: { size: 11 } }, title: { display: true, text: 'Gained / Lost', font: { size: 11 } } },
-          yLine: { type: 'linear', position: 'right', grid: { drawOnChartArea: false }, ticks: { font: { size: 11 } }, title: { display: true, text: 'Total Active', font: { size: 11 } } },
-          x: { ticks: { font: { size: 11 } } }
+          x: { ticks: { font: { size: 11 } } },
+          y: {
+            beginAtZero: false,
+            grid: {
+              color: ctx => ctx.tick.value === 0 ? 'rgba(0,0,0,0.4)' : 'rgba(0,0,0,0.08)',
+            },
+            ticks: { font: { size: 11 }, callback: v => (v > 0 ? '+' : '') + v.toFixed(2) + '%' },
+            title: { display: true, text: '% Change vs previous period', font: { size: 11 } },
+          }
         }
       }
     });
@@ -2636,13 +2659,22 @@ function renderAudience(M) {
       btn.style.color      = active ? '#fff'          : 'var(--text-muted)';
     });
     const badge = document.getElementById('growth-trend-badge');
-    if (badge) badge.textContent = grain === 'month' ? '— last 18 months' : '— last 52 weeks';
+    if (badge) badge.textContent = grain === 'month' ? '— last 12 months' : '— last 12 weeks';
     if (!window._growthTrendChart) return;
     const d = _buildGrowthTrend(grain);
+    window._growthTrendChart._latestActive = d.active;
     window._growthTrendChart.data.labels = d.labels;
-    window._growthTrendChart.data.datasets[0].data = d.gained;
-    window._growthTrendChart.data.datasets[1].data = d.lost.map(v => -(v||0));
-    window._growthTrendChart.data.datasets[2].data = d.active_count;
+    window._growthTrendChart.data.datasets[0].data = d.pct;
+    // Patch tooltip to use new active series
+    window._growthTrendChart.options.plugins.tooltip.callbacks.label = item => {
+      const v = Number(item.raw);
+      const sign = v >= 0 ? '+' : '';
+      const active = d.active[item.dataIndex];
+      return [
+        '% Change: ' + sign + v.toFixed(2) + '%',
+        'Total Active: ' + (active != null ? active.toLocaleString() : '—'),
+      ];
+    };
     window._growthTrendChart.update();
   };
 }

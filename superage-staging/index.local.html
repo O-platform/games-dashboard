@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>SuperAge — Brand Pulse Dashboard</title>
+<title>SuperAge — Brand Pulse Dashboard [LOCAL]</title>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js"></script>
 <style>
   :root {
@@ -185,6 +185,9 @@
 </style>
 </head>
 <body>
+<div style="background:#9a6700;color:#fff;text-align:center;padding:5px 12px;font-size:12px;font-weight:600;letter-spacing:.5px;position:sticky;top:0;z-index:9999;">
+  ⚠ LOCAL DEV — reading from local JSON files (run_local.py output)
+</div>
 <div id="loading-overlay" class="loading-overlay">
   <div class="spinner"></div>
   <div style="font-size:13px;color:var(--text-muted);">Loading dashboard data…</div>
@@ -340,10 +343,11 @@ function utmLabel(raw) {
    `superage-dashboard/*.json` keys are written by the two refresh
    Lambdas (see superage_metrics_lambda_updated.py + superage_comparison_lambda.py).
 ═══════════════════════════════════════ */
-const DASHBOARD_API = 'https://dashboard.pardon-ventures-06b.workers.dev';
+// LOCAL DEV — reads JSON files from the same directory.
+// Run: python -m http.server 8080  then open http://localhost:8080/index.local.html
 Promise.all([
-  fetch(`${DASHBOARD_API}/superage-dashboard/superage-metrics.json`).then(r => r.json()),
-  fetch(`${DASHBOARD_API}/superage-dashboard/superage-comparison.json`).then(r => r.ok ? r.json() : {}).catch(() => ({}))
+  fetch('./superage-metrics.json').then(r => r.json()),
+  fetch('./superage-comparison.json').then(r => r.ok ? r.json() : {}).catch(() => ({}))
 ])
   .then(([metrics, comparison]) => {
     const M = Object.assign({}, metrics, comparison);

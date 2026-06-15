@@ -466,8 +466,15 @@ function renderOverview(M) {
     </div>
 
     <div class="chart-card" style="margin-bottom:18px;">
-      <h3 style="margin:0 0 4px;">Subscriber Growth Rate <span class="badge-inline" id="ov-growth-rate-badge">— % change vs previous period</span></h3>
-      <p style="font-size:12px;color:var(--text-muted);margin:0 0 10px;">Period-over-period % change in Total Subscribers. Green = growth, red = contraction. Hover to see the absolute Total Subscribers for that period.</p>
+      <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;margin-bottom:6px;">
+        <h3 style="margin:0;">Subscriber Growth Rate <span class="badge-inline" id="ov-growth-rate-badge">— MoM</span></h3>
+        <div style="display:flex;gap:4px;">
+          <button onclick="_setOvRateGran('monthly')" id="ovgr-monthly" style="font-size:11px;padding:3px 10px;border:1px solid var(--card-border);border-radius:5px;background:var(--accent);color:#fff;cursor:pointer;">MoM</button>
+          <button onclick="_setOvRateGran('weekly')"  id="ovgr-weekly"  style="font-size:11px;padding:3px 10px;border:1px solid var(--card-border);border-radius:5px;background:var(--card);color:var(--text-muted);cursor:pointer;">WoW</button>
+          <button onclick="_setOvRateGran('daily')"   id="ovgr-daily"   style="font-size:11px;padding:3px 10px;border:1px solid var(--card-border);border-radius:5px;background:var(--card);color:var(--text-muted);cursor:pointer;">DoD</button>
+        </div>
+      </div>
+      <p style="font-size:12px;color:var(--text-muted);margin:0 0 10px;">Period-over-period % change in Total Subscribers. Green = growth, red = contraction. Outliers beyond ±15% capped for readability. Hover to see the exact % and absolute Total Subscribers.</p>
       <div class="chart-container h240"><canvas id="ov-growth-rate"></canvas></div>
     </div>
 
@@ -701,54 +708,9 @@ function _ovGrowthChart(gd, n) {
   const unsubNeg = unsub.map(v => -Math.abs(Number(v) || 0));
   const net      = newS.map((v, i) => (Number(v) || 0) - Math.abs(Number(unsub[i]) || 0));
 
-  // ── Growth Rate (% change) line chart ──
-  const rateCtx = document.getElementById('ov-growth-rate');
-  if (rateCtx) {
-    if (rateCtx._chart) rateCtx._chart.destroy();
-    const rateActive = active.slice();
-    const ratePct = rateActive.map((v, i) => {
-      if (i === 0 || !rateActive[i - 1]) return null;
-      return ((v - rateActive[i - 1]) / rateActive[i - 1]) * 100;
-    });
-    // Drop first (null) and last (current incomplete period)
-    const trim = ratePct.length > 1 ? ratePct.length - 1 : ratePct.length;
-    const rateLabels        = labels.slice(1, trim);
-    const ratePctTrimmed    = ratePct.slice(1, trim);
-    const rateActiveTrimmed = rateActive.slice(1, trim);
-    rateCtx._chart = new Chart(rateCtx, {
-      type: 'line',
-      data: { labels: rateLabels, datasets: [{
-        label: '% Change',
-        data: ratePctTrimmed,
-        segment: { borderColor: ctx2 => ctx2.p1.parsed.y < 0 ? '#cf222e' : '#1a7f37' },
-        backgroundColor: 'transparent',
-        tension: 0.35, pointRadius: 4, borderWidth: 2,
-        pointBackgroundColor: ctx2 => ctx2.parsed.y < 0 ? '#cf222e' : '#1a7f37',
-        spanGaps: false,
-      }]},
-      options: { responsive: true, maintainAspectRatio: false,
-        plugins: {
-          legend: { display: false },
-          tooltip: { callbacks: { label: item => {
-            const v = Number(item.raw);
-            const sign = v >= 0 ? '+' : '';
-            const tot = rateActiveTrimmed[item.dataIndex];
-            return [
-              '% Change: ' + sign + v.toFixed(2) + '%',
-              'Total Subscribers: ' + (tot != null ? Number(tot).toLocaleString() : '—'),
-            ];
-          }}}
-        },
-        scales: {
-          x: { ticks: { font: { size: 11 } } },
-          y: { beginAtZero: false,
-               grid: { color: c => c.tick.value === 0 ? 'rgba(127,127,127,.55)' : 'rgba(127,127,127,.12)', lineWidth: c => c.tick.value === 0 ? 2 : 1 },
-               ticks: { font: { size: 11 }, callback: v => (v > 0 ? '+' : '') + v.toFixed(2) + '%' },
-               title: { display: true, text: '% Change vs previous period', font: { size: 11 } } }
-        }
-      }
-    });
-  }
+  // Rate chart — standalone, driven by _renderOvRateChart()
+  if (!window._ovRateGranInit) { window._ovRateGranInit = true; window._ovRateGran = 'monthly'; }
+  _renderOvRateChart();
 
   const ctx = document.getElementById('ov-growth');
   if (!ctx) return;
@@ -808,6 +770,72 @@ function _ovGrowthChart(gd, n) {
       } }
   });
 }
+
+function _renderOvRateChart() {
+  const gran = window._ovRateGran || 'monthly';
+  const series = window._ovGrowthSeries || {};
+  const gd = series[gran] || series.monthly || { labels:[], active_count:[] };
+  const rawLabels = gd.labels || [];
+  const rawActive = gd.active_count || [];
+  const pct = rawActive.map((v, i) => {
+    if (i === 0 || !rawActive[i - 1]) return null;
+    return ((v - rawActive[i - 1]) / rawActive[i - 1]) * 100;
+  });
+  const trim = pct.length > 1 ? pct.length - 1 : pct.length;
+  const pctSlice    = pct.slice(1, trim);
+  const activeSlice = rawActive.slice(1, trim);
+  const rawLblSlice = rawLabels.slice(1, trim);
+  const mo = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  const fmtLabel = l => {
+    if (gran === 'monthly') { const d = new Date(l + '-01T00:00:00'); return isNaN(d) ? l : d.toLocaleDateString('en-US', { month: 'short', year: '2-digit' }); }
+    const d = new Date(l + 'T00:00:00'); if (isNaN(d)) return l;
+    if (gran === 'weekly') { const end = new Date(d.getTime() + 6 * 86400000); return mo[d.getMonth()] + ' ' + d.getDate() + '–' + (d.getMonth() !== end.getMonth() ? mo[end.getMonth()] + ' ' : '') + end.getDate(); }
+    return mo[d.getMonth()] + ' ' + d.getDate();
+  };
+  const labels = rawLblSlice.map(fmtLabel);
+  const CAP = 15;
+  const cappedPct = pctSlice.map(v => v == null ? null : Math.max(-CAP, Math.min(CAP, v)));
+  ['monthly','weekly','daily'].forEach(g => {
+    const idMap = { monthly:'ovgr-monthly', weekly:'ovgr-weekly', daily:'ovgr-daily' };
+    const btn = document.getElementById(idMap[g]);
+    if (!btn) return;
+    btn.style.background = g === gran ? 'var(--accent)' : 'var(--card)';
+    btn.style.color      = g === gran ? '#fff'          : 'var(--text-muted)';
+  });
+  const badge = document.getElementById('ov-growth-rate-badge');
+  if (badge) badge.textContent = gran === 'monthly' ? '— MoM' : gran === 'weekly' ? '— WoW' : '— DoD';
+  const rateCtx = document.getElementById('ov-growth-rate');
+  if (!rateCtx) return;
+  if (rateCtx._chart) rateCtx._chart.destroy();
+  rateCtx._chart = new Chart(rateCtx, {
+    type: 'line',
+    data: { labels, datasets: [{ label: '% Change', data: cappedPct,
+      segment: { borderColor: ctx2 => (ctx2.p1.parsed.y < 0) ? '#cf222e' : '#1a7f37' },
+      backgroundColor: 'transparent', tension: 0.25,
+      pointRadius: gran === 'daily' ? 2 : 4, borderWidth: 2,
+      pointBackgroundColor: ctx2 => (ctx2.parsed.y < 0) ? '#cf222e' : '#1a7f37', spanGaps: false,
+    }]},
+    options: { responsive: true, maintainAspectRatio: false,
+      plugins: { legend: { display: false },
+        tooltip: { callbacks: { label: item => {
+          const raw = pctSlice[item.dataIndex]; const v = Number(raw);
+          const sign = v >= 0 ? '+' : '';
+          const capped = Math.abs(v) > CAP ? ' ⚠ capped' : '';
+          const tot = activeSlice[item.dataIndex];
+          return ['% Change: ' + sign + v.toFixed(2) + '%' + capped, 'Total Subscribers: ' + (tot != null ? Number(tot).toLocaleString() : '—')];
+        }}}},
+      scales: {
+        x: { ticks: { font: { size: 10 }, maxTicksLimit: gran === 'daily' ? 20 : 14, maxRotation: 45 } },
+        y: { beginAtZero: false, min: -CAP, max: CAP,
+             grid: { color: c => c.tick.value === 0 ? 'rgba(127,127,127,.55)' : 'rgba(127,127,127,.12)', lineWidth: c => c.tick.value === 0 ? 2 : 1 },
+             ticks: { font: { size: 11 }, callback: v => (v > 0 ? '+' : '') + v.toFixed(1) + '%' },
+             title: { display: true, text: '% Change (±15% capped)', font: { size: 11 } } }
+      }
+    }
+  });
+}
+function _setOvRateGran(gran) { window._ovRateGran = gran; _renderOvRateChart(); }
+
 /* ═══════════════════════════════════════
    CAMPAIGNS
 ═══════════════════════════════════════ */

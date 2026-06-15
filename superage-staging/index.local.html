@@ -1004,8 +1004,8 @@ function _digestSummaryBody(wd, lastIdx, priorIdx, lastLabel) {
       </div>`
     : `<div class="chart-card">
         <h3>New Subscribers by Source <span class="badge-inline">total: ${fmtN(totalNew)}</span></h3>
-        <div class="chart-container h300"><canvas id="dig-src-pie"></canvas></div>
-        <div class="insight">Canonical-source split of subscribers who joined during the last completed week. Click a legend entry to hide that slice.</div>
+        <div class="chart-container h340"><canvas id="dig-src-pie"></canvas></div>
+        <div class="insight">Canonical-source split of subscribers who joined during the last completed week, sorted by volume.</div>
       </div>`;
 
   // ── Three article-section horizontal bars — Editorial / Sponsor /
@@ -1087,22 +1087,28 @@ function _initDigestCharts() {
   const allSrc = window._digSrcData || [];
   const totalNew = window._digSrcTotal || 0;
   if (srcCanvas && allSrc.length) {
+    const sorted = [...allSrc].sort((a, b) => (Number(b.subs)||0) - (Number(a.subs)||0));
     new Chart(srcCanvas, {
-      type: 'doughnut',
+      type: 'bar',
       data: {
-        labels: allSrc.map(r => utmLabel(r.bucket)),
-        datasets: [{ data: allSrc.map(r => Number(r.subs) || 0),
-                     backgroundColor: allSrc.map((_, i) => palette[i % palette.length]),
-                     borderWidth: 1 }]
+        labels: sorted.map(r => utmLabel(r.bucket)),
+        datasets: [{ data: sorted.map(r => Number(r.subs) || 0),
+                     backgroundColor: sorted.map((_, i) => palette[i % palette.length]),
+                     borderRadius: 3 }]
       },
       options: {
         responsive: true, maintainAspectRatio: false,
+        indexAxis: 'y',
         plugins: {
-          legend: { position: 'right', labels: { font: { size: 11 }, padding: 6, boxWidth: 12 } },
+          legend: { display: false },
           tooltip: { callbacks: { label: c => {
-            const pct = totalNew ? (c.parsed / totalNew * 100).toFixed(2) : '0.00';
-            return `${c.label}: ${Number(c.parsed).toLocaleString()} (${pct}%)`;
+            const pct = totalNew ? (Math.abs(c.parsed) / totalNew * 100).toFixed(1) : '0.0';
+            return `${Number(Math.abs(c.parsed)).toLocaleString()} (${pct}%)`;
           }}}
+        },
+        scales: {
+          x: { beginAtZero: true, ticks: { font: { size: 11 } } },
+          y: { ticks: { font: { size: 11 } } }
         }
       }
     });

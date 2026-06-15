@@ -1,6 +1,8 @@
 # SuperAge Analytics Dashboard — Metrics Reference
 
-_Last updated: **2026-05-25** — acquisition source priority chain expanded to 4 levels: `acquisition_utm_source >> url_variables (Meta only) >> sub_source >> source >> 'Organic'`. `website`/`games_website`/`homepage`/`home`/`web`/`site` moved out of the Organic bucket into a new **Website** bucket. `organic` and `direct` are now explicit Organic stops (no longer fall-through NULLs). `sub_source` column added as Level 3 in all acquisition queries. See per-section last-updated notes below._
+_Last updated: **2026-06-15** — Q18b expanded with rolling 90d window and unique-click definition (DISTINCT email/issue\_name/issue\_date); survival curve extended to Month 24 (alive\_30…alive\_730); acquisition trend MoM/WoW total growth chart added to Audience tab; NULL-safe engagement\_segment guard applied to all Active filters; date filter migrated from `date_joined` to `COALESCE(date_subscribed, date_joined)` throughout._
+
+_Prior (2026-05-25): acquisition source priority chain expanded to 4 levels: `acquisition_utm_source >> url_variables (Meta only) >> sub_source >> source >> 'Organic'`. `website`/`games_website`/`homepage`/`home`/`web`/`site` moved to Website bucket. `organic` and `direct` explicit Organic stops. `sub_source` column added as Level 3._
 
 This document describes every metric, chart, and data source used in the SuperAge dashboard,
 including the exact SQL queries run by the Lambda so anomalies can be reproduced and debugged directly in RDS.
@@ -16,7 +18,8 @@ including the exact SQL queries run by the Lambda so anomalies can be reproduced
 
 > **Canonical "Active" rule** (used wherever the dashboard reports an "Active" count — send-to KPI,
 > retention KPI, retention-by-source, cohort table, 90-day source retention):
-> `state = 'Active' AND engagement_segment NOT IN ('Ghosts', 'Zombies', 'Dormant')`. Both halves are required.
+> `state = 'Active' AND (engagement_segment IS NULL OR engagement_segment NOT IN ('Ghosts', 'Zombies', 'Dormant'))`. Both halves are required.
+> NULL `engagement_segment` is treated as not-disengaged — without the NULL guard, PostgreSQL's `NOT IN` returns NULL (not TRUE) for every row with a NULL segment, silently excluding all active subscribers without a computed segment label.
 
 ---
 
@@ -38,7 +41,7 @@ For every table that has a reliable date column, the dashboard **excludes today 
 
 | Section | Date field applied |
 |---|---|
-| Subscribers | `date_joined`, `date_unsubscribed` |
+| Subscribers | `COALESCE(date_subscribed, date_joined)`, `date_unsubscribed` |
 | Campaigns | `"Sent Date "` (note: trailing space in column name) |
 | Article placements | `created_at` |
 | WordPress articles | `published_date` |
@@ -368,7 +371,7 @@ SELECT
     COUNT(*) FILTER (WHERE took_fitness_quiz::text = '1')   AS fitness_quiz_takers,
     COUNT(*) FILTER (WHERE took_menu_quiz::text = '1')      AS menu_quiz_takers
 FROM superage.subscribers
-WHERE date_joined::date < CURRENT_DATE;
+WHERE COALESCE(date_subscribed, date_joined)::date < CURRENT_DATE;
 ```
 
 The lambda assigns `total_subscribers = active` from this row.
@@ -376,7 +379,7 @@ The lambda assigns `total_subscribers = active` from this row.
 ## Q1b — Audience: Active (Send-to) Count
 
 **Definition of "Active" across the whole dashboard:**
-`state = 'Active'` **AND** `engagement_segment NOT IN ('Ghosts', 'Zombies', 'Dormant')`.
+`state = 'Active'` **AND** `(engagement_segment IS NULL OR engagement_segment NOT IN ('Ghosts', 'Zombies', 'Dormant'))`.
 Both halves are required — `state='Active'` alone is too broad (it includes Dormant /
 Zombie / Ghost subscribers we don't send to), and the engagement filter alone is too
 broad (it includes Unsubscribed / Bounced / Deleted state rows that happen to lack a
@@ -386,10 +389,10 @@ Ghost-style engagement label).
 SELECT
     COUNT(*) FILTER (
         WHERE state = 'Active'
-          AND engagement_segment NOT IN ('Ghosts', 'Zombies', 'Dormant')
+          AND (engagement_segment IS NULL OR engagement_segment NOT IN ('Ghosts', 'Zombies', 'Dormant'))
     ) AS send_to_active
 FROM superage.subscribers
-WHERE date_joined::date < CURRENT_DATE;
+WHERE COALESCE(date_subscribed, date_joined)::date < CURRENT_DATE;
 ```
 
 Exposed as `M.send_to_active`; `send_to_rate = send_to_active / total_subscribers` (active base). **Every other "Active" count in this doc — retention KPI (Q35), cohort table (Q40), per-source retention (Q35b), 90-day source retention (Q41) — uses the same two-condition rule.**
@@ -402,7 +405,7 @@ Three slices, all computed from a single `state='Active'` row scan. The Zombies 
 
 | Slice | Formula (state='Active' AND …) | Colour |
 |---|---|---|
-| **Send-To** | `engagement_segment NOT IN ('Ghosts','Zombies','Dormant')` | green `#1a7f37` |
+| **Send-To** | `(engagement_segment IS NULL OR engagement_segment NOT IN ('Ghosts','Zombies','Dormant'))` | green `#1a7f37` |
 | **Dormant / Ghost / Zombie** | `engagement_segment IN ('Ghosts','Zombies','Dormant')` *(sum of the three per-segment counts)* | amber `#9a6700` |
 | **Other** | `engagement_segment IS NULL OR engagement_segment = ''` *(residual — also catches any unrecognised future segment label)* | grey `#9ca3af` |
 
@@ -415,7 +418,7 @@ The "Other" slice is computed as a **residual** against the active base (`total_
 SELECT
     COUNT(*) FILTER (
         WHERE state = 'Active'
-          AND engagement_segment NOT IN ('Ghosts','Zombies','Dormant')
+          AND (engagement_segment IS NULL OR engagement_segment NOT IN ('Ghosts','Zombies','Dormant'))
     )                                                                 AS send_to,
     COUNT(*) FILTER (WHERE state = 'Active' AND engagement_segment = 'Zombies') AS zombies,
     COUNT(*) FILTER (WHERE state = 'Active' AND engagement_segment = 'Ghosts')  AS ghosts,
@@ -425,7 +428,7 @@ SELECT
           AND (engagement_segment IS NULL OR engagement_segment = '')
     )                                                                 AS other_segment
 FROM superage.subscribers
-WHERE date_joined::date < CURRENT_DATE;
+WHERE COALESCE(date_subscribed, date_joined)::date < CURRENT_DATE;
 ```
 
 Emitted as:
@@ -444,7 +447,7 @@ The legacy `M.subscriber_states` four-state JSON (`Active` / `Unsubscribed` / `B
 -- Legacy four-state distribution (kept in JSON, no longer the primary chart)
 SELECT COALESCE(NULLIF(state, ''), 'Unknown') AS state, COUNT(*) AS cnt
 FROM superage.subscribers
-WHERE date_joined::date < CURRENT_DATE
+WHERE COALESCE(date_subscribed, date_joined)::date < CURRENT_DATE
 GROUP BY 1 ORDER BY 2 DESC;
 ```
 
@@ -909,7 +912,7 @@ s AS (
     FROM superage.subscribers s
     LEFT JOIN sa_acq sa ON sa.email = LOWER(TRIM(s.email))
     WHERE s.email IS NOT NULL AND TRIM(s.email) != ''
-      AND s.date_joined::date < CURRENT_DATE
+      AND COALESCE(s.date_subscribed, s.date_joined)::date < CURRENT_DATE
       -- AND COALESCE(sa.acquisition_date, s.date_joined::date)
       --     >= CURRENT_DATE - INTERVAL '<N> days'
 ),
@@ -996,6 +999,14 @@ GROUP BY 1
 ORDER BY unique_clicks DESC NULLS LAST
 LIMIT 12;
 ```
+
+## Q5b — Audience: Subscriber Growth Trend (Total MoM / WoW)
+
+Total subscriber growth shown on the Audience tab as green/red bars (gained/lost) plus a blue Total Active line. Sourced from `subscriber_growth_series` (already fetched in the Overview section via Q3). The Audience tab chart reads `M.subscriber_growth_series.monthly` (last 18 months) for MoM and `.weekly` (last 52 weeks) for WoW. No separate SQL — data comes from the 3-granularity fetch in Q3.
+
+**JSON used:** `M.subscriber_growth_series = { monthly: { labels, new_subs, unsubs, active_count }, weekly: { ... } }`. Client trims the current incomplete period before rendering.
+
+---
 
 ## Q21 — Audience Persona: Quiz KPIs
 
@@ -1166,25 +1177,25 @@ SELECT
     COUNT(*)                                       AS total,
     COUNT(*) FILTER (
         WHERE state = 'Active'
-          AND engagement_segment NOT IN ('Ghosts', 'Zombies', 'Dormant')
+          AND (engagement_segment IS NULL OR engagement_segment NOT IN ('Ghosts', 'Zombies', 'Dormant'))
     )                                              AS active,
     COUNT(*) FILTER (WHERE state = 'Unsubscribed') AS churned,
     ROUND(AVG(
-        EXTRACT(EPOCH FROM (date_unsubscribed - date_joined)) / 86400
+        EXTRACT(EPOCH FROM (date_unsubscribed - COALESCE(date_subscribed, date_joined))) / 86400
     ) FILTER (
         WHERE state = 'Unsubscribed'
           AND date_unsubscribed IS NOT NULL AND date_unsubscribed::date < CURRENT_DATE
-          AND date_joined       IS NOT NULL AND date_joined::date       < CURRENT_DATE
+          AND COALESCE(date_subscribed, date_joined) IS NOT NULL AND COALESCE(date_subscribed, date_joined)::date < CURRENT_DATE
     )) AS avg_lifespan_days,
     ROUND(PERCENTILE_CONT(0.5) WITHIN GROUP (
-        ORDER BY EXTRACT(EPOCH FROM (date_unsubscribed - date_joined)) / 86400
+        ORDER BY EXTRACT(EPOCH FROM (date_unsubscribed - COALESCE(date_subscribed, date_joined))) / 86400
     ) FILTER (
         WHERE state = 'Unsubscribed'
           AND date_unsubscribed IS NOT NULL AND date_unsubscribed::date < CURRENT_DATE
-          AND date_joined       IS NOT NULL AND date_joined::date       < CURRENT_DATE
+          AND COALESCE(date_subscribed, date_joined) IS NOT NULL AND COALESCE(date_subscribed, date_joined)::date < CURRENT_DATE
     )) AS median_lifespan_days
 FROM superage.subscribers
-WHERE date_joined::date < CURRENT_DATE;
+WHERE COALESCE(date_subscribed, date_joined)::date < CURRENT_DATE;
 ```
 
 `active` uses the two-condition Active definition from Q1b. Exposed as
@@ -1228,7 +1239,7 @@ s AS (
         )                                                   AS source_raw
     FROM superage.subscribers sub
     LEFT JOIN sa_acq sa ON sa.email = LOWER(TRIM(sub.email))
-    WHERE sub.date_joined IS NOT NULL AND sub.date_joined::date < CURRENT_DATE
+    WHERE COALESCE(sub.date_subscribed, sub.date_joined) IS NOT NULL AND COALESCE(sub.date_subscribed, sub.date_joined)::date < CURRENT_DATE
 ),
 mapped AS (
     SELECT
@@ -1252,7 +1263,7 @@ SELECT
     COUNT(*)                                              AS subscribers,
     COUNT(*) FILTER (
         WHERE m.state = 'Active'
-          AND m.engagement_segment NOT IN ('Ghosts', 'Zombies', 'Dormant')
+          AND (m.engagement_segment IS NULL OR m.engagement_segment NOT IN ('Ghosts', 'Zombies', 'Dormant'))
     )                                                     AS active_now,
     COUNT(*) FILTER (WHERE m.state = 'Unsubscribed')      AS churned,
     COUNT(*) FILTER (
@@ -1293,7 +1304,7 @@ FROM (
         EXTRACT(EPOCH FROM (COALESCE(date_unsubscribed, NOW()) - date_joined)) / 86400
             AS days_active
     FROM superage.subscribers
-    WHERE date_joined IS NOT NULL AND date_joined::date < CURRENT_DATE
+    WHERE COALESCE(date_subscribed, date_joined) IS NOT NULL AND COALESCE(date_subscribed, date_joined)::date < CURRENT_DATE
       AND (date_unsubscribed IS NULL OR date_unsubscribed::date < CURRENT_DATE)
 ) x;
 ```
@@ -1301,6 +1312,8 @@ FROM (
 Exposed as `M.lifespan_dist = { labels: [...], data: [...] }`.
 
 ## Q37 — Subscriber Retention: Survival Curve (all subscribers)
+
+Milestones: 30, 60, 90, 120, 150, 180, 210, 240, 270, 300, 330, 365, 395, 425, 455, 485, 515, 545, 575, 606, 636, 666, 696, 730 days → Month 1 through Month 24. `days_to_unsub` uses the **gated** form: `CASE WHEN state = 'Unsubscribed' THEN date_unsubscribed END` — this prevents resubscribed-Active rows from contributing a stale unsub date.
 
 ```sql
 SELECT
@@ -1316,17 +1329,33 @@ SELECT
     COUNT(*) FILTER (WHERE days_to_unsub IS NULL OR days_to_unsub > 270) AS alive_270,
     COUNT(*) FILTER (WHERE days_to_unsub IS NULL OR days_to_unsub > 300) AS alive_300,
     COUNT(*) FILTER (WHERE days_to_unsub IS NULL OR days_to_unsub > 330) AS alive_330,
-    COUNT(*) FILTER (WHERE days_to_unsub IS NULL OR days_to_unsub > 365) AS alive_365
+    COUNT(*) FILTER (WHERE days_to_unsub IS NULL OR days_to_unsub > 365) AS alive_365,
+    COUNT(*) FILTER (WHERE days_to_unsub IS NULL OR days_to_unsub > 395) AS alive_395,
+    COUNT(*) FILTER (WHERE days_to_unsub IS NULL OR days_to_unsub > 425) AS alive_425,
+    COUNT(*) FILTER (WHERE days_to_unsub IS NULL OR days_to_unsub > 455) AS alive_455,
+    COUNT(*) FILTER (WHERE days_to_unsub IS NULL OR days_to_unsub > 485) AS alive_485,
+    COUNT(*) FILTER (WHERE days_to_unsub IS NULL OR days_to_unsub > 515) AS alive_515,
+    COUNT(*) FILTER (WHERE days_to_unsub IS NULL OR days_to_unsub > 545) AS alive_545,
+    COUNT(*) FILTER (WHERE days_to_unsub IS NULL OR days_to_unsub > 575) AS alive_575,
+    COUNT(*) FILTER (WHERE days_to_unsub IS NULL OR days_to_unsub > 606) AS alive_606,
+    COUNT(*) FILTER (WHERE days_to_unsub IS NULL OR days_to_unsub > 636) AS alive_636,
+    COUNT(*) FILTER (WHERE days_to_unsub IS NULL OR days_to_unsub > 666) AS alive_666,
+    COUNT(*) FILTER (WHERE days_to_unsub IS NULL OR days_to_unsub > 696) AS alive_696,
+    COUNT(*) FILTER (WHERE days_to_unsub IS NULL OR days_to_unsub > 730) AS alive_730
 FROM (
     SELECT
-        EXTRACT(EPOCH FROM (date_unsubscribed - date_joined)) / 86400 AS days_to_unsub
+        EXTRACT(EPOCH FROM (
+            CASE WHEN state = 'Unsubscribed' THEN date_unsubscribed END
+            - COALESCE(date_subscribed, date_joined)
+        )) / 86400 AS days_to_unsub
     FROM superage.subscribers
-    WHERE date_joined IS NOT NULL AND date_joined::date < CURRENT_DATE
+    WHERE COALESCE(date_subscribed, date_joined) IS NOT NULL
+      AND COALESCE(date_subscribed, date_joined)::date < CURRENT_DATE
       AND (date_unsubscribed IS NULL OR date_unsubscribed::date < CURRENT_DATE)
 ) x;
 ```
 
-Exposed as `M.survival_curve = { labels: ['Month 0','Month 1',...,'Month 12'], rates: [100, %, ...] }` — single series (Month 0 = 100%, Month 1 = ~Day 30, ..., Month 12 = ~Day 365). Last updated: 2026-05-21.
+Exposed as `M.survival_curve = { labels: ['Month 0','Month 1',...,'Month 24'], rates: [100, %, ...] }` — 25 points (Month 0 = 100%, Month 1 ≈ Day 30, …, Month 24 ≈ Day 730). Last updated: 2026-06-15.
 
 ## Q37b — Subscriber Retention: Survival Curve per Acquisition Source (fixed-denominator)
 
@@ -1415,7 +1444,19 @@ SELECT
     COUNT(*) FILTER (WHERE days_to_unsub IS NULL OR days_to_unsub > 270) AS alive_270,
     COUNT(*) FILTER (WHERE days_to_unsub IS NULL OR days_to_unsub > 300) AS alive_300,
     COUNT(*) FILTER (WHERE days_to_unsub IS NULL OR days_to_unsub > 330) AS alive_330,
-    COUNT(*) FILTER (WHERE days_to_unsub IS NULL OR days_to_unsub > 365) AS alive_365
+    COUNT(*) FILTER (WHERE days_to_unsub IS NULL OR days_to_unsub > 365) AS alive_365,
+    COUNT(*) FILTER (WHERE days_to_unsub IS NULL OR days_to_unsub > 395) AS alive_395,
+    COUNT(*) FILTER (WHERE days_to_unsub IS NULL OR days_to_unsub > 425) AS alive_425,
+    COUNT(*) FILTER (WHERE days_to_unsub IS NULL OR days_to_unsub > 455) AS alive_455,
+    COUNT(*) FILTER (WHERE days_to_unsub IS NULL OR days_to_unsub > 485) AS alive_485,
+    COUNT(*) FILTER (WHERE days_to_unsub IS NULL OR days_to_unsub > 515) AS alive_515,
+    COUNT(*) FILTER (WHERE days_to_unsub IS NULL OR days_to_unsub > 545) AS alive_545,
+    COUNT(*) FILTER (WHERE days_to_unsub IS NULL OR days_to_unsub > 575) AS alive_575,
+    COUNT(*) FILTER (WHERE days_to_unsub IS NULL OR days_to_unsub > 606) AS alive_606,
+    COUNT(*) FILTER (WHERE days_to_unsub IS NULL OR days_to_unsub > 636) AS alive_636,
+    COUNT(*) FILTER (WHERE days_to_unsub IS NULL OR days_to_unsub > 666) AS alive_666,
+    COUNT(*) FILTER (WHERE days_to_unsub IS NULL OR days_to_unsub > 696) AS alive_696,
+    COUNT(*) FILTER (WHERE days_to_unsub IS NULL OR days_to_unsub > 730) AS alive_730
 FROM s
 GROUP BY 1
 HAVING COUNT(*) >= 100
@@ -1425,11 +1466,13 @@ ORDER BY
     total DESC;
 ```
 
+> `<_priority_source()>` — expand inline using the 4-level COALESCE chain from §4: `COALESCE(L1_canon(sa.acquisition_utm_source), L2_meta_url_vars_gated, L3_canon(sub.sub_source), L4_canon(sub.source), 'Organic')`.
+
 ### JSON output
 
 ```json
 M.survival_curve_by_source = {
-  "labels": ["Month 0","Month 1", ... ,"Month 12"],
+  "labels": ["Month 0","Month 1", ... ,"Month 24"],
   "series": [
     {
       "label": "<Source>",
@@ -1471,8 +1514,28 @@ SELECT
     COUNT(*) AS total,
     COUNT(*) FILTER (WHERE days_to_unsub IS NULL OR days_to_unsub > 30)  AS alive_30,
     COUNT(*) FILTER (WHERE days_to_unsub IS NULL OR days_to_unsub > 60)  AS alive_60,
-    ...
-    COUNT(*) FILTER (WHERE days_to_unsub IS NULL OR days_to_unsub > 365) AS alive_365
+    COUNT(*) FILTER (WHERE days_to_unsub IS NULL OR days_to_unsub > 90)  AS alive_90,
+    COUNT(*) FILTER (WHERE days_to_unsub IS NULL OR days_to_unsub > 120) AS alive_120,
+    COUNT(*) FILTER (WHERE days_to_unsub IS NULL OR days_to_unsub > 150) AS alive_150,
+    COUNT(*) FILTER (WHERE days_to_unsub IS NULL OR days_to_unsub > 180) AS alive_180,
+    COUNT(*) FILTER (WHERE days_to_unsub IS NULL OR days_to_unsub > 210) AS alive_210,
+    COUNT(*) FILTER (WHERE days_to_unsub IS NULL OR days_to_unsub > 240) AS alive_240,
+    COUNT(*) FILTER (WHERE days_to_unsub IS NULL OR days_to_unsub > 270) AS alive_270,
+    COUNT(*) FILTER (WHERE days_to_unsub IS NULL OR days_to_unsub > 300) AS alive_300,
+    COUNT(*) FILTER (WHERE days_to_unsub IS NULL OR days_to_unsub > 330) AS alive_330,
+    COUNT(*) FILTER (WHERE days_to_unsub IS NULL OR days_to_unsub > 365) AS alive_365,
+    COUNT(*) FILTER (WHERE days_to_unsub IS NULL OR days_to_unsub > 395) AS alive_395,
+    COUNT(*) FILTER (WHERE days_to_unsub IS NULL OR days_to_unsub > 425) AS alive_425,
+    COUNT(*) FILTER (WHERE days_to_unsub IS NULL OR days_to_unsub > 455) AS alive_455,
+    COUNT(*) FILTER (WHERE days_to_unsub IS NULL OR days_to_unsub > 485) AS alive_485,
+    COUNT(*) FILTER (WHERE days_to_unsub IS NULL OR days_to_unsub > 515) AS alive_515,
+    COUNT(*) FILTER (WHERE days_to_unsub IS NULL OR days_to_unsub > 545) AS alive_545,
+    COUNT(*) FILTER (WHERE days_to_unsub IS NULL OR days_to_unsub > 575) AS alive_575,
+    COUNT(*) FILTER (WHERE days_to_unsub IS NULL OR days_to_unsub > 606) AS alive_606,
+    COUNT(*) FILTER (WHERE days_to_unsub IS NULL OR days_to_unsub > 636) AS alive_636,
+    COUNT(*) FILTER (WHERE days_to_unsub IS NULL OR days_to_unsub > 666) AS alive_666,
+    COUNT(*) FILTER (WHERE days_to_unsub IS NULL OR days_to_unsub > 696) AS alive_696,
+    COUNT(*) FILTER (WHERE days_to_unsub IS NULL OR days_to_unsub > 730) AS alive_730
 FROM s
 GROUP BY 1, 2
 HAVING COUNT(*) >= 50
@@ -1482,6 +1545,9 @@ ORDER BY 1 DESC, 3 DESC;
 ### Milestone eligibility (Python-side)
 
 ```python
+# Milestones: [30, 60, 90, 120, 150, 180, 210, 240, 270, 300, 330, 365,
+#              395, 425, 455, 485, 515, 545, 575, 606, 636, 666, 696, 730]
+# Labels: ['Month 0', 'Month 1', ..., 'Month 24']  (25 points)
 def _cohort_eligible(cohort_month, milestone_days):
     return (cohort_month + timedelta(days=milestone_days)) <= today
 ```
@@ -1492,7 +1558,7 @@ Uses the **first day** of the cohort month. If at least the earliest joiner in t
 
 ```json
 M.survival_curve_cohorts = {
-  "labels": ["Month 0","Month 1", ... ,"Month 12"],
+  "labels": ["Month 0","Month 1", ... ,"Month 24"],
   "cohorts": [
     {
       "month": "2025-11",
@@ -1529,7 +1595,8 @@ sends AS (
         DATE_TRUNC('month', "Sent Date "::date)::date AS month,
         SUM("Recipients")                              AS total_sent,
         COUNT(*)                                       AS campaigns,
-        COALESCE(SUM("Unsubscribed"), 0)               AS campaign_unsubs
+        COALESCE(SUM("Unsubscribed"), 0)               AS campaign_unsubs,
+        COALESCE(SUM("SpamComplaints"), 0)             AS campaign_complaints
     FROM superage."Campaigns"
     WHERE "Sent Date " IS NOT NULL
       AND "Sent Date "::date < CURRENT_DATE
@@ -1542,6 +1609,7 @@ SELECT
     COALESCE(s.total_sent, 0)               AS total_sent,
     COALESCE(s.campaigns, 0)                AS campaigns,
     COALESCE(s.campaign_unsubs, 0)          AS campaign_unsubs,
+    COALESCE(s.campaign_complaints, 0)      AS campaign_complaints,
     CASE
         WHEN COALESCE(s.total_sent, 0) = 0 THEN NULL
         ELSE ROUND(COALESCE(u.churned, 0)::numeric / s.total_sent * 100, 4)
@@ -1549,7 +1617,11 @@ SELECT
     CASE
         WHEN COALESCE(s.total_sent, 0) = 0 THEN NULL
         ELSE ROUND(COALESCE(s.campaign_unsubs, 0)::numeric / s.total_sent * 100, 4)
-    END                                     AS campaign_unsub_pct
+    END                                     AS campaign_unsub_pct,
+    CASE
+        WHEN COALESCE(s.total_sent, 0) = 0 THEN NULL
+        ELSE ROUND(COALESCE(s.campaign_complaints, 0)::numeric / s.total_sent * 100, 4)
+    END                                     AS campaign_complaint_pct
 FROM unsubs u
 FULL OUTER JOIN sends s ON u.month = s.month
 ORDER BY 1;
@@ -1559,13 +1631,15 @@ Exposed as:
 
 ```json
 M.monthly_churn = {
-  "labels":              ["YYYY-MM-01", ...],
-  "data":                [<churned per month (subscribers.date_unsubscribed)>],
-  "total_sent":          [<sum of Recipients per month, 0 if no qualifying send>],
-  "campaigns":           [<count of qualifying campaigns per month>],
-  "churn_pct":           [<churned / total_sent * 100, or null when no sends>],
-  "campaign_unsubs":     [<SUM(Campaigns.Unsubscribed) per month>],
-  "campaign_unsub_pct":  [<campaign_unsubs / total_sent * 100, or null when no sends>]
+  "labels":                  ["YYYY-MM-01", ...],
+  "data":                    [<churned per month (subscribers.date_unsubscribed)>],
+  "total_sent":              [<sum of Recipients per month, 0 if no qualifying send>],
+  "campaigns":               [<count of qualifying campaigns per month>],
+  "churn_pct":               [<churned / total_sent * 100, or null when no sends>],
+  "campaign_unsubs":         [<SUM(Campaigns.Unsubscribed) per month>],
+  "campaign_unsub_pct":      [<campaign_unsubs / total_sent * 100, or null when no sends>],
+  "campaign_complaints":     [<SUM(Campaigns.SpamComplaints) per month>],
+  "campaign_complaint_pct":  [<campaign_complaints / total_sent * 100, or null when no sends>]
 }
 ```
 
@@ -1582,16 +1656,16 @@ M.monthly_churn = {
 ```sql
 WITH cohorts AS (
     SELECT
-        DATE_TRUNC('month', date_joined::date)::date AS cohort_month,
+        DATE_TRUNC('month', COALESCE(date_subscribed, date_joined)::date)::date AS cohort_month,
         email,
-        date_joined::date AS joined,
+        COALESCE(date_subscribed, date_joined)::date AS joined,
         -- Gate by state: resubscribed subs keep the OLD date_unsubscribed in the
         -- subscribers row even after date_joined is updated to the new join date.
         -- Without this gate those rows produce a stale unsubbed < joined and are
         -- falsely counted as churned at every milestone.
         CASE WHEN state = 'Unsubscribed' THEN date_unsubscribed::date END AS unsubbed
     FROM superage.subscribers
-    WHERE date_joined IS NOT NULL AND date_joined::date < CURRENT_DATE
+    WHERE COALESCE(date_subscribed, date_joined) IS NOT NULL AND COALESCE(date_subscribed, date_joined)::date < CURRENT_DATE
 )
 SELECT
     cohort_month,
@@ -1622,7 +1696,7 @@ Restricted to cohorts where `date_joined >= '2025-01-01'` so the table focuses o
 |---|---|---|
 | **Cohort Size** | Subscribers who joined this month | `COUNT(*)` over the cohort |
 | **Total Subscribers** | Still on the list today | `COUNT(*) FILTER (WHERE state IN ('Active','Bounced'))` |
-| **Active (Send-To)** | Reachable + engaged | `COUNT(*) FILTER (WHERE state = 'Active' AND engagement_segment NOT IN ('Ghosts','Zombies','Dormant'))` |
+| **Active (Send-To)** | Reachable + engaged | `COUNT(*) FILTER (WHERE state = 'Active' AND (engagement_segment IS NULL OR engagement_segment NOT IN ('Ghosts','Zombies','Dormant')))` |
 | Active % (of Cohort Size) | Active (Send-To) / Cohort Size — canonical Active rule | derived |
 | Churn % | Unsubscribed / Cohort Size | derived |
 | Campaigns Sent | Qualifying campaigns sent during the cohort's join month | `Campaigns` table, `Recipients > 95` |
@@ -1632,19 +1706,19 @@ The earlier heatmap (Q39) still includes pre-2025 cohorts; this table is the onl
 ```sql
 WITH cohorts AS (
     SELECT
-        TO_CHAR(DATE_TRUNC('month', date_joined::date), 'Mon YYYY') AS cohort_label,
-        DATE_TRUNC('month', date_joined::date)::date                AS cohort_month,
+        TO_CHAR(DATE_TRUNC('month', COALESCE(date_subscribed, date_joined)::date), 'Mon YYYY') AS cohort_label,
+        DATE_TRUNC('month', COALESCE(date_subscribed, date_joined)::date)::date                AS cohort_month,
         COUNT(*)                                                    AS total,
         COUNT(*) FILTER (WHERE state IN ('Active', 'Bounced'))      AS total_subscribers,
         COUNT(*) FILTER (
             WHERE state = 'Active'
-              AND engagement_segment NOT IN ('Ghosts', 'Zombies', 'Dormant')
+              AND (engagement_segment IS NULL OR engagement_segment NOT IN ('Ghosts', 'Zombies', 'Dormant'))
         )                                                           AS active_now,
         COUNT(*) FILTER (WHERE state = 'Unsubscribed')              AS churned
     FROM superage.subscribers
-    WHERE date_joined IS NOT NULL
-      AND date_joined::date < CURRENT_DATE
-      AND date_joined::date >= DATE '2025-01-01'
+    WHERE COALESCE(date_subscribed, date_joined) IS NOT NULL
+      AND COALESCE(date_subscribed, date_joined)::date < CURRENT_DATE
+      AND COALESCE(date_subscribed, date_joined)::date >= DATE '2025-01-01'
     GROUP BY 1, 2
     HAVING COUNT(*) >= 20
 ),
@@ -1730,7 +1804,7 @@ ORDER BY c.cohort_month;
 20. **Overview sponsor revenue removed**: Sponsor Revenue KPI card removed from Overview tab (still available in Revenue & Sponsors tab).
 21. **Logo background**: `.sa-logo` badge background changed to `#000` (black).
 22. **Dashboard title**: `SuperAge — Brand Pulse Dashboard`.
-23. **Canonical "Active" rule**: Every "Active" count in the dashboard uses `state = 'Active' AND engagement_segment NOT IN ('Ghosts','Zombies','Dormant')`. Applies to Q1b (send_to_active), Q35 (retention KPI), Q35b (retention_by_source), Q40 (cohort table) and Q41 (90-day retention by source).
+23. **Canonical "Active" rule**: Every "Active" count in the dashboard uses `state = 'Active' AND (engagement_segment IS NULL OR engagement_segment NOT IN ('Ghosts','Zombies','Dormant'))`. Applies to Q1b (send_to_active), Q35 (retention KPI), Q35b (retention_by_source), Q40 (cohort table) and Q41 (90-day retention by source).
 24. **Top Position Cat KPI removed; Top Categories + Top Tags charts added**: The Content Reference tab no longer renders the "Top Position Cat" KPI card (position-category info is already covered by the position-category filter and chart). Two new horizontal bar charts — **Top Categories** and **Top Tags** — were added below the position-category / sleeper-hits grid. Both are computed client-side from `M.content_drill_table` after applying the current filter scope (Position Cat / Position / Author / Category / Tag / Title search): the row set is iterated, `categories` / `tags` strings are split on commas, and `unique_clicks` + `total_clicks` are summed per label. The top 10 labels by unique clicks are shown with paired bars (unique vs total) and re-render on every filter change via `_crFilter()` → `_crRenderTopBar()`.
 25. **Overview KPI ordering + Recent Campaigns Metrics table**: Overview KPI cards are split into two rows. Primary row (most important): Active (Send-to), Avg Open Rate, Avg Click Rate, Campaigns Sent. Secondary row: Total Subscribers, Unsubscribed, Bounced, Quiz Takers. The bottom "Top Campaign Open Rates" table was renamed to **Recent Campaigns Metrics** and now lists the **last 10 sent campaigns by date** (most recent first), sorted client-side on `sent_date` DESC from `M.campaign_table` instead of the top-by-open-rate set.
 26. **Sunday Spotlight toggle default OFF**: The Campaigns tab toggle ships unchecked, so Sunday Spotlight is excluded by default. Initial label state is "Excluding branded digest sends".

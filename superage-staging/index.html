@@ -2580,8 +2580,12 @@ function renderAudience(M) {
       if (i === 0 || !activeAll[i - 1]) return null;
       return ((v - activeAll[i - 1]) / activeAll[i - 1]) * 100;
     });
-    // Slice to last `cap` periods AFTER computing % so first bar isn't lost
-    const labelsCapped = labelsAll.slice(-cap).map(l => {
+    // Drop the first entry — it always has null % change (no prior period).
+    // Slice to last `cap` periods AFTER computing % so first point isn't lost.
+    const labelsAfterFirst = labelsAll.slice(1);
+    const pctAfterFirst    = pct.slice(1);
+    const activeAfterFirst = activeAll.slice(1);
+    const labelsCapped = labelsAfterFirst.slice(-cap).map(l => {
       if (grain === 'month') {
         const d = new Date(l + '-01T00:00:00');
         return isNaN(d) ? l : d.toLocaleDateString('en-US', { month: 'short', year: '2-digit' });
@@ -2594,8 +2598,8 @@ function renderAudience(M) {
     });
     return {
       labels: labelsCapped,
-      pct:    pct.slice(-cap),
-      active: activeAll.slice(-cap),
+      pct:    pctAfterFirst.slice(-cap),
+      active: activeAfterFirst.slice(-cap),
     };
   }
 

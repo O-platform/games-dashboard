@@ -2575,11 +2575,10 @@ function renderAudience(M) {
     const s = grain === 'month' ? _growthSeries.monthly : _growthSeries.weekly;
     const rawLabels = s.labels || [];
     const rawActive = s.active_count || [];
-    // Trim current incomplete period (last label)
-    const trim = rawLabels.length > 1 ? rawLabels.length - 1 : rawLabels.length;
+    // Keep current period (partial month/week still shows so latest is visible).
     const cap = grain === 'month' ? 12 : 12;  // last 12 periods for readability
-    const labelsAll = rawLabels.slice(0, trim);
-    const activeAll = rawActive.slice(0, trim);
+    const labelsAll = rawLabels.slice();
+    const activeAll = rawActive.slice();
     // Compute % change vs previous period
     const pct = activeAll.map((v, i) => {
       if (i === 0 || !activeAll[i - 1]) return null;
@@ -2608,17 +2607,27 @@ function renderAudience(M) {
   if (_growthTrendCanvas) {
     const initData = _buildGrowthTrend('month');
     window._growthTrendChart = new Chart(_growthTrendCanvas, {
-      type: 'bar',
+      type: 'line',
       data: {
         labels: initData.labels,
         datasets: [{
           label: '% Change',
           data: initData.pct,
-          backgroundColor: ctx => {
+          borderColor: '#1a7f37',
+          backgroundColor: 'rgba(26,127,55,0.12)',
+          pointBackgroundColor: ctx => {
             const v = Number(ctx.raw);
             return (v != null && v < 0) ? '#cf222e' : '#1a7f37';
           },
-          borderRadius: 4,
+          pointBorderColor: ctx => {
+            const v = Number(ctx.raw);
+            return (v != null && v < 0) ? '#cf222e' : '#1a7f37';
+          },
+          pointRadius: 4,
+          borderWidth: 2,
+          tension: 0.3,
+          fill: true,
+          spanGaps: true,
         }]
       },
       options: {

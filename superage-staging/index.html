@@ -342,10 +342,9 @@ function utmLabel(raw) {
 ═══════════════════════════════════════ */
 const DASHBOARD_API = 'https://dashboard.pardon-ventures-06b.workers.dev';
 const API_TOKEN     = 'dashboardkiwilytics123';
-const _hdr = { headers: { 'x-api-token': API_TOKEN } };
 Promise.all([
-  fetch(`${DASHBOARD_API}/superage-dashboard/superage-metrics.json`, _hdr).then(r => r.json()),
-  fetch(`${DASHBOARD_API}/superage-dashboard/superage-comparison.json`, _hdr).then(r => r.ok ? r.json() : {}).catch(() => ({}))
+  fetch(`${DASHBOARD_API}/superage-dashboard/superage-metrics.json?token=${API_TOKEN}`).then(r => r.json()),
+  fetch(`${DASHBOARD_API}/superage-dashboard/superage-comparison.json?token=${API_TOKEN}`).then(r => r.ok ? r.json() : {}).catch(() => ({}))
 ])
   .then(([metrics, comparison]) => {
     const M = Object.assign({}, metrics, comparison);

@@ -82,7 +82,7 @@ def run_metrics_lambda():
     with patch.object(lm, "_get_db_secret", side_effect=_local_db_secret), \
          patch.object(lm, "write_to_r2", side_effect=_fake_write):
         log.info("─── Running metrics lambda ───")
-        result = lm.handler({}, {})
+        result = lm.lambda_handler({}, {})
         body = json.loads(result.get("body", "{}"))
         log.info(
             "Metrics done — subscribers=%s  campaigns=%s  data_as_of=%s",
@@ -102,7 +102,7 @@ def run_comparison_lambda():
     with patch.object(cl, "_get_db_secret", side_effect=_local_db_secret), \
          patch.object(cl, "write_to_r2", side_effect=_fake_write):
         log.info("─── Running comparison lambda ───")
-        cl.handler({}, {})
+        cl.lambda_handler({}, {})
         log.info("Comparison done.")
 
 

@@ -2527,16 +2527,16 @@ function renderAudience(M) {
 
     <div class="chart-card" style="margin-top:18px;">
       <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;margin-bottom:14px;">
-        <h3 style="margin:0;">New Subscribers by Source <span class="badge-inline" id="acq-trend-badge">— last 6 months</span></h3>
+        <h3 style="margin:0;">Subscriber Growth <span class="badge-inline" id="growth-trend-badge">— last 6 months</span></h3>
         <div style="display:flex;gap:6px;">
-          <button id="acq-trend-mom" onclick="window._acqTrendSetGrain('month')"
+          <button id="growth-trend-mom" onclick="window._growthTrendSetGrain('month')"
             style="font-size:12px;padding:3px 10px;border:1px solid var(--card-border);border-radius:5px;cursor:pointer;background:var(--accent);color:#fff;">MoM</button>
-          <button id="acq-trend-wow" onclick="window._acqTrendSetGrain('week')"
+          <button id="growth-trend-wow" onclick="window._growthTrendSetGrain('week')"
             style="font-size:12px;padding:3px 10px;border:1px solid var(--card-border);border-radius:5px;cursor:pointer;background:var(--card);color:var(--text-muted);">WoW</button>
         </div>
       </div>
-      <div class="chart-container h340"><canvas id="acq-trend-chart"></canvas></div>
-      <div class="insight">Stacked bars show new subscribers per acquisition source. MoM = last 6 complete months; WoW = last 8 complete ISO weeks. Partial current period excluded. Toggle MoM / WoW to switch granularity.</div>
+      <div class="chart-container h340"><canvas id="growth-trend-chart"></canvas></div>
+      <div class="insight">Green bars = new subscribers gained; red bars = unsubscribes lost; blue line = total active at period end. MoM = last 18 months; WoW = last 52 weeks. Sourced from <code>growth_history</code> snapshots.</div>
     </div>
   `;
   // Build pie + bar with empty data; _setAcqWindow fills them.
@@ -2562,91 +2562,88 @@ function renderAudience(M) {
   window._M_total_subscribers = M.total_subscribers || 0;
   _setAcqWindow('all');
 
-  // ── Acquisition Trend (MoM / WoW stacked bar) ──
-  const _acqTrend = M.acq_trend || { monthly: [], weekly: [] };
+  // ── Subscriber Growth Total (MoM / WoW) ──
+  const _growthSeries = (M.subscriber_growth_series) || { monthly: { labels:[], new_subs:[], unsubs:[], active_count:[] }, weekly: { labels:[], new_subs:[], unsubs:[], active_count:[] } };
 
-  function _buildAcqTrend(grain) {
-    const rows = grain === 'month' ? (_acqTrend.monthly || []) : (_acqTrend.weekly || []);
-    // Collect ordered periods and sources
-    const periods = [...new Set(rows.map(r => r.period))].sort();
-    const sources = [];
-    const seen = new Set();
-    rows.forEach(r => { if (!seen.has(r.source)) { seen.add(r.source); sources.push(r.source); } });
-
-    // Period label formatter
-    const fmtPeriod = p => {
+  function _buildGrowthTrend(grain) {
+    const s = grain === 'month' ? _growthSeries.monthly : _growthSeries.weekly;
+    const rawLabels = s.labels || [];
+    // Trim current incomplete period (last label)
+    const trim = rawLabels.length > 1 ? rawLabels.length - 1 : rawLabels.length;
+    const labels = rawLabels.slice(0, trim).map(l => {
       if (grain === 'month') {
-        const d = new Date(p + 'T00:00:00');
-        return isNaN(d) ? p : d.toLocaleDateString('en-US', { month: 'short', year: '2-digit' });
+        const d = new Date(l + '-01T00:00:00');
+        return isNaN(d) ? l : d.toLocaleDateString('en-US', { month: 'short', year: '2-digit' });
       }
-      const d = new Date(p + 'T00:00:00');
-      if (isNaN(d)) return p;
+      const d = new Date(l + 'T00:00:00');
+      if (isNaN(d)) return l;
       const end = new Date(d.getTime() + 6 * 86400000);
-      const m = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
-      return m[d.getMonth()] + ' ' + d.getDate() + '–' + (d.getMonth() !== end.getMonth() ? m[end.getMonth()] + ' ' : '') + end.getDate();
+      const mo = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+      return mo[d.getMonth()] + ' ' + d.getDate() + '–' + (d.getMonth() !== end.getMonth() ? mo[end.getMonth()] + ' ' : '') + end.getDate();
+    });
+    // For monthly cap to last 18 periods, weekly to last 52
+    const cap = grain === 'month' ? 18 : 52;
+    const sl = l => (l || []).slice(0, trim).slice(-cap);
+    return {
+      labels: labels.slice(-cap),
+      gained:       sl(s.new_subs),
+      lost:         sl(s.unsubs),
+      active_count: sl(s.active_count),
     };
-
-    // Source → colour map (reuse palette)
-    const palette = ['#0969da','#cf222e','#8250df','#9a6700','#bf3989','#1b7c83','#1a7f37','#58a6ff','#fb8500','#3fb950','#fb6f92','#7d4e00','#a78bfa','#34d399','#f87171','#fbbf24'];
-    const srcColor = {};
-    sources.forEach((s, i) => { srcColor[s] = palette[i % palette.length]; });
-
-    // Build lookup: period+source → new_subs
-    const lookup = {};
-    rows.forEach(r => { lookup[r.period + '|' + r.source] = r.new_subs || 0; });
-
-    const datasets = sources.map(src => ({
-      label: utmLabel(src),
-      data: periods.map(p => lookup[p + '|' + src] || 0),
-      backgroundColor: srcColor[src],
-      stack: 'acq',
-    }));
-
-    return { labels: periods.map(fmtPeriod), datasets };
   }
 
-  const _acqTrendCanvas = document.getElementById('acq-trend-chart');
-  if (_acqTrendCanvas) {
-    const initData = _buildAcqTrend('month');
-    window._acqTrendChart = new Chart(_acqTrendCanvas, {
+  const _growthTrendCanvas = document.getElementById('growth-trend-chart');
+  if (_growthTrendCanvas) {
+    const initData = _buildGrowthTrend('month');
+    window._growthTrendChart = new Chart(_growthTrendCanvas, {
       type: 'bar',
-      data: initData,
+      data: {
+        labels: initData.labels,
+        datasets: [
+          { label: 'Gained',       data: initData.gained,       backgroundColor: '#1a7f37', yAxisID: 'yBar', order: 2 },
+          { label: 'Lost',         data: initData.lost.map(v => -(v||0)), backgroundColor: '#cf222e', yAxisID: 'yBar', order: 2 },
+          { label: 'Total Active', data: initData.active_count, type: 'line', borderColor: '#0969da', backgroundColor: 'transparent', pointRadius: 2, borderWidth: 2, yAxisID: 'yLine', order: 1 },
+        ]
+      },
       options: {
         responsive: true, maintainAspectRatio: false,
         plugins: {
           legend: { position: 'bottom', labels: { font: { size: 11 }, padding: 6, boxWidth: 12 } },
           tooltip: {
             callbacks: {
-              footer: items => {
-                const total = items.reduce((s, i) => s + (Number(i.raw) || 0), 0);
-                return 'Total: ' + total.toLocaleString();
+              label: item => {
+                const v = Math.abs(Number(item.raw) || 0);
+                return item.dataset.label + ': ' + v.toLocaleString();
               }
             }
           }
         },
         scales: {
-          x: { stacked: true, ticks: { font: { size: 11 } } },
-          y: { stacked: true, beginAtZero: true, ticks: { font: { size: 11 } } }
+          yBar:  { type: 'linear', position: 'left',  beginAtZero: true, ticks: { font: { size: 11 } }, title: { display: true, text: 'Gained / Lost', font: { size: 11 } } },
+          yLine: { type: 'linear', position: 'right', grid: { drawOnChartArea: false }, ticks: { font: { size: 11 } }, title: { display: true, text: 'Total Active', font: { size: 11 } } },
+          x: { ticks: { font: { size: 11 } } }
         }
       }
     });
   }
 
-  window._acqTrendSetGrain = function(grain) {
-    ['acq-trend-mom','acq-trend-wow'].forEach(id => {
+  window._growthTrendSetGrain = function(grain) {
+    ['growth-trend-mom','growth-trend-wow'].forEach(id => {
       const btn = document.getElementById(id);
       if (!btn) return;
-      const active = (grain === 'month' && id === 'acq-trend-mom') || (grain === 'week' && id === 'acq-trend-wow');
+      const active = (grain === 'month' && id === 'growth-trend-mom') || (grain === 'week' && id === 'growth-trend-wow');
       btn.style.background = active ? 'var(--accent)' : 'var(--card)';
       btn.style.color      = active ? '#fff'          : 'var(--text-muted)';
     });
-    const badge = document.getElementById('acq-trend-badge');
-    if (badge) badge.textContent = grain === 'month' ? '— last 6 months' : '— last 8 weeks';
-    if (!window._acqTrendChart) return;
-    const d = _buildAcqTrend(grain);
-    window._acqTrendChart.data.labels   = d.labels;
-    window._acqTrendChart.data.datasets = d.datasets;
-    window._acqTrendChart.update();
+    const badge = document.getElementById('growth-trend-badge');
+    if (badge) badge.textContent = grain === 'month' ? '— last 18 months' : '— last 52 weeks';
+    if (!window._growthTrendChart) return;
+    const d = _buildGrowthTrend(grain);
+    window._growthTrendChart.data.labels = d.labels;
+    window._growthTrendChart.data.datasets[0].data = d.gained;
+    window._growthTrendChart.data.datasets[1].data = d.lost.map(v => -(v||0));
+    window._growthTrendChart.data.datasets[2].data = d.active_count;
+    window._growthTrendChart.update();
   };
 }
 

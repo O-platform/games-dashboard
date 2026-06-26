@@ -1604,6 +1604,7 @@ function _buildCampaignSeries(rows, periodFn, formatter, limit) {
     clicks:       keys.map(k => groups.get(k).clicks),
     per_campaign: keys.map(k => { const g = groups.get(k); return g.n ? Math.round(g.clicks / g.n) : 0; }),
     ctor:         keys.map(k => { const g = groups.get(k); return g.opens ? Number((g.clicks / g.opens * 100).toFixed(1)) : 0; }),
+    ctr:          keys.map(k => { const g = groups.get(k); return g.recipients ? Number((g.clicks / g.recipients * 100).toFixed(2)) : 0; }),
     campaigns:    keys.map(k => groups.get(k).n),
     unique_opens: keys.map(k => groups.get(k).opens),
     recipients:   keys.map(k => groups.get(k).recipients),
@@ -1621,11 +1622,12 @@ function _renderClickSection1() {
   const weekly  = _buildCampaignSeries(rows, _isoWeekStart, _fmtWeekLabel,  8);
   const monthly = _buildCampaignSeries(rows, _monthStart,  _fmtMonthLabel, 6);
   const isCtor    = metric === 'ctor';
+  const isCtr     = metric === 'ctr';
   const isPerCamp = metric === 'per_campaign';
-  const metricLabel = isPerCamp ? 'Clicks / campaign' : (isCtor ? 'Click-to-Open %' : 'Total clicks');
-  const unitLabel   = isPerCamp ? 'clicks/campaign'  : (isCtor ? 'CTOR'             : 'clicks');
-  const tickFmt     = isCtor ? (v => v.toFixed(1) + '%') : (v => Number(v).toLocaleString());
-  const valFmt      = isCtor ? (v => Number(v).toFixed(1) + '%') : (v => Number(v).toLocaleString());
+  const metricLabel = isPerCamp ? 'Clicks / campaign' : (isCtor ? 'Click-to-Open %' : (isCtr ? 'CTR (clicks / recipients) %' : 'Total clicks'));
+  const unitLabel   = isPerCamp ? 'clicks/campaign'  : (isCtor ? 'CTOR'             : (isCtr ? 'CTR'                          : 'clicks'));
+  const tickFmt     = (isCtor || isCtr) ? (v => v.toFixed(2) + '%') : (v => Number(v).toLocaleString());
+  const valFmt      = (isCtor || isCtr) ? (v => Number(v).toFixed(2) + '%') : (v => Number(v).toLocaleString());
   _clickTrendChart('cnt-weekly-bar',  weekly,  metric, '#0969da', metricLabel, tickFmt);
   _clickTrendChart('cnt-monthly-bar', monthly, metric, '#1a7f37', metricLabel, tickFmt);
   const wIns = document.getElementById('cnt-weekly-insight');
@@ -2001,6 +2003,7 @@ function renderContent(M) {
           <option value="clicks">Total clicks</option>
           <option value="per_campaign" selected>Clicks / campaign</option>
           <option value="ctor">Click-to-Open %</option>
+          <option value="ctr">CTR (clicks / recipients) %</option>
         </select>
       </div>
     </div>

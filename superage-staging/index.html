@@ -1753,15 +1753,6 @@ function _renderClickTrendRight() {
     const mm = (ms && Array.isArray(ms.unique_clicks_no_ss) && !_ssOn()) ? 'unique_clicks_no_ss' : 'unique_clicks';
     _clickTrendChart('cnt-raw-monthly-unique-bar', ms, mm, '#1a7f37', 'Unique clickers');
     _updateRightChartTitles('Unique Clickers', '— raw events · distinct subscribers who clicked');
-  } else if (metric === 'ctor') {
-    // CTOR from raw data: unique_clicks / unique_openers per week/month
-    const ws = _sliceSeries(_rawClicksData && _rawClicksData.raw_clicks_weekly || {}, window._rawWeeklyN || 8);
-    const wm = (ws && Array.isArray(ws.ctor_no_ss) && !_ssOn()) ? 'ctor_no_ss' : 'ctor';
-    _clickTrendChart('cnt-raw-weekly-unique-bar', ws, wm, '#8250df', 'CTOR %', pctFmt);
-    const ms = (_rawClicksData && _rawClicksData.raw_clicks_monthly) || {};
-    const mm = (ms && Array.isArray(ms.ctor_no_ss) && !_ssOn()) ? 'ctor_no_ss' : 'ctor';
-    _clickTrendChart('cnt-raw-monthly-unique-bar', ms, mm, '#8250df', 'CTOR %', pctFmt);
-    _updateRightChartTitles('Click-to-Open %', '— raw events · unique clicks ÷ unique opens');
   } else {
     // avg_click_rate from campaign summary (AVG UClickRate per week/month)
     const ws = _sliceSeries(_rawClicksData && _rawClicksData.campaign_clicks_weekly || {}, window._rawWeeklyN || 8);
@@ -1777,7 +1768,6 @@ function _updateMetricNote() {
   const metric = (document.getElementById('clicksMetric') || {}).value || 'unique_clicks';
   const notes = {
     unique_clicks:   'Raw events — one per subscriber per period, regardless of how many campaigns they clicked',
-    ctor:            'Raw events — unique clicks ÷ unique opens',
     avg_click_rate:  'Campaign summary — avg click rate across campaigns per period',
   };
   el.textContent = notes[metric] || '';
@@ -2110,7 +2100,6 @@ function renderContent(M) {
       <hr style="flex:1;border:none;border-top:1px solid var(--card-border);">
       <select id="clicksMetric" onchange="_renderClickTrendRight();_updateMetricNote()" style="font-size:12px;padding:4px 10px;border:1px solid var(--card-border);border-radius:6px;background:var(--card);color:var(--text);">
         <option value="unique_clicks" selected>Unique clickers</option>
-        <option value="ctor">Click-to-Open % (CTOR)</option>
         <option value="avg_click_rate">Avg Click Rate</option>
       </select>
       <hr style="flex:1;border:none;border-top:1px solid var(--card-border);">

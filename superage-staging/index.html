@@ -1777,6 +1777,46 @@ function _renderSubscriberClickKpis(M) {
   set('sc-kpi-90d',   r.repeat_90d != null ? Number(r.repeat_90d).toLocaleString() : '—');
 }
 
+function _renderOpenerKpis(M) {
+  const o   = (M && M.opener_kpis) || {};
+  const set = (id, v) => { const el = document.getElementById(id); if (el) el.textContent = v; };
+  ['7d','30d','90d'].forEach(w => {
+    const tot = o[`total_${w}`];
+    set(`op-kpi-${w}`, tot != null ? Number(tot).toLocaleString() : '—');
+  });
+}
+
+function _renderOpenerWeeklyChart(M) {
+  const s      = (M && M.opener_weekly_series) || {};
+  const labels = s.labels || [];
+  const data   = (s.openers_rolling30 || []).map(Number);
+  const ctx    = _resetCanvas('op-weekly-chart');
+  if (!ctx || !labels.length) return;
+  new Chart(ctx, {
+    type: 'line',
+    data: {
+      labels,
+      datasets: [{
+        label: 'Unique Openers (rolling 30d)',
+        data,
+        borderColor: '#0969da',
+        backgroundColor: 'rgba(9,105,218,0.08)',
+        fill: true,
+        tension: 0.3,
+        pointRadius: 3,
+      }]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: { legend: { display: false } },
+      scales: {
+        x: { ticks: { color: 'var(--text-muted)', font: { size: 11 } }, grid: { color: 'var(--card-border)' } },
+        y: { ticks: { color: 'var(--text-muted)', font: { size: 11 }, callback: v => Number(v).toLocaleString() }, grid: { color: 'var(--card-border)' }, beginAtZero: false }
+      }
+    }
+  });
+}
+
 /* Click-volume distribution bar — buckets subscribers by their lifetime
  * unique-click count using the same boundaries the lambda emits:
  * 1, 2–5, 6–10, 11–20, 20+. */
@@ -1876,6 +1916,17 @@ function renderContent(M) {
       <div class="kpi-card orange"><div class="label">Repeat Clickers — Last 90d</div><div class="value" id="sc-kpi-90d">—</div><div class="sub">2+ unique campaign clicks in last 90 days</div></div>
     </div>
 
+    <h3 style="margin:18px 0 10px;font-size:13px;text-transform:uppercase;letter-spacing:.5px;color:var(--text-muted);">Unique Openers</h3>
+    <div class="kpi-row" style="grid-template-columns:repeat(auto-fit,minmax(180px,1fr));margin-top:8px;">
+      <div class="kpi-card green"><div class="label">Unique Openers — Last 7d</div><div class="value" id="op-kpi-7d">—</div><div class="sub">Distinct subscribers who opened in last 7 days</div></div>
+      <div class="kpi-card blue"><div class="label">Unique Openers — Last 30d</div><div class="value" id="op-kpi-30d">—</div><div class="sub">Distinct subscribers who opened in last 30 days</div></div>
+      <div class="kpi-card orange"><div class="label">Unique Openers — Last 90d</div><div class="value" id="op-kpi-90d">—</div><div class="sub">Distinct subscribers who opened in last 90 days</div></div>
+    </div>
+    <div class="chart-card" style="margin-top:14px;">
+      <h3>Weekly Unique Openers <span class="badge-inline">— rolling 30-day window, last 13 weeks</span></h3>
+      <div class="chart-container h220"><canvas id="op-weekly-chart"></canvas></div>
+    </div>
+
     <h3 style="margin:18px 0 10px;font-size:13px;text-transform:uppercase;letter-spacing:.5px;color:var(--text-muted);">Section 1 — Campaign-Level Aggregated</h3>
     <div class="grid-2">
       <div class="chart-card">
@@ -1950,6 +2001,8 @@ function renderContent(M) {
   _rawClicksData = M;
   _renderClickKpis();
   _renderSubscriberClickKpis(M);
+  _renderOpenerKpis(M);
+  _renderOpenerWeeklyChart(M);
   _renderClickBucketChart(M);
   _renderClickSection1();
   _setWeekdayWindow(3);

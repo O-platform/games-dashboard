@@ -222,7 +222,7 @@
   <button class="tab active" onclick="showPage('overview',this)">Overview</button>
   <button class="tab" onclick="showPage('digest',this)">Weekly Digest</button>
   <button class="tab" onclick="showPage('campaigns',this)">Campaigns</button>
-  <button class="tab" onclick="showPage('content',this)">Click Analysis</button>
+  <button class="tab" onclick="showPage('content',this)">Engagement</button>
   <button class="tab" onclick="showPage('content-ref',this)">Content Reference</button>
   <button class="tab" onclick="showPage('audience',this)">Audience</button>
   <button class="tab" onclick="showPage('quiz',this)">Audience Persona</button>
@@ -1761,20 +1761,24 @@ function _renderClickKpis() {
   set('ca-kpi-camps',  camps.toLocaleString());
   set('ca-kpi-recip',  recip.toLocaleString());
   set('ca-kpi-clicks', clicks.toLocaleString());
-  set('ca-kpi-avg',    camps ? avg.toLocaleString() : '—');
+  const opens = _rawClicksData && _rawClicksData.total_unique_opens;
+  set('ca-kpi-opens',  opens != null ? Number(opens).toLocaleString() : '—');
 }
 
 /* Section 3 KPI tiles — subscriber-level click metrics sourced from the
  * subscriber_clicks rollup (one row per email). Independent of the Sunday
  * Spotlight toggle since the underlying table doesn't carry campaign tags. */
 function _renderSubscriberClickKpis(M) {
-  const total = Number(M && M.total_article_clickers || 0);
   const r = (M && M.clicker_repeat) || {};
   const set = (id, txt) => { const el = document.getElementById(id); if (el) el.textContent = txt; };
-  set('sc-kpi-total', total ? total.toLocaleString() : '—');
-  set('sc-kpi-7d',    r.repeat_7d  != null ? Number(r.repeat_7d).toLocaleString()  : '—');
-  set('sc-kpi-30d',   r.repeat_30d != null ? Number(r.repeat_30d).toLocaleString() : '—');
-  set('sc-kpi-90d',   r.repeat_90d != null ? Number(r.repeat_90d).toLocaleString() : '—');
+  ['7d','30d','90d'].forEach(w => {
+    const uniq   = r[`unique_${w}`];
+    const repeat = r[`repeat_${w}`];
+    set(`sc-kpi-uniq-${w}`, uniq != null ? Number(uniq).toLocaleString() : '—');
+    set(`sc-kpi-${w}`,      repeat != null ? Number(repeat).toLocaleString() : '—');
+    const pct = (uniq && repeat != null) ? ((repeat / uniq) * 100).toFixed(1) : null;
+    set(`sc-kpi-pct-${w}`,  pct !== null ? pct : '—');
+  });
 }
 
 function _renderOpenerKpis(M) {
@@ -1815,6 +1819,22 @@ function _renderOpenerWeeklyChart(M) {
       }
     }
   });
+}
+
+function _setEngTab(tab) {
+  const clicks = document.getElementById('eng-panel-clicks');
+  const opens  = document.getElementById('eng-panel-opens');
+  const toolbar = document.getElementById('eng-clicks-toolbar');
+  const btnC = document.getElementById('eng-tab-clicks');
+  const btnO = document.getElementById('eng-tab-opens');
+  if (clicks)  clicks.style.display  = tab === 'clicks' ? '' : 'none';
+  if (opens)   opens.style.display   = tab === 'opens'  ? '' : 'none';
+  if (toolbar) toolbar.style.display = tab === 'clicks' ? 'flex' : 'none';
+  const on  = 'background:var(--accent);color:#fff;border-color:var(--accent);';
+  const off = 'background:var(--card);color:var(--text-muted);border-color:var(--card-border);';
+  if (btnC) btnC.style.cssText = (tab === 'clicks' ? on : off) + 'font-size:13px;font-weight:600;padding:6px 18px;border-width:1px;border-style:solid;border-radius:7px;cursor:pointer;';
+  if (btnO) btnO.style.cssText = (tab === 'opens'  ? on : off) + 'font-size:13px;font-weight:600;padding:6px 18px;border-width:1px;border-style:solid;border-radius:7px;cursor:pointer;';
+  if (tab === 'opens') _renderOpenerWeeklyChart(_rawClicksData);
 }
 
 /* Click-volume distribution bar — buckets subscribers by their lifetime
@@ -1873,61 +1893,68 @@ function _renderClickBucketChart(M) {
 function renderContent(M) {
   document.getElementById('content').innerHTML = `
     <div class="section-context-banner">
-      <strong>Click Analysis</strong> — Engagement with SuperAge website articles. Tracks unique and total clicks per article, category, and author. <strong>Click-event data (Section 2: Same Weekday / Weekly / Monthly raw events + per-article click totals) starts December 2025.</strong> Section 1 campaign-aggregate metrics come from the CreateSend <em>Campaigns</em> table and reflect the full send history.
-    </div>
-    <!-- Toolbar moved ABOVE the KPI cards so the Sunday Spotlight toggle
-         visibly governs the whole tab (KPIs, charts, table). -->
-    <div class="camp-toolbar" style="margin: 0 0 12px;">
-      <div class="camp-toolbar-left">
-        <label class="switch" for="clicksIncludeSS" title="Include Sunday Spotlight campaigns">
-          <input type="checkbox" id="clicksIncludeSS" onchange="_refreshClicksTab()">
-          <span class="slider-round"></span>
-        </label>
-        <div>
-          <div style="font-size:13px;font-weight:600;color:var(--text);">Include Sunday Spotlight</div>
-          <div style="font-size:11px;color:var(--text-muted);" id="clicks-ss-state">Excluding branded digest sends</div>
-        </div>
-      </div>
-      <div style="display:flex;align-items:center;gap:8px;">
-        <label style="font-size:12px;color:var(--text-muted);">Section 1 metric:</label>
-        <select id="clicksMetric" onchange="_renderClickSection1()" style="font-size:12px;padding:5px 10px;border:1px solid var(--card-border);border-radius:6px;background:var(--card);color:var(--text);">
-          <option value="clicks">Total clicks</option>
-          <option value="per_campaign" selected>Clicks / campaign</option>
-          <option value="ctor">Click-to-Open %</option>
-          <option value="ctr">CTR (clicks / recipients) %</option>
-        </select>
-      </div>
+      <strong>Engagement</strong> — Campaign clicks and opens analysis. Click-event data starts December 2025. Campaign-aggregate metrics come from the CreateSend <em>Campaigns</em> table and reflect the full send history.
     </div>
 
-    <!-- Click Analysis KPIs are now campaign-level aggregates computed
-         client-side from M.campaign_table filtered by the toggle above, so
-         flipping Sunday Spotlight visibly changes every number on the tab.
-         Values are populated by _renderClickKpis() in _refreshClicksTab(). -->
-    <div class="kpi-row" style="grid-template-columns:repeat(auto-fit,minmax(140px,1fr));">
+    <!-- Shared top KPIs (always visible) -->
+    <div class="kpi-row" style="grid-template-columns:repeat(auto-fit,minmax(140px,1fr));margin-bottom:16px;">
       <div class="kpi-card accent"><div class="label">Campaigns Sent</div><div class="value" id="ca-kpi-camps">—</div><div class="sub">In scope (after toggle)</div></div>
       <div class="kpi-card green"><div class="label">Total Recipients</div><div class="value" id="ca-kpi-recip">—</div><div class="sub">Sum of <code>Recipients</code></div></div>
       <div class="kpi-card blue"><div class="label">Total Clicks</div><div class="value" id="ca-kpi-clicks">—</div><div class="sub">Sum of campaign <code>Clicks</code></div></div>
-      <div class="kpi-card orange"><div class="label">Avg Clicks / Campaign</div><div class="value" id="ca-kpi-avg">—</div><div class="sub">Mean per send (in scope)</div></div>
-    </div>
-    <div class="kpi-row" style="grid-template-columns:repeat(auto-fit,minmax(180px,1fr));margin-top:8px;">
-      <div class="kpi-card accent"><div class="label">Unique Email Clickers</div><div class="value" id="sc-kpi-total">—</div><div class="sub">Distinct subscribers in <code>subscriber_clicks</code></div></div>
-      <div class="kpi-card green"><div class="label">Repeat Clickers — Last 7d</div><div class="value" id="sc-kpi-7d">—</div><div class="sub">2+ unique campaign clicks in last 7 days</div></div>
-      <div class="kpi-card blue"><div class="label">Repeat Clickers — Last 30d</div><div class="value" id="sc-kpi-30d">—</div><div class="sub">2+ unique campaign clicks in last 30 days</div></div>
-      <div class="kpi-card orange"><div class="label">Repeat Clickers — Last 90d</div><div class="value" id="sc-kpi-90d">—</div><div class="sub">2+ unique campaign clicks in last 90 days</div></div>
+      <div class="kpi-card orange"><div class="label">Total Opens</div><div class="value" id="ca-kpi-opens">—</div><div class="sub">Sum of <code>UniqueOpened</code></div></div>
     </div>
 
-    <h3 style="margin:18px 0 10px;font-size:13px;text-transform:uppercase;letter-spacing:.5px;color:var(--text-muted);">Unique Openers</h3>
-    <div class="kpi-row" style="grid-template-columns:repeat(auto-fit,minmax(180px,1fr));margin-top:8px;">
-      <div class="kpi-card green"><div class="label">Unique Openers — Last 7d</div><div class="value" id="op-kpi-7d">—</div><div class="sub">Distinct subscribers who opened in last 7 days</div></div>
-      <div class="kpi-card blue"><div class="label">Unique Openers — Last 30d</div><div class="value" id="op-kpi-30d">—</div><div class="sub">Distinct subscribers who opened in last 30 days</div></div>
-      <div class="kpi-card orange"><div class="label">Unique Openers — Last 90d</div><div class="value" id="op-kpi-90d">—</div><div class="sub">Distinct subscribers who opened in last 90 days</div></div>
-    </div>
-    <div class="chart-card" style="margin-top:14px;">
-      <h3>Weekly Unique Openers <span class="badge-inline">— rolling 30-day window, last 13 weeks</span></h3>
-      <div class="chart-container h220"><canvas id="op-weekly-chart"></canvas></div>
+    <!-- Clicks / Opens toggle -->
+    <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;margin-bottom:14px;">
+      <div style="display:flex;gap:6px;">
+        <button id="eng-tab-clicks" onclick="_setEngTab('clicks')" style="font-size:13px;font-weight:600;padding:6px 18px;border:1px solid var(--accent);border-radius:7px;background:var(--accent);color:#fff;cursor:pointer;">Clicks</button>
+        <button id="eng-tab-opens"  onclick="_setEngTab('opens')"  style="font-size:13px;font-weight:600;padding:6px 18px;border:1px solid var(--card-border);border-radius:7px;background:var(--card);color:var(--text-muted);cursor:pointer;">Opens</button>
+      </div>
+      <!-- Clicks toolbar (shown only in clicks mode) -->
+      <div id="eng-clicks-toolbar" style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;">
+        <div class="camp-toolbar-left" style="margin:0;">
+          <label class="switch" for="clicksIncludeSS" title="Include Sunday Spotlight campaigns">
+            <input type="checkbox" id="clicksIncludeSS" onchange="_refreshClicksTab()">
+            <span class="slider-round"></span>
+          </label>
+          <div>
+            <div style="font-size:13px;font-weight:600;color:var(--text);">Include Sunday Spotlight</div>
+            <div style="font-size:11px;color:var(--text-muted);" id="clicks-ss-state">Excluding branded digest sends</div>
+          </div>
+        </div>
+        <div style="display:flex;align-items:center;gap:8px;">
+          <label style="font-size:12px;color:var(--text-muted);">Section 1 metric:</label>
+          <select id="clicksMetric" onchange="_renderClickSection1()" style="font-size:12px;padding:5px 10px;border:1px solid var(--card-border);border-radius:6px;background:var(--card);color:var(--text);">
+            <option value="clicks">Total clicks</option>
+            <option value="per_campaign" selected>Clicks / campaign</option>
+            <option value="ctor">Click-to-Open %</option>
+            <option value="ctr">CTR (clicks / recipients) %</option>
+          </select>
+        </div>
+      </div>
     </div>
 
-    <h3 style="margin:18px 0 10px;font-size:13px;text-transform:uppercase;letter-spacing:.5px;color:var(--text-muted);">Section 1 — Campaign-Level Aggregated</h3>
+    <!-- ── CLICKS PANEL ── -->
+    <div id="eng-panel-clicks">
+      <div class="kpi-row" style="grid-template-columns:repeat(auto-fit,minmax(200px,1fr));margin-bottom:16px;">
+        <div class="kpi-card green">
+          <div class="label">Unique Clickers — Last 7d</div>
+          <div class="value" id="sc-kpi-uniq-7d">—</div>
+          <div class="sub">of which <span id="sc-kpi-7d">—</span> (<span id="sc-kpi-pct-7d">—</span>%) clicked 2+ campaigns</div>
+        </div>
+        <div class="kpi-card blue">
+          <div class="label">Unique Clickers — Last 30d</div>
+          <div class="value" id="sc-kpi-uniq-30d">—</div>
+          <div class="sub">of which <span id="sc-kpi-30d">—</span> (<span id="sc-kpi-pct-30d">—</span>%) clicked 2+ campaigns</div>
+        </div>
+        <div class="kpi-card orange">
+          <div class="label">Unique Clickers — Last 90d</div>
+          <div class="value" id="sc-kpi-uniq-90d">—</div>
+          <div class="sub">of which <span id="sc-kpi-90d">—</span> (<span id="sc-kpi-pct-90d">—</span>%) clicked 2+ campaigns</div>
+        </div>
+      </div>
+
+      <h3 style="margin:18px 0 10px;font-size:13px;text-transform:uppercase;letter-spacing:.5px;color:var(--text-muted);">Section 1 — Campaign-Level Aggregated</h3>
     <div class="grid-2">
       <div class="chart-card">
         <h3>Weekly Campaign Clicks <span class="badge-inline">— last 8 weeks, Mon-Sun rollup</span></h3>
@@ -1991,6 +2018,33 @@ function renderContent(M) {
         </table>
       </div>
     </div>
+    </div><!-- /eng-panel-clicks -->
+
+    <!-- ── OPENS PANEL ── -->
+    <div id="eng-panel-opens" style="display:none;">
+      <div class="kpi-row" style="grid-template-columns:repeat(auto-fit,minmax(200px,1fr));margin-bottom:16px;">
+        <div class="kpi-card green">
+          <div class="label">Unique Openers — Last 7d</div>
+          <div class="value" id="op-kpi-7d">—</div>
+          <div class="sub">Distinct subscribers who opened at least one campaign</div>
+        </div>
+        <div class="kpi-card blue">
+          <div class="label">Unique Openers — Last 30d</div>
+          <div class="value" id="op-kpi-30d">—</div>
+          <div class="sub">Distinct subscribers who opened at least one campaign</div>
+        </div>
+        <div class="kpi-card orange">
+          <div class="label">Unique Openers — Last 90d</div>
+          <div class="value" id="op-kpi-90d">—</div>
+          <div class="sub">Distinct subscribers who opened at least one campaign</div>
+        </div>
+      </div>
+
+      <div class="chart-card">
+        <h3>Weekly Unique Openers <span class="badge-inline">— rolling 30-day window, last 13 weeks</span></h3>
+        <div class="chart-container h260"><canvas id="op-weekly-chart"></canvas></div>
+      </div>
+    </div><!-- /eng-panel-opens -->
   `;
   /* Article table data — top 10 all-time by unique clicks (the windowed
    * date filters were dropped because only "All" returned data). */
@@ -2002,7 +2056,6 @@ function renderContent(M) {
   _renderClickKpis();
   _renderSubscriberClickKpis(M);
   _renderOpenerKpis(M);
-  _renderOpenerWeeklyChart(M);
   _renderClickBucketChart(M);
   _renderClickSection1();
   _setWeekdayWindow(3);

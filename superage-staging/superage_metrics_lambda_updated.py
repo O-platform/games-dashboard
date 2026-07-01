@@ -502,20 +502,20 @@ def lambda_handler(event, context):
                 GROUP BY 1
             )
             SELECT
+                (SELECT COUNT(*) FROM per_email_7d)                AS unique_7d,
+                (SELECT COUNT(*) FROM per_email_30d)               AS unique_30d,
+                (SELECT COUNT(*) FROM per_email_90d)               AS unique_90d,
                 (SELECT COUNT(*) FROM per_email_7d  WHERE clicks >= 2) AS repeat_7d,
                 (SELECT COUNT(*) FROM per_email_30d WHERE clicks >= 2) AS repeat_30d,
-                (SELECT COUNT(*) FROM per_email_90d WHERE clicks >= 2) AS repeat_90d,
-                (SELECT COUNT(*) FROM per_email_7d  WHERE clicks >= 1) AS total_1plus_7d,
-                (SELECT COUNT(*) FROM per_email_30d WHERE clicks >= 1) AS total_1plus_30d,
-                (SELECT COUNT(*) FROM per_email_90d WHERE clicks >= 1) AS total_1plus_90d
+                (SELECT COUNT(*) FROM per_email_90d WHERE clicks >= 2) AS repeat_90d
         """)
         repeat_row = cur.fetchone() or {}
-        clicker_summary["repeat_7d"]       = safe_int(repeat_row.get("repeat_7d"))
-        clicker_summary["repeat_30d"]      = safe_int(repeat_row.get("repeat_30d"))
-        clicker_summary["repeat_90d"]      = safe_int(repeat_row.get("repeat_90d"))
-        clicker_summary["total_1plus_7d"]  = safe_int(repeat_row.get("total_1plus_7d"))
-        clicker_summary["total_1plus_30d"] = safe_int(repeat_row.get("total_1plus_30d"))
-        clicker_summary["total_1plus_90d"] = safe_int(repeat_row.get("total_1plus_90d"))
+        clicker_summary["unique_7d"]  = safe_int(repeat_row.get("unique_7d"))
+        clicker_summary["unique_30d"] = safe_int(repeat_row.get("unique_30d"))
+        clicker_summary["unique_90d"] = safe_int(repeat_row.get("unique_90d"))
+        clicker_summary["repeat_7d"]  = safe_int(repeat_row.get("repeat_7d"))
+        clicker_summary["repeat_30d"] = safe_int(repeat_row.get("repeat_30d"))
+        clicker_summary["repeat_90d"] = safe_int(repeat_row.get("repeat_90d"))
 
         # ─────────────────────────────────────────────────────
         # Q18c — Opener KPIs from optimism.superage_opens
@@ -1499,8 +1499,9 @@ def lambda_handler(event, context):
     M["send_to_rate"]        = pct(send_to_active,    total_subscribers)  # send-to / active base
 
     # Campaign KPIs (Recipients > 95)
-    M["total_campaigns"]    = total_campaigns
-    M["total_recipients"]   = total_recipients
+    M["total_campaigns"]     = total_campaigns
+    M["total_recipients"]    = total_recipients
+    M["total_unique_opens"]  = total_unique_opens
     M["avg_open_rate"]      = f"{avg_open_rate:.2f}%"
     M["avg_click_rate"]     = f"{avg_click_rate:.2f}%"
     M["best_open_rate"]     = f"{best_open_rate:.2f}%"
@@ -1516,12 +1517,12 @@ def lambda_handler(event, context):
     M["total_article_clicks"]   = total_article_clicks
     M["total_article_clickers"] = total_article_clickers
     M["clicker_repeat"] = {
-        "repeat_7d":       safe_int(clicker_summary.get("repeat_7d")),
-        "repeat_30d":      safe_int(clicker_summary.get("repeat_30d")),
-        "repeat_90d":      safe_int(clicker_summary.get("repeat_90d")),
-        "total_1plus_7d":  safe_int(clicker_summary.get("total_1plus_7d")),
-        "total_1plus_30d": safe_int(clicker_summary.get("total_1plus_30d")),
-        "total_1plus_90d": safe_int(clicker_summary.get("total_1plus_90d")),
+        "unique_7d":  safe_int(clicker_summary.get("unique_7d")),
+        "unique_30d": safe_int(clicker_summary.get("unique_30d")),
+        "unique_90d": safe_int(clicker_summary.get("unique_90d")),
+        "repeat_7d":  safe_int(clicker_summary.get("repeat_7d")),
+        "repeat_30d": safe_int(clicker_summary.get("repeat_30d")),
+        "repeat_90d": safe_int(clicker_summary.get("repeat_90d")),
     }
     M["opener_kpis"] = {
         "total_7d":   safe_int(opener_summary.get("total_openers_7d")),

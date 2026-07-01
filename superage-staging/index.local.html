@@ -1863,7 +1863,7 @@ function _renderClickTrendRight() {
     const ms = (_rawClicksData && _rawClicksData.raw_clicks_monthly) || {};
     const mm = (ms && Array.isArray(ms.unique_clicks_no_ss) && !_ssOn()) ? 'unique_clicks_no_ss' : 'unique_clicks';
     _clickTrendChart('cnt-raw-monthly-unique-bar', ms, mm, '#1a7f37', 'Unique clicks');
-    _updateRightChartTitles('Unique Clicks', '— raw events · unique subscribers who clicked');
+    _updateRightChartTitles('Unique Clicks', '— raw events · distinct subscribers who clicked');
   } else if (metric === 'ctor') {
     // CTOR from raw data: unique_clicks / unique_openers per week/month
     const ws = _sliceSeries(_rawClicksData && _rawClicksData.raw_clicks_weekly || {}, window._rawWeeklyN || 8);
@@ -1887,7 +1887,7 @@ function _updateMetricNote() {
   if (!el) return;
   const metric = (document.getElementById('clicksMetric') || {}).value || 'unique_clicks';
   const notes = {
-    unique_clicks:   'Raw events — unique clicks ÷ sends',
+    unique_clicks:   'Raw events — distinct subscribers who clicked per period',
     ctor:            'Raw events — unique clicks ÷ unique opens',
     avg_click_rate:  'Campaign summary — avg click rate across campaigns per period',
   };

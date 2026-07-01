@@ -1863,7 +1863,7 @@ function _renderClickTrendRight() {
     const ms = (_rawClicksData && _rawClicksData.raw_clicks_monthly) || {};
     const mm = (ms && Array.isArray(ms.unique_clicks_no_ss) && !_ssOn()) ? 'unique_clicks_no_ss' : 'unique_clicks';
     _clickTrendChart('cnt-raw-monthly-unique-bar', ms, mm, '#1a7f37', 'Unique clicks');
-    _updateRightChartTitles('Unique Clicks', '— one per subscriber per campaign');
+    _updateRightChartTitles('Unique Clicks', '— unique clicks ÷ sends');
   } else {
     const rows = _ssOn()
       ? ((_rawClicksData && _rawClicksData.campaign_table) || [])
@@ -1873,11 +1873,11 @@ function _renderClickTrendRight() {
     if (metric === 'ctor') {
       _clickTrendChart('cnt-raw-weekly-unique-bar',  ws, 'ctor', '#8250df', 'CTOR %', pctFmt);
       _clickTrendChart('cnt-raw-monthly-unique-bar', ms, 'ctor', '#8250df', 'CTOR %', pctFmt);
-      _updateRightChartTitles('Click-to-Open %', '— clicks ÷ unique opens per period');
+      _updateRightChartTitles('Click-to-Open %', '— unique clicks ÷ unique opens');
     } else {
       _clickTrendChart('cnt-raw-weekly-unique-bar',  ws, 'ctr', '#cf222e', 'CTR %', pctFmt);
       _clickTrendChart('cnt-raw-monthly-unique-bar', ms, 'ctr', '#cf222e', 'CTR %', pctFmt);
-      _updateRightChartTitles('CTR %', '— clicks ÷ recipients per period');
+      _updateRightChartTitles('CTR %', '— unique clicks ÷ recipients');
     }
   }
 }
@@ -1886,9 +1886,9 @@ function _updateMetricNote() {
   if (!el) return;
   const metric = (document.getElementById('clicksMetric') || {}).value || 'unique_clicks';
   const notes = {
-    unique_clicks: 'One click counted per subscriber per campaign — sourced from raw click events, respects SS toggle.',
-    ctor: 'Click-to-Open Rate = clicks ÷ unique opens. ⚠ Campaign Monitor reported data (not raw events) — SS toggle applies.',
-    ctr:  'Click-Through Rate = clicks ÷ recipients. ⚠ Campaign Monitor reported data (not raw events) — SS toggle applies.',
+    unique_clicks: 'One click per subscriber per campaign — unique clicks ÷ sends',
+    ctor: 'Unique clicks ÷ Unique opens',
+    ctr:  'Unique clicks ÷ Recipients',
   };
   el.textContent = notes[metric] || '';
 }
@@ -1896,9 +1896,11 @@ function _updateRightChartTitles(label, badge) {
   const wh = document.getElementById('cnt-right-weekly-title');
   const wb = document.getElementById('cnt-raw-weekly-unique-badge');
   const mh = document.getElementById('cnt-right-monthly-title');
+  const mb = document.getElementById('cnt-right-monthly-badge');
   if (wh) wh.textContent = 'Weekly — ' + label;
   if (wb) wb.textContent = badge;
   if (mh) mh.textContent = 'Monthly — ' + label;
+  if (mb) mb.textContent = badge;
 }
 
 /* Re-render every chart on the Click Analysis tab. Called when the
@@ -2141,21 +2143,11 @@ function renderContent(M) {
       <div class="insight" id="cnt-raw-weekday-insight"></div>
       <div id="cnt-raw-weekday-table"></div>
     </div>
-    <div style="margin:14px 0 8px;">
-      <div style="display:flex;align-items:center;gap:8px;margin-bottom:4px;">
-        <span style="font-size:12px;color:var(--text-muted);font-weight:500;">Pair right charts with:</span>
-        <select id="clicksMetric" onchange="_renderClickTrendRight();_updateMetricNote()" style="font-size:12px;padding:4px 10px;border:1px solid var(--card-border);border-radius:6px;background:var(--card);color:var(--text);">
-          <option value="unique_clicks" selected>Unique clicks</option>
-          <option value="ctor">Click-to-Open % (CTOR)</option>
-          <option value="ctr">Click-Through Rate % (CTR)</option>
-        </select>
-      </div>
-      <div id="clicks-metric-note" style="font-size:11px;color:var(--text-muted);font-style:italic;padding-left:2px;">One click counted per subscriber per campaign — sourced from raw click events, respects SS toggle.</div>
-    </div>
-    <div class="grid-2">
+    <!-- Totals row -->
+    <div class="grid-2" style="margin-top:14px;">
       <div class="chart-card">
         <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;margin-bottom:6px;flex-wrap:wrap;">
-          <h3 style="margin:0;">Weekly — Total Click Events <span class="badge-inline" id="cnt-raw-weekly-badge">— raw events per week, SS excluded by toggle</span></h3>
+          <h3 style="margin:0;">Weekly — Total Click Events <span class="badge-inline" id="cnt-raw-weekly-badge">— raw events per week</span></h3>
           <div style="display:flex;gap:4px;" id="cnt-raw-weekly-btns">
             <button onclick="_setRawWeeklyWindow(4)"  id="rww-4"  style="font-size:11px;padding:3px 8px;border:1px solid var(--card-border);border-radius:5px;background:var(--card);color:var(--text-muted);cursor:pointer;">4w</button>
             <button onclick="_setRawWeeklyWindow(8)"  id="rww-8"  style="font-size:11px;padding:3px 8px;border:1px solid var(--card-border);border-radius:5px;background:var(--accent);color:#fff;cursor:pointer;">8w</button>
@@ -2166,25 +2158,32 @@ function renderContent(M) {
         <div class="insight" id="cnt-raw-weekly-insight"></div>
       </div>
       <div class="chart-card">
-        <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;margin-bottom:6px;flex-wrap:wrap;">
-          <h3 style="margin:0;" id="cnt-right-weekly-title">Weekly — Unique Clicks <span class="badge-inline" id="cnt-raw-weekly-unique-badge">— one per subscriber per campaign</span></h3>
-          <div style="display:flex;gap:4px;">
-            <button onclick="_setRawWeeklyWindow(4)"  id="rwu-4"  style="font-size:11px;padding:3px 8px;border:1px solid var(--card-border);border-radius:5px;background:var(--card);color:var(--text-muted);cursor:pointer;">4w</button>
-            <button onclick="_setRawWeeklyWindow(8)"  id="rwu-8"  style="font-size:11px;padding:3px 8px;border:1px solid var(--card-border);border-radius:5px;background:var(--accent);color:#fff;cursor:pointer;">8w</button>
-            <button onclick="_setRawWeeklyWindow(12)" id="rwu-12" style="font-size:11px;padding:3px 8px;border:1px solid var(--card-border);border-radius:5px;background:var(--card);color:var(--text-muted);cursor:pointer;">12w</button>
-          </div>
-        </div>
-        <div class="chart-container h240"><canvas id="cnt-raw-weekly-unique-bar"></canvas></div>
-      </div>
-    </div>
-    <div class="grid-2">
-      <div class="chart-card">
         <h3>Monthly — Total Click Events <span class="badge-inline" id="cnt-raw-monthly-badge">— raw events per month</span></h3>
         <div class="chart-container h240"><canvas id="cnt-raw-monthly-bar"></canvas></div>
         <div class="insight" id="cnt-raw-monthly-insight"></div>
       </div>
+    </div>
+
+    <!-- Metric selector divider -->
+    <div style="display:flex;align-items:center;gap:12px;margin:18px 0 12px;">
+      <hr style="flex:1;border:none;border-top:1px solid var(--card-border);">
+      <select id="clicksMetric" onchange="_renderClickTrendRight();_updateMetricNote()" style="font-size:12px;padding:4px 10px;border:1px solid var(--card-border);border-radius:6px;background:var(--card);color:var(--text);">
+        <option value="unique_clicks" selected>Unique clicks</option>
+        <option value="ctor">Click-to-Open % (CTOR)</option>
+        <option value="ctr">Click-Through Rate % (CTR)</option>
+      </select>
+      <hr style="flex:1;border:none;border-top:1px solid var(--card-border);">
+    </div>
+    <div id="clicks-metric-note" style="font-size:11px;color:var(--text-muted);font-style:italic;text-align:center;margin-bottom:10px;">One click per subscriber per campaign — unique clicks ÷ sends</div>
+
+    <!-- Metric charts row -->
+    <div class="grid-2">
       <div class="chart-card">
-        <h3 id="cnt-right-monthly-title">Monthly — Unique Clicks <span class="badge-inline">— one per subscriber per campaign</span></h3>
+        <h3><span id="cnt-right-weekly-title">Weekly — Unique Clicks</span> <span class="badge-inline" id="cnt-raw-weekly-unique-badge">— unique clicks ÷ sends</span></h3>
+        <div class="chart-container h240"><canvas id="cnt-raw-weekly-unique-bar"></canvas></div>
+      </div>
+      <div class="chart-card">
+        <h3><span id="cnt-right-monthly-title">Monthly — Unique Clicks</span> <span class="badge-inline" id="cnt-right-monthly-badge">— unique clicks ÷ sends</span></h3>
         <div class="chart-container h240"><canvas id="cnt-raw-monthly-unique-bar"></canvas></div>
       </div>
     </div>

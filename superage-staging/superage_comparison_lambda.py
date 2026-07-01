@@ -293,7 +293,9 @@ def lambda_handler(event, context):
                         DATE_TRUNC('week', "Sent Date "::date)::date AS week_start,
                         COALESCE(SUM("Clicks"), 0)                   AS clicks,
                         COALESCE(SUM("UniqueOpened"), 0)             AS unique_opens,
-                        COUNT(*)                                     AS campaigns
+                        COUNT(*)                                     AS campaigns,
+                        ROUND(AVG("UOpenRate")::numeric,  2)         AS avg_open_rate,
+                        ROUND(AVG("UClickRate")::numeric, 2)         AS avg_click_rate
                     FROM {S}."Campaigns"
                     WHERE "Sent Date " IS NOT NULL
                       AND "Sent Date "::date < CURRENT_DATE
@@ -307,6 +309,8 @@ def lambda_handler(event, context):
                     COALESCE(a.clicks, 0)                                    AS clicks,
                     COALESCE(a.unique_opens, 0)                              AS unique_opens,
                     COALESCE(a.campaigns, 0)                                 AS campaigns,
+                    a.avg_open_rate,
+                    a.avg_click_rate,
                     (w.week_start = DATE_TRUNC('week', CURRENT_DATE)::date)  AS is_current
                 FROM weeks w
                 LEFT JOIN agg a USING (week_start)
@@ -328,7 +332,9 @@ def lambda_handler(event, context):
                         DATE_TRUNC('month', "Sent Date "::date)::date AS month_start,
                         COALESCE(SUM("Clicks"), 0)                    AS clicks,
                         COALESCE(SUM("UniqueOpened"), 0)              AS unique_opens,
-                        COUNT(*)                                      AS campaigns
+                        COUNT(*)                                      AS campaigns,
+                        ROUND(AVG("UOpenRate")::numeric,  2)          AS avg_open_rate,
+                        ROUND(AVG("UClickRate")::numeric, 2)          AS avg_click_rate
                     FROM {S}."Campaigns"
                     WHERE "Sent Date " IS NOT NULL
                       AND "Sent Date "::date < CURRENT_DATE
@@ -342,6 +348,8 @@ def lambda_handler(event, context):
                     COALESCE(a.clicks, 0)                                      AS clicks,
                     COALESCE(a.unique_opens, 0)                                AS unique_opens,
                     COALESCE(a.campaigns, 0)                                   AS campaigns,
+                    a.avg_open_rate,
+                    a.avg_click_rate,
                     (m.month_start = DATE_TRUNC('month', CURRENT_DATE)::date)  AS is_current
                 FROM months m
                 LEFT JOIN agg a USING (month_start)
@@ -501,6 +509,7 @@ def lambda_handler(event, context):
             raw_clicks_by_weekday_rows = cur.fetchall()
 
             # (B.2) Raw clicks — last 12 ISO weeks (HTML defaults to 8w view; user can switch 4w/8w/12w).
+            # unique_clicks = COUNT(DISTINCT email) per week — truly unique subscribers who clicked.
             cur.execute(f"""
                 WITH sunday_campaigns AS (
                     SELECT "Campaign Name" AS name
@@ -532,8 +541,8 @@ def lambda_handler(event, context):
                     COUNT(c.w) FILTER (
                         WHERE c.issue_name NOT IN (SELECT name FROM sunday_campaigns)
                     )                                                        AS clicks_no_ss,
-                    COUNT(DISTINCT c.email || '|' || c.issue_name)           AS unique_clicks,
-                    COUNT(DISTINCT c.email || '|' || c.issue_name) FILTER (
+                    COUNT(DISTINCT c.email)                                  AS unique_clicks,
+                    COUNT(DISTINCT c.email) FILTER (
                         WHERE c.issue_name NOT IN (SELECT name FROM sunday_campaigns)
                     )                                                        AS unique_clicks_no_ss,
                     (w.week_start = DATE_TRUNC('week', CURRENT_DATE)::date)  AS is_current
@@ -545,6 +554,7 @@ def lambda_handler(event, context):
             raw_clicks_weekly_rows = cur.fetchall()
 
             # (B.3) Raw clicks — last 6 calendar months
+            # unique_clicks = COUNT(DISTINCT email) per month — truly unique subscribers who clicked.
             cur.execute(f"""
                 WITH sunday_campaigns AS (
                     SELECT "Campaign Name" AS name
@@ -576,8 +586,8 @@ def lambda_handler(event, context):
                     COUNT(c.m) FILTER (
                         WHERE c.issue_name NOT IN (SELECT name FROM sunday_campaigns)
                     )                                                          AS clicks_no_ss,
-                    COUNT(DISTINCT c.email || '|' || c.issue_name)             AS unique_clicks,
-                    COUNT(DISTINCT c.email || '|' || c.issue_name) FILTER (
+                    COUNT(DISTINCT c.email)                                    AS unique_clicks,
+                    COUNT(DISTINCT c.email) FILTER (
                         WHERE c.issue_name NOT IN (SELECT name FROM sunday_campaigns)
                     )                                                          AS unique_clicks_no_ss,
                     (m.month_start = DATE_TRUNC('month', CURRENT_DATE)::date)  AS is_current
@@ -587,6 +597,65 @@ def lambda_handler(event, context):
                 ORDER BY m.month_start
             """)
             raw_clicks_monthly_rows = cur.fetchall()
+
+            # (B.4) Raw opens — weekly unique openers from optimism.superage_opens
+            # COUNT(DISTINCT email) per ISO week — true unique subscribers who opened anything.
+            cur.execute("""
+                WITH weeks AS (
+                    SELECT generate_series(
+                        DATE_TRUNC('week', CURRENT_DATE)::date - INTERVAL '11 weeks',
+                        DATE_TRUNC('week', CURRENT_DATE)::date,
+                        INTERVAL '1 week'
+                    )::date AS week_start
+                ),
+                openers AS (
+                    SELECT
+                        DATE_TRUNC('week', "Timestamp"::date)::date          AS week_start,
+                        COUNT(DISTINCT LOWER(TRIM("EmailAddress")))           AS unique_openers
+                    FROM optimism.superage_opens
+                    WHERE "Timestamp"::date >= DATE_TRUNC('week', CURRENT_DATE)::date - INTERVAL '11 weeks'
+                      AND "Timestamp"::date <= CURRENT_DATE
+                    GROUP BY 1
+                )
+                SELECT
+                    w.week_start,
+                    TO_CHAR(w.week_start, 'Mon DD')                          AS label,
+                    COALESCE(o.unique_openers, 0)                            AS unique_openers,
+                    (w.week_start = DATE_TRUNC('week', CURRENT_DATE)::date)  AS is_current
+                FROM weeks w
+                LEFT JOIN openers o USING (week_start)
+                ORDER BY w.week_start
+            """)
+            raw_opens_weekly_rows = cur.fetchall()
+
+            # (B.5) Raw opens — monthly unique openers from optimism.superage_opens
+            cur.execute("""
+                WITH months AS (
+                    SELECT generate_series(
+                        DATE_TRUNC('month', CURRENT_DATE)::date - INTERVAL '5 months',
+                        DATE_TRUNC('month', CURRENT_DATE)::date,
+                        INTERVAL '1 month'
+                    )::date AS month_start
+                ),
+                openers AS (
+                    SELECT
+                        DATE_TRUNC('month', "Timestamp"::date)::date         AS month_start,
+                        COUNT(DISTINCT LOWER(TRIM("EmailAddress")))           AS unique_openers
+                    FROM optimism.superage_opens
+                    WHERE "Timestamp"::date >= DATE_TRUNC('month', CURRENT_DATE)::date - INTERVAL '5 months'
+                      AND "Timestamp"::date <= CURRENT_DATE
+                    GROUP BY 1
+                )
+                SELECT
+                    m.month_start,
+                    TO_CHAR(m.month_start, 'Mon YYYY')                           AS label,
+                    COALESCE(o.unique_openers, 0)                                AS unique_openers,
+                    (m.month_start = DATE_TRUNC('month', CURRENT_DATE)::date)    AS is_current
+                FROM months m
+                LEFT JOIN openers o USING (month_start)
+                ORDER BY m.month_start
+            """)
+            raw_opens_monthly_rows = cur.fetchall()
 
             # (C) Weekly digest — 9 ISO weeks (8 completed + the in-progress
             # current week) of headline metrics for the Weekly Digest tab.
@@ -845,6 +914,22 @@ def lambda_handler(event, context):
             """)
             digest_articles_rows = cur.fetchall()
 
+    # Compute CTOR from raw opens + raw clicks (both COUNT DISTINCT email per period)
+    weekly_openers_map  = {str(r["week_start"]):  safe_int(r["unique_openers"]) for r in raw_opens_weekly_rows}
+    monthly_openers_map = {str(r["month_start"]): safe_int(r["unique_openers"]) for r in raw_opens_monthly_rows}
+
+    for r in raw_clicks_weekly_rows:
+        openers = weekly_openers_map.get(str(r["week_start"]), 0)
+        r["ctor"]           = round(safe_int(r["unique_clicks"])       / openers * 100, 2) if openers else None
+        r["ctor_no_ss"]     = round(safe_int(r["unique_clicks_no_ss"]) / openers * 100, 2) if openers else None
+        r["unique_openers"] = openers
+
+    for r in raw_clicks_monthly_rows:
+        openers = monthly_openers_map.get(str(r["month_start"]), 0)
+        r["ctor"]           = round(safe_int(r["unique_clicks"])       / openers * 100, 2) if openers else None
+        r["ctor_no_ss"]     = round(safe_int(r["unique_clicks_no_ss"]) / openers * 100, 2) if openers else None
+        r["unique_openers"] = openers
+
     if not all_rows:
         result = {"data_as_of": today.isoformat(), "error": "no qualifying campaigns found"}
         write_to_r2(json.dumps(result, indent=2, default=str))
@@ -907,20 +992,24 @@ def lambda_handler(event, context):
         "weekly_trend":      weekly_trend,
         # Click Analysis trends (Section A — campaign aggregates)
         "campaign_clicks_weekly": {
-            "labels":       [str(r["label"])      for r in campaign_weekly_rows],
-            "week_starts":  [str(r["week_start"]) for r in campaign_weekly_rows],
-            "clicks":       [safe_int(r["clicks"])       for r in campaign_weekly_rows],
-            "unique_opens": [safe_int(r["unique_opens"]) for r in campaign_weekly_rows],
-            "campaigns":    [safe_int(r["campaigns"])    for r in campaign_weekly_rows],
-            "is_current":   [bool(r["is_current"])       for r in campaign_weekly_rows],
+            "labels":          [str(r["label"])      for r in campaign_weekly_rows],
+            "week_starts":     [str(r["week_start"]) for r in campaign_weekly_rows],
+            "clicks":          [safe_int(r["clicks"])       for r in campaign_weekly_rows],
+            "unique_opens":    [safe_int(r["unique_opens"]) for r in campaign_weekly_rows],
+            "campaigns":       [safe_int(r["campaigns"])    for r in campaign_weekly_rows],
+            "avg_open_rate":   [safe_float(r["avg_open_rate"])  if r.get("avg_open_rate")  is not None else None for r in campaign_weekly_rows],
+            "avg_click_rate":  [safe_float(r["avg_click_rate"]) if r.get("avg_click_rate") is not None else None for r in campaign_weekly_rows],
+            "is_current":      [bool(r["is_current"])       for r in campaign_weekly_rows],
         },
         "campaign_clicks_monthly": {
-            "labels":       [str(r["label"])       for r in campaign_monthly_rows],
-            "month_starts": [str(r["month_start"]) for r in campaign_monthly_rows],
-            "clicks":       [safe_int(r["clicks"])       for r in campaign_monthly_rows],
-            "unique_opens": [safe_int(r["unique_opens"]) for r in campaign_monthly_rows],
-            "campaigns":    [safe_int(r["campaigns"])    for r in campaign_monthly_rows],
-            "is_current":   [bool(r["is_current"])       for r in campaign_monthly_rows],
+            "labels":          [str(r["label"])       for r in campaign_monthly_rows],
+            "month_starts":    [str(r["month_start"]) for r in campaign_monthly_rows],
+            "clicks":          [safe_int(r["clicks"])       for r in campaign_monthly_rows],
+            "unique_opens":    [safe_int(r["unique_opens"]) for r in campaign_monthly_rows],
+            "campaigns":       [safe_int(r["campaigns"])    for r in campaign_monthly_rows],
+            "avg_open_rate":   [safe_float(r["avg_open_rate"])  if r.get("avg_open_rate")  is not None else None for r in campaign_monthly_rows],
+            "avg_click_rate":  [safe_float(r["avg_click_rate"]) if r.get("avg_click_rate") is not None else None for r in campaign_monthly_rows],
+            "is_current":      [bool(r["is_current"])       for r in campaign_monthly_rows],
         },
         "campaign_clicks_same_weekday": {
             "labels":       [str(r["label"]) for r in campaign_same_weekday_rows],
@@ -967,6 +1056,9 @@ def lambda_handler(event, context):
             "clicks_no_ss":         [safe_int(r["clicks_no_ss"])         for r in raw_clicks_weekly_rows],
             "unique_clicks":        [safe_int(r["unique_clicks"])        for r in raw_clicks_weekly_rows],
             "unique_clicks_no_ss":  [safe_int(r["unique_clicks_no_ss"])  for r in raw_clicks_weekly_rows],
+            "unique_openers":       [safe_int(r.get("unique_openers", 0)) for r in raw_clicks_weekly_rows],
+            "ctor":                 [r.get("ctor")        for r in raw_clicks_weekly_rows],
+            "ctor_no_ss":           [r.get("ctor_no_ss")  for r in raw_clicks_weekly_rows],
             "is_current":           [bool(r["is_current"])               for r in raw_clicks_weekly_rows],
         },
         "raw_clicks_monthly": {
@@ -976,7 +1068,22 @@ def lambda_handler(event, context):
             "clicks_no_ss":         [safe_int(r["clicks_no_ss"])         for r in raw_clicks_monthly_rows],
             "unique_clicks":        [safe_int(r["unique_clicks"])        for r in raw_clicks_monthly_rows],
             "unique_clicks_no_ss":  [safe_int(r["unique_clicks_no_ss"])  for r in raw_clicks_monthly_rows],
+            "unique_openers":       [safe_int(r.get("unique_openers", 0)) for r in raw_clicks_monthly_rows],
+            "ctor":                 [r.get("ctor")        for r in raw_clicks_monthly_rows],
+            "ctor_no_ss":           [r.get("ctor_no_ss")  for r in raw_clicks_monthly_rows],
             "is_current":           [bool(r["is_current"])               for r in raw_clicks_monthly_rows],
+        },
+        "raw_opens_weekly": {
+            "labels":         [str(r["label"])      for r in raw_opens_weekly_rows],
+            "week_starts":    [str(r["week_start"]) for r in raw_opens_weekly_rows],
+            "unique_openers": [safe_int(r["unique_openers"]) for r in raw_opens_weekly_rows],
+            "is_current":     [bool(r["is_current"]) for r in raw_opens_weekly_rows],
+        },
+        "raw_opens_monthly": {
+            "labels":         [str(r["label"])       for r in raw_opens_monthly_rows],
+            "month_starts":   [str(r["month_start"]) for r in raw_opens_monthly_rows],
+            "unique_openers": [safe_int(r["unique_openers"]) for r in raw_opens_monthly_rows],
+            "is_current":     [bool(r["is_current"]) for r in raw_opens_monthly_rows],
         },
         # Weekly Digest — feeds the new Weekly Digest tab. 9 ISO weeks
         # (8 completed + the in-progress current week, flagged by

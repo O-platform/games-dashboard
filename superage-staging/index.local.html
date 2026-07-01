@@ -1525,6 +1525,10 @@ function _rawMetric(series) {
   if (_ssOn()) return 'clicks';
   return (series && Array.isArray(series.clicks_no_ss)) ? 'clicks_no_ss' : 'clicks';
 }
+function _rawUniqueMetric(series) {
+  if (_ssOn()) return 'unique_clicks';
+  return (series && Array.isArray(series.unique_clicks_no_ss)) ? 'unique_clicks_no_ss' : 'unique_clicks';
+}
 
 /* Section 1 client-side aggregation from M.campaign_table.
  * Lets us filter Sunday Spotlight and switch between Total / Per-campaign /
@@ -1811,9 +1815,18 @@ function _setRawWeeklyWindow(n) {
     btn.style.background = active ? 'var(--accent)' : 'var(--card)';
     btn.style.color = active ? '#fff' : 'var(--text-muted)';
   });
+  ['rwu-4','rwu-8','rwu-12'].forEach(id => {
+    const btn = document.getElementById(id);
+    if (!btn) return;
+    const active = parseInt(id.split('-')[1]) === n;
+    btn.style.background = active ? 'var(--accent)' : 'var(--card)';
+    btn.style.color = active ? '#fff' : 'var(--text-muted)';
+  });
   const series = _sliceSeries(_rawClicksData.raw_clicks_weekly || {}, n);
   const m = _rawMetric(series);
   _clickTrendChart('cnt-raw-weekly-bar', series, m, '#bf3989', 'Click events');
+  const um = (series && Array.isArray(series.unique_clicks_no_ss) && !_ssOn()) ? 'unique_clicks_no_ss' : 'unique_clicks';
+  _clickTrendChart('cnt-raw-weekly-unique-bar', series, um, '#1a7f37', 'Unique clicks');
   const badge = document.getElementById('cnt-raw-weekly-badge');
   if (badge) badge.textContent = `— last ${(series.labels||[]).length || 0} ISO weeks`;
   const ins = document.getElementById('cnt-raw-weekly-insight');
@@ -1830,6 +1843,8 @@ function _renderRawMonthly() {
   const series = _rawClicksData.raw_clicks_monthly || {};
   const m = _rawMetric(series);
   _clickTrendChart('cnt-raw-monthly-bar', series, m, '#9a6700', 'Click events');
+  const um = (series && Array.isArray(series.unique_clicks_no_ss) && !_ssOn()) ? 'unique_clicks_no_ss' : 'unique_clicks';
+  _clickTrendChart('cnt-raw-monthly-unique-bar', series, um, '#1a7f37', 'Unique clicks');
   const badge = document.getElementById('cnt-raw-monthly-badge');
   if (badge) badge.textContent = `— last ${(series.labels||[]).length || 0} months`;
   const ins = document.getElementById('cnt-raw-monthly-insight');
@@ -1846,13 +1861,11 @@ function _renderRawMonthly() {
  * KPI cards above the charts so they share the same scope. */
 function _refreshClicksTab() {
   _renderClickKpis();
-  _renderClickSection1();
   _setWeekdayWindow(window._rawWeekdayN || 3);
   _setRawWeeklyWindow(window._rawWeeklyN || 8);
   _renderRawMonthly();
   const opensPanel = document.getElementById('eng-panel-opens');
   if (opensPanel && opensPanel.style.display !== 'none') {
-    _renderOpensSection1();
     _renderOpensSection2();
   }
 }
@@ -1986,7 +1999,7 @@ function _renderOpensSection2() {
   _renderOpenerWeeklyChart(_rawClicksData);
   const rows    = _opensRows();
   const monthly = _buildCampaignSeries(rows, _monthStart, _fmtMonthLabel, 6);
-  _clickTrendChart('op-s2-monthly-bar', monthly, 'unique_opens', '#bf8700', 'Unique Opens', v => Number(v).toLocaleString());
+  _clickTrendChart('op-s2-monthly-bar', monthly, 'unique_opens', '#1a7f37', 'Unique Opens', v => Number(v).toLocaleString());
 }
 
 /* Click-volume distribution bar — buckets subscribers by their lifetime
@@ -2056,34 +2069,32 @@ function renderContent(M) {
       <div class="kpi-card orange"><div class="label">Total Opens</div><div class="value" id="ca-kpi-opens">—</div><div class="sub">Sum of <code>UniqueOpened</code></div></div>
     </div>
 
-    <!-- Clicks / Opens toggle + shared SS toggle -->
-    <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;margin-bottom:14px;">
-      <div style="display:flex;gap:6px;">
-        <button id="eng-tab-clicks" onclick="_setEngTab('clicks')" style="font-size:13px;font-weight:600;padding:6px 18px;border:1px solid var(--accent);border-radius:7px;background:var(--accent);color:#fff;cursor:pointer;">Clicks</button>
-        <button id="eng-tab-opens"  onclick="_setEngTab('opens')"  style="font-size:13px;font-weight:600;padding:6px 18px;border:1px solid var(--card-border);border-radius:7px;background:var(--card);color:var(--text-muted);cursor:pointer;">Opens</button>
+    <!-- Clicks / Opens toggle -->
+    <div style="display:flex;gap:6px;margin-bottom:12px;">
+      <button id="eng-tab-clicks" onclick="_setEngTab('clicks')" style="font-size:13px;font-weight:600;padding:6px 18px;border:1px solid var(--accent);border-radius:7px;background:var(--accent);color:#fff;cursor:pointer;">Clicks</button>
+      <button id="eng-tab-opens"  onclick="_setEngTab('opens')"  style="font-size:13px;font-weight:600;padding:6px 18px;border:1px solid var(--card-border);border-radius:7px;background:var(--card);color:var(--text-muted);cursor:pointer;">Opens</button>
+    </div>
+
+    <!-- Shared toolbar — SS toggle always visible, metric dropdown only in clicks mode -->
+    <div class="camp-toolbar" style="margin-bottom:16px;">
+      <div class="camp-toolbar-left">
+        <label class="switch" for="clicksIncludeSS" title="Include Sunday Spotlight campaigns">
+          <input type="checkbox" id="clicksIncludeSS" onchange="_refreshClicksTab()">
+          <span class="slider-round"></span>
+        </label>
+        <div>
+          <div style="font-size:13px;font-weight:600;color:var(--text);">Include Sunday Spotlight</div>
+          <div style="font-size:11px;color:var(--text-muted);" id="clicks-ss-state">Excluding branded digest sends</div>
+        </div>
       </div>
-      <!-- SS toggle: always visible, applies to both panels -->
-      <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;">
-        <div class="camp-toolbar-left" style="margin:0;">
-          <label class="switch" for="clicksIncludeSS" title="Include Sunday Spotlight campaigns">
-            <input type="checkbox" id="clicksIncludeSS" onchange="_refreshClicksTab()">
-            <span class="slider-round"></span>
-          </label>
-          <div>
-            <div style="font-size:13px;font-weight:600;color:var(--text);">Include Sunday Spotlight</div>
-            <div style="font-size:11px;color:var(--text-muted);" id="clicks-ss-state">Excluding branded digest sends</div>
-          </div>
-        </div>
-        <!-- Clicks-only: metric dropdown -->
-        <div id="eng-clicks-toolbar" style="display:flex;align-items:center;gap:8px;">
-          <label style="font-size:12px;color:var(--text-muted);">Section 1 metric:</label>
-          <select id="clicksMetric" onchange="_renderClickSection1()" style="font-size:12px;padding:5px 10px;border:1px solid var(--card-border);border-radius:6px;background:var(--card);color:var(--text);">
-            <option value="clicks">Total clicks</option>
-            <option value="per_campaign" selected>Clicks / campaign</option>
-            <option value="ctor">Click-to-Open %</option>
-            <option value="ctr">CTR (clicks / recipients) %</option>
-          </select>
-        </div>
+      <div id="eng-clicks-toolbar" style="display:flex;align-items:center;gap:8px;">
+        <label style="font-size:12px;color:var(--text-muted);">Clicks metric:</label>
+        <select id="clicksMetric" onchange="_renderClickSection1()" style="font-size:12px;padding:5px 10px;border:1px solid var(--card-border);border-radius:6px;background:var(--card);color:var(--text);">
+          <option value="clicks">Total click events</option>
+          <option value="unique_clicks" selected>Unique clicks</option>
+          <option value="ctor">Click-to-Open %</option>
+          <option value="ctr">CTR (clicks / recipients) %</option>
+        </select>
       </div>
     </div>
 
@@ -2107,24 +2118,10 @@ function renderContent(M) {
         </div>
       </div>
 
-      <h3 style="margin:18px 0 10px;font-size:13px;text-transform:uppercase;letter-spacing:.5px;color:var(--text-muted);">Section 1 — Campaign-Level Aggregated</h3>
-    <div class="grid-2">
-      <div class="chart-card">
-        <h3>Weekly Campaign Clicks <span class="badge-inline">— last 8 weeks, Mon-Sun rollup</span></h3>
-        <div class="chart-container h260"><canvas id="cnt-weekly-bar"></canvas></div>
-        <div class="insight" id="cnt-weekly-insight"></div>
-      </div>
-      <div class="chart-card">
-        <h3>Monthly Campaign Clicks <span class="badge-inline">— last 6 months</span></h3>
-        <div class="chart-container h260"><canvas id="cnt-monthly-bar"></canvas></div>
-        <div class="insight" id="cnt-monthly-insight"></div>
-      </div>
-    </div>
-
-    <h3 style="margin:18px 0 10px;font-size:13px;text-transform:uppercase;letter-spacing:.5px;color:var(--text-muted);">Section 2 — Click Trends Over Time</h3>
+    <h3 style="margin:18px 0 10px;font-size:13px;text-transform:uppercase;letter-spacing:.5px;color:var(--text-muted);">Click Trends</h3>
     <div class="chart-card">
       <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;margin-bottom:6px;flex-wrap:wrap;">
-        <h3 style="margin:0;">Same Weekday <span class="badge-inline" id="cnt-raw-weekday-badge">— last N sends per weekday, total clicks per send</span></h3>
+        <h3 style="margin:0;">Same Weekday <span class="badge-inline" id="cnt-raw-weekday-badge">— last N sends per weekday</span></h3>
         <div style="display:flex;gap:4px;" id="cnt-raw-weekday-btns">
           <button onclick="_setWeekdayWindow(2)" id="rwd-2" style="font-size:11px;padding:3px 8px;border:1px solid var(--card-border);border-radius:5px;background:var(--card);color:var(--text-muted);cursor:pointer;">2 weeks</button>
           <button onclick="_setWeekdayWindow(3)" id="rwd-3" style="font-size:11px;padding:3px 8px;border:1px solid var(--card-border);border-radius:5px;background:var(--accent);color:#fff;cursor:pointer;">3 weeks</button>
@@ -2138,7 +2135,7 @@ function renderContent(M) {
     <div class="grid-2">
       <div class="chart-card">
         <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;margin-bottom:6px;flex-wrap:wrap;">
-          <h3 style="margin:0;">Weekly <span class="badge-inline" id="cnt-raw-weekly-badge">— last ISO weeks</span></h3>
+          <h3 style="margin:0;">Weekly — Total Click Events <span class="badge-inline" id="cnt-raw-weekly-badge">— raw events per week, SS excluded by toggle</span></h3>
           <div style="display:flex;gap:4px;" id="cnt-raw-weekly-btns">
             <button onclick="_setRawWeeklyWindow(4)"  id="rww-4"  style="font-size:11px;padding:3px 8px;border:1px solid var(--card-border);border-radius:5px;background:var(--card);color:var(--text-muted);cursor:pointer;">4w</button>
             <button onclick="_setRawWeeklyWindow(8)"  id="rww-8"  style="font-size:11px;padding:3px 8px;border:1px solid var(--card-border);border-radius:5px;background:var(--accent);color:#fff;cursor:pointer;">8w</button>
@@ -2149,17 +2146,27 @@ function renderContent(M) {
         <div class="insight" id="cnt-raw-weekly-insight"></div>
       </div>
       <div class="chart-card">
-        <h3>Monthly <span class="badge-inline" id="cnt-raw-monthly-badge">— last months</span></h3>
+        <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;margin-bottom:6px;flex-wrap:wrap;">
+          <h3 style="margin:0;">Weekly — Unique Clicks <span class="badge-inline" id="cnt-raw-weekly-unique-badge">— unique clicks per week</span></h3>
+          <div style="display:flex;gap:4px;">
+            <button onclick="_setRawWeeklyWindow(4)"  id="rwu-4"  style="font-size:11px;padding:3px 8px;border:1px solid var(--card-border);border-radius:5px;background:var(--card);color:var(--text-muted);cursor:pointer;">4w</button>
+            <button onclick="_setRawWeeklyWindow(8)"  id="rwu-8"  style="font-size:11px;padding:3px 8px;border:1px solid var(--card-border);border-radius:5px;background:var(--accent);color:#fff;cursor:pointer;">8w</button>
+            <button onclick="_setRawWeeklyWindow(12)" id="rwu-12" style="font-size:11px;padding:3px 8px;border:1px solid var(--card-border);border-radius:5px;background:var(--card);color:var(--text-muted);cursor:pointer;">12w</button>
+          </div>
+        </div>
+        <div class="chart-container h240"><canvas id="cnt-raw-weekly-unique-bar"></canvas></div>
+      </div>
+    </div>
+    <div class="grid-2">
+      <div class="chart-card">
+        <h3>Monthly — Total Click Events <span class="badge-inline" id="cnt-raw-monthly-badge">— raw events per month</span></h3>
         <div class="chart-container h240"><canvas id="cnt-raw-monthly-bar"></canvas></div>
         <div class="insight" id="cnt-raw-monthly-insight"></div>
       </div>
-    </div>
-
-    <h3 style="margin:18px 0 10px;font-size:13px;text-transform:uppercase;letter-spacing:.5px;color:var(--text-muted);">Section 3 — Subscriber Click Behaviour</h3>
-    <div class="chart-card">
-      <h3 style="margin-bottom:12px;">Click Volume Distribution <span class="badge-inline">— subscribers grouped by lifetime unique clicks</span></h3>
-      <div class="chart-container h300"><canvas id="sc-bucket-bar"></canvas></div>
-      <div class="insight" id="sc-bucket-insight"></div>
+      <div class="chart-card">
+        <h3>Monthly — Unique Clicks <span class="badge-inline">— unique clicks per month</span></h3>
+        <div class="chart-container h240"><canvas id="cnt-raw-monthly-unique-bar"></canvas></div>
+      </div>
     </div>
 
     <div class="chart-card">
@@ -2193,28 +2200,14 @@ function renderContent(M) {
         </div>
       </div>
 
-      <h3 style="margin:18px 0 10px;font-size:13px;text-transform:uppercase;letter-spacing:.5px;color:var(--text-muted);">Section 1 — Campaign-Level Aggregated</h3>
+      <h3 style="margin:18px 0 10px;font-size:13px;text-transform:uppercase;letter-spacing:.5px;color:var(--text-muted);">Opens Trends</h3>
       <div class="grid-2">
         <div class="chart-card">
-          <h3>Weekly Campaign Opens <span class="badge-inline">— last 8 weeks, Mon-Sun rollup</span></h3>
-          <div class="chart-container h260"><canvas id="op-s1-weekly-bar"></canvas></div>
-          <div class="insight" id="op-s1-weekly-insight"></div>
-        </div>
-        <div class="chart-card">
-          <h3>Monthly Campaign Opens <span class="badge-inline">— last 6 months</span></h3>
-          <div class="chart-container h260"><canvas id="op-s1-monthly-bar"></canvas></div>
-          <div class="insight" id="op-s1-monthly-insight"></div>
-        </div>
-      </div>
-
-      <h3 style="margin:18px 0 10px;font-size:13px;text-transform:uppercase;letter-spacing:.5px;color:var(--text-muted);">Section 2 — Opens Trends Over Time</h3>
-      <div class="grid-2">
-        <div class="chart-card">
-          <h3>Weekly Unique Openers <span class="badge-inline">— rolling 30-day window, last 13 weeks</span></h3>
+          <h3>Weekly — Unique Openers <span class="badge-inline">— rolling 30-day window, one per subscriber</span></h3>
           <div class="chart-container h260"><canvas id="op-weekly-chart"></canvas></div>
         </div>
         <div class="chart-card">
-          <h3>Monthly Campaign Opens <span class="badge-inline">— last 6 months</span></h3>
+          <h3>Monthly — Unique Opens <span class="badge-inline">— UniqueOpened per campaign, grouped by send month</span></h3>
           <div class="chart-container h260"><canvas id="op-s2-monthly-bar"></canvas></div>
         </div>
       </div>
@@ -2230,8 +2223,6 @@ function renderContent(M) {
   _renderClickKpis();
   _renderSubscriberClickKpis(M);
   _renderOpenerKpis(M);
-  _renderClickBucketChart(M);
-  _renderClickSection1();
   _setWeekdayWindow(3);
   _setRawWeeklyWindow(8);
   _renderRawMonthly();

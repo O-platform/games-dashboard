@@ -1752,22 +1752,23 @@ function _renderClickTrendRight() {
     const ms = (_rawClicksData && _rawClicksData.raw_clicks_monthly) || {};
     const mm = (ms && Array.isArray(ms.unique_clicks_no_ss) && !_ssOn()) ? 'unique_clicks_no_ss' : 'unique_clicks';
     _clickTrendChart('cnt-raw-monthly-unique-bar', ms, mm, '#1a7f37', 'Unique clicks');
-    _updateRightChartTitles('Unique Clicks', '— unique clicks ÷ sends');
+    _updateRightChartTitles('Unique Clicks', '— raw events · unique subscribers who clicked');
+  } else if (metric === 'ctor') {
+    // CTOR from raw data: unique_clicks / unique_openers per week/month
+    const ws = _sliceSeries(_rawClicksData && _rawClicksData.raw_clicks_weekly || {}, window._rawWeeklyN || 8);
+    const wm = (ws && Array.isArray(ws.ctor_no_ss) && !_ssOn()) ? 'ctor_no_ss' : 'ctor';
+    _clickTrendChart('cnt-raw-weekly-unique-bar', ws, wm, '#8250df', 'CTOR %', pctFmt);
+    const ms = (_rawClicksData && _rawClicksData.raw_clicks_monthly) || {};
+    const mm = (ms && Array.isArray(ms.ctor_no_ss) && !_ssOn()) ? 'ctor_no_ss' : 'ctor';
+    _clickTrendChart('cnt-raw-monthly-unique-bar', ms, mm, '#8250df', 'CTOR %', pctFmt);
+    _updateRightChartTitles('Click-to-Open %', '— raw events · unique clicks ÷ unique opens');
   } else {
-    const rows = _ssOn()
-      ? ((_rawClicksData && _rawClicksData.campaign_table) || [])
-      : ((_rawClicksData && _rawClicksData.campaign_table) || []).filter(c => !_isSundayCampaign(c));
-    const ws = _buildCampaignSeries(rows, _isoWeekStart, _fmtWeekLabel, window._rawWeeklyN || 8);
-    const ms = _buildCampaignSeries(rows, _monthStart,   _fmtMonthLabel, 6);
-    if (metric === 'ctor') {
-      _clickTrendChart('cnt-raw-weekly-unique-bar',  ws, 'ctor', '#8250df', 'CTOR %', pctFmt);
-      _clickTrendChart('cnt-raw-monthly-unique-bar', ms, 'ctor', '#8250df', 'CTOR %', pctFmt);
-      _updateRightChartTitles('Click-to-Open %', '— unique clicks ÷ unique opens');
-    } else {
-      _clickTrendChart('cnt-raw-weekly-unique-bar',  ws, 'ctr', '#cf222e', 'CTR %', pctFmt);
-      _clickTrendChart('cnt-raw-monthly-unique-bar', ms, 'ctr', '#cf222e', 'CTR %', pctFmt);
-      _updateRightChartTitles('CTR %', '— unique clicks ÷ recipients');
-    }
+    // avg_click_rate from campaign summary (AVG UClickRate per week/month)
+    const ws = _sliceSeries(_rawClicksData && _rawClicksData.campaign_clicks_weekly || {}, window._rawWeeklyN || 8);
+    _clickTrendChart('cnt-raw-weekly-unique-bar', ws, 'avg_click_rate', '#cf222e', 'Avg Click Rate %', pctFmt);
+    const ms = (_rawClicksData && _rawClicksData.campaign_clicks_monthly) || {};
+    _clickTrendChart('cnt-raw-monthly-unique-bar', ms, 'avg_click_rate', '#cf222e', 'Avg Click Rate %', pctFmt);
+    _updateRightChartTitles('Avg Click Rate', '— campaign summary · avg UClickRate across campaigns');
   }
 }
 function _updateMetricNote() {
@@ -1775,9 +1776,9 @@ function _updateMetricNote() {
   if (!el) return;
   const metric = (document.getElementById('clicksMetric') || {}).value || 'unique_clicks';
   const notes = {
-    unique_clicks: 'One click per subscriber per campaign — unique clicks ÷ sends',
-    ctor: 'Unique clicks ÷ Unique opens',
-    ctr:  'Unique clicks ÷ Recipients',
+    unique_clicks:   'Raw events — unique clicks ÷ sends',
+    ctor:            'Raw events — unique clicks ÷ unique opens',
+    avg_click_rate:  'Campaign summary — avg click rate across campaigns per period',
   };
   el.textContent = notes[metric] || '';
 }
@@ -1900,10 +1901,10 @@ function _renderOpensSection1() {
 
 function _renderOpensSection2() {
   _renderOpenerWeeklyChart();
-  // Monthly opens from campaign_table grouped by month
-  const rows    = _opensRows();
-  const monthly = _buildCampaignSeries(rows, _monthStart, _fmtMonthLabel, 6);
-  _clickTrendChart('op-s2-monthly-bar', monthly, 'unique_opens', '#1a7f37', 'Unique Opens', v => Number(v).toLocaleString());
+  // Monthly unique openers from raw events
+  const ms = (_rawClicksData && _rawClicksData.raw_opens_monthly) || {};
+  _clickTrendChart('op-s2-monthly-bar', ms, 'unique_openers', '#1a7f37', 'Unique Openers', v => Number(v).toLocaleString());
+  _renderAvgOpenRateCharts();
 }
 
 function _renderOpenerKpis(M) {
@@ -1916,9 +1917,50 @@ function _renderOpenerKpis(M) {
 }
 
 function _renderOpenerWeeklyChart() {
-  const rows   = _opensRows();
-  const weekly = _buildCampaignSeries(rows, _isoWeekStart, _fmtWeekLabel, 8);
-  _clickTrendChart('op-weekly-chart', weekly, 'unique_opens', '#1a7f37', 'Unique Opens', v => Number(v).toLocaleString());
+  // Weekly unique openers from raw events (COUNT DISTINCT email per ISO week)
+  const ws = _sliceSeries((_rawClicksData && _rawClicksData.raw_opens_weekly) || {}, window._rawWeeklyN || 8);
+  _clickTrendChart('op-weekly-chart', ws, 'unique_openers', '#1a7f37', 'Unique Openers', v => Number(v).toLocaleString());
+}
+
+function _renderAvgOpenRateCharts() {
+  const pctFmt = v => v != null ? Number(v).toFixed(2) + '%' : null;
+  const ws = _sliceSeries((_rawClicksData && _rawClicksData.campaign_clicks_weekly) || {}, window._rawWeeklyN || 8);
+  const ms = (_rawClicksData && _rawClicksData.campaign_clicks_monthly) || {};
+  const mkLine = (canvasId, series, label, color) => {
+    const ctx = _resetCanvas(canvasId);
+    if (!ctx) return;
+    const labels = series.labels || [];
+    const data   = (series.avg_open_rate || []).map(v => v != null ? Number(v) : null);
+    const isCur  = series.is_current || [];
+    ctx._chart = _newChart(ctx, {
+      type: 'line',
+      data: {
+        labels,
+        datasets: [{
+          label,
+          data,
+          borderColor: isCur.map((c, i) => (c && i === isCur.length - 1) ? color + '80' : color),
+          backgroundColor: 'transparent',
+          pointBackgroundColor: isCur.map((c, i) => (c && i === isCur.length - 1) ? color + '60' : color),
+          pointRadius: 4,
+          pointHoverRadius: 6,
+          borderWidth: 2,
+          tension: 0.3,
+          spanGaps: true,
+        }]
+      },
+      options: {
+        responsive: true, maintainAspectRatio: false,
+        plugins: { legend: { display: false }, tooltip: { callbacks: { label: ctx => pctFmt(ctx.raw) } } },
+        scales: {
+          x: { ticks: { font: { size: 11 } }, grid: { display: false } },
+          y: { ticks: { font: { size: 11 }, callback: v => v + '%' }, beginAtZero: false },
+        },
+      },
+    });
+  };
+  mkLine('op-avg-open-rate-weekly',  ws, 'Avg Open Rate %', '#0969da');
+  mkLine('op-avg-open-rate-monthly', ms, 'Avg Open Rate %', '#0969da');
 }
 
 /* Click-volume distribution bar — buckets subscribers by their lifetime
@@ -2069,7 +2111,7 @@ function renderContent(M) {
       <select id="clicksMetric" onchange="_renderClickTrendRight();_updateMetricNote()" style="font-size:12px;padding:4px 10px;border:1px solid var(--card-border);border-radius:6px;background:var(--card);color:var(--text);">
         <option value="unique_clicks" selected>Unique clicks</option>
         <option value="ctor">Click-to-Open % (CTOR)</option>
-        <option value="ctr">Click-Through Rate % (CTR)</option>
+        <option value="avg_click_rate">Avg Click Rate</option>
       </select>
       <hr style="flex:1;border:none;border-top:1px solid var(--card-border);">
     </div>
@@ -2118,15 +2160,26 @@ function renderContent(M) {
         </div>
       </div>
 
-      <h3 style="margin:18px 0 10px;font-size:13px;text-transform:uppercase;letter-spacing:.5px;color:var(--text-muted);">Opens Trends</h3>
+      <h3 style="margin:18px 0 10px;font-size:13px;text-transform:uppercase;letter-spacing:.5px;color:var(--text-muted);">Unique Openers <span style="font-weight:400;text-transform:none;letter-spacing:0;font-size:11px;color:var(--text-muted);">raw events · COUNT DISTINCT email per period</span></h3>
       <div class="grid-2">
         <div class="chart-card">
-          <h3>Weekly — Unique Openers <span class="badge-inline">— UniqueOpened per campaign, grouped by send week</span></h3>
+          <h3>Weekly — Unique Openers <span class="badge-inline">— raw events, distinct subscribers per ISO week</span></h3>
           <div class="chart-container h260"><canvas id="op-weekly-chart"></canvas></div>
         </div>
         <div class="chart-card">
-          <h3>Monthly — Unique Opens <span class="badge-inline">— UniqueOpened per campaign, grouped by send month</span></h3>
+          <h3>Monthly — Unique Openers <span class="badge-inline">— raw events, distinct subscribers per month</span></h3>
           <div class="chart-container h260"><canvas id="op-s2-monthly-bar"></canvas></div>
+        </div>
+      </div>
+      <h3 style="margin:18px 0 10px;font-size:13px;text-transform:uppercase;letter-spacing:.5px;color:var(--text-muted);">Avg Open Rate <span style="font-weight:400;text-transform:none;letter-spacing:0;font-size:11px;color:var(--text-muted);">campaign summary · AVG(UOpenRate) across campaigns</span></h3>
+      <div class="grid-2">
+        <div class="chart-card">
+          <h3>Weekly — Avg Open Rate <span class="badge-inline">— campaign summary per ISO week</span></h3>
+          <div class="chart-container h240"><canvas id="op-avg-open-rate-weekly"></canvas></div>
+        </div>
+        <div class="chart-card">
+          <h3>Monthly — Avg Open Rate <span class="badge-inline">— campaign summary per month</span></h3>
+          <div class="chart-container h240"><canvas id="op-avg-open-rate-monthly"></canvas></div>
         </div>
       </div>
     </div><!-- /eng-panel-opens -->

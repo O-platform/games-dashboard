@@ -1881,6 +1881,17 @@ function _renderClickTrendRight() {
     }
   }
 }
+function _updateMetricNote() {
+  const el = document.getElementById('clicks-metric-note');
+  if (!el) return;
+  const metric = (document.getElementById('clicksMetric') || {}).value || 'unique_clicks';
+  const notes = {
+    unique_clicks: 'One click counted per subscriber per campaign — sourced from raw click events, respects SS toggle.',
+    ctor: 'Click-to-Open Rate = clicks ÷ unique opens. ⚠ Campaign Monitor reported data (not raw events) — SS toggle applies.',
+    ctr:  'Click-Through Rate = clicks ÷ recipients. ⚠ Campaign Monitor reported data (not raw events) — SS toggle applies.',
+  };
+  el.textContent = notes[metric] || '';
+}
 function _updateRightChartTitles(label, badge) {
   const wh = document.getElementById('cnt-right-weekly-title');
   const wb = document.getElementById('cnt-raw-weekly-unique-badge');
@@ -2130,13 +2141,16 @@ function renderContent(M) {
       <div class="insight" id="cnt-raw-weekday-insight"></div>
       <div id="cnt-raw-weekday-table"></div>
     </div>
-    <div style="display:flex;align-items:center;gap:8px;margin:14px 0 8px;">
-      <span style="font-size:12px;color:var(--text-muted);font-weight:500;">Right chart metric:</span>
-      <select id="clicksMetric" onchange="_renderClickTrendRight()" style="font-size:12px;padding:4px 10px;border:1px solid var(--card-border);border-radius:6px;background:var(--card);color:var(--text);">
-        <option value="unique_clicks" selected>Unique clicks</option>
-        <option value="ctor">Click-to-Open %</option>
-        <option value="ctr">CTR %</option>
-      </select>
+    <div style="margin:14px 0 8px;">
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:4px;">
+        <span style="font-size:12px;color:var(--text-muted);font-weight:500;">Pair right charts with:</span>
+        <select id="clicksMetric" onchange="_renderClickTrendRight();_updateMetricNote()" style="font-size:12px;padding:4px 10px;border:1px solid var(--card-border);border-radius:6px;background:var(--card);color:var(--text);">
+          <option value="unique_clicks" selected>Unique clicks</option>
+          <option value="ctor">Click-to-Open % (CTOR)</option>
+          <option value="ctr">Click-Through Rate % (CTR)</option>
+        </select>
+      </div>
+      <div id="clicks-metric-note" style="font-size:11px;color:var(--text-muted);font-style:italic;padding-left:2px;">One click counted per subscriber per campaign — sourced from raw click events, respects SS toggle.</div>
     </div>
     <div class="grid-2">
       <div class="chart-card">

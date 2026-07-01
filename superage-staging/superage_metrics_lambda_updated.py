@@ -536,21 +536,18 @@ def lambda_handler(event, context):
         clicker_summary["repeat_90d"] = safe_int(repeat_row.get("repeat_90d"))
 
         # ─────────────────────────────────────────────────────
-        # Q18c — Opener KPIs from optimism.superage_opens
-        # 120-day filter covers 13-week rolling-30d window.
+        # Q18c — Opener KPIs from superage.mv_opens_daily
+        # Matview deduplicates optimism.superage_opens (78M rows) into unique
+        # (open_date, email, campaign_id) tuples; refreshed daily via pg_cron.
+        # See superage-staging/sql/mv_opens_daily.sql for definition.
         # ─────────────────────────────────────────────────────
         opener_summary = {}
         try:
             cur.execute("""
                 WITH recent AS (
-                    SELECT DISTINCT
-                        LOWER(TRIM(email))       AS email,
-                        campaign_id,
-                        opened_at::date          AS open_date
-                    FROM optimism.superage_opens
-                    WHERE opened_at >= CURRENT_TIMESTAMP - INTERVAL '120 days'
-                      AND email IS NOT NULL
-                      AND TRIM(email) != ''
+                    SELECT email, campaign_id, open_date
+                    FROM superage.mv_opens_daily
+                    WHERE open_date >= CURRENT_DATE - INTERVAL '120 days'
                 ),
                 per_email_7d  AS (SELECT email, COUNT(DISTINCT campaign_id) AS opens FROM recent WHERE open_date >= CURRENT_DATE - INTERVAL '7 days'  GROUP BY 1),
                 per_email_30d AS (SELECT email, COUNT(DISTINCT campaign_id) AS opens FROM recent WHERE open_date >= CURRENT_DATE - INTERVAL '30 days' GROUP BY 1),
@@ -564,28 +561,27 @@ def lambda_handler(event, context):
                     (SELECT COUNT(*) FROM per_email_90d WHERE opens >= 2) AS repeat_openers_90d
             """)
             opener_summary = cur.fetchone() or {}
-            _t("5a. opener KPIs (superage_opens 120d)")
+            _t("5a. opener KPIs (mv_opens_daily 120d)")
 
             # Weekly rolling-30d unique openers — last 13 weeks
             cur.execute("""
                 SELECT
-                    gs::date                                            AS week_end,
-                    COUNT(DISTINCT LOWER(TRIM(o.email)))                AS openers_rolling_30d
+                    gs::date                           AS week_end,
+                    COUNT(DISTINCT o.email)            AS openers_rolling_30d
                 FROM generate_series(
                     CURRENT_DATE - INTERVAL '12 weeks',
                     CURRENT_DATE,
                     INTERVAL '1 week'
                 ) gs
-                JOIN optimism.superage_opens o
-                    ON o.opened_at >= gs - INTERVAL '29 days'
-                   AND o.opened_at <  gs + INTERVAL '1 day'
-                WHERE o.opened_at >= CURRENT_TIMESTAMP - INTERVAL '120 days'
-                  AND o.email IS NOT NULL
+                JOIN superage.mv_opens_daily o
+                    ON o.open_date >= gs::date - INTERVAL '29 days'
+                   AND o.open_date <  gs::date + INTERVAL '1 day'
+                WHERE o.open_date >= CURRENT_DATE - INTERVAL '120 days'
                 GROUP BY 1
                 ORDER BY 1
             """)
             opener_weekly_rows = cur.fetchall() or []
-            _t("5b. opener rolling-30d weekly (superage_opens)")
+            _t("5b. opener rolling-30d weekly (mv_opens_daily)")
         except Exception as ex:
             logger.warning(f"Opens query failed: {ex}")
             opener_weekly_rows = []

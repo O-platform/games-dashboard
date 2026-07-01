@@ -598,8 +598,10 @@ def lambda_handler(event, context):
             """)
             raw_clicks_monthly_rows = cur.fetchall()
 
-            # (B.4) Raw opens — weekly unique openers from optimism.superage_opens
-            # COUNT(DISTINCT email) per ISO week — true unique subscribers who opened anything.
+            # (B.4) Raw opens — weekly unique openers from superage.mv_opens_daily
+            # Matview deduplicates optimism.superage_opens (78M rows) into unique
+            # (open_date, email, campaign_id) tuples; refreshed daily via pg_cron.
+            # See superage-staging/sql/mv_opens_daily.sql for definition.
             cur.execute("""
                 WITH weeks AS (
                     SELECT generate_series(
@@ -610,12 +612,11 @@ def lambda_handler(event, context):
                 ),
                 openers AS (
                     SELECT
-                        DATE_TRUNC('week', opened_at)::date                  AS week_start,
-                        COUNT(DISTINCT LOWER(TRIM(email)))                   AS unique_openers
-                    FROM optimism.superage_opens
-                    WHERE opened_at >= DATE_TRUNC('week', CURRENT_DATE) - INTERVAL '11 weeks'
-                      AND opened_at <  CURRENT_DATE + INTERVAL '1 day'
-                      AND email IS NOT NULL
+                        DATE_TRUNC('week', open_date)::date  AS week_start,
+                        COUNT(DISTINCT email)                AS unique_openers
+                    FROM superage.mv_opens_daily
+                    WHERE open_date >= DATE_TRUNC('week', CURRENT_DATE)::date - INTERVAL '11 weeks'
+                      AND open_date <  CURRENT_DATE + INTERVAL '1 day'
                     GROUP BY 1
                 )
                 SELECT
@@ -629,7 +630,7 @@ def lambda_handler(event, context):
             """)
             raw_opens_weekly_rows = cur.fetchall()
 
-            # (B.5) Raw opens — monthly unique openers from optimism.superage_opens
+            # (B.5) Raw opens — monthly unique openers from superage.mv_opens_daily
             cur.execute("""
                 WITH months AS (
                     SELECT generate_series(
@@ -640,12 +641,11 @@ def lambda_handler(event, context):
                 ),
                 openers AS (
                     SELECT
-                        DATE_TRUNC('month', opened_at)::date                 AS month_start,
-                        COUNT(DISTINCT LOWER(TRIM(email)))                   AS unique_openers
-                    FROM optimism.superage_opens
-                    WHERE opened_at >= DATE_TRUNC('month', CURRENT_DATE) - INTERVAL '5 months'
-                      AND opened_at <  CURRENT_DATE + INTERVAL '1 day'
-                      AND email IS NOT NULL
+                        DATE_TRUNC('month', open_date)::date AS month_start,
+                        COUNT(DISTINCT email)                AS unique_openers
+                    FROM superage.mv_opens_daily
+                    WHERE open_date >= DATE_TRUNC('month', CURRENT_DATE)::date - INTERVAL '5 months'
+                      AND open_date <  CURRENT_DATE + INTERVAL '1 day'
                     GROUP BY 1
                 )
                 SELECT

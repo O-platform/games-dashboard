@@ -1066,18 +1066,6 @@
       </div>
       <div class="grid-2">
         <div class="card">
-          <h3>Age Distribution</h3>
-          <div class="chart-wrap"><canvas id="chart-age"></canvas></div>
-          <div id="age-empty" class="empty-msg" style="display:none;">No DOB column</div>
-        </div>
-        <div class="card">
-          <h3>Gender Split</h3>
-          <div style="height:220px;position:relative;"><canvas id="chart-gender"></canvas></div>
-          <div id="gender-empty" class="empty-msg" style="display:none;">No gender column</div>
-        </div>
-      </div>
-      <div class="grid-2">
-        <div class="card">
           <h3>Top Cities</h3>
           <div id="cities-list" class="bar-list" style="padding-top:4px;"></div>
           <div id="cities-empty" class="empty-msg" style="display:none;">No city column</div>
@@ -3566,14 +3554,6 @@
           mkChart('chart-waitlist-overlap', donutCfg(['From Waitlist', 'Direct Buyers'], [ov.on_waitlist || 0, ov.not_on_waitlist || 0], [C.accent, C.green]));
         else { hideEl('chart-waitlist-overlap'); showEl('overlap-empty'); }
 
-        const ageDist = (m.age_distribution || []).filter(r => (r.count || 0) > 0);
-        if (ageDist.length) mkChart('chart-age', hbarCfg(ageDist.map(r => r.range), ageDist.map(r => r.count), colorN(ageDist.length), 'buyers'));
-        else { hideEl('chart-age'); showEl('age-empty'); }
-
-        const gd = (m.gender_distribution || []).filter(r => (r.count || 0) > 0);
-        if (gd.length) mkChart('chart-gender', donutCfg(gd.map(r => r.gender), gd.map(r => r.count), colorN(gd.length)));
-        else { hideEl('chart-gender'); showEl('gender-empty'); }
-
         const cd = (m.city_distribution || []).filter(r => (r.count || 0) > 0);
         const cl = document.getElementById('cities-list');
         if (cd.length) {
@@ -3675,6 +3655,23 @@
       const avgAge   = p.avg_age != null ? Math.round(+p.avg_age) : '—';
       const unmatched = unique - matched;
 
+      function fatBarList(items, key, total) {
+        if (!items || !items.length) return '<div class="empty-msg">No data</div>';
+        const tot = total || items.reduce((s, x) => s + x.count, 0);
+        const max = Math.max(...items.map(i => i.count));
+        const fills = ['#0969da','#1a7f37','#8250df','#9a6700','#1b7c83','#7d4e00','#bf3989','#cf222e'];
+        return items.map((item, i) => `
+          <div style="margin-bottom:14px;">
+            <div style="display:flex;justify-content:space-between;margin-bottom:5px;">
+              <span style="font-size:13px;color:var(--text);font-weight:500;">${fmtLabel(item[key])}</span>
+              <span style="font-size:12px;color:var(--text-muted);">${item.count.toLocaleString()} &middot; ${tot > 0 ? Math.round(item.count/tot*100) : 0}%</span>
+            </div>
+            <div style="background:var(--card-2);border-radius:4px;height:20px;overflow:hidden;">
+              <div style="height:100%;border-radius:4px;background:${fills[i % fills.length]};width:${max > 0 ? Math.round(item.count/max*100) : 0}%;"></div>
+            </div>
+          </div>`).join('');
+      }
+
       function barList(items, key, total, sharedMax) {
         const tot = total || matched;
         if (!items || !items.length) return '<div class="empty-msg">No data</div>';
@@ -3763,7 +3760,6 @@
           <div style="font-size:13px;font-weight:600;color:var(--text);">${t.ticket_type}</div>
           <div style="display:flex;gap:24px;font-size:12px;color:var(--text-muted);">
             <span><strong style="color:var(--text);">${t.count}</strong> buyers</span>
-            <span>Longevity <strong style="color:${C.green};">${t.avg_longevity != null ? t.avg_longevity : '—'}</strong></span>
             <span>Avg age <strong style="color:var(--text);">${t.avg_age != null ? Math.round(t.avg_age) : '—'}</strong></span>
           </div>
         </div>`).join('');
@@ -3776,37 +3772,65 @@
         ? `${Math.round(topUGender.count / unmatched * 100)}% ${fmtLabel(topUGender.gender)}`
         : '—';
 
-      const sharedBanner = `
-        <div class="section-context-banner">
-          <strong>${matched.toLocaleString()}</strong> of <strong>${unique.toLocaleString()}</strong>
-          ticket buyers took the longevity quiz (${matchPct} match rate)
-        </div>`;
-
-      const sharedKpis = `
+      // KPIs shown only in In Depth
+      const depthKpis = `
         <div class="kpi-row" style="margin-bottom:24px;">
           <div class="kpi-card purple">
             <div class="label">Quiz Participants</div>
             <div class="value">${matched.toLocaleString()}</div>
-            <div class="sub">Of ${unique.toLocaleString()} unique buyers</div>
+            <div class="sub">Took the longevity quiz</div>
           </div>
           <div class="kpi-card accent">
             <div class="label">Match Rate</div>
             <div class="value">${matchPct}</div>
-            <div class="sub">Took the longevity quiz</div>
-          </div>
-          <div class="kpi-card green">
-            <div class="label">Avg Longevity Score</div>
-            <div class="value">${avgLS}</div>
-            <div class="sub">${lsDiffHtml || 'Out of 100'}</div>
-          </div>
-          <div class="kpi-card gold">
-            <div class="label">Avg Age</div>
-            <div class="value">${avgAge}</div>
-            <div class="sub">Years old</div>
+            <div class="sub">Of ${unique.toLocaleString()} unique buyers</div>
           </div>
         </div>`;
 
+      // Overview uses all-buyer age + gender (top-level keys in sales_metrics JSON)
+      const allGender = (m.gender_distribution || []);
+      const allAge    = (m.age_distribution    || []);
+      const allGenderTotal = allGender.reduce((s, x) => s + x.count, 0);
+      const allAgeTotal    = allAge.reduce((s, x) => s + x.count, 0);
+      const allByType = m.ticket_types || [];
+      const allByTypeHtml = allByType.map(t => `
+        <div style="display:flex;justify-content:space-between;align-items:center;padding:10px 0;border-bottom:1px solid var(--card-border);">
+          <div style="font-size:13px;font-weight:600;color:var(--text);">${t.type}</div>
+          <div style="font-size:12px;color:var(--text-muted);">
+            <strong style="color:var(--text);">${(t.total||0).toLocaleString()}</strong> tickets
+          </div>
+        </div>`).join('');
+
       const overviewHtml = `
+        <div class="kpi-row" style="margin-bottom:18px;">
+          <div class="kpi-card accent">
+            <div class="label">Ticket Buyers</div>
+            <div class="value">${(m.total_tickets || allGenderTotal).toLocaleString()}</div>
+            <div class="sub">All purchases</div>
+          </div>
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:18px;align-items:stretch;margin-bottom:18px;">
+          <div class="card">
+            <h3>Age Distribution</h3>
+            ${fatBarList(allAge, 'range', allAgeTotal)}
+          </div>
+          <div style="display:flex;flex-direction:column;gap:18px;">
+            <div class="card" style="flex:1;">
+              <h3>Gender</h3>
+              <div style="height:180px;position:relative;"><canvas id="persona-ov-gender-pie"></canvas></div>
+            </div>
+            <div class="card">
+              <h3>By Ticket Type</h3>
+              ${allByTypeHtml || '<div class="empty-msg">No data</div>'}
+            </div>
+          </div>
+        </div>`;
+
+      const depthHtml = `
+        <div class="section-context-banner" style="margin-bottom:18px;font-size:15px;padding:12px 16px;">
+          Based on <strong>${matched.toLocaleString()}</strong> buyers who took the longevity quiz
+        </div>
+        ${depthKpis}
         <div class="section-header" style="margin-bottom:14px;">
           <div class="dot" style="background:var(--green);"></div>
           <h2>Health Profile</h2>
@@ -3818,66 +3842,34 @@
           ${lightCard('Stress', lights.stress)}
           ${lightCard('Alcohol', lights.alcohol)}
         </div>
-
         <div class="grid-2" style="margin-bottom:18px;">
           <div class="card">
             <h3>By Ticket Type</h3>
+            <div class="section-context-banner" style="margin-bottom:14px;">
+              <strong>${matched.toLocaleString()}</strong> quiz participants only
+            </div>
             ${byTypeHtml || '<div class="empty-msg">No data</div>'}
           </div>
-          <div class="card">
-            <h3>${unmatched.toLocaleString()} Buyers Without Quiz Data</h3>
-            <div style="font-size:13px;color:var(--text-muted);margin-bottom:12px;">Known from ticket purchase only</div>
-            ${unmatchedGender.length ? (() => {
-              const ugt = unmatchedGender.reduce((s, x) => s + x.count, 0);
-              const uat = unmatchedAge.reduce((s, x) => s + x.count, 0);
-              const sharedMax = Math.max(
-                ...unmatchedGender.map(x => x.count),
-                ...unmatchedAge.map(x => x.count)
-              );
-              return `
-              <div style="margin-bottom:8px;font-size:12px;font-weight:600;color:var(--text-muted);text-transform:uppercase;letter-spacing:.5px;">Gender</div>
-              ${barList(unmatchedGender, 'gender', ugt, sharedMax)}
-              <div style="margin-top:14px;margin-bottom:8px;font-size:12px;font-weight:600;color:var(--text-muted);text-transform:uppercase;letter-spacing:.5px;">Age</div>
-              ${barList(unmatchedAge, 'range', uat, sharedMax)}`;
-            })() : '<div class="empty-msg">No data</div>'}
-          </div>
-        </div>`;
-
-      const depthHtml = `
-        <div class="grid-2" style="margin-bottom:18px;">
-          <div class="card">
-            <h3>Longevity Score Distribution</h3>
-            <div style="height:210px;position:relative;"><canvas id="persona-longevity-donut"></canvas></div>
-          </div>
-          <div class="card">
-            <h3>Gender</h3>
-            <div style="height:210px;position:relative;"><canvas id="persona-gender-donut"></canvas></div>
-          </div>
-        </div>
-        <div class="grid-2" style="margin-bottom:18px;">
           <div class="card"><h3>Financial Situation</h3><div class="bar-list" style="padding-top:4px;">${barList(p.financial_situation,'financial_situation')}</div></div>
+        </div>
+        <div class="grid-2" style="margin-bottom:18px;">
           <div class="card"><h3>Education Level</h3><div class="bar-list" style="padding-top:4px;">${barList(p.education_level,'education_level')}</div></div>
-        </div>
-        <div class="grid-2" style="margin-bottom:18px;">
           <div class="card"><h3>Marital Status</h3><div class="bar-list" style="padding-top:4px;">${barList(p.marital_status,'marital_status')}</div></div>
+        </div>
+        <div class="grid-2" style="margin-bottom:18px;">
           <div class="card"><h3>Sleep Hours / Night</h3><div class="bar-list" style="padding-top:4px;">${barList(p.sleep_hours,'sleep_hours')}</div></div>
-        </div>
-        <div class="grid-2" style="margin-bottom:18px;">
           <div class="card"><h3>Exercise Frequency</h3><div class="bar-list" style="padding-top:4px;">${barList(p.exercise_freq,'exercise_freq')}</div></div>
+        </div>
+        <div class="grid-2" style="margin-bottom:18px;">
           <div class="card"><h3>Stress Impact on Health</h3><div class="bar-list" style="padding-top:4px;">${barList(p.stress_impact,'stress_impact')}</div></div>
-        </div>
-        <div class="grid-2" style="margin-bottom:18px;">
           <div class="card"><h3>Alcohol Frequency</h3><div class="bar-list" style="padding-top:4px;">${barList(p.alcohol_freq,'alcohol_freq')}</div></div>
-          <div class="card"><h3>Smoking Status</h3><div class="bar-list" style="padding-top:4px;">${barList(p.smoking_status,'smoking_status')}</div></div>
         </div>
         <div class="grid-2" style="margin-bottom:18px;">
+          <div class="card"><h3>Smoking Status</h3><div class="bar-list" style="padding-top:4px;">${barList(p.smoking_status,'smoking_status')}</div></div>
           <div class="card"><h3>Obesity (Self-Reported)</h3><div class="bar-list" style="padding-top:4px;">${barList(p.is_obese,'is_obese')}</div></div>
-          <div class="card"><h3>By Ticket Type</h3>${byTypeHtml || '<div class="empty-msg">No data</div>'}</div>
         </div>`;
 
       el.innerHTML = `
-        ${sharedBanner}
-        ${sharedKpis}
         <div style="display:flex;gap:8px;margin-bottom:24px;">
           <button id="persona-tab-overview" onclick="switchPersonaView('overview')"
             style="padding:7px 20px;border-radius:20px;border:1px solid var(--accent);background:var(--accent);color:#fff;font-size:13px;font-weight:600;cursor:pointer;">
@@ -3911,6 +3903,17 @@
           type: 'doughnut',
           data: { labels: gData.map(g => g.gender), datasets: [{ data: gData.map(g => g.count), backgroundColor: gData.map(g => gColors[g.gender] || C.gold), borderWidth: 2, borderColor: '#161b22', hoverOffset: 4 }] },
           options: { responsive: true, maintainAspectRatio: false, cutout: '62%', plugins: { legend: { position: 'right', labels: { boxWidth: 10, padding: 10, font: { size: 11 } } }, tooltip: { callbacks: { label: c => `  ${c.label}: ${c.raw} (${Math.round(c.raw / tot * 100)}%)` } } } }
+        });
+      }
+
+      // Overview gender pie (all buyers)
+      if (allGender.length) {
+        const ovGColors = { 'Female': C.pink, 'Male': C.accent };
+        const ovTot = allGender.reduce((a, b) => a + b.count, 0);
+        mkChart('persona-ov-gender-pie', {
+          type: 'doughnut',
+          data: { labels: allGender.map(g => fmtLabel(g.gender)), datasets: [{ data: allGender.map(g => g.count), backgroundColor: allGender.map(g => ovGColors[fmtLabel(g.gender)] || C.gold), borderWidth: 2, borderColor: '#161b22', hoverOffset: 4 }] },
+          options: { responsive: true, maintainAspectRatio: false, cutout: '62%', plugins: { legend: { position: 'right', labels: { boxWidth: 10, padding: 10, font: { size: 11 } } }, tooltip: { callbacks: { label: c => `  ${c.label}: ${c.raw} (${Math.round(c.raw / ovTot * 100)}%)` } } } }
         });
       }
 

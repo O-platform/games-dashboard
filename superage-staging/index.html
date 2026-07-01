@@ -341,9 +341,10 @@ function utmLabel(raw) {
    Lambdas (see superage_metrics_lambda_updated.py + superage_comparison_lambda.py).
 ═══════════════════════════════════════ */
 const DASHBOARD_API = 'https://dashboard.pardon-ventures-06b.workers.dev';
+const _API_HEADERS = { 'X-Auth-Token': 'dashboardkiwilytics123' };
 Promise.all([
-  fetch(`${DASHBOARD_API}/superage-dashboard/superage-metrics.json`).then(r => r.json()),
-  fetch(`${DASHBOARD_API}/superage-dashboard/superage-comparison.json`).then(r => r.ok ? r.json() : {}).catch(() => ({}))
+  fetch(`${DASHBOARD_API}/superage-dashboard/superage-metrics.json`,   { headers: _API_HEADERS }).then(r => r.json()),
+  fetch(`${DASHBOARD_API}/superage-dashboard/superage-comparison.json`, { headers: _API_HEADERS }).then(r => r.ok ? r.json() : {}).catch(() => ({}))
 ])
   .then(([metrics, comparison]) => {
     const M = Object.assign({}, metrics, comparison);

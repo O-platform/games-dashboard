@@ -4,22 +4,18 @@
     {
       "Sid": "SecretsManagerRead",
       "Effect": "Allow",
-      "Action": [
-        "secretsmanager:GetSecretValue"
-      ],
+      "Action": ["secretsmanager:GetSecretValue"],
       "Resource": [
-        "arn:aws:secretsmanager:*:*:secret:superage/db*",
-        "arn:aws:secretsmanager:*:*:secret:superage/ongage*"
+        "arn:aws:secretsmanager:us-west-1:550130133458:secret:CampaignMonitorCredientials-jEKwKX",
+        "arn:aws:secretsmanager:us-west-1:550130133458:secret:DBMetrics_Superage_Secrets-fnwNnN"
       ]
     },
     {
       "Sid": "SelfInvoke",
       "Effect": "Allow",
-      "Action": [
-        "lambda:InvokeFunction"
-      ],
+      "Action": ["lambda:InvokeFunction"],
       "Resource": [
-        "arn:aws:lambda:*:*:function:superage-opens-ingest"
+        "arn:aws:lambda:us-west-1:550130133458:function:superage-opens-ingest"
       ]
     },
     {

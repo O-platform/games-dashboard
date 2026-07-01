@@ -1,37 +1,43 @@
 -- ============================================================
--- Campaigns_Opens — raw open events (one row per open event)
--- Mirrors the existing Campaigns_Clicks table structure.
--- Run once against your RDS instance before the first Lambda run.
+-- superage.campaign_opens
+-- Raw Campaign Monitor open events — one row per unique opener
+-- per campaign (CM returns first open only, not every open event).
+-- Run once against RDS before the first Lambda invocation.
 -- ============================================================
 
-CREATE TABLE IF NOT EXISTS superage."Campaigns_Opens" (
-    id            BIGSERIAL    PRIMARY KEY,
-    email         VARCHAR(320) NOT NULL,          -- lowercased + trimmed
-    campaign_id   BIGINT,                         -- Ongage message/campaign id
-    campaign_name TEXT,
-    opened_at     TIMESTAMPTZ  NOT NULL,           -- UTC open timestamp
-    list_id       VARCHAR(64),                     -- Ongage list id
-    created_at    TIMESTAMPTZ  DEFAULT NOW()
+CREATE TABLE IF NOT EXISTS superage.campaign_opens (
+    id                 BIGSERIAL        PRIMARY KEY,
+    email_address      VARCHAR(320)     NOT NULL,
+    list_id            VARCHAR(100),
+    opened_at          TIMESTAMPTZ,
+    ip_address         VARCHAR(50),
+    latitude           DOUBLE PRECISION,
+    longitude          DOUBLE PRECISION,
+    city               VARCHAR(100),
+    region             VARCHAR(100),
+    country_code       VARCHAR(10),
+    country_name       VARCHAR(100),
+    campaign_id        VARCHAR(100)     NOT NULL,
+    campaign_name      TEXT,
+    campaign_sent_date DATE,
+    created_at         TIMESTAMPTZ      DEFAULT NOW(),
+
+    -- One row per (opener, campaign). CM only returns first open per person.
+    CONSTRAINT uq_campaign_opens UNIQUE (email_address, campaign_id)
 );
 
--- Unique constraint — prevents duplicate rows on re-runs / re-ingestion
-ALTER TABLE superage."Campaigns_Opens"
-    ADD CONSTRAINT uq_camps_opens
-    UNIQUE (email, campaign_id, opened_at);
+CREATE INDEX IF NOT EXISTS idx_camp_opens_email
+    ON superage.campaign_opens (email_address);
 
--- Indexes — cover the most common query patterns
-CREATE INDEX IF NOT EXISTS idx_camps_opens_email
-    ON superage."Campaigns_Opens" (email);
+CREATE INDEX IF NOT EXISTS idx_camp_opens_opened
+    ON superage.campaign_opens (opened_at);
 
-CREATE INDEX IF NOT EXISTS idx_camps_opens_opened
-    ON superage."Campaigns_Opens" (opened_at);
+CREATE INDEX IF NOT EXISTS idx_camp_opens_campaign
+    ON superage.campaign_opens (campaign_id);
 
-CREATE INDEX IF NOT EXISTS idx_camps_opens_campaign
-    ON superage."Campaigns_Opens" (campaign_id);
-
--- Partial index for rolling-window queries (last 120 days)
-CREATE INDEX IF NOT EXISTS idx_camps_opens_recent
-    ON superage."Campaigns_Opens" (email, opened_at)
+-- Partial index for rolling-window queries (most common access pattern)
+CREATE INDEX IF NOT EXISTS idx_camp_opens_recent
+    ON superage.campaign_opens (email_address, opened_at)
     WHERE opened_at >= NOW() - INTERVAL '120 days';
 
 
@@ -39,53 +45,49 @@ CREATE INDEX IF NOT EXISTS idx_camps_opens_recent
 -- Useful queries once data is loaded
 -- ============================================================
 
--- Weekly distinct openers (rolling 30-day window) — last 13 weeks
--- (equivalent of the "openers-30" metric requested)
+-- Distinct openers rolling 30d — one point per week (last 13 weeks)
+-- This is the "openers-30" weekly trendline
 SELECT
-    week_end,
-    COUNT(DISTINCT email) AS openers_rolling_30d
-FROM (
-    SELECT
-        gs::date AS week_end
-    FROM generate_series(
+    week_end::date,
+    COUNT(DISTINCT email_address) AS unique_openers_rolling_30d
+FROM
+    generate_series(
         CURRENT_DATE - INTERVAL '12 weeks',
         CURRENT_DATE,
         INTERVAL '1 week'
-    ) gs
-) weeks
-JOIN superage."Campaigns_Opens" o
-    ON o.opened_at::date BETWEEN weeks.week_end - 29 AND weeks.week_end
+    ) AS week_end
+JOIN superage.campaign_opens o
+    ON o.opened_at::date BETWEEN week_end::date - 29 AND week_end::date
 GROUP BY 1
 ORDER BY 1;
 
 
--- Weekly unique openers (opened in that specific week only)
+-- Weekly unique openers (opened in that specific ISO week)
 SELECT
     DATE_TRUNC('week', opened_at)::date AS week_start,
-    COUNT(DISTINCT email)               AS unique_openers,
+    COUNT(DISTINCT email_address)       AS unique_openers,
     COUNT(*)                            AS total_opens,
-    COUNT(DISTINCT campaign_id)         AS campaigns_with_opens
-FROM superage."Campaigns_Opens"
+    COUNT(DISTINCT campaign_id)         AS campaigns
+FROM superage.campaign_opens
 WHERE opened_at >= CURRENT_DATE - INTERVAL '13 weeks'
 GROUP BY 1
 ORDER BY 1 DESC;
 
 
--- Weekly avg open rate (opens / recipients) — join with Campaigns table
+-- Weekly avg open rate — join with Campaigns for recipients denominator
 SELECT
     DATE_TRUNC('week', c."Sent Date ")::date AS week_start,
-    SUM(c."UniqueOpened")                    AS unique_opens,
+    COUNT(DISTINCT o.email_address)          AS unique_openers,
     SUM(c."Recipients")                      AS recipients,
     ROUND(
-        SUM(c."UniqueOpened")::numeric
-          / NULLIF(SUM(c."Recipients"), 0)
-          * 100,
+        COUNT(DISTINCT o.email_address)::numeric
+          / NULLIF(SUM(c."Recipients"), 0) * 100,
         2
-    ) AS weighted_open_rate_pct
+    ) AS open_rate_pct
 FROM superage."Campaigns" c
-WHERE c."Sent Date " IS NOT NULL
-  AND c."Sent Date "::date >= CURRENT_DATE - INTERVAL '13 weeks'
+LEFT JOIN superage.campaign_opens o USING (campaign_id)
+WHERE c."Sent Date " >= CURRENT_DATE - INTERVAL '13 weeks'
   AND c."Recipients" > 95
-  AND EXTRACT(DOW FROM c."Sent Date "::date) <> 0   -- exclude Sunday
+  AND EXTRACT(DOW FROM c."Sent Date "::date) <> 0   -- exclude Sundays
 GROUP BY 1
 ORDER BY 1 DESC;

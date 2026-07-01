@@ -1920,35 +1920,10 @@ function _renderOpenerKpis(M) {
   });
 }
 
-function _renderOpenerWeeklyChart(M) {
-  const s      = (M && M.opener_weekly_series) || {};
-  const labels = s.labels || [];
-  const data   = (s.openers_rolling30 || []).map(Number);
-  const ctx    = _resetCanvas('op-weekly-chart');
-  if (!ctx || !labels.length) return;
-  new Chart(ctx, {
-    type: 'line',
-    data: {
-      labels,
-      datasets: [{
-        label: 'Unique Openers (rolling 30d)',
-        data,
-        borderColor: '#0969da',
-        backgroundColor: 'rgba(9,105,218,0.08)',
-        fill: true,
-        tension: 0.3,
-        pointRadius: 3,
-      }]
-    },
-    options: {
-      responsive: true, maintainAspectRatio: false,
-      plugins: { legend: { display: false } },
-      scales: {
-        x: { ticks: { color: 'var(--text-muted)', font: { size: 11 } }, grid: { color: 'var(--card-border)' } },
-        y: { ticks: { color: 'var(--text-muted)', font: { size: 11 }, callback: v => Number(v).toLocaleString() }, grid: { color: 'var(--card-border)' }, beginAtZero: false }
-      }
-    }
-  });
+function _renderOpenerWeeklyChart() {
+  const rows   = _opensRows();
+  const weekly = _buildCampaignSeries(rows, _isoWeekStart, _fmtWeekLabel, 8);
+  _clickTrendChart('op-weekly-chart', weekly, 'unique_opens', '#1a7f37', 'Unique Opens', v => Number(v).toLocaleString());
 }
 
 function _setEngTab(tab) {
@@ -1964,7 +1939,7 @@ function _setEngTab(tab) {
   const off = 'background:var(--card);color:var(--text-muted);border-color:var(--card-border);';
   if (btnC) btnC.style.cssText = (tab === 'clicks' ? on : off) + 'font-size:13px;font-weight:600;padding:6px 18px;border-width:1px;border-style:solid;border-radius:7px;cursor:pointer;';
   if (btnO) btnO.style.cssText = (tab === 'opens'  ? on : off) + 'font-size:13px;font-weight:600;padding:6px 18px;border-width:1px;border-style:solid;border-radius:7px;cursor:pointer;';
-  if (tab === 'opens') { _renderOpensSection1(); _renderOpensSection2(); }
+  if (tab === 'opens') { _renderOpensSection2(); }
 }
 
 function _opensRows() {
@@ -1996,7 +1971,7 @@ function _renderOpensSection1() {
 }
 
 function _renderOpensSection2() {
-  _renderOpenerWeeklyChart(_rawClicksData);
+  _renderOpenerWeeklyChart();
   const rows    = _opensRows();
   const monthly = _buildCampaignSeries(rows, _monthStart, _fmtMonthLabel, 6);
   _clickTrendChart('op-s2-monthly-bar', monthly, 'unique_opens', '#1a7f37', 'Unique Opens', v => Number(v).toLocaleString());
@@ -2203,7 +2178,7 @@ function renderContent(M) {
       <h3 style="margin:18px 0 10px;font-size:13px;text-transform:uppercase;letter-spacing:.5px;color:var(--text-muted);">Opens Trends</h3>
       <div class="grid-2">
         <div class="chart-card">
-          <h3>Weekly — Unique Openers <span class="badge-inline">— rolling 30-day window, one per subscriber</span></h3>
+          <h3>Weekly — Unique Openers <span class="badge-inline">— UniqueOpened per campaign, grouped by send week</span></h3>
           <div class="chart-container h260"><canvas id="op-weekly-chart"></canvas></div>
         </div>
         <div class="chart-card">

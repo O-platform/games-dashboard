@@ -610,11 +610,12 @@ def lambda_handler(event, context):
                 ),
                 openers AS (
                     SELECT
-                        DATE_TRUNC('week', "Timestamp"::date)::date          AS week_start,
-                        COUNT(DISTINCT LOWER(TRIM("EmailAddress")))           AS unique_openers
+                        DATE_TRUNC('week', opened_at::date)::date            AS week_start,
+                        COUNT(DISTINCT LOWER(TRIM(email)))                   AS unique_openers
                     FROM optimism.superage_opens
-                    WHERE "Timestamp"::date >= DATE_TRUNC('week', CURRENT_DATE)::date - INTERVAL '11 weeks'
-                      AND "Timestamp"::date <= CURRENT_DATE
+                    WHERE opened_at::date >= DATE_TRUNC('week', CURRENT_DATE)::date - INTERVAL '11 weeks'
+                      AND opened_at::date <= CURRENT_DATE
+                      AND email IS NOT NULL
                     GROUP BY 1
                 )
                 SELECT
@@ -639,11 +640,12 @@ def lambda_handler(event, context):
                 ),
                 openers AS (
                     SELECT
-                        DATE_TRUNC('month', "Timestamp"::date)::date         AS month_start,
-                        COUNT(DISTINCT LOWER(TRIM("EmailAddress")))           AS unique_openers
+                        DATE_TRUNC('month', opened_at::date)::date           AS month_start,
+                        COUNT(DISTINCT LOWER(TRIM(email)))                   AS unique_openers
                     FROM optimism.superage_opens
-                    WHERE "Timestamp"::date >= DATE_TRUNC('month', CURRENT_DATE)::date - INTERVAL '5 months'
-                      AND "Timestamp"::date <= CURRENT_DATE
+                    WHERE opened_at::date >= DATE_TRUNC('month', CURRENT_DATE)::date - INTERVAL '5 months'
+                      AND opened_at::date <= CURRENT_DATE
+                      AND email IS NOT NULL
                     GROUP BY 1
                 )
                 SELECT

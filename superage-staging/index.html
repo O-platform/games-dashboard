@@ -1748,11 +1748,11 @@ function _renderClickTrendRight() {
   if (metric === 'unique_clicks') {
     const ws = _sliceSeries(_rawClicksData && _rawClicksData.raw_clicks_weekly || {}, window._rawWeeklyN || 8);
     const wm = (ws && Array.isArray(ws.unique_clicks_no_ss) && !_ssOn()) ? 'unique_clicks_no_ss' : 'unique_clicks';
-    _clickTrendChart('cnt-raw-weekly-unique-bar', ws, wm, '#1a7f37', 'Unique clicks');
+    _clickTrendChart('cnt-raw-weekly-unique-bar', ws, wm, '#1a7f37', 'Unique clickers');
     const ms = (_rawClicksData && _rawClicksData.raw_clicks_monthly) || {};
     const mm = (ms && Array.isArray(ms.unique_clicks_no_ss) && !_ssOn()) ? 'unique_clicks_no_ss' : 'unique_clicks';
-    _clickTrendChart('cnt-raw-monthly-unique-bar', ms, mm, '#1a7f37', 'Unique clicks');
-    _updateRightChartTitles('Unique Clicks', '— raw events · distinct subscribers who clicked');
+    _clickTrendChart('cnt-raw-monthly-unique-bar', ms, mm, '#1a7f37', 'Unique clickers');
+    _updateRightChartTitles('Unique Clickers', '— raw events · distinct subscribers who clicked');
   } else if (metric === 'ctor') {
     // CTOR from raw data: unique_clicks / unique_openers per week/month
     const ws = _sliceSeries(_rawClicksData && _rawClicksData.raw_clicks_weekly || {}, window._rawWeeklyN || 8);
@@ -1776,7 +1776,7 @@ function _updateMetricNote() {
   if (!el) return;
   const metric = (document.getElementById('clicksMetric') || {}).value || 'unique_clicks';
   const notes = {
-    unique_clicks:   'Raw events — distinct subscribers who clicked per period',
+    unique_clicks:   'Raw events — one per subscriber per period, regardless of how many campaigns they clicked',
     ctor:            'Raw events — unique clicks ÷ unique opens',
     avg_click_rate:  'Campaign summary — avg click rate across campaigns per period',
   };
@@ -2109,22 +2109,22 @@ function renderContent(M) {
     <div style="display:flex;align-items:center;gap:12px;margin:18px 0 12px;">
       <hr style="flex:1;border:none;border-top:1px solid var(--card-border);">
       <select id="clicksMetric" onchange="_renderClickTrendRight();_updateMetricNote()" style="font-size:12px;padding:4px 10px;border:1px solid var(--card-border);border-radius:6px;background:var(--card);color:var(--text);">
-        <option value="unique_clicks" selected>Unique clicks</option>
+        <option value="unique_clicks" selected>Unique clickers</option>
         <option value="ctor">Click-to-Open % (CTOR)</option>
         <option value="avg_click_rate">Avg Click Rate</option>
       </select>
       <hr style="flex:1;border:none;border-top:1px solid var(--card-border);">
     </div>
-    <div id="clicks-metric-note" style="font-size:11px;color:var(--text-muted);font-style:italic;text-align:center;margin-bottom:10px;">Raw events — distinct subscribers who clicked per period</div>
+    <div id="clicks-metric-note" style="font-size:11px;color:var(--text-muted);font-style:italic;text-align:center;margin-bottom:10px;">Raw events — one per subscriber per period, regardless of how many campaigns they clicked</div>
 
     <!-- Metric charts row -->
     <div class="grid-2">
       <div class="chart-card">
-        <h3><span id="cnt-right-weekly-title">Weekly — Unique Clicks</span> <span class="badge-inline" id="cnt-raw-weekly-unique-badge">— unique clicks ÷ sends</span></h3>
+        <h3><span id="cnt-right-weekly-title">Weekly — Unique Clickers</span> <span class="badge-inline" id="cnt-raw-weekly-unique-badge">— raw events · distinct subscribers who clicked</span></h3>
         <div class="chart-container h240"><canvas id="cnt-raw-weekly-unique-bar"></canvas></div>
       </div>
       <div class="chart-card">
-        <h3><span id="cnt-right-monthly-title">Monthly — Unique Clicks</span> <span class="badge-inline" id="cnt-right-monthly-badge">— unique clicks ÷ sends</span></h3>
+        <h3><span id="cnt-right-monthly-title">Monthly — Unique Clickers</span> <span class="badge-inline" id="cnt-right-monthly-badge">— raw events · distinct subscribers who clicked</span></h3>
         <div class="chart-container h240"><canvas id="cnt-raw-monthly-unique-bar"></canvas></div>
       </div>
     </div>

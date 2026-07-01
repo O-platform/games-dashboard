@@ -1411,6 +1411,10 @@ function _isSundayCampaign(c) {
   return !isNaN(d) && d.getDay() === 0; /* 0 = Sunday */
 }
 function _rawMetric(series) {
+  const metric = (document.getElementById('clicksMetric') || {}).value || 'clicks';
+  if (metric === 'unique_clicks') {
+    return (_ssOn() || !(series && Array.isArray(series.unique_clicks_no_ss))) ? 'unique_clicks' : 'unique_clicks_no_ss';
+  }
   if (_ssOn()) return 'clicks';
   return (series && Array.isArray(series.clicks_no_ss)) ? 'clicks_no_ss' : 'clicks';
 }
@@ -1812,12 +1816,10 @@ function _renderOpenerKpis(M) {
 function _setEngTab(tab) {
   const clicks = document.getElementById('eng-panel-clicks');
   const opens  = document.getElementById('eng-panel-opens');
-  const toolbar = document.getElementById('eng-clicks-toolbar');
   const btnC = document.getElementById('eng-tab-clicks');
   const btnO = document.getElementById('eng-tab-opens');
   if (clicks)  clicks.style.display  = tab === 'clicks' ? '' : 'none';
   if (opens)   opens.style.display   = tab === 'opens'  ? '' : 'none';
-  if (toolbar) toolbar.style.display = tab === 'clicks' ? 'flex' : 'none';
   const on  = 'background:var(--accent);color:#fff;border-color:var(--accent);';
   const off = 'background:var(--card);color:var(--text-muted);border-color:var(--card-border);';
   if (btnC) btnC.style.cssText = (tab === 'clicks' ? on : off) + 'font-size:13px;font-weight:600;padding:6px 18px;border-width:1px;border-style:solid;border-radius:7px;cursor:pointer;';
@@ -1961,15 +1963,6 @@ function renderContent(M) {
           <div style="font-size:11px;color:var(--text-muted);" id="clicks-ss-state">Excluding branded digest sends</div>
         </div>
       </div>
-      <div id="eng-clicks-toolbar" style="display:flex;align-items:center;gap:8px;">
-        <label style="font-size:12px;color:var(--text-muted);">Clicks metric:</label>
-        <select id="clicksMetric" onchange="_renderClickSection1()" style="font-size:12px;padding:5px 10px;border:1px solid var(--card-border);border-radius:6px;background:var(--card);color:var(--text);">
-          <option value="clicks">Total click events</option>
-          <option value="unique_clicks" selected>Unique clicks</option>
-          <option value="ctor">Click-to-Open %</option>
-          <option value="ctr">CTR (clicks / recipients) %</option>
-        </select>
-      </div>
     </div>
 
     <!-- ── CLICKS PANEL ── -->
@@ -1995,7 +1988,13 @@ function renderContent(M) {
     <h3 style="margin:18px 0 10px;font-size:13px;text-transform:uppercase;letter-spacing:.5px;color:var(--text-muted);">Click Trends</h3>
     <div class="chart-card">
       <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;margin-bottom:6px;flex-wrap:wrap;">
-        <h3 style="margin:0;">Same Weekday <span class="badge-inline" id="cnt-raw-weekday-badge">— last N sends per weekday</span></h3>
+        <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
+          <h3 style="margin:0;">Same Weekday <span class="badge-inline" id="cnt-raw-weekday-badge">— last N sends per weekday</span></h3>
+          <select id="clicksMetric" onchange="_setWeekdayWindow(window._rawWeekdayN||3)" style="font-size:12px;padding:4px 8px;border:1px solid var(--card-border);border-radius:6px;background:var(--card);color:var(--text);">
+            <option value="clicks">Total click events</option>
+            <option value="unique_clicks" selected>Unique clicks</option>
+          </select>
+        </div>
         <div style="display:flex;gap:4px;" id="cnt-raw-weekday-btns">
           <button onclick="_setWeekdayWindow(2)" id="rwd-2" style="font-size:11px;padding:3px 8px;border:1px solid var(--card-border);border-radius:5px;background:var(--card);color:var(--text-muted);cursor:pointer;">2 weeks</button>
           <button onclick="_setWeekdayWindow(3)" id="rwd-3" style="font-size:11px;padding:3px 8px;border:1px solid var(--card-border);border-radius:5px;background:var(--accent);color:#fff;cursor:pointer;">3 weeks</button>

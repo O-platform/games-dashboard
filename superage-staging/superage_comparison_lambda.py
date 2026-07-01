@@ -509,7 +509,10 @@ def lambda_handler(event, context):
                       AND EXTRACT(DOW FROM "Sent Date "::date) = 0
                 ),
                 clicks AS (
-                    SELECT DATE_TRUNC('week', "Date"::date)::date AS w, issue_name
+                    SELECT
+                        DATE_TRUNC('week', "Date"::date)::date            AS w,
+                        issue_name,
+                        LOWER(TRIM("EmailAddress "))                       AS email
                     FROM {S}."Campaigns_Clicks"
                     WHERE "Date" IS NOT NULL
                       AND "Date" >= (DATE_TRUNC('week', CURRENT_DATE) - INTERVAL '11 weeks')
@@ -529,6 +532,10 @@ def lambda_handler(event, context):
                     COUNT(c.w) FILTER (
                         WHERE c.issue_name NOT IN (SELECT name FROM sunday_campaigns)
                     )                                                        AS clicks_no_ss,
+                    COUNT(DISTINCT c.email || '|' || c.issue_name)           AS unique_clicks,
+                    COUNT(DISTINCT c.email || '|' || c.issue_name) FILTER (
+                        WHERE c.issue_name NOT IN (SELECT name FROM sunday_campaigns)
+                    )                                                        AS unique_clicks_no_ss,
                     (w.week_start = DATE_TRUNC('week', CURRENT_DATE)::date)  AS is_current
                 FROM weeks w
                 LEFT JOIN clicks c ON c.w = w.week_start
@@ -546,7 +553,10 @@ def lambda_handler(event, context):
                       AND EXTRACT(DOW FROM "Sent Date "::date) = 0
                 ),
                 clicks AS (
-                    SELECT DATE_TRUNC('month', "Date"::date)::date AS m, issue_name
+                    SELECT
+                        DATE_TRUNC('month', "Date"::date)::date           AS m,
+                        issue_name,
+                        LOWER(TRIM("EmailAddress "))                       AS email
                     FROM {S}."Campaigns_Clicks"
                     WHERE "Date" IS NOT NULL
                       AND "Date" >= (DATE_TRUNC('month', CURRENT_DATE) - INTERVAL '5 months')
@@ -566,6 +576,10 @@ def lambda_handler(event, context):
                     COUNT(c.m) FILTER (
                         WHERE c.issue_name NOT IN (SELECT name FROM sunday_campaigns)
                     )                                                          AS clicks_no_ss,
+                    COUNT(DISTINCT c.email || '|' || c.issue_name)             AS unique_clicks,
+                    COUNT(DISTINCT c.email || '|' || c.issue_name) FILTER (
+                        WHERE c.issue_name NOT IN (SELECT name FROM sunday_campaigns)
+                    )                                                          AS unique_clicks_no_ss,
                     (m.month_start = DATE_TRUNC('month', CURRENT_DATE)::date)  AS is_current
                 FROM months m
                 LEFT JOIN clicks c ON c.m = m.month_start
@@ -947,18 +961,22 @@ def lambda_handler(event, context):
             for dow in ("Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun")
         })(raw_clicks_by_weekday_rows),
         "raw_clicks_weekly": {
-            "labels":       [str(r["label"])      for r in raw_clicks_weekly_rows],
-            "week_starts":  [str(r["week_start"]) for r in raw_clicks_weekly_rows],
-            "clicks":       [safe_int(r["clicks"])       for r in raw_clicks_weekly_rows],
-            "clicks_no_ss": [safe_int(r["clicks_no_ss"]) for r in raw_clicks_weekly_rows],
-            "is_current":   [bool(r["is_current"])       for r in raw_clicks_weekly_rows],
+            "labels":               [str(r["label"])      for r in raw_clicks_weekly_rows],
+            "week_starts":          [str(r["week_start"]) for r in raw_clicks_weekly_rows],
+            "clicks":               [safe_int(r["clicks"])               for r in raw_clicks_weekly_rows],
+            "clicks_no_ss":         [safe_int(r["clicks_no_ss"])         for r in raw_clicks_weekly_rows],
+            "unique_clicks":        [safe_int(r["unique_clicks"])        for r in raw_clicks_weekly_rows],
+            "unique_clicks_no_ss":  [safe_int(r["unique_clicks_no_ss"])  for r in raw_clicks_weekly_rows],
+            "is_current":           [bool(r["is_current"])               for r in raw_clicks_weekly_rows],
         },
         "raw_clicks_monthly": {
-            "labels":       [str(r["label"])       for r in raw_clicks_monthly_rows],
-            "month_starts": [str(r["month_start"]) for r in raw_clicks_monthly_rows],
-            "clicks":       [safe_int(r["clicks"])       for r in raw_clicks_monthly_rows],
-            "clicks_no_ss": [safe_int(r["clicks_no_ss"]) for r in raw_clicks_monthly_rows],
-            "is_current":   [bool(r["is_current"])       for r in raw_clicks_monthly_rows],
+            "labels":               [str(r["label"])       for r in raw_clicks_monthly_rows],
+            "month_starts":         [str(r["month_start"]) for r in raw_clicks_monthly_rows],
+            "clicks":               [safe_int(r["clicks"])               for r in raw_clicks_monthly_rows],
+            "clicks_no_ss":         [safe_int(r["clicks_no_ss"])         for r in raw_clicks_monthly_rows],
+            "unique_clicks":        [safe_int(r["unique_clicks"])        for r in raw_clicks_monthly_rows],
+            "unique_clicks_no_ss":  [safe_int(r["unique_clicks_no_ss"])  for r in raw_clicks_monthly_rows],
+            "is_current":           [bool(r["is_current"])               for r in raw_clicks_monthly_rows],
         },
         # Weekly Digest — feeds the new Weekly Digest tab. 9 ISO weeks
         # (8 completed + the in-progress current week, flagged by

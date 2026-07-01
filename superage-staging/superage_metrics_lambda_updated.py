@@ -512,6 +512,58 @@ def lambda_handler(event, context):
         clicker_summary["repeat_90d"] = safe_int(repeat_row.get("repeat_90d"))
 
         # ─────────────────────────────────────────────────────
+        # Q18c — Opener KPIs from optimism.superage_opens
+        # 120-day filter covers 13-week rolling-30d window.
+        # ─────────────────────────────────────────────────────
+        opener_summary = {}
+        try:
+            cur.execute("""
+                WITH recent AS (
+                    SELECT DISTINCT
+                        LOWER(TRIM(email))       AS email,
+                        campaign_id,
+                        opened_at::date          AS open_date
+                    FROM optimism.superage_opens
+                    WHERE opened_at >= CURRENT_DATE - INTERVAL '120 days'
+                      AND email IS NOT NULL
+                      AND TRIM(email) != ''
+                ),
+                per_email_7d  AS (SELECT email, COUNT(DISTINCT campaign_id) AS opens FROM recent WHERE open_date >= CURRENT_DATE - INTERVAL '7 days'  GROUP BY 1),
+                per_email_30d AS (SELECT email, COUNT(DISTINCT campaign_id) AS opens FROM recent WHERE open_date >= CURRENT_DATE - INTERVAL '30 days' GROUP BY 1),
+                per_email_90d AS (SELECT email, COUNT(DISTINCT campaign_id) AS opens FROM recent GROUP BY 1)
+                SELECT
+                    (SELECT COUNT(*) FROM per_email_7d)                AS total_openers_7d,
+                    (SELECT COUNT(*) FROM per_email_30d)               AS total_openers_30d,
+                    (SELECT COUNT(*) FROM per_email_90d)               AS total_openers_90d,
+                    (SELECT COUNT(*) FROM per_email_7d  WHERE opens >= 2) AS repeat_openers_7d,
+                    (SELECT COUNT(*) FROM per_email_30d WHERE opens >= 2) AS repeat_openers_30d,
+                    (SELECT COUNT(*) FROM per_email_90d WHERE opens >= 2) AS repeat_openers_90d
+            """)
+            opener_summary = cur.fetchone() or {}
+
+            # Weekly rolling-30d unique openers — last 13 weeks
+            cur.execute("""
+                SELECT
+                    gs::date                                            AS week_end,
+                    COUNT(DISTINCT LOWER(TRIM(o.email)))                AS openers_rolling_30d
+                FROM generate_series(
+                    CURRENT_DATE - INTERVAL '12 weeks',
+                    CURRENT_DATE,
+                    INTERVAL '1 week'
+                ) gs
+                JOIN optimism.superage_opens o
+                    ON o.opened_at::date BETWEEN gs::date - 29 AND gs::date
+                WHERE o.opened_at >= CURRENT_DATE - INTERVAL '120 days'
+                  AND o.email IS NOT NULL
+                GROUP BY 1
+                ORDER BY 1
+            """)
+            opener_weekly_rows = cur.fetchall() or []
+        except Exception as ex:
+            logger.warning(f"Opens query failed: {ex}")
+            opener_weekly_rows = []
+
+        # ─────────────────────────────────────────────────────
         # 4. Acquisition quality — utm_source only
         # ─────────────────────────────────────────────────────
         # Rebuilt to support a time-window selector (All / 30d / 60d / 90d) on
@@ -1461,6 +1513,18 @@ def lambda_handler(event, context):
         "repeat_7d":  safe_int(clicker_summary.get("repeat_7d")),
         "repeat_30d": safe_int(clicker_summary.get("repeat_30d")),
         "repeat_90d": safe_int(clicker_summary.get("repeat_90d")),
+    }
+    M["opener_kpis"] = {
+        "total_7d":   safe_int(opener_summary.get("total_openers_7d")),
+        "total_30d":  safe_int(opener_summary.get("total_openers_30d")),
+        "total_90d":  safe_int(opener_summary.get("total_openers_90d")),
+        "repeat_7d":  safe_int(opener_summary.get("repeat_openers_7d")),
+        "repeat_30d": safe_int(opener_summary.get("repeat_openers_30d")),
+        "repeat_90d": safe_int(opener_summary.get("repeat_openers_90d")),
+    }
+    M["opener_weekly_series"] = {
+        "labels":            [str(r["week_end"]) for r in opener_weekly_rows],
+        "openers_rolling30": [safe_int(r["openers_rolling_30d"]) for r in opener_weekly_rows],
     }
     M["clicker_buckets"] = {
         "b_1":       safe_int(clicker_summary.get("bucket_1")),

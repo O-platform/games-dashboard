@@ -190,8 +190,13 @@ def color_list(n):
 # ─────────────────────────────────────────────────────────────
 
 def lambda_handler(event, context):
+    import time as _time
     S = SA_SCHEMA
     logger.info("SuperAge metrics Lambda starting — r2_key=%s schema=%s", R2_FILE_PATH, S)
+    _t0 = _time.time()
+
+    def _t(label):
+        logger.info("  ⏱  %-55s  %.1fs", label, _time.time() - _t0)
 
     conn = get_connection()
     cur = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
@@ -214,6 +219,7 @@ def lambda_handler(event, context):
             WHERE COALESCE(date_subscribed, date_joined)::date < CURRENT_DATE
         """)
         sub = cur.fetchone() or {}
+        _t("1. subscriber overview")
         total_all_states     = safe_int(sub.get("total_all_states"))  # every row regardless of state
         # Per product definition: "Total Subscribers" = the active base only (state='Active')
         total_subscribers    = safe_int(sub.get("active"))
@@ -246,6 +252,7 @@ def lambda_handler(event, context):
             WHERE COALESCE(date_subscribed, date_joined)::date < CURRENT_DATE
         """)
         _eng = cur.fetchone() or {}
+        _t("1b. engagement segment split")
         send_to_active = safe_int(_eng.get("send_to_active"))
         zombies_count  = safe_int(_eng.get("zombies"))
         ghosts_count   = safe_int(_eng.get("ghosts"))
@@ -267,6 +274,7 @@ def lambda_handler(event, context):
             GROUP BY 1 ORDER BY 2 DESC
         """)
         state_rows = cur.fetchall()
+        _t("1c. state breakdown")
 
         # Growth history table — Overview subscriber growth chart.
         # We produce three granularity buckets (day / week / month) so the
@@ -312,8 +320,11 @@ def lambda_handler(event, context):
             return cur.fetchall()
 
         growth_daily_rows   = _fetch_growth_buckets('day',   "AND snapshot_date >= CURRENT_DATE - INTERVAL '120 days'")
+        _t("2a. growth history daily")
         growth_weekly_rows  = _fetch_growth_buckets('week',  "AND snapshot_date >= CURRENT_DATE - INTERVAL '52 weeks'")
+        _t("2b. growth history weekly")
         growth_monthly_rows = _fetch_growth_buckets('month', "AND snapshot_date >= CURRENT_DATE - INTERVAL '36 months'")
+        _t("2c. growth history monthly")
         # Existing variable name kept so downstream code that builds
         # M["subscriber_monthly"] doesn't need to change shape.
         growth_history_rows = [
@@ -350,6 +361,7 @@ def lambda_handler(event, context):
             WHERE {camp_filter}
         """)
         cs = cur.fetchone() or {}
+        _t("3. campaigns summary")
         total_campaigns    = safe_int(cs.get("n"))
         total_recipients   = safe_int(cs.get("total_recipients"))
         total_unique_opens = safe_int(cs.get("total_unique_opens"))
@@ -373,6 +385,7 @@ def lambda_handler(event, context):
             ORDER BY "Sent Date " ASC
         """)
         camp_rows = cur.fetchall()
+        _t("3b. campaigns detail rows")
 
         # ─────────────────────────────────────────────────────
         # 3. Content: articles_clicks + wordpress_articles
@@ -389,6 +402,7 @@ def lambda_handler(event, context):
             FROM {S}.articles_clicks ac
         """)
         content_summary = cur.fetchone() or {}
+        _t("4. content summary")
 
         cur.execute(f"""
             SELECT
@@ -400,6 +414,7 @@ def lambda_handler(event, context):
             LIMIT 40
         """)
         article_rows = cur.fetchall()
+        _t("4b. top articles")
 
         cur.execute(f"""
             SELECT COALESCE(SUM(unique_clicks), 0) AS n
@@ -447,6 +462,7 @@ def lambda_handler(event, context):
             ORDER BY ac.unique_clicks DESC NULLS LAST
         """)
         content_drill_rows = cur.fetchall()
+        _t("4c. content drill (articles_clicks JOIN wordpress_articles)")
 
         # Total distinct article clickers (feeds the "Unique Clickers" KPI)
         # plus the 1 / 2–5 / 6–10 / 11–20 / 20+ click-distribution buckets.
@@ -463,6 +479,7 @@ def lambda_handler(event, context):
             FROM {S}.subscriber_clicks
         """)
         clicker_summary = cur.fetchone() or {}
+        _t("4d. clicker buckets (subscriber_clicks)")
         total_article_clickers = safe_int(clicker_summary.get("total_clickers"))
 
         # Repeat-clicker counts — derived from the raw `Campaigns_Clicks`
@@ -510,6 +527,7 @@ def lambda_handler(event, context):
                 (SELECT COUNT(*) FROM per_email_90d WHERE clicks >= 2) AS repeat_90d
         """)
         repeat_row = cur.fetchone() or {}
+        _t("4e. repeat clickers (Campaigns_Clicks 90d)")
         clicker_summary["unique_7d"]  = safe_int(repeat_row.get("unique_7d"))
         clicker_summary["unique_30d"] = safe_int(repeat_row.get("unique_30d"))
         clicker_summary["unique_90d"] = safe_int(repeat_row.get("unique_90d"))
@@ -546,6 +564,7 @@ def lambda_handler(event, context):
                     (SELECT COUNT(*) FROM per_email_90d WHERE opens >= 2) AS repeat_openers_90d
             """)
             opener_summary = cur.fetchone() or {}
+            _t("5a. opener KPIs (superage_opens 120d)")
 
             # Weekly rolling-30d unique openers — last 13 weeks
             cur.execute("""
@@ -565,6 +584,7 @@ def lambda_handler(event, context):
                 ORDER BY 1
             """)
             opener_weekly_rows = cur.fetchall() or []
+            _t("5b. opener rolling-30d weekly (superage_opens)")
         except Exception as ex:
             logger.warning(f"Opens query failed: {ex}")
             opener_weekly_rows = []
@@ -747,9 +767,13 @@ def lambda_handler(event, context):
 
         # Acquisition source label priority: sa.acquisition_utm_source >> s.source >> 'Organic'.
         acquisition_utm_rows     = fetch_acquisition_rows("Organic")
+        _t("6a. acquisition all-time")
         acquisition_utm_rows_30  = fetch_acquisition_rows("Organic", since_days=30)
+        _t("6b. acquisition 30d")
         acquisition_utm_rows_60  = fetch_acquisition_rows("Organic", since_days=60)
+        _t("6c. acquisition 60d")
         acquisition_utm_rows_90  = fetch_acquisition_rows("Organic", since_days=90)
+        _t("6d. acquisition 90d")
 
         # ─────────────────────────────────────────────────────
         # 5. UTM source subscriber click performance
@@ -786,6 +810,7 @@ def lambda_handler(event, context):
             LIMIT 12
         """)
         sub_clicks_utm_rows = cur.fetchall()
+        _t("7. UTM subscriber click performance")
 
         # ─────────────────────────────────────────────────────
         # 5b. Acquisition trend — MoM (6 months) + WoW (8 weeks) per source
@@ -833,6 +858,7 @@ def lambda_handler(event, context):
             ORDER BY grain, period, new_subs DESC
         """)
         acq_trend_rows = cur.fetchall()
+        _t("8. acquisition trend")
 
         # ─────────────────────────────────────────────────────
         # 6. Longevity quiz
@@ -850,6 +876,7 @@ def lambda_handler(event, context):
             WHERE longevity_score IS NOT NULL
         """)
         qs = cur.fetchone() or {}
+        _t("9. quiz summary")
         quiz_count   = safe_int(qs.get("n"))
         avg_age_quiz = safe_float(qs.get("avg_age"))
 
@@ -925,6 +952,7 @@ def lambda_handler(event, context):
             GROUP BY 1 ORDER BY 2 DESC
         """)
         obesity_rows = cur.fetchall()
+        _t("9b. quiz demographics")
 
         # ─────────────────────────────────────────────────────
         # 7. Revenue and sponsors
@@ -950,6 +978,7 @@ def lambda_handler(event, context):
             WHERE {_sponsor_filter}
         """)
         rs = cur.fetchone() or {}
+        _t("10. revenue summary")
         total_line_amount   = safe_float(rs.get("total_line_amount"))
         avg_deal_size       = safe_float(rs.get("avg_deal"))
         total_sponsor_deals = safe_int(rs.get("n"))
@@ -968,6 +997,7 @@ def lambda_handler(event, context):
             ORDER BY 1
         """)
         rev_monthly_rows = cur.fetchall()
+        _t("10b. revenue monthly")
 
         cur.execute(f"""
             SELECT
@@ -979,6 +1009,7 @@ def lambda_handler(event, context):
             GROUP BY 1 ORDER BY 3 DESC NULLS LAST LIMIT 10
         """)
         sponsor_rows = cur.fetchall()
+        _t("10c. sponsor rows")
 
         cur.execute(f"""
             SELECT NULLIF(TRIM(sponsor_type), '') AS stype, COUNT(*) AS cnt
@@ -1019,6 +1050,7 @@ def lambda_handler(event, context):
             WHERE COALESCE(date_subscribed, date_joined)::date < CURRENT_DATE
         """)
         retention_overall_row = cur.fetchone() or {}
+        _t("11. retention overall")
 
         cur.execute(f"""
             SELECT
@@ -1041,6 +1073,7 @@ def lambda_handler(event, context):
             ) x
         """)
         lifespan_dist_row = cur.fetchone() or {}
+        _t("11b. lifespan distribution")
 
         cur.execute(f"""
             SELECT
@@ -1086,6 +1119,7 @@ def lambda_handler(event, context):
             ) x
         """)
         survival_row = cur.fetchone() or {}
+        _t("11c. survival analysis")
 
         # Survival curves split by acquisition source bucket — overlays one
         # line per source on the Retention tab so churn shapes can be
@@ -1163,6 +1197,7 @@ def lambda_handler(event, context):
                 total DESC
         """)
         survival_by_source_rows = cur.fetchall()
+        _t("11d. survival by source")
 
         # Cohort survival: same source bucketing but grouped by (join-month, bucket).
         # Python nulls out milestones the cohort hasn't fully aged into yet so the
@@ -1227,6 +1262,7 @@ def lambda_handler(event, context):
             ORDER BY 1 DESC, 3 DESC
         """)
         survival_cohort_rows = cur.fetchall()
+        _t("11e. survival cohort")
 
         # Monthly churn volume + two churn-rate flavours.
         #
@@ -1307,6 +1343,7 @@ def lambda_handler(event, context):
             ORDER BY 1
         """)
         churn_monthly_rows = cur.fetchall()
+        _t("11f. churn monthly")
 
         # ─────────────────────────────────────────────────────
         # 8b. Retention by Acquisition Source
@@ -1382,6 +1419,7 @@ def lambda_handler(event, context):
             LIMIT 15
         """)
         retention_by_source_rows = cur.fetchall()
+        _t("11g. retention by source")
 
         # ─────────────────────────────────────────────────────
         # 9. Cohort Analysis
@@ -1417,6 +1455,7 @@ def lambda_handler(event, context):
             GROUP BY 1 ORDER BY 1
         """)
         cohort_heatmap_rows = cur.fetchall()
+        _t("11h. cohort heatmap")
 
         # Overall survival curve by join-month cohort (for the overlay line chart)
         # already captured above via survival_rows; reuse for cohort level
@@ -1473,6 +1512,7 @@ def lambda_handler(event, context):
             ORDER BY c.cohort_month
         """)
         cohort_table_rows = cur.fetchall()
+        _t("11i. cohort table")
 
     finally:
         cur.close()

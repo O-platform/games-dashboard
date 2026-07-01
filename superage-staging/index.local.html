@@ -1850,6 +1850,11 @@ function _refreshClicksTab() {
   _setWeekdayWindow(window._rawWeekdayN || 3);
   _setRawWeeklyWindow(window._rawWeeklyN || 8);
   _renderRawMonthly();
+  const opensPanel = document.getElementById('eng-panel-opens');
+  if (opensPanel && opensPanel.style.display !== 'none') {
+    _renderOpensSection1();
+    _renderOpensSection2();
+  }
 }
 
 /* Click Analysis KPIs — campaigns sent / total recipients / total clicks /
@@ -1871,9 +1876,10 @@ function _renderClickKpis() {
   const set = (id, txt) => { const el = document.getElementById(id); if (el) el.textContent = txt; };
   set('ca-kpi-camps',  camps.toLocaleString());
   set('ca-kpi-recip',  recip.toLocaleString());
+  let totalOpens = 0;
+  rows.forEach(c => { totalOpens += _campNum(c.unique_opens); });
   set('ca-kpi-clicks', clicks.toLocaleString());
-  const opens = _rawClicksData && _rawClicksData.total_unique_opens;
-  set('ca-kpi-opens',  opens != null ? Number(opens).toLocaleString() : '—');
+  set('ca-kpi-opens',  totalOpens ? totalOpens.toLocaleString() : '—');
 }
 
 /* Section 3 KPI tiles — subscriber-level click metrics sourced from the
@@ -1945,7 +1951,42 @@ function _setEngTab(tab) {
   const off = 'background:var(--card);color:var(--text-muted);border-color:var(--card-border);';
   if (btnC) btnC.style.cssText = (tab === 'clicks' ? on : off) + 'font-size:13px;font-weight:600;padding:6px 18px;border-width:1px;border-style:solid;border-radius:7px;cursor:pointer;';
   if (btnO) btnO.style.cssText = (tab === 'opens'  ? on : off) + 'font-size:13px;font-weight:600;padding:6px 18px;border-width:1px;border-style:solid;border-radius:7px;cursor:pointer;';
-  if (tab === 'opens') _renderOpenerWeeklyChart(_rawClicksData);
+  if (tab === 'opens') { _renderOpensSection1(); _renderOpensSection2(); }
+}
+
+function _opensRows() {
+  const table = (_rawClicksData && _rawClicksData.campaign_table) || [];
+  return table.filter(c => _ssOn() ? true : !_isSundayCampaign(c));
+}
+
+function _renderOpensSection1() {
+  const rows    = _opensRows();
+  const weekly  = _buildCampaignSeries(rows, _isoWeekStart, _fmtWeekLabel,  8);
+  const monthly = _buildCampaignSeries(rows, _monthStart,  _fmtMonthLabel, 6);
+  const tickFmt = v => Number(v).toLocaleString();
+  _clickTrendChart('op-s1-weekly-bar',  weekly,  'unique_opens', '#e36209', 'Unique Opens', tickFmt);
+  _clickTrendChart('op-s1-monthly-bar', monthly, 'unique_opens', '#bf8700', 'Unique Opens', tickFmt);
+  const wIns = document.getElementById('op-s1-weekly-insight');
+  if (wIns) {
+    const txt = _clickTrendInsight(weekly, 'unique_opens', 'opens', v => Number(v).toLocaleString());
+    wIns.innerHTML = txt
+      ? `WoW (last 2 completed weeks): ${txt}.`
+      : `Not enough completed weeks for a WoW comparison yet.`;
+  }
+  const mIns = document.getElementById('op-s1-monthly-insight');
+  if (mIns) {
+    const txt = _clickTrendInsight(monthly, 'unique_opens', 'opens', v => Number(v).toLocaleString());
+    mIns.innerHTML = txt
+      ? `MoM (last 2 completed months): ${txt}.`
+      : `Not enough completed months for a MoM comparison yet.`;
+  }
+}
+
+function _renderOpensSection2() {
+  _renderOpenerWeeklyChart(_rawClicksData);
+  const rows    = _opensRows();
+  const monthly = _buildCampaignSeries(rows, _monthStart, _fmtMonthLabel, 6);
+  _clickTrendChart('op-s2-monthly-bar', monthly, 'unique_opens', '#bf8700', 'Unique Opens', v => Number(v).toLocaleString());
 }
 
 /* Click-volume distribution bar — buckets subscribers by their lifetime
@@ -2015,14 +2056,14 @@ function renderContent(M) {
       <div class="kpi-card orange"><div class="label">Total Opens</div><div class="value" id="ca-kpi-opens">—</div><div class="sub">Sum of <code>UniqueOpened</code></div></div>
     </div>
 
-    <!-- Clicks / Opens toggle -->
+    <!-- Clicks / Opens toggle + shared SS toggle -->
     <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;margin-bottom:14px;">
       <div style="display:flex;gap:6px;">
         <button id="eng-tab-clicks" onclick="_setEngTab('clicks')" style="font-size:13px;font-weight:600;padding:6px 18px;border:1px solid var(--accent);border-radius:7px;background:var(--accent);color:#fff;cursor:pointer;">Clicks</button>
         <button id="eng-tab-opens"  onclick="_setEngTab('opens')"  style="font-size:13px;font-weight:600;padding:6px 18px;border:1px solid var(--card-border);border-radius:7px;background:var(--card);color:var(--text-muted);cursor:pointer;">Opens</button>
       </div>
-      <!-- Clicks toolbar (shown only in clicks mode) -->
-      <div id="eng-clicks-toolbar" style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;">
+      <!-- SS toggle: always visible, applies to both panels -->
+      <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;">
         <div class="camp-toolbar-left" style="margin:0;">
           <label class="switch" for="clicksIncludeSS" title="Include Sunday Spotlight campaigns">
             <input type="checkbox" id="clicksIncludeSS" onchange="_refreshClicksTab()">
@@ -2033,7 +2074,8 @@ function renderContent(M) {
             <div style="font-size:11px;color:var(--text-muted);" id="clicks-ss-state">Excluding branded digest sends</div>
           </div>
         </div>
-        <div style="display:flex;align-items:center;gap:8px;">
+        <!-- Clicks-only: metric dropdown -->
+        <div id="eng-clicks-toolbar" style="display:flex;align-items:center;gap:8px;">
           <label style="font-size:12px;color:var(--text-muted);">Section 1 metric:</label>
           <select id="clicksMetric" onchange="_renderClickSection1()" style="font-size:12px;padding:5px 10px;border:1px solid var(--card-border);border-radius:6px;background:var(--card);color:var(--text);">
             <option value="clicks">Total clicks</option>
@@ -2151,9 +2193,30 @@ function renderContent(M) {
         </div>
       </div>
 
-      <div class="chart-card">
-        <h3>Weekly Unique Openers <span class="badge-inline">— rolling 30-day window, last 13 weeks</span></h3>
-        <div class="chart-container h260"><canvas id="op-weekly-chart"></canvas></div>
+      <h3 style="margin:18px 0 10px;font-size:13px;text-transform:uppercase;letter-spacing:.5px;color:var(--text-muted);">Section 1 — Campaign-Level Aggregated</h3>
+      <div class="grid-2">
+        <div class="chart-card">
+          <h3>Weekly Campaign Opens <span class="badge-inline">— last 8 weeks, Mon-Sun rollup</span></h3>
+          <div class="chart-container h260"><canvas id="op-s1-weekly-bar"></canvas></div>
+          <div class="insight" id="op-s1-weekly-insight"></div>
+        </div>
+        <div class="chart-card">
+          <h3>Monthly Campaign Opens <span class="badge-inline">— last 6 months</span></h3>
+          <div class="chart-container h260"><canvas id="op-s1-monthly-bar"></canvas></div>
+          <div class="insight" id="op-s1-monthly-insight"></div>
+        </div>
+      </div>
+
+      <h3 style="margin:18px 0 10px;font-size:13px;text-transform:uppercase;letter-spacing:.5px;color:var(--text-muted);">Section 2 — Opens Trends Over Time</h3>
+      <div class="grid-2">
+        <div class="chart-card">
+          <h3>Weekly Unique Openers <span class="badge-inline">— rolling 30-day window, last 13 weeks</span></h3>
+          <div class="chart-container h260"><canvas id="op-weekly-chart"></canvas></div>
+        </div>
+        <div class="chart-card">
+          <h3>Monthly Campaign Opens <span class="badge-inline">— last 6 months</span></h3>
+          <div class="chart-container h260"><canvas id="op-s2-monthly-bar"></canvas></div>
+        </div>
       </div>
     </div><!-- /eng-panel-opens -->
   `;

@@ -610,11 +610,11 @@ def lambda_handler(event, context):
                 ),
                 openers AS (
                     SELECT
-                        DATE_TRUNC('week', opened_at::date)::date            AS week_start,
+                        DATE_TRUNC('week', opened_at)::date                  AS week_start,
                         COUNT(DISTINCT LOWER(TRIM(email)))                   AS unique_openers
                     FROM optimism.superage_opens
-                    WHERE opened_at::date >= DATE_TRUNC('week', CURRENT_DATE)::date - INTERVAL '11 weeks'
-                      AND opened_at::date <= CURRENT_DATE
+                    WHERE opened_at >= DATE_TRUNC('week', CURRENT_DATE) - INTERVAL '11 weeks'
+                      AND opened_at <  CURRENT_DATE + INTERVAL '1 day'
                       AND email IS NOT NULL
                     GROUP BY 1
                 )
@@ -640,11 +640,11 @@ def lambda_handler(event, context):
                 ),
                 openers AS (
                     SELECT
-                        DATE_TRUNC('month', opened_at::date)::date           AS month_start,
+                        DATE_TRUNC('month', opened_at)::date                 AS month_start,
                         COUNT(DISTINCT LOWER(TRIM(email)))                   AS unique_openers
                     FROM optimism.superage_opens
-                    WHERE opened_at::date >= DATE_TRUNC('month', CURRENT_DATE)::date - INTERVAL '5 months'
-                      AND opened_at::date <= CURRENT_DATE
+                    WHERE opened_at >= DATE_TRUNC('month', CURRENT_DATE) - INTERVAL '5 months'
+                      AND opened_at <  CURRENT_DATE + INTERVAL '1 day'
                       AND email IS NOT NULL
                     GROUP BY 1
                 )

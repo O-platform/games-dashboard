@@ -548,7 +548,7 @@ def lambda_handler(event, context):
                         campaign_id,
                         opened_at::date          AS open_date
                     FROM optimism.superage_opens
-                    WHERE opened_at >= CURRENT_DATE - INTERVAL '120 days'
+                    WHERE opened_at >= CURRENT_TIMESTAMP - INTERVAL '120 days'
                       AND email IS NOT NULL
                       AND TRIM(email) != ''
                 ),
@@ -577,8 +577,9 @@ def lambda_handler(event, context):
                     INTERVAL '1 week'
                 ) gs
                 JOIN optimism.superage_opens o
-                    ON o.opened_at::date BETWEEN gs::date - 29 AND gs::date
-                WHERE o.opened_at >= CURRENT_DATE - INTERVAL '120 days'
+                    ON o.opened_at >= gs - INTERVAL '29 days'
+                   AND o.opened_at <  gs + INTERVAL '1 day'
+                WHERE o.opened_at >= CURRENT_TIMESTAMP - INTERVAL '120 days'
                   AND o.email IS NOT NULL
                 GROUP BY 1
                 ORDER BY 1

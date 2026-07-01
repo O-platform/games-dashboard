@@ -1,0 +1,4076 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <base href="/games-sold-tickets/">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Games Waitlist — Audience Intelligence Dashboard</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js"></script>
+  <style>
+    :root {
+      --bg: #f6f8fa;
+      --card: #ffffff;
+      --card-2: #f0f2f5;
+      --card-border: #d0d7de;
+      --text: #1f2328;
+      --text-muted: #57606a;
+      --text-dim: #8c959f;
+      --accent: #0969da;
+      --green: #1a7f37;
+      --teal: #1a7f37;
+      --red: #cf222e;
+      --orange: #9a6700;
+      --purple: #8250df;
+      --pink: #bf3989;
+      --cyan: #1b7c83;
+      --gold: #7d4e00;
+      --header-bg: linear-gradient(160deg, #dce8f5 0%, #f6f8fa 60%);
+      --row-hover: #f0f2f5;
+      --row-border: #21262d;
+      --map-bg: #eef1f4;
+    }
+
+    body.dark {
+      --bg: #0d1117;
+      --card: #161b22;
+      --card-2: #1c2128;
+      --card-border: #30363d;
+      --text: #e6edf3;
+      --text-muted: #8b949e;
+      --text-dim: #484f58;
+      --accent: #58a6ff;
+      --green: #3fb950;
+      --teal: #39d353;
+      --red: #f85149;
+      --orange: #d29922;
+      --purple: #bc8cff;
+      --pink: #f778ba;
+      --cyan: #39c5cf;
+      --gold: #e3b341;
+      --header-bg: linear-gradient(160deg, #0d1b2e 0%, #0d1117 60%);
+      --row-hover: #1c2128;
+      --row-border: #30363d;
+      --map-bg: #0d1117;
+    }
+
+    .theme-toggle {
+      display: flex;
+      align-items: center;
+      gap: 7px;
+      cursor: pointer;
+      background: var(--card);
+      border: 1px solid var(--card-border);
+      border-radius: 20px;
+      padding: 5px 12px 5px 8px;
+      transition: all .2s;
+      flex-shrink: 0;
+    }
+
+    .theme-toggle:hover {
+      border-color: var(--accent);
+    }
+
+    .toggle-track {
+      width: 34px;
+      height: 18px;
+      background: var(--accent);
+      border-radius: 9px;
+      position: relative;
+      transition: background .25s;
+      flex-shrink: 0;
+    }
+
+    .toggle-thumb {
+      width: 13px;
+      height: 13px;
+      background: #fff;
+      border-radius: 50%;
+      position: absolute;
+      top: 2.5px;
+      left: 2.5px;
+      transition: transform .25s;
+      box-shadow: 0 1px 3px rgba(0, 0, 0, .3);
+    }
+
+    body.dark .toggle-thumb {
+      transform: translateX(16px);
+    }
+
+    .toggle-label {
+      font-size: 11px;
+      font-weight: 600;
+      color: var(--text-muted);
+      letter-spacing: .3px;
+    }
+
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Helvetica Neue', Arial, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      font-size: 14px;
+    }
+
+    .header {
+      background: var(--header-bg);
+      border-bottom: 1px solid var(--card-border);
+      padding: 16px 32px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      position: sticky;
+      top: 0;
+      z-index: 100;
+    }
+
+    .header-left {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+    }
+
+    .header-badge {
+      background: linear-gradient(135deg, #1f4e79, #1a6cad);
+      border: 1px solid #2a7fc5;
+      color: #7ec8f0;
+      font-size: 10px;
+      font-weight: 700;
+      letter-spacing: 1.5px;
+      text-transform: uppercase;
+      padding: 4px 10px;
+      border-radius: 20px;
+      white-space: nowrap;
+    }
+
+    .header h1 {
+      font-size: 17px;
+      font-weight: 600;
+      color: var(--text);
+    }
+
+    .header h1 span {
+      color: var(--accent);
+    }
+
+    .freshness-badge {
+      display: inline-flex;
+      align-items: center;
+      border: 1px solid var(--card-border);
+      background: var(--card-2);
+      color: var(--accent);
+      border-radius: 999px;
+      padding: 2px 8px;
+      font-size: 10px;
+      font-weight: 700;
+      letter-spacing: .6px;
+      text-transform: uppercase;
+      line-height: 1.4;
+    }
+
+    .section-context-banner {
+      background: var(--card);
+      border: 1px solid var(--card-border);
+      border-left: 3px solid var(--accent);
+      border-radius: 8px;
+      padding: 9px 12px;
+      margin-bottom: 18px;
+      font-size: 12px;
+      color: var(--text-muted);
+      line-height: 1.5;
+    }
+
+    .section-context-banner strong {
+      color: var(--text);
+      font-weight: 600;
+    }
+
+    .tabs {
+      display: flex;
+      gap: 2px;
+      padding: 0 32px;
+      background: var(--bg);
+      border-bottom: 1px solid var(--card-border);
+      overflow-x: auto;
+      scrollbar-width: none;
+    }
+
+    .tabs::-webkit-scrollbar {
+      display: none;
+    }
+
+    .tab {
+      padding: 11px 16px;
+      font-size: 13px;
+      font-weight: 500;
+      color: var(--text-muted);
+      border: none;
+      background: none;
+      cursor: pointer;
+      border-bottom: 2px solid transparent;
+      transition: all .2s;
+      white-space: nowrap;
+    }
+
+    .tab:hover {
+      color: var(--text);
+    }
+
+    .tab.active {
+      color: var(--accent);
+      border-bottom-color: var(--accent);
+    }
+
+    .page {
+      display: none;
+      padding: 26px 32px;
+      max-width: 1400px;
+    }
+
+    .page.active {
+      display: block;
+    }
+
+    .kpi-row {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(155px, 1fr));
+      gap: 12px;
+      margin-bottom: 24px;
+    }
+
+    .kpi-card {
+      background: var(--card);
+      border: 1px solid var(--card-border);
+      border-radius: 10px;
+      padding: 16px 18px;
+    }
+
+    .kpi-card .label {
+      font-size: 11px;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: .6px;
+      margin-bottom: 8px;
+    }
+
+    .kpi-card .value {
+      font-size: 28px;
+      font-weight: 700;
+      line-height: 1;
+    }
+
+    .kpi-card .sub {
+      font-size: 11px;
+      color: var(--text-muted);
+      margin-top: 6px;
+    }
+
+    .kpi-card.accent .value {
+      color: var(--accent);
+    }
+
+    .kpi-card.green .value {
+      color: var(--green);
+    }
+
+    .kpi-card.orange .value {
+      color: var(--orange);
+    }
+
+    .kpi-card.purple .value {
+      color: var(--purple);
+    }
+
+    .kpi-card.pink .value {
+      color: var(--pink);
+    }
+
+    .kpi-card.cyan .value {
+      color: var(--cyan);
+    }
+
+    .kpi-card.gold .value {
+      color: var(--gold);
+    }
+
+    .kpi-card.red .value {
+      color: var(--red);
+    }
+
+    .grid-2 {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 18px;
+      margin-bottom: 18px;
+    }
+
+    .grid-3 {
+      display: grid;
+      grid-template-columns: 1fr 1fr 1fr;
+      gap: 18px;
+      margin-bottom: 18px;
+    }
+
+    .card {
+      background: var(--card);
+      border: 1px solid var(--card-border);
+      border-radius: 10px;
+      padding: 18px 20px;
+    }
+
+    .card h3 {
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: .6px;
+      margin-bottom: 14px;
+    }
+
+    .card h3 span {
+      color: var(--accent);
+      font-weight: 400;
+      text-transform: none;
+      letter-spacing: 0;
+      font-size: 11px;
+    }
+
+    .insight {
+      margin-top: 10px;
+      font-size: 12px;
+      color: var(--text-muted);
+      line-height: 1.6;
+      padding: 9px 11px;
+      background: var(--card-2);
+      border-radius: 6px;
+      border-left: 3px solid var(--accent);
+    }
+
+    .insight strong {
+      color: var(--text);
+    }
+
+    .section-header {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 18px;
+      padding-bottom: 12px;
+      border-bottom: 1px solid var(--card-border);
+    }
+
+    .section-header h2 {
+      font-size: 15px;
+      font-weight: 600;
+    }
+
+    .section-header .dot {
+      width: 7px;
+      height: 7px;
+      border-radius: 50%;
+      background: var(--accent);
+      flex-shrink: 0;
+    }
+
+    .chart-wrap {
+      position: relative;
+      height: 220px;
+    }
+
+    .chart-wrap.tall {
+      height: 300px;
+    }
+
+    .chart-wrap.short {
+      height: 160px;
+    }
+
+    .bar-list {
+      display: flex;
+      flex-direction: column;
+      gap: 9px;
+    }
+
+    .bar-meta {
+      display: flex;
+      justify-content: space-between;
+      margin-bottom: 4px;
+    }
+
+    .bar-label {
+      font-size: 12px;
+      color: var(--text);
+    }
+
+    .bar-pct {
+      font-size: 12px;
+      color: var(--text-muted);
+    }
+
+    .bar-track {
+      background: var(--card-2);
+      border-radius: 3px;
+      height: 5px;
+      overflow: hidden;
+    }
+
+    .bar-fill {
+      height: 100%;
+      border-radius: 3px;
+    }
+
+    .bar-fill.accent {
+      background: var(--accent);
+    }
+
+    .bar-fill.green {
+      background: var(--green);
+    }
+
+    .bar-fill.orange {
+      background: var(--orange);
+    }
+
+    .bar-fill.purple {
+      background: var(--purple);
+    }
+
+    .bar-fill.pink {
+      background: var(--pink);
+    }
+
+    .bar-fill.cyan {
+      background: var(--cyan);
+    }
+
+    .bar-fill.gold {
+      background: var(--gold);
+    }
+
+    .bar-fill.red {
+      background: var(--red);
+    }
+
+    .bar-fill.teal {
+      background: var(--teal);
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 13px;
+    }
+
+    th {
+      text-align: left;
+      font-size: 11px;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: .5px;
+      padding: 7px 10px;
+      border-bottom: 1px solid var(--card-border);
+    }
+
+    td {
+      padding: 8px 10px;
+      border-bottom: 1px solid var(--row-border);
+      color: var(--text);
+      vertical-align: middle;
+    }
+
+    tr:last-child td {
+      border-bottom: none;
+    }
+
+    tr:hover td {
+      background: var(--row-hover);
+    }
+
+    .badge {
+      display: inline-block;
+      padding: 2px 8px;
+      border-radius: 10px;
+      font-size: 11px;
+      font-weight: 500;
+    }
+
+    .badge.green {
+      background: rgba(63, 185, 80, .15);
+      color: var(--green);
+    }
+
+    .badge.orange {
+      background: rgba(210, 153, 34, .15);
+      color: var(--orange);
+    }
+
+    .badge.purple {
+      background: rgba(188, 140, 255, .15);
+      color: var(--purple);
+    }
+
+    .badge.accent {
+      background: rgba(88, 166, 255, .15);
+      color: var(--accent);
+    }
+
+    .badge.pink {
+      background: rgba(247, 120, 186, .15);
+      color: var(--pink);
+    }
+
+    .badge.red {
+      background: rgba(248, 81, 73, .15);
+      color: var(--red);
+    }
+
+    .badge.cyan {
+      background: rgba(57, 197, 207, .15);
+      color: var(--cyan);
+    }
+
+    .badge.gold {
+      background: rgba(227, 179, 65, .15);
+      color: var(--gold);
+    }
+
+    .badge.teal {
+      background: rgba(57, 211, 83, .12);
+      color: var(--teal);
+    }
+
+    .coverage-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(190px, 1fr));
+      gap: 9px;
+    }
+
+    .coverage-item {
+      background: var(--card-2);
+      border-radius: 8px;
+      padding: 11px 13px;
+    }
+
+    .coverage-item .cf {
+      font-size: 12px;
+      color: var(--text);
+      margin-bottom: 5px;
+    }
+
+    .coverage-item .cp {
+      font-size: 11px;
+      color: var(--text-muted);
+      margin-bottom: 5px;
+    }
+
+    .coverage-track {
+      background: var(--row-border);
+      border-radius: 3px;
+      height: 4px;
+    }
+
+    .coverage-bar {
+      height: 100%;
+      border-radius: 3px;
+    }
+
+    .segment-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(275px, 1fr));
+      gap: 14px;
+      margin-bottom: 18px;
+    }
+
+    .segment-card {
+      background: var(--card);
+      border: 1px solid var(--card-border);
+      border-radius: 10px;
+      padding: 18px 20px;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .segment-card::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 3px;
+    }
+
+    .segment-card.seg-1::before {
+      background: linear-gradient(90deg, var(--accent), var(--cyan));
+    }
+
+    .segment-card.seg-2::before {
+      background: linear-gradient(90deg, var(--green), var(--teal));
+    }
+
+    .segment-card.seg-3::before {
+      background: linear-gradient(90deg, var(--purple), var(--pink));
+    }
+
+    .segment-card.seg-4::before {
+      background: linear-gradient(90deg, var(--gold), var(--orange));
+    }
+
+    .segment-card.seg-5::before {
+      background: linear-gradient(90deg, var(--pink), var(--red));
+    }
+
+    .segment-card.seg-6::before {
+      background: linear-gradient(90deg, var(--cyan), var(--accent));
+    }
+
+    .segment-card h4 {
+      font-size: 13px;
+      font-weight: 600;
+      margin-bottom: 8px;
+    }
+
+    .segment-card .seg-size {
+      font-size: 22px;
+      font-weight: 700;
+      margin-bottom: 3px;
+    }
+
+    .segment-card .seg-pct {
+      font-size: 11px;
+      color: var(--text-muted);
+      margin-bottom: 10px;
+    }
+
+    .segment-card .seg-logic {
+      font-size: 12px;
+      color: var(--text-muted);
+      margin-bottom: 8px;
+      line-height: 1.5;
+    }
+
+    .segment-card .seg-why {
+      font-size: 11px;
+      color: var(--accent);
+      font-weight: 500;
+    }
+
+    .geo-list {
+      display: flex;
+      flex-direction: column;
+      gap: 7px;
+    }
+
+    .geo-item {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .geo-rank {
+      font-size: 11px;
+      color: var(--text-dim);
+      width: 18px;
+      text-align: right;
+    }
+
+    .geo-name {
+      font-size: 13px;
+      flex: 1;
+    }
+
+    .geo-count {
+      font-size: 12px;
+      color: var(--text-muted);
+      width: 100px;
+      text-align: right;
+      white-space: nowrap;
+    }
+
+    .geo-track {
+      flex: 0 0 65px;
+      background: var(--card-2);
+      border-radius: 3px;
+      height: 5px;
+    }
+
+    .geo-fill {
+      height: 100%;
+      border-radius: 3px;
+      background: var(--accent);
+    }
+
+    .trait-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+      gap: 9px;
+    }
+
+    .trait-card {
+      background: var(--card-2);
+      border-radius: 8px;
+      padding: 12px;
+      text-align: center;
+    }
+
+    .trait-icon {
+      font-size: 20px;
+      margin-bottom: 7px;
+    }
+
+    .trait-label {
+      font-size: 11px;
+      color: var(--text-muted);
+      margin-bottom: 3px;
+    }
+
+    .trait-val {
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--text);
+    }
+
+    .map-container {
+      background: var(--card);
+      border: 1px solid var(--card-border);
+      border-radius: 10px;
+      padding: 18px 20px;
+      margin-bottom: 18px;
+    }
+
+    .map-container h3 {
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: .6px;
+      margin-bottom: 14px;
+    }
+
+    #map-tt {
+      position: fixed;
+      background: #1c2128;
+      border: 1px solid #30363d;
+      border-radius: 6px;
+      padding: 7px 12px;
+      font-size: 12px;
+      pointer-events: none;
+      display: none;
+      z-index: 9999;
+      color: #e6edf3;
+      white-space: nowrap;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, .4);
+    }
+
+    ::-webkit-scrollbar {
+      width: 6px;
+      height: 6px;
+    }
+
+    ::-webkit-scrollbar-track {
+      background: transparent;
+    }
+
+    ::-webkit-scrollbar-thumb {
+      background: var(--card-border);
+      border-radius: 3px;
+    }
+
+    @media(max-width:900px) {
+
+      .grid-2,
+      .grid-3 {
+        grid-template-columns: 1fr;
+      }
+
+      .page {
+        padding: 14px 16px;
+      }
+
+      .header {
+        padding: 12px 16px;
+        flex-wrap: wrap;
+        gap: 8px;
+      }
+
+      .tabs {
+        padding: 0 16px;
+      }
+    }
+
+    .sales-loading,
+    .sales-error {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-direction: column;
+      gap: 12px;
+      padding: 60px 20px;
+    }
+
+    .sales-spinner {
+      width: 28px;
+      height: 28px;
+      border: 3px solid var(--card-border);
+      border-top-color: var(--accent);
+      border-radius: 50%;
+      animation: spin .8s linear infinite;
+    }
+
+    @keyframes spin {
+      to {
+        transform: rotate(360deg);
+      }
+    }
+
+    .refresh-btn {
+      background: var(--accent);
+      color: #fff;
+      border: none;
+      border-radius: 6px;
+      padding: 6px 14px;
+      font-size: 12px;
+      font-weight: 500;
+      cursor: pointer;
+    }
+
+    .refresh-btn:hover {
+      opacity: .85;
+    }
+
+    .empty-msg {
+      padding: 20px;
+      text-align: center;
+      font-size: 12px;
+      color: var(--text-dim);
+    }
+
+    .funnel-wrap {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 8px 0 4px;
+    }
+
+    .funnel-step {
+      border: 1.5px solid;
+      border-radius: 8px;
+      padding: 14px 24px;
+      text-align: center;
+      min-width: 200px;
+      box-sizing: border-box;
+    }
+
+    .funnel-step-label {
+      font-size: 11px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: .6px;
+      color: var(--text-muted);
+      margin-bottom: 4px;
+    }
+
+    .funnel-step-count {
+      font-size: 26px;
+      font-weight: 700;
+      line-height: 1.1;
+      margin-bottom: 3px;
+    }
+
+    .funnel-step-sub {
+      font-size: 11px;
+      color: var(--text-muted);
+    }
+
+    .funnel-arrow {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 4px 0;
+      gap: 2px;
+    }
+
+    .funnel-rate {
+      font-size: 11px;
+      color: var(--accent);
+      font-weight: 500;
+    }
+
+    .funnel-arrow-line {
+      width: 1.5px;
+      height: 14px;
+      background: var(--card-border);
+    }
+
+    .funnel-arrow-head {
+      width: 0;
+      height: 0;
+      border-left: 5px solid transparent;
+      border-right: 5px solid transparent;
+      border-top: 6px solid var(--card-border);
+    }
+  </style>
+</head>
+
+<body>
+  <div id="map-tt"></div>
+
+  <div class="header">
+    <div class="header-left">
+      <div class="header-badge">Audience Intel</div>
+      <h1>SuperAge Games &mdash; <span>Waitlist Intelligence</span></h1>
+    </div>
+    <div style="display:flex;align-items:center;gap:16px;">
+      <div style="text-align:right;line-height:1.6;">
+        <div style="display:flex;align-items:center;justify-content:flex-end;gap:8px;">
+          <span id="header-refresh-label" class="freshness-badge">Static snapshot</span>
+          <span id="header-clock" style="font-size:13px;font-weight:600;color:var(--text);">&#8212;</span>
+        </div>
+        <div style="font-size:11px;color:var(--text-dim);">
+          <span id="header-context-label">Waitlist campaign analysis</span> &middot; Last updated
+        </div>
+      </div>
+      <div style="width:1px;height:28px;background:var(--card-border);"></div>
+      <button class="theme-toggle" onclick="toggleTheme()">
+        <div class="toggle-track">
+          <div class="toggle-thumb"></div>
+        </div>
+        <span class="toggle-label" id="toggle-label">LIGHT</span>
+      </button>
+      <div id="header-ticket-meta" style="font-size:12px;color:var(--text-muted);"></div>
+    </div>
+  </div>
+
+  <div class="tabs">
+    <button class="tab active" onclick="showTab('sales',this)">Sales Tickets</button>
+    <button class="tab" onclick="showTab('persona',this)">Buyer Persona</button>
+    <button class="tab" onclick="showTab('funnel',this)">Funnel Analysis</button>
+    <button class="tab" onclick="showTab('summary',this)">Executive Summary</button>
+    <button class="tab" onclick="showTab('sources',this)">Source Analysis</button>
+    <button class="tab" onclick="showTab('demographics',this)">Demographics</button>
+    <button class="tab" onclick="showTab('geo',this)">Geo Analysis</button>
+    <button class="tab" onclick="showTab('psychographic',this)">Psychographic</button>
+    <button class="tab" onclick="showTab('coverage',this)">Data Coverage</button>
+    <button class="tab" onclick="showTab('segments',this)">Segments</button>
+    <button class="tab" onclick="showTab('editorial',this)">Editorial</button>
+  </div>
+
+  <!-- SALES TICKETS TAB -->
+  <div class="page active" id="tab-sales">
+    <div id="sales-loading" class="sales-loading">
+      <div class="sales-spinner"></div>
+      <div style="font-size:13px;color:var(--text-muted);">Loading sales data&hellip;</div>
+    </div>
+    <div id="sales-error" class="sales-error" style="display:none;">
+      <div style="font-size:14px;color:var(--text-muted);">Failed to load sales data</div>
+      <div class="error-msg" style="font-size:12px;color:var(--red);margin:0 0 6px;"></div>
+      <button class="refresh-btn" onclick="loadSalesData()">&#8635; Retry</button>
+    </div>
+    <div id="sales-content" style="display:none;">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:18px;">
+        <div>
+          <h2 style="font-size:15px;font-weight:600;">Sales Tickets</h2>
+          <div style="font-size:12px;color:var(--text-muted);margin-top:3px;">Waitlist campaign analysis &middot; Hourly
+            updates during working hours &middot; Last updated: <strong id="sales-section-updated">&#8212;</strong></div>
+        </div>
+      </div>
+      <div class="kpi-row">
+        <div class="kpi-card green">
+          <div class="label">Ticket Sales</div>
+          <div class="value" id="kpi-tickets">&#8212;</div>
+          <div class="sub">Total purchases</div>
+        </div>
+        <div class="kpi-card gold">
+          <div class="label">Est. Revenue</div>
+          <div class="value" id="kpi-revenue">&#8212;</div>
+          <div class="sub">Price &times; tickets sold</div>
+        </div>
+        <div class="kpi-card accent">
+          <div class="label">Waitlist Emails</div>
+          <div class="value" id="kpi-waitlist">&#8212;</div>
+          <div class="sub">Filtered signups</div>
+        </div>
+        <div class="kpi-card purple">
+          <div class="label">Waitlist Buyers</div>
+          <div class="value" id="kpi-crossover">&#8212;</div>
+          <div class="sub" id="kpi-crossover-sub">On waitlist + purchased</div>
+        </div>
+        <div class="kpi-card orange">
+          <div class="label">Conversion Rate</div>
+          <div class="value" id="kpi-conversion">&#8212;</div>
+          <div class="sub">Waitlist &rarr; Purchase</div>
+        </div>
+        <div class="kpi-card cyan">
+          <div class="label">Landing Events</div>
+          <div class="value" id="kpi-landing">&#8212;</div>
+          <div class="sub">Known sources only</div>
+        </div>
+      </div>
+      <div style="margin-bottom:18px;" class="section-header">
+        <div class="dot" style="background:var(--cyan);"></div>
+        <h2>Landing Analysis</h2>
+      </div>
+      <div class="grid-2">
+        <div class="card">
+          <h3>Purchase Funnel</h3>
+          <div class="funnel-wrap" id="sales-funnel"></div>
+        </div>
+        <div class="card">
+          <h3>Ticket Type Breakdown</h3>
+          <div class="chart-wrap"><canvas id="chart-ticket-types"></canvas></div>
+          <div id="ticket-types-empty" class="empty-msg" style="display:none;">No ticket_type column</div>
+        </div>
+      </div>
+      <div class="card" style="margin-bottom:18px;">
+        <h3>Landing by Source &mdash; Our Brands</h3>
+        <div class="chart-wrap"><canvas id="chart-landing-source-brands"></canvas></div>
+        <div id="landing-source-brands-empty" class="empty-msg" style="display:none;">No data</div>
+      </div>
+      <div class="grid-2">
+        <div class="card">
+          <h3>Landing by Source &mdash; Sponsors</h3>
+          <div class="chart-wrap"><canvas id="chart-landing-source-sponsors"></canvas></div>
+          <div id="landing-source-sponsors-empty" class="empty-msg" style="display:none;">No data</div>
+        </div>
+        <div class="card">
+          <h3>Landing by Source &mdash; Events</h3>
+          <div class="chart-wrap"><canvas id="chart-landing-source-events"></canvas></div>
+          <div id="landing-source-events-empty" class="empty-msg" style="display:none;">No data</div>
+        </div>
+      </div>
+      <div class="grid-2">
+        <div class="card">
+          <h3>Landing Events by Campaign</h3>
+          <div class="chart-wrap"><canvas id="chart-landing-campaign"></canvas></div>
+          <div id="landing-campaign-empty" class="empty-msg" style="display:none;">No campaign data</div>
+        </div>
+        <div class="card">
+          <h3>Landing Events by Medium</h3>
+          <div class="chart-wrap"><canvas id="chart-landing-medium"></canvas></div>
+          <div id="landing-medium-empty" class="empty-msg" style="display:none;">No medium data</div>
+        </div>
+      </div>
+      <div class="card" style="margin-bottom:18px;">
+        <h3>Landing Events &mdash; Daily Trend</h3>
+        <div class="chart-wrap"><canvas id="chart-landing-daily"></canvas></div>
+        <div id="landing-daily-empty" class="empty-msg" style="display:none;">No date data</div>
+      </div>
+      <div class="section-header" style="margin-bottom:18px;">
+        <div class="dot" style="background:var(--green);"></div>
+        <h2>Ticket Buyer Demographics</h2>
+      </div>
+      <div class="grid-2">
+        <div class="card">
+          <h3>Age Distribution</h3>
+          <div class="chart-wrap"><canvas id="chart-age"></canvas></div>
+          <div id="age-empty" class="empty-msg" style="display:none;">No DOB column</div>
+        </div>
+        <div class="card">
+          <h3>Gender Split</h3>
+          <div style="height:220px;position:relative;"><canvas id="chart-gender"></canvas></div>
+          <div id="gender-empty" class="empty-msg" style="display:none;">No gender column</div>
+        </div>
+      </div>
+      <div class="grid-2">
+        <div class="card">
+          <h3>Top Cities</h3>
+          <div id="cities-list" class="bar-list" style="padding-top:4px;"></div>
+          <div id="cities-empty" class="empty-msg" style="display:none;">No city column</div>
+        </div>
+        <div class="card">
+          <h3>Waitlist vs Direct Buyers</h3>
+          <div style="height:220px;position:relative;"><canvas id="chart-waitlist-overlap"></canvas></div>
+          <div id="overlap-empty" class="empty-msg" style="display:none;">No email match data</div>
+        </div>
+      </div>
+      <div class="section-header" style="margin-bottom:18px;">
+        <div class="dot" style="background:var(--accent);"></div>
+        <h2>Recent Purchases</h2>
+      </div>
+      <div class="card" style="margin-bottom:18px;">
+        <div id="tickets-table-wrap"></div>
+        <div id="tickets-table-count" style="font-size:11px;color:var(--text-dim);margin-top:6px;"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- BUYER PERSONA TAB -->
+  <div class="page" id="tab-persona">
+    <div id="persona-loading" class="sales-loading">
+      <div class="sales-spinner"></div>
+      <div style="font-size:13px;color:var(--text-muted);">Loading persona data&hellip;</div>
+    </div>
+    <div id="persona-content" style="display:none;"></div>
+  </div>
+
+  <!-- FUNNEL ANALYSIS TAB -->
+  <div class="page" id="tab-funnel">
+    <div id="funnel-loading" class="sales-loading">
+      <div class="sales-spinner"></div>
+      <div style="font-size:13px;color:var(--text-muted);">Loading funnel data&hellip;</div>
+    </div>
+    <div id="funnel-content" style="display:none;"></div>
+  </div>
+
+  <!-- EXECUTIVE SUMMARY TAB -->
+  <div class="page" id="tab-summary">
+    <div class="section-context-banner"><strong>Waitlist campaign analysis</strong> &middot; Static snapshot &middot;
+      Last updated: <strong>Apr 30, 2026, 09:30 AM EST</strong> <span style="color:var(--text-muted);">(no more waitlist
+        entries)</span></div>
+    <div class="kpi-row">
+      <div class="kpi-card accent">
+        <div class="label">Total Waitlist</div>
+        <div class="value">3,190</div>
+        <div class="sub">All Active &middot; Ongage</div>
+      </div>
+      <div class="kpi-card green">
+        <div class="label">SuperAge</div>
+        <div class="value">2,624</div>
+        <div class="sub">82.3% of total</div>
+      </div>
+      <div class="kpi-card purple">
+        <div class="label">Ageist</div>
+        <div class="value">291</div>
+        <div class="sub">9.1% of total</div>
+      </div>
+      <div class="kpi-card gold">
+        <div class="label">AllHealthy</div>
+        <div class="value">176</div>
+        <div class="sub">5.5% of total</div>
+      </div>
+      <div class="kpi-card orange">
+        <div class="label">With Profile Data</div>
+        <div class="value">1,573</div>
+        <div class="sub">49.3% have quiz/demo data</div>
+      </div>
+      <div class="kpi-card red">
+        <div class="label">Email-Only</div>
+        <div class="value">1,617</div>
+        <div class="sub">50.7% &mdash; no profile data</div>
+      </div>
+    </div>
+    <div class="grid-2">
+      <div class="card">
+        <h3>Source Mix</h3>
+        <div style="height:200px;position:relative;"><canvas id="chart-source-donut"></canvas></div>
+      </div>
+      <div class="card">
+        <h3>Data Completeness</h3>
+        <div style="height:200px;position:relative;"><canvas id="chart-coverage-donut"></canvas></div>
+      </div>
+    </div>
+    <div class="grid-3">
+      <div class="card">
+        <h3>Gender Split <span>&mdash; profiled only &middot; #1,573</span></h3>
+        <div style="height:160px;position:relative;"><canvas id="chart-gender-donut"></canvas></div>
+      </div>
+      <div class="card">
+        <h3>Age Distribution <span>&mdash; profiled only &middot; #1,571</span></h3>
+        <div class="bar-list" style="padding-top:4px;">
+          <div>
+            <div class="bar-meta"><span class="bar-label">&lt;35</span><span class="bar-pct">14 &middot; 0.9%</span>
+            </div>
+            <div class="bar-track">
+              <div class="bar-fill cyan" style="width:2.2%"></div>
+            </div>
+          </div>
+          <div>
+            <div class="bar-meta"><span class="bar-label">35&ndash;44</span><span class="bar-pct">52 &middot;
+                3.3%</span></div>
+            <div class="bar-track">
+              <div class="bar-fill cyan" style="width:8.1%"></div>
+            </div>
+          </div>
+          <div>
+            <div class="bar-meta"><span class="bar-label">45&ndash;54</span><span class="bar-pct">145 &middot;
+                9.2%</span></div>
+            <div class="bar-track">
+              <div class="bar-fill accent" style="width:22.5%"></div>
+            </div>
+          </div>
+          <div>
+            <div class="bar-meta"><span class="bar-label">55&ndash;64</span><span class="bar-pct">395 &middot;
+                25.1%</span></div>
+            <div class="bar-track">
+              <div class="bar-fill accent" style="width:61.5%"></div>
+            </div>
+          </div>
+          <div>
+            <div class="bar-meta"><span class="bar-label">65&ndash;74</span><span class="bar-pct">643 &middot;
+                40.9%</span></div>
+            <div class="bar-track">
+              <div class="bar-fill green" style="width:100%"></div>
+            </div>
+          </div>
+          <div>
+            <div class="bar-meta"><span class="bar-label">75+</span><span class="bar-pct">322 &middot; 20.5%</span>
+            </div>
+            <div class="bar-track">
+              <div class="bar-fill orange" style="width:50.1%"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="card">
+        <h3>Longevity Score Buckets <span>#1,573</span></h3>
+        <div class="bar-list" style="padding-top:4px;">
+          <div>
+            <div class="bar-meta"><span class="bar-label">&lt;70</span><span class="bar-pct">5 &middot; 0.3%</span>
+            </div>
+            <div class="bar-track">
+              <div class="bar-fill red" style="width:0.8%"></div>
+            </div>
+          </div>
+          <div>
+            <div class="bar-meta"><span class="bar-label">70&ndash;79</span><span class="bar-pct">27 &middot;
+                1.7%</span></div>
+            <div class="bar-track">
+              <div class="bar-fill orange" style="width:4.5%"></div>
+            </div>
+          </div>
+          <div>
+            <div class="bar-meta"><span class="bar-label">80&ndash;89 Strong</span><span class="bar-pct">938 &middot;
+                59.6%</span></div>
+            <div class="bar-track">
+              <div class="bar-fill accent" style="width:100%"></div>
+            </div>
+          </div>
+          <div>
+            <div class="bar-meta"><span class="bar-label">90+ Elite</span><span class="bar-pct">603 &middot;
+                38.3%</span></div>
+            <div class="bar-track">
+              <div class="bar-fill green" style="width:64.3%"></div>
+            </div>
+          </div>
+        </div>
+        <div class="insight"><strong>98.3% score 80+.</strong> Mean longevity score: <strong>88.6 / 100</strong>.</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- SOURCE ANALYSIS TAB -->
+  <div class="page" id="tab-sources">
+    <div class="section-context-banner"><strong>Waitlist campaign analysis</strong> &middot; Static snapshot &middot;
+      Last updated: <strong>Apr 30, 2026, 09:30 AM EST</strong></div>
+    <div class="section-header">
+      <div class="dot"></div>
+      <h2>Source Analysis</h2>
+    </div>
+    <div class="kpi-row">
+      <div class="kpi-card green">
+        <div class="label">SuperAge</div>
+        <div class="value">2,624</div>
+        <div class="sub">82.3% of 3,190</div>
+      </div>
+      <div class="kpi-card purple">
+        <div class="label">Ageist</div>
+        <div class="value">291</div>
+        <div class="sub">9.1% &middot; 3 campaigns</div>
+      </div>
+      <div class="kpi-card gold">
+        <div class="label">AllHealthy</div>
+        <div class="value">176</div>
+        <div class="sub">5.5% &middot; 3 campaigns</div>
+      </div>
+      <div class="kpi-card cyan">
+        <div class="label">HealthBrief</div>
+        <div class="value">83</div>
+        <div class="sub">2.6% &middot; growing source</div>
+      </div>
+      <div class="kpi-card accent">
+        <div class="label">SA w/ Profile</div>
+        <div class="value">1,396</div>
+        <div class="sub">~53% profile rate</div>
+      </div>
+      <div class="kpi-card pink">
+        <div class="label">Ageist w/ Profile</div>
+        <div class="value">97</div>
+        <div class="sub">~33% profile rate</div>
+      </div>
+    </div>
+    <div class="grid-2">
+      <div class="card">
+        <h3>Subscribers by Source</h3>
+        <div class="chart-wrap"><canvas id="chart-source-bar"></canvas></div>
+      </div>
+      <div class="card">
+        <h3>Gender by Source <span>profiled subs only</span></h3>
+        <div class="chart-wrap"><canvas id="chart-source-gender"></canvas></div>
+        <div class="insight"><strong>All sources skew female.</strong> HealthBrief added 83 subs (30% profile rate).
+          Ageist grew with 2 new campaigns.</div>
+      </div>
+    </div>
+    <div class="grid-2">
+      <div class="card">
+        <h3>Campaign Breakdown &mdash; SuperAge <span>#2,624 &middot; 10 campaigns</span></h3>
+        <div class="chart-wrap short"><canvas id="chart-camp-sa"></canvas></div>
+        <table style="margin-top:14px;">
+          <thead>
+            <tr>
+              <th>Campaign</th>
+              <th>Subs</th>
+              <th>% of SA</th>
+              <th>Tag</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><strong>SA_PF_20260402</strong></td>
+              <td>1,049</td>
+              <td>40.0%</td>
+              <td><span class="badge green">Primary &middot; Apr 2</span></td>
+            </tr>
+            <tr>
+              <td><strong>SA_PF_20260329</strong></td>
+              <td>633</td>
+              <td>24.1%</td>
+              <td><span class="badge accent">Mar 29</span></td>
+            </tr>
+            <tr>
+              <td><strong>SA_PF_20260405</strong></td>
+              <td>224</td>
+              <td>8.5%</td>
+              <td><span class="badge purple">Apr 5</span></td>
+            </tr>
+            <tr>
+              <td><strong>SA_PF_20260416</strong></td>
+              <td>168</td>
+              <td>6.4%</td>
+              <td><span class="badge teal">New &middot; Apr 16</span></td>
+            </tr>
+            <tr>
+              <td><strong>SA_PF_20260412</strong></td>
+              <td>142</td>
+              <td>5.4%</td>
+              <td><span class="badge green">Apr 12</span></td>
+            </tr>
+            <tr>
+              <td><strong>SA_PF_20260406</strong></td>
+              <td>115</td>
+              <td>4.4%</td>
+              <td><span class="badge pink">Apr 6</span></td>
+            </tr>
+            <tr>
+              <td><strong>SA_EA_20260331</strong></td>
+              <td>106</td>
+              <td>4.0%</td>
+              <td><span class="badge cyan">Mar 31</span></td>
+            </tr>
+            <tr>
+              <td><strong>SA_PF_20260330</strong></td>
+              <td>104</td>
+              <td>4.0%</td>
+              <td><span class="badge gold">Mar 30</span></td>
+            </tr>
+            <tr>
+              <td><strong>SA_PF_20260409</strong></td>
+              <td>47</td>
+              <td>1.8%</td>
+              <td><span class="badge accent">Apr 9</span></td>
+            </tr>
+            <tr>
+              <td><strong>SA_PF_20260413</strong></td>
+              <td>36</td>
+              <td>1.4%</td>
+              <td><span class="badge teal">Apr 13</span></td>
+            </tr>
+          </tbody>
+        </table>
+        <div class="insight"><strong>SA_PF_20260416</strong> is the newest wave adding 168 subs on Apr 16.</div>
+      </div>
+      <div class="card">
+        <h3>Campaign Breakdown &mdash; Ageist <span>#291 &middot; 3 campaigns</span></h3>
+        <div class="chart-wrap short"><canvas id="chart-camp-ageist"></canvas></div>
+        <table style="margin-top:14px;">
+          <thead>
+            <tr>
+              <th>Campaign</th>
+              <th>Subs</th>
+              <th>% of AG</th>
+              <th>Tag</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><strong>Sunday March 29 Games Promo</strong></td>
+              <td>219</td>
+              <td>75.3%</td>
+              <td><span class="badge purple">Primary &middot; Mar 29</span></td>
+            </tr>
+            <tr>
+              <td><strong>487 Karen Hartman</strong></td>
+              <td>45</td>
+              <td>15.5%</td>
+              <td><span class="badge teal">New wave</span></td>
+            </tr>
+            <tr>
+              <td><strong>489 Tim Parr</strong></td>
+              <td>27</td>
+              <td>9.3%</td>
+              <td><span class="badge accent">New wave</span></td>
+            </tr>
+          </tbody>
+        </table>
+        <div class="insight">Ageist grew from 263 to <strong>291 (+28)</strong> with two new campaign sends in Apr 2026.
+        </div>
+      </div>
+    </div>
+    <div class="card" style="margin-bottom:18px;">
+      <h3>AllHealthy Campaigns <span>#176 &middot; 3 campaigns</span></h3>
+      <table>
+        <thead>
+          <tr>
+            <th>Campaign</th>
+            <th>Subs</th>
+            <th>% of AH</th>
+            <th>Tag</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><strong>AH_PF_20260402</strong></td>
+            <td>77</td>
+            <td>43.8%</td>
+            <td><span class="badge gold">Primary &middot; Apr 2</span></td>
+          </tr>
+          <tr>
+            <td><strong>AH_PF_20260408</strong></td>
+            <td>62</td>
+            <td>35.2%</td>
+            <td><span class="badge orange">Apr 8</span></td>
+          </tr>
+          <tr>
+            <td><strong>AH_PF_20260416</strong></td>
+            <td>36</td>
+            <td>20.5%</td>
+            <td><span class="badge teal">New &middot; Apr 16</span></td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="card" style="margin-bottom:18px;">
+      <h3>Source &times; Campaign Quality Matrix</h3>
+      <table>
+        <thead>
+          <tr>
+            <th>Source</th>
+            <th>Campaign</th>
+            <th>Subs</th>
+            <th>% of Total</th>
+            <th>Profile Rate</th>
+            <th>Send Date</th>
+            <th>Signal</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>SuperAge</td>
+            <td>SA_PF_20260402</td>
+            <td>1,049</td>
+            <td>32.9%</td>
+            <td>~53%</td>
+            <td>Apr 2, 2026</td>
+            <td><span class="badge green">Highest volume</span></td>
+          </tr>
+          <tr>
+            <td>SuperAge</td>
+            <td>SA_PF_20260329</td>
+            <td>633</td>
+            <td>19.8%</td>
+            <td>~53%</td>
+            <td>Mar 29, 2026</td>
+            <td><span class="badge accent">Primary wave</span></td>
+          </tr>
+          <tr>
+            <td>SuperAge</td>
+            <td>SA_PF_20260405</td>
+            <td>224</td>
+            <td>7.0%</td>
+            <td>~53%</td>
+            <td>Apr 5, 2026</td>
+            <td><span class="badge purple">Wave</span></td>
+          </tr>
+          <tr>
+            <td>SuperAge</td>
+            <td>SA_PF_20260416</td>
+            <td>168</td>
+            <td>5.3%</td>
+            <td>~53%</td>
+            <td>Apr 16, 2026</td>
+            <td><span class="badge teal">Latest wave</span></td>
+          </tr>
+          <tr>
+            <td>SuperAge</td>
+            <td>SA_PF_20260412</td>
+            <td>142</td>
+            <td>4.5%</td>
+            <td>~53%</td>
+            <td>Apr 12, 2026</td>
+            <td><span class="badge green">Wave</span></td>
+          </tr>
+          <tr>
+            <td>Ageist</td>
+            <td>Sunday Mar 29 Games Promo</td>
+            <td>219</td>
+            <td>6.9%</td>
+            <td>~33%</td>
+            <td>Mar 29, 2026</td>
+            <td><span class="badge purple">Single blast</span></td>
+          </tr>
+          <tr>
+            <td>Ageist</td>
+            <td>487 Karen Hartman</td>
+            <td>45</td>
+            <td>1.4%</td>
+            <td>~33%</td>
+            <td>Apr 2026</td>
+            <td><span class="badge teal">New wave</span></td>
+          </tr>
+          <tr>
+            <td>Ageist</td>
+            <td>489 Tim Parr</td>
+            <td>27</td>
+            <td>0.8%</td>
+            <td>~33%</td>
+            <td>Apr 2026</td>
+            <td><span class="badge teal">New wave</span></td>
+          </tr>
+          <tr>
+            <td>AllHealthy</td>
+            <td>AH_PF_20260402</td>
+            <td>77</td>
+            <td>2.4%</td>
+            <td>~30%</td>
+            <td>Apr 2, 2026</td>
+            <td><span class="badge gold">Primary</span></td>
+          </tr>
+          <tr>
+            <td>AllHealthy</td>
+            <td>AH_PF_20260408</td>
+            <td>62</td>
+            <td>1.9%</td>
+            <td>~30%</td>
+            <td>Apr 8, 2026</td>
+            <td><span class="badge gold">Growing</span></td>
+          </tr>
+          <tr>
+            <td>AllHealthy</td>
+            <td>AH_PF_20260416</td>
+            <td>36</td>
+            <td>1.1%</td>
+            <td>~30%</td>
+            <td>Apr 16, 2026</td>
+            <td><span class="badge teal">New wave</span></td>
+          </tr>
+          <tr>
+            <td>HealthBrief</td>
+            <td>HB campaigns</td>
+            <td>83</td>
+            <td>2.6%</td>
+            <td>~30%</td>
+            <td>Apr 2026</td>
+            <td><span class="badge cyan">Growing source</span></td>
+          </tr>
+          <tr>
+            <td>Instagram</td>
+            <td>&mdash;</td>
+            <td>7</td>
+            <td>0.2%</td>
+            <td>29%</td>
+            <td>&mdash;</td>
+            <td><span class="badge orange">Micro</span></td>
+          </tr>
+          <tr>
+            <td>Optimism</td>
+            <td>&mdash;</td>
+            <td>5</td>
+            <td>0.2%</td>
+            <td>20%</td>
+            <td>&mdash;</td>
+            <td><span class="badge orange">Micro</span></td>
+          </tr>
+          <tr>
+            <td>Unknown</td>
+            <td>&mdash;</td>
+            <td>4</td>
+            <td>0.1%</td>
+            <td>0%</td>
+            <td>null UTMs</td>
+            <td><span class="badge red">No UTM</span></td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- DEMOGRAPHICS TAB -->
+  <div class="page" id="tab-demographics">
+    <div class="section-context-banner"><strong>Waitlist campaign analysis</strong> &middot; Static snapshot &middot;
+      Last updated: <strong>Apr 30, 2026, 09:30 AM EST</strong></div>
+    <div class="section-header">
+      <div class="dot green"></div>
+      <h2>Demographic Analysis <small
+          style="font-size:12px;color:var(--text-muted);font-weight:400;margin-left:8px;">Profiled subscribers only
+          &middot; #1,573</small></h2>
+    </div>
+    <div class="grid-3">
+      <div class="card">
+        <h3>Gender <span>#1,573</span></h3>
+        <div style="height:175px;position:relative;"><canvas id="chart-gender-pie"></canvas></div>
+        <div class="insight"><strong>65.7% female, 34.2% male</strong> among profiled.</div>
+      </div>
+      <div class="card">
+        <h3>Marital Status <span>#1,546</span></h3>
+        <div style="height:175px;position:relative;"><canvas id="chart-marital"></canvas></div>
+      </div>
+      <div class="card">
+        <h3>Education Level <span>#1,487</span></h3>
+        <div class="bar-list" style="padding-top:4px;">
+          <div>
+            <div class="bar-meta"><span class="bar-label">College degree+</span><span class="bar-pct">1,198 &middot;
+                80.6%</span></div>
+            <div class="bar-track">
+              <div class="bar-fill green" style="width:100%"></div>
+            </div>
+          </div>
+          <div>
+            <div class="bar-meta"><span class="bar-label">Some college / trade</span><span class="bar-pct">237 &middot;
+                15.9%</span></div>
+            <div class="bar-track">
+              <div class="bar-fill accent" style="width:19.8%"></div>
+            </div>
+          </div>
+          <div>
+            <div class="bar-meta"><span class="bar-label">High school</span><span class="bar-pct">48 &middot;
+                3.2%</span></div>
+            <div class="bar-track">
+              <div class="bar-fill orange" style="width:3.8%"></div>
+            </div>
+          </div>
+          <div>
+            <div class="bar-meta"><span class="bar-label">Less than HS</span><span class="bar-pct">4 &middot;
+                0.3%</span></div>
+            <div class="bar-track">
+              <div class="bar-fill red" style="width:0.3%"></div>
+            </div>
+          </div>
+        </div>
+        <div class="insight"><strong>80.6% college degree or higher.</strong></div>
+      </div>
+    </div>
+    <div class="grid-2">
+      <div class="card">
+        <h3>Age Distribution <span>#1,571 &middot; Core 55&ndash;74 = 66.1%</span></h3>
+        <div class="chart-wrap"><canvas id="chart-age-bar"></canvas></div>
+        <div class="insight"><strong>Core: 55&ndash;74 (66.1%).</strong> Mean age ~65.9.</div>
+      </div>
+      <div class="card">
+        <h3>Financial Situation <span>#1,538</span></h3>
+        <div class="chart-wrap"><canvas id="chart-financial"></canvas></div>
+        <div class="insight"><strong>67.8% Comfortable or Very Comfortable.</strong> Only 2.3% Unstable.</div>
+      </div>
+    </div>
+    <div class="grid-3">
+      <div class="card">
+        <h3>Smoking Status <span>#1,564</span></h3>
+        <div class="bar-list">
+          <div>
+            <div class="bar-meta"><span class="bar-label">Never smoked</span><span class="bar-pct">1,118 &middot;
+                71.5%</span></div>
+            <div class="bar-track">
+              <div class="bar-fill green" style="width:100%"></div>
+            </div>
+          </div>
+          <div>
+            <div class="bar-meta"><span class="bar-label">Quit &mdash; minimal effects</span><span class="bar-pct">410
+                &middot; 26.2%</span></div>
+            <div class="bar-track">
+              <div class="bar-fill accent" style="width:36.7%"></div>
+            </div>
+          </div>
+          <div>
+            <div class="bar-meta"><span class="bar-label">Quit &mdash; chronic disease</span><span class="bar-pct">13
+                &middot; 0.8%</span></div>
+            <div class="bar-track">
+              <div class="bar-fill orange" style="width:1.2%"></div>
+            </div>
+          </div>
+          <div>
+            <div class="bar-meta"><span class="bar-label">Still smokes</span><span class="bar-pct">23 &middot;
+                1.5%</span></div>
+            <div class="bar-track">
+              <div class="bar-fill red" style="width:2.1%"></div>
+            </div>
+          </div>
+        </div>
+        <div class="insight"><strong>98.5% non-smokers</strong> or ex-smokers.</div>
+      </div>
+      <div class="card">
+        <h3>Blood Pressure (Diastolic) <span>#1,509</span></h3>
+        <div class="bar-list">
+          <div>
+            <div class="bar-meta"><span class="bar-label">Below 80 (healthy)</span><span class="bar-pct">919 &middot;
+                60.9%</span></div>
+            <div class="bar-track">
+              <div class="bar-fill green" style="width:100%"></div>
+            </div>
+          </div>
+          <div>
+            <div class="bar-meta"><span class="bar-label">80&ndash;89 (elevated)</span><span class="bar-pct">410
+                &middot; 27.2%</span></div>
+            <div class="bar-track">
+              <div class="bar-fill accent" style="width:44.7%"></div>
+            </div>
+          </div>
+          <div>
+            <div class="bar-meta"><span class="bar-label">90&ndash;105 (Stage 1)</span><span class="bar-pct">87 &middot;
+                5.8%</span></div>
+            <div class="bar-track">
+              <div class="bar-fill orange" style="width:9.5%"></div>
+            </div>
+          </div>
+          <div>
+            <div class="bar-meta"><span class="bar-label">106+ (Stage 2+)</span><span class="bar-pct">93 &middot;
+                6.2%</span></div>
+            <div class="bar-track">
+              <div class="bar-fill red" style="width:10.1%"></div>
+            </div>
+          </div>
+        </div>
+        <div class="insight"><strong>88.1%</strong> healthy or mildly elevated BP.</div>
+      </div>
+      <div class="card">
+        <h3>Obesity <span>#1,573</span></h3>
+        <div class="bar-list">
+          <div>
+            <div class="bar-meta"><span class="bar-label">No</span><span class="bar-pct">1,426 &middot; 90.7%</span>
+            </div>
+            <div class="bar-track">
+              <div class="bar-fill green" style="width:100%"></div>
+            </div>
+          </div>
+          <div>
+            <div class="bar-meta"><span class="bar-label">Yes</span><span class="bar-pct">114 &middot; 7.2%</span></div>
+            <div class="bar-track">
+              <div class="bar-fill red" style="width:8.0%"></div>
+            </div>
+          </div>
+          <div>
+            <div class="bar-meta"><span class="bar-label">Don&apos;t know</span><span class="bar-pct">33 &middot;
+                2.1%</span></div>
+            <div class="bar-track">
+              <div class="bar-fill orange" style="width:2.3%"></div>
+            </div>
+          </div>
+        </div>
+        <div class="insight"><strong>90.7% non-obese</strong> vs ~38% US population average.</div>
+      </div>
+    </div>
+    <div class="grid-2">
+      <div class="card">
+        <h3>Family Cancer History <span>#1,046</span></h3>
+        <div class="bar-list">
+          <div>
+            <div class="bar-meta"><span class="bar-label">One family member</span><span class="bar-pct">564 &middot;
+                53.9%</span></div>
+            <div class="bar-track">
+              <div class="bar-fill orange" style="width:100%"></div>
+            </div>
+          </div>
+          <div>
+            <div class="bar-meta"><span class="bar-label">Two family members</span><span class="bar-pct">306 &middot;
+                29.3%</span></div>
+            <div class="bar-track">
+              <div class="bar-fill orange" style="width:54.3%"></div>
+            </div>
+          </div>
+          <div>
+            <div class="bar-meta"><span class="bar-label">Three or more</span><span class="bar-pct">176 &middot;
+                16.8%</span></div>
+            <div class="bar-track">
+              <div class="bar-fill red" style="width:31.2%"></div>
+            </div>
+          </div>
+        </div>
+        <div class="insight"><strong>100%</strong> of respondents report at least one family cancer history case.</div>
+      </div>
+      <div class="card">
+        <h3>Known Health Conditions <span>#1,354</span></h3>
+        <div class="bar-list">
+          <div>
+            <div class="bar-meta"><span class="bar-label">None</span><span class="bar-pct">952 &middot; 70.3%</span>
+            </div>
+            <div class="bar-track">
+              <div class="bar-fill green" style="width:100%"></div>
+            </div>
+          </div>
+          <div>
+            <div class="bar-meta"><span class="bar-label">Other</span><span class="bar-pct">275 &middot; 20.3%</span>
+            </div>
+            <div class="bar-track">
+              <div class="bar-fill orange" style="width:28.9%"></div>
+            </div>
+          </div>
+          <div>
+            <div class="bar-meta"><span class="bar-label">Heart Disease</span><span class="bar-pct">66 &middot;
+                4.9%</span></div>
+            <div class="bar-track">
+              <div class="bar-fill red" style="width:6.9%"></div>
+            </div>
+          </div>
+          <div>
+            <div class="bar-meta"><span class="bar-label">Diabetes</span><span class="bar-pct">31 &middot; 2.3%</span>
+            </div>
+            <div class="bar-track">
+              <div class="bar-fill orange" style="width:3.3%"></div>
+            </div>
+          </div>
+          <div>
+            <div class="bar-meta"><span class="bar-label">Cancer</span><span class="bar-pct">30 &middot; 2.2%</span>
+            </div>
+            <div class="bar-track">
+              <div class="bar-fill red" style="width:3.2%"></div>
+            </div>
+          </div>
+        </div>
+        <div class="insight"><strong>70.3% report no known conditions.</strong> Proactive, preventative audience.</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- GEO TAB -->
+  <div class="page" id="tab-geo">
+    <div class="section-context-banner"><strong>Waitlist campaign analysis</strong> &middot; Static snapshot &middot;
+      Last updated: <strong>Apr 30, 2026, 09:30 AM EST</strong></div>
+    <div class="section-header">
+      <div class="dot orange"></div>
+      <h2>Geographic Analysis <small
+          style="font-size:12px;color:var(--text-muted);font-weight:400;margin-left:8px;">Based on click volume &middot;
+          234,672 total clicks &middot; 2,820 unique clickers</small></h2>
+    </div>
+    <div class="kpi-row">
+      <div class="kpi-card accent">
+        <div class="label">Unique Clickers w/ Geo</div>
+        <div class="value">2,820</div>
+        <div class="sub">88.4% of 3,190 waitlist</div>
+      </div>
+      <div class="kpi-card green">
+        <div class="label">US-Based Clicks</div>
+        <div class="value">92.5%</div>
+        <div class="sub">217,028 of 234,672</div>
+      </div>
+      <div class="kpi-card purple">
+        <div class="label">Canada Clicks</div>
+        <div class="value">3.3%</div>
+        <div class="sub">7,645 clicks</div>
+      </div>
+      <div class="kpi-card orange">
+        <div class="label">Australia Clicks</div>
+        <div class="value">0.7%</div>
+        <div class="sub">1,531 clicks</div>
+      </div>
+      <div class="kpi-card cyan">
+        <div class="label">Top US State</div>
+        <div class="value">CA</div>
+        <div class="sub">California &middot; 32,487</div>
+      </div>
+      <div class="kpi-card gold">
+        <div class="label">Top City</div>
+        <div class="value">NYC</div>
+        <div class="sub">New York &middot; 6,809</div>
+      </div>
+    </div>
+    <div class="map-container">
+      <h3>Click Volume by US State <span
+          style="font-size:11px;color:var(--text-muted);font-weight:400;text-transform:none;letter-spacing:0;"> &mdash;
+          hover for details</span></h3>
+      <div style="background:var(--map-bg);border-radius:8px;overflow:hidden;">
+        <div id="us-map-wrap" style="width:100%;"></div>
+      </div>
+      <div style="display:flex;align-items:center;gap:8px;margin-top:10px;font-size:11px;color:var(--text-muted);">
+        <span style="color:var(--text-dim)">Low</span>
+        <div
+          style="width:160px;height:8px;border-radius:4px;background:linear-gradient(90deg,#1a2235,#1a4a8a,#58a6ff);">
+        </div>
+        <span>High</span>
+      </div>
+    </div>
+    <div class="grid-2">
+      <div class="card">
+        <h3>Top 15 US States by Click Volume</h3>
+        <div class="geo-list">
+          <div class="geo-item"><span class="geo-rank">1</span><span class="geo-name">California</span><span
+              class="geo-count">32,487 &middot; 15.0%</span>
+            <div class="geo-track">
+              <div class="geo-fill" style="width:100%"></div>
+            </div>
+          </div>
+          <div class="geo-item"><span class="geo-rank">2</span><span class="geo-name">New York</span><span
+              class="geo-count">17,523 &middot; 8.1%</span>
+            <div class="geo-track">
+              <div class="geo-fill" style="width:54%"></div>
+            </div>
+          </div>
+          <div class="geo-item"><span class="geo-rank">3</span><span class="geo-name">Florida</span><span
+              class="geo-count">15,023 &middot; 6.9%</span>
+            <div class="geo-track">
+              <div class="geo-fill" style="width:46.2%"></div>
+            </div>
+          </div>
+          <div class="geo-item"><span class="geo-rank">4</span><span class="geo-name">Texas</span><span
+              class="geo-count">12,893 &middot; 5.9%</span>
+            <div class="geo-track">
+              <div class="geo-fill" style="width:39.7%"></div>
+            </div>
+          </div>
+          <div class="geo-item"><span class="geo-rank">5</span><span class="geo-name">New Jersey</span><span
+              class="geo-count">7,153 &middot; 3.3%</span>
+            <div class="geo-track">
+              <div class="geo-fill" style="width:22.0%"></div>
+            </div>
+          </div>
+          <div class="geo-item"><span class="geo-rank">6</span><span class="geo-name">North Carolina</span><span
+              class="geo-count">7,116 &middot; 3.3%</span>
+            <div class="geo-track">
+              <div class="geo-fill" style="width:21.9%"></div>
+            </div>
+          </div>
+          <div class="geo-item"><span class="geo-rank">7</span><span class="geo-name">Colorado</span><span
+              class="geo-count">6,939 &middot; 3.2%</span>
+            <div class="geo-track">
+              <div class="geo-fill" style="width:21.4%"></div>
+            </div>
+          </div>
+          <div class="geo-item"><span class="geo-rank">8</span><span class="geo-name">Arizona</span><span
+              class="geo-count">6,910 &middot; 3.2%</span>
+            <div class="geo-track">
+              <div class="geo-fill" style="width:21.3%"></div>
+            </div>
+          </div>
+          <div class="geo-item"><span class="geo-rank">9</span><span class="geo-name">Massachusetts</span><span
+              class="geo-count">6,356 &middot; 2.9%</span>
+            <div class="geo-track">
+              <div class="geo-fill" style="width:19.6%"></div>
+            </div>
+          </div>
+          <div class="geo-item"><span class="geo-rank">10</span><span class="geo-name">Pennsylvania</span><span
+              class="geo-count">6,082 &middot; 2.8%</span>
+            <div class="geo-track">
+              <div class="geo-fill" style="width:18.7%"></div>
+            </div>
+          </div>
+          <div class="geo-item"><span class="geo-rank">11</span><span class="geo-name">Illinois</span><span
+              class="geo-count">6,065 &middot; 2.8%</span>
+            <div class="geo-track">
+              <div class="geo-fill" style="width:18.7%"></div>
+            </div>
+          </div>
+          <div class="geo-item"><span class="geo-rank">12</span><span class="geo-name">Virginia</span><span
+              class="geo-count">5,729 &middot; 2.6%</span>
+            <div class="geo-track">
+              <div class="geo-fill" style="width:17.6%"></div>
+            </div>
+          </div>
+          <div class="geo-item"><span class="geo-rank">13</span><span class="geo-name">Georgia</span><span
+              class="geo-count">5,365 &middot; 2.5%</span>
+            <div class="geo-track">
+              <div class="geo-fill" style="width:16.5%"></div>
+            </div>
+          </div>
+          <div class="geo-item"><span class="geo-rank">14</span><span class="geo-name">Michigan</span><span
+              class="geo-count">5,342 &middot; 2.5%</span>
+            <div class="geo-track">
+              <div class="geo-fill" style="width:16.4%"></div>
+            </div>
+          </div>
+          <div class="geo-item"><span class="geo-rank">15</span><span class="geo-name">Washington</span><span
+              class="geo-count">4,846 &middot; 2.2%</span>
+            <div class="geo-track">
+              <div class="geo-fill" style="width:14.9%"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="card">
+        <h3>Top 15 Cities by Click Volume</h3>
+        <div class="geo-list">
+          <div class="geo-item"><span class="geo-rank">1</span><span class="geo-name">New York, NY</span><span
+              class="geo-count">6,809 &middot; 3.1%</span>
+            <div class="geo-track">
+              <div class="geo-fill" style="width:100%"></div>
+            </div>
+          </div>
+          <div class="geo-item"><span class="geo-rank">2</span><span class="geo-name">Denver, CO</span><span
+              class="geo-count">3,377 &middot; 1.6%</span>
+            <div class="geo-track">
+              <div class="geo-fill" style="width:49.6%"></div>
+            </div>
+          </div>
+          <div class="geo-item"><span class="geo-rank">3</span><span class="geo-name">Chicago, IL</span><span
+              class="geo-count">2,847 &middot; 1.3%</span>
+            <div class="geo-track">
+              <div class="geo-fill" style="width:41.8%"></div>
+            </div>
+          </div>
+          <div class="geo-item"><span class="geo-rank">4</span><span class="geo-name">Phoenix, AZ</span><span
+              class="geo-count">2,704 &middot; 1.2%</span>
+            <div class="geo-track">
+              <div class="geo-fill" style="width:39.7%"></div>
+            </div>
+          </div>
+          <div class="geo-item"><span class="geo-rank">5</span><span class="geo-name">Seattle, WA</span><span
+              class="geo-count">2,489 &middot; 1.1%</span>
+            <div class="geo-track">
+              <div class="geo-fill" style="width:36.6%"></div>
+            </div>
+          </div>
+          <div class="geo-item"><span class="geo-rank">6</span><span class="geo-name">San Diego, CA</span><span
+              class="geo-count">2,271 &middot; 1.0%</span>
+            <div class="geo-track">
+              <div class="geo-fill" style="width:33.4%"></div>
+            </div>
+          </div>
+          <div class="geo-item"><span class="geo-rank">7</span><span class="geo-name">Atlanta, GA</span><span
+              class="geo-count">2,132 &middot; 1.0%</span>
+            <div class="geo-track">
+              <div class="geo-fill" style="width:31.3%"></div>
+            </div>
+          </div>
+          <div class="geo-item"><span class="geo-rank">8</span><span class="geo-name">Los Angeles, CA</span><span
+              class="geo-count">2,013 &middot; 0.9%</span>
+            <div class="geo-track">
+              <div class="geo-fill" style="width:29.6%"></div>
+            </div>
+          </div>
+          <div class="geo-item"><span class="geo-rank">9</span><span class="geo-name">Albuquerque, NM</span><span
+              class="geo-count">1,866 &middot; 0.9%</span>
+            <div class="geo-track">
+              <div class="geo-fill" style="width:27.4%"></div>
+            </div>
+          </div>
+          <div class="geo-item"><span class="geo-rank">10</span><span class="geo-name">Houston, TX</span><span
+              class="geo-count">1,813 &middot; 0.8%</span>
+            <div class="geo-track">
+              <div class="geo-fill" style="width:26.6%"></div>
+            </div>
+          </div>
+          <div class="geo-item"><span class="geo-rank">11</span><span class="geo-name">Portland, OR</span><span
+              class="geo-count">1,795 &middot; 0.8%</span>
+            <div class="geo-track">
+              <div class="geo-fill" style="width:26.4%"></div>
+            </div>
+          </div>
+          <div class="geo-item"><span class="geo-rank">12</span><span class="geo-name">Philadelphia, PA</span><span
+              class="geo-count">1,772 &middot; 0.8%</span>
+            <div class="geo-track">
+              <div class="geo-fill" style="width:26.0%"></div>
+            </div>
+          </div>
+          <div class="geo-item"><span class="geo-rank">13</span><span class="geo-name">Miami, FL</span><span
+              class="geo-count">1,721 &middot; 0.7%</span>
+            <div class="geo-track">
+              <div class="geo-fill" style="width:25.3%"></div>
+            </div>
+          </div>
+          <div class="geo-item"><span class="geo-rank">14</span><span class="geo-name">San Francisco, CA</span><span
+              class="geo-count">1,655 &middot; 0.7%</span>
+            <div class="geo-track">
+              <div class="geo-fill" style="width:24.3%"></div>
+            </div>
+          </div>
+          <div class="geo-item"><span class="geo-rank">15</span><span class="geo-name">Dallas, TX</span><span
+              class="geo-count">1,589 &middot; 0.7%</span>
+            <div class="geo-track">
+              <div class="geo-fill" style="width:23.3%"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="grid-2">
+      <div class="card">
+        <h3>International Click Share by Country</h3>
+        <div class="chart-wrap"><canvas id="chart-countries"></canvas></div>
+      </div>
+      <div class="card">
+        <h3>Geographic Signals</h3>
+        <div class="trait-grid" style="margin-top:6px;">
+          <div class="trait-card">
+            <div class="trait-icon">&#127754;</div>
+            <div class="trait-label">Coastal Dominance</div>
+            <div class="trait-val">CA &middot; NY &middot; FL = Top 3</div>
+          </div>
+          <div class="trait-card">
+            <div class="trait-icon">&#127956;</div>
+            <div class="trait-label">Active-Lifestyle</div>
+            <div class="trait-val">CO &middot; OR &middot; AZ strong</div>
+          </div>
+          <div class="trait-card">
+            <div class="trait-icon">&#127961;</div>
+            <div class="trait-label">Urban Concentration</div>
+            <div class="trait-val">NYC &middot; Denver &middot; Phoenix</div>
+          </div>
+          <div class="trait-card">
+            <div class="trait-icon">&#127758;</div>
+            <div class="trait-label">Intl English Markets</div>
+            <div class="trait-val">Canada &middot; Australia &middot; UK</div>
+          </div>
+          <div class="trait-card">
+            <div class="trait-icon">&#127482;&#127480;</div>
+            <div class="trait-label">Primarily US</div>
+            <div class="trait-val">92.5% click share</div>
+          </div>
+          <div class="trait-card">
+            <div class="trait-icon">&#127891;</div>
+            <div class="trait-label">University Signal</div>
+            <div class="trait-val">Albuquerque #9</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- PSYCHOGRAPHIC TAB -->
+  <div class="page" id="tab-psychographic">
+    <div class="section-context-banner"><strong>Waitlist campaign analysis</strong> &middot; Static snapshot &middot;
+      Last updated: <strong>Apr 30, 2026, 09:30 AM EST</strong></div>
+    <div class="section-header">
+      <div class="dot purple"></div>
+      <h2>Psychographic Profile</h2>
+    </div>
+    <div class="grid-3">
+      <div class="card">
+        <h3>Exercise Frequency <span>combined M+F &middot; #1,670</span></h3>
+        <div class="bar-list">
+          <div>
+            <div class="bar-meta"><span class="bar-label">Almost every day+</span><span class="bar-pct">960 &middot;
+                57.5%</span></div>
+            <div class="bar-track">
+              <div class="bar-fill green" style="width:100%"></div>
+            </div>
+          </div>
+          <div>
+            <div class="bar-meta"><span class="bar-label">A few times / week</span><span class="bar-pct">602 &middot;
+                36.0%</span></div>
+            <div class="bar-track">
+              <div class="bar-fill accent" style="width:62.7%"></div>
+            </div>
+          </div>
+          <div>
+            <div class="bar-meta"><span class="bar-label">Rarely</span><span class="bar-pct">99 &middot; 5.9%</span>
+            </div>
+            <div class="bar-track">
+              <div class="bar-fill orange" style="width:10.3%"></div>
+            </div>
+          </div>
+          <div>
+            <div class="bar-meta"><span class="bar-label">Never</span><span class="bar-pct">9 &middot; 0.5%</span></div>
+            <div class="bar-track">
+              <div class="bar-fill red" style="width:0.9%"></div>
+            </div>
+          </div>
+        </div>
+        <div class="insight"><strong>93.5% exercise regularly.</strong></div>
+      </div>
+      <div class="card">
+        <h3>Diet Quality <span>#1,570</span></h3>
+        <div class="bar-list">
+          <div>
+            <div class="bar-meta"><span class="bar-label">Mix (moderately healthy)</span><span class="bar-pct">1,051
+                &middot; 66.9%</span></div>
+            <div class="bar-track">
+              <div class="bar-fill accent" style="width:100%"></div>
+            </div>
+          </div>
+          <div>
+            <div class="bar-meta"><span class="bar-label">Balanced / plant-based</span><span class="bar-pct">475
+                &middot; 30.3%</span></div>
+            <div class="bar-track">
+              <div class="bar-fill green" style="width:45.2%"></div>
+            </div>
+          </div>
+          <div>
+            <div class="bar-meta"><span class="bar-label">High processed</span><span class="bar-pct">39 &middot;
+                2.5%</span></div>
+            <div class="bar-track">
+              <div class="bar-fill red" style="width:3.7%"></div>
+            </div>
+          </div>
+          <div>
+            <div class="bar-meta"><span class="bar-label">Don&apos;t pay attention</span><span class="bar-pct">5
+                &middot; 0.3%</span></div>
+            <div class="bar-track">
+              <div class="bar-fill orange" style="width:0.5%"></div>
+            </div>
+          </div>
+        </div>
+        <div class="insight"><strong>97.2% eat moderately-to-very healthy.</strong> 30.3% plant-based.</div>
+      </div>
+      <div class="card">
+        <h3>Stress Impact <span>#1,557</span></h3>
+        <div class="bar-list">
+          <div>
+            <div class="bar-meta"><span class="bar-label">Not at all / little</span><span class="bar-pct">457 &middot;
+                29.4%</span></div>
+            <div class="bar-track">
+              <div class="bar-fill green" style="width:62.0%"></div>
+            </div>
+          </div>
+          <div>
+            <div class="bar-meta"><span class="bar-label">Somewhat</span><span class="bar-pct">738 &middot; 47.4%</span>
+            </div>
+            <div class="bar-track">
+              <div class="bar-fill accent" style="width:100%"></div>
+            </div>
+          </div>
+          <div>
+            <div class="bar-meta"><span class="bar-label">Moderately</span><span class="bar-pct">286 &middot;
+                18.4%</span></div>
+            <div class="bar-track">
+              <div class="bar-fill orange" style="width:38.8%"></div>
+            </div>
+          </div>
+          <div>
+            <div class="bar-meta"><span class="bar-label">Extremely</span><span class="bar-pct">76 &middot; 4.9%</span>
+            </div>
+            <div class="bar-track">
+              <div class="bar-fill red" style="width:10.3%"></div>
+            </div>
+          </div>
+        </div>
+        <div class="insight"><strong>70.7% somewhat-to-moderately affected by stress.</strong></div>
+      </div>
+    </div>
+    <div class="grid-2">
+      <div class="card">
+        <h3>Alcohol Consumption <span>#1,535</span></h3>
+        <div class="chart-wrap short"><canvas id="chart-alcohol"></canvas></div>
+        <div class="insight"><strong>39.5% never drink.</strong> 26.0% drink 4+/week.</div>
+      </div>
+      <div class="card">
+        <h3>Social Frequency <span>#1,543</span></h3>
+        <div class="chart-wrap short"><canvas id="chart-social"></canvas></div>
+        <div class="insight"><strong>73.0% socialize several times/week or daily.</strong></div>
+      </div>
+    </div>
+    <div class="card" style="margin-bottom:18px;">
+      <h3>Audience Trait Summary</h3>
+      <div class="trait-grid" style="margin-top:8px;">
+        <div class="trait-card">
+          <div class="trait-icon">&#127939;</div>
+          <div class="trait-label">Exercise</div>
+          <div class="trait-val">93.5% train regularly</div>
+        </div>
+        <div class="trait-card">
+          <div class="trait-icon">&#129367;</div>
+          <div class="trait-label">Diet</div>
+          <div class="trait-val">97.2% eat healthy+</div>
+        </div>
+        <div class="trait-card">
+          <div class="trait-icon">&#127919;</div>
+          <div class="trait-label">Longevity Score</div>
+          <div class="trait-val">Avg 88.6 / 100</div>
+        </div>
+        <div class="trait-card">
+          <div class="trait-icon">&#127891;</div>
+          <div class="trait-label">Education</div>
+          <div class="trait-val">80.6% college degree+</div>
+        </div>
+        <div class="trait-card">
+          <div class="trait-icon">&#128176;</div>
+          <div class="trait-label">Financial</div>
+          <div class="trait-val">67.8% comfortable+</div>
+        </div>
+        <div class="trait-card">
+          <div class="trait-icon">&#128683;</div>
+          <div class="trait-label">Smoking</div>
+          <div class="trait-val">98.5% non-smoking</div>
+        </div>
+        <div class="trait-card">
+          <div class="trait-icon">&#128170;</div>
+          <div class="trait-label">Obesity</div>
+          <div class="trait-val">90.7% non-obese</div>
+        </div>
+        <div class="trait-card">
+          <div class="trait-icon">&#128101;</div>
+          <div class="trait-label">Social</div>
+          <div class="trait-val">73% socialize 3+/wk</div>
+        </div>
+        <div class="trait-card">
+          <div class="trait-icon">&#10084;</div>
+          <div class="trait-label">Heart Health</div>
+          <div class="trait-val">88.1% healthy BP</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- DATA COVERAGE TAB -->
+  <div class="page" id="tab-coverage">
+    <div class="section-context-banner"><strong>Waitlist campaign analysis</strong> &middot; Static snapshot &middot;
+      Last updated: <strong>Apr 30, 2026, 09:30 AM EST</strong></div>
+    <div class="section-header">
+      <div class="dot gold"></div>
+      <h2>Data Coverage</h2>
+    </div>
+    <div class="kpi-row">
+      <div class="kpi-card green">
+        <div class="label">Email (ID)</div>
+        <div class="value">100%</div>
+        <div class="sub">3,190 / 3,190</div>
+      </div>
+      <div class="kpi-card green">
+        <div class="label">Source / Campaign</div>
+        <div class="value">100%</div>
+        <div class="sub">3,190 / 3,190</div>
+      </div>
+      <div class="kpi-card orange">
+        <div class="label">Core Quiz Fields</div>
+        <div class="value">~49%</div>
+        <div class="sub">~1,573 / 3,190 avg</div>
+      </div>
+      <div class="kpi-card red">
+        <div class="label">Exercise (M+F direct)</div>
+        <div class="value">52%</div>
+        <div class="sub">~1,670 / 3,190</div>
+      </div>
+      <div class="kpi-card red">
+        <div class="label">MC Status</div>
+        <div class="value">11.4%</div>
+        <div class="sub">364 / 3,190</div>
+      </div>
+      <div class="kpi-card purple">
+        <div class="label">Geo (click-based)</div>
+        <div class="value">~88%</div>
+        <div class="sub">2,820 unique clickers</div>
+      </div>
+    </div>
+    <div class="card" style="margin-bottom:18px;">
+      <h3>Field-Level Coverage</h3>
+      <div class="coverage-grid">
+        <div class="coverage-item">
+          <div class="cf">Email</div>
+          <div class="cp">3,190 / 3,190 &middot; 100%</div>
+          <div class="coverage-track">
+            <div class="coverage-bar" style="width:100%;background:var(--green)"></div>
+          </div>
+        </div>
+        <div class="coverage-item">
+          <div class="cf">UTM Source</div>
+          <div class="cp">3,190 / 3,190 &middot; 100%</div>
+          <div class="coverage-track">
+            <div class="coverage-bar" style="width:100%;background:var(--green)"></div>
+          </div>
+        </div>
+        <div class="coverage-item">
+          <div class="cf">UTM Campaign</div>
+          <div class="cp">3,186 / 3,190 &middot; ~100%</div>
+          <div class="coverage-track">
+            <div class="coverage-bar" style="width:99.9%;background:var(--green)"></div>
+          </div>
+        </div>
+        <div class="coverage-item">
+          <div class="cf">In SA (Ongage)</div>
+          <div class="cp">2,943 / 3,190 &middot; 92.3%</div>
+          <div class="coverage-track">
+            <div class="coverage-bar" style="width:92.3%;background:var(--green)"></div>
+          </div>
+        </div>
+        <div class="coverage-item">
+          <div class="cf">Longevity Score</div>
+          <div class="cp">1,573 / 3,190 &middot; 49.3%</div>
+          <div class="coverage-track">
+            <div class="coverage-bar" style="width:49%;background:var(--accent)"></div>
+          </div>
+        </div>
+        <div class="coverage-item">
+          <div class="cf">Gender</div>
+          <div class="cp">1,573 / 3,190 &middot; 49.3%</div>
+          <div class="coverage-track">
+            <div class="coverage-bar" style="width:49%;background:var(--accent)"></div>
+          </div>
+        </div>
+        <div class="coverage-item">
+          <div class="cf">Age</div>
+          <div class="cp">1,571 / 3,190 &middot; 49.2%</div>
+          <div class="coverage-track">
+            <div class="coverage-bar" style="width:49%;background:var(--accent)"></div>
+          </div>
+        </div>
+        <div class="coverage-item">
+          <div class="cf">Diet</div>
+          <div class="cp">1,570 / 3,190 &middot; 49.2%</div>
+          <div class="coverage-track">
+            <div class="coverage-bar" style="width:49%;background:var(--accent)"></div>
+          </div>
+        </div>
+        <div class="coverage-item">
+          <div class="cf">Obesity</div>
+          <div class="cp">1,573 / 3,190 &middot; 49.3%</div>
+          <div class="coverage-track">
+            <div class="coverage-bar" style="width:49%;background:var(--accent)"></div>
+          </div>
+        </div>
+        <div class="coverage-item">
+          <div class="cf">Smoking</div>
+          <div class="cp">1,564 / 3,190 &middot; 49.0%</div>
+          <div class="coverage-track">
+            <div class="coverage-bar" style="width:49%;background:var(--accent)"></div>
+          </div>
+        </div>
+        <div class="coverage-item">
+          <div class="cf">Stress Impact</div>
+          <div class="cp">1,557 / 3,190 &middot; 48.8%</div>
+          <div class="coverage-track">
+            <div class="coverage-bar" style="width:48.8%;background:var(--accent)"></div>
+          </div>
+        </div>
+        <div class="coverage-item">
+          <div class="cf">Marital Status</div>
+          <div class="cp">1,546 / 3,190 &middot; 48.5%</div>
+          <div class="coverage-track">
+            <div class="coverage-bar" style="width:48.5%;background:var(--accent)"></div>
+          </div>
+        </div>
+        <div class="coverage-item">
+          <div class="cf">Socialize Frequency</div>
+          <div class="cp">1,543 / 3,190 &middot; 48.4%</div>
+          <div class="coverage-track">
+            <div class="coverage-bar" style="width:48.4%;background:var(--accent)"></div>
+          </div>
+        </div>
+        <div class="coverage-item">
+          <div class="cf">Financial Situation</div>
+          <div class="cp">1,538 / 3,190 &middot; 48.2%</div>
+          <div class="coverage-track">
+            <div class="coverage-bar" style="width:48.2%;background:var(--accent)"></div>
+          </div>
+        </div>
+        <div class="coverage-item">
+          <div class="cf">Alcohol</div>
+          <div class="cp">1,535 / 3,190 &middot; 48.1%</div>
+          <div class="coverage-track">
+            <div class="coverage-bar" style="width:48.1%;background:var(--accent)"></div>
+          </div>
+        </div>
+        <div class="coverage-item">
+          <div class="cf">Grandparents Death Age</div>
+          <div class="cp">1,541 / 3,190 &middot; 48.3%</div>
+          <div class="coverage-track">
+            <div class="coverage-bar" style="width:48.3%;background:var(--accent)"></div>
+          </div>
+        </div>
+        <div class="coverage-item">
+          <div class="cf">Diastolic BP</div>
+          <div class="cp">1,522 / 3,190 &middot; 47.7%</div>
+          <div class="coverage-track">
+            <div class="coverage-bar" style="width:47.7%;background:var(--accent)"></div>
+          </div>
+        </div>
+        <div class="coverage-item">
+          <div class="cf">Education Level</div>
+          <div class="cp">1,487 / 3,190 &middot; 46.6%</div>
+          <div class="coverage-track">
+            <div class="coverage-bar" style="width:46.6%;background:var(--accent)"></div>
+          </div>
+        </div>
+        <div class="coverage-item">
+          <div class="cf">Health Conditions</div>
+          <div class="cp">1,354 / 3,190 &middot; 42.4%</div>
+          <div class="coverage-track">
+            <div class="coverage-bar" style="width:42.4%;background:var(--orange)"></div>
+          </div>
+        </div>
+        <div class="coverage-item">
+          <div class="cf">Mother Independent Age</div>
+          <div class="cp">1,279 / 3,190 &middot; 40.1%</div>
+          <div class="coverage-track">
+            <div class="coverage-bar" style="width:40.1%;background:var(--orange)"></div>
+          </div>
+        </div>
+        <div class="coverage-item">
+          <div class="cf">Family Cancer History</div>
+          <div class="cp">1,046 / 3,190 &middot; 32.8%</div>
+          <div class="coverage-track">
+            <div class="coverage-bar" style="width:32.8%;background:var(--orange)"></div>
+          </div>
+        </div>
+        <div class="coverage-item">
+          <div class="cf">Exercise (M+F direct)</div>
+          <div class="cp">~1,670 / 3,190 &middot; ~52%</div>
+          <div class="coverage-track">
+            <div class="coverage-bar" style="width:52%;background:var(--accent)"></div>
+          </div>
+        </div>
+        <div class="coverage-item">
+          <div class="cf">Zipcode</div>
+          <div class="cp">636 / 3,190 &middot; 19.9%</div>
+          <div class="coverage-track">
+            <div class="coverage-bar" style="width:19.9%;background:var(--red)"></div>
+          </div>
+        </div>
+        <div class="coverage-item">
+          <div class="cf">MC Status (Mailchimp)</div>
+          <div class="cp">364 / 3,190 &middot; 11.4%</div>
+          <div class="coverage-track">
+            <div class="coverage-bar" style="width:11.4%;background:var(--red)"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="grid-2">
+      <div class="card">
+        <h3>Trust Levels by Field Group</h3>
+        <table>
+          <thead>
+            <tr>
+              <th>Field Group</th>
+              <th>Coverage</th>
+              <th>Trust</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>Email / Source / Campaign</td>
+              <td>100%</td>
+              <td><span class="badge green">High</span></td>
+            </tr>
+            <tr>
+              <td>In SA (Ongage)</td>
+              <td>92.3%</td>
+              <td><span class="badge green">High</span></td>
+            </tr>
+            <tr>
+              <td>Longevity Score &middot; Gender &middot; Age</td>
+              <td>~49%</td>
+              <td><span class="badge accent">Good</span></td>
+            </tr>
+            <tr>
+              <td>Diet &middot; Obesity &middot; Smoking &middot; Stress</td>
+              <td>~49%</td>
+              <td><span class="badge accent">Good</span></td>
+            </tr>
+            <tr>
+              <td>Financial &middot; Marital &middot; Alcohol &middot; Social</td>
+              <td>~48%</td>
+              <td><span class="badge accent">Good</span></td>
+            </tr>
+            <tr>
+              <td>Health Conditions &middot; Education</td>
+              <td>42&ndash;47%</td>
+              <td><span class="badge orange">Use with care</span></td>
+            </tr>
+            <tr>
+              <td>Family Cancer &middot; Mother Age</td>
+              <td>33&ndash;40%</td>
+              <td><span class="badge orange">Indicative</span></td>
+            </tr>
+            <tr>
+              <td>Zipcode &middot; MC Status</td>
+              <td>11&ndash;20%</td>
+              <td><span class="badge red">Low trust</span></td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="card">
+        <h3>Data Gap Priorities</h3>
+        <div class="bar-list" style="margin-top:4px;">
+          <div>
+            <div class="bar-meta"><span class="bar-label">Re-engage 1,617 email-only subs with quiz</span><span
+                class="bar-pct">P1</span></div>
+            <div class="bar-track">
+              <div class="bar-fill red" style="width:100%"></div>
+            </div>
+          </div>
+          <div>
+            <div class="bar-meta"><span class="bar-label">Collect zipcode for geo targeting</span><span
+                class="bar-pct">P2</span></div>
+            <div class="bar-track">
+              <div class="bar-fill orange" style="width:80%"></div>
+            </div>
+          </div>
+          <div>
+            <div class="bar-meta"><span class="bar-label">Match Mailchimp status for all subs</span><span
+                class="bar-pct">P3</span></div>
+            <div class="bar-track">
+              <div class="bar-fill accent" style="width:60%"></div>
+            </div>
+          </div>
+          <div>
+            <div class="bar-meta"><span class="bar-label">Tag content interests from click history</span><span
+                class="bar-pct">P4</span></div>
+            <div class="bar-track">
+              <div class="bar-fill cyan" style="width:50%"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- SEGMENTS TAB -->
+  <div class="page" id="tab-segments">
+    <div class="section-context-banner"><strong>Waitlist campaign analysis</strong> &middot; Static snapshot &middot;
+      Last updated: <strong>Apr 30, 2026, 09:30 AM EST</strong></div>
+    <div class="section-header">
+      <div class="dot"></div>
+      <h2>Audience Segments</h2>
+    </div>
+    <div class="segment-grid">
+      <div class="segment-card seg-1">
+        <h4>&#127939; Elite Active Women 55&ndash;74</h4>
+        <div class="seg-size" style="color:var(--accent)">~272</div>
+        <div class="seg-pct">~17% of profiled</div>
+        <div class="seg-logic">Female &middot; Age 55&ndash;74 &middot; Exercise almost every day+ &middot; Longevity
+          score 85+</div>
+        <div class="seg-why">&rarr; Highest-value seed for Meta lookalike.</div>
+      </div>
+      <div class="segment-card seg-2">
+        <h4>&#128176; High-Income Wellness</h4>
+        <div class="seg-size" style="color:var(--green)">~1,043</div>
+        <div class="seg-pct">~68% of financially-profiled</div>
+        <div class="seg-logic">Financial: Comfortable or Very Comfortable &middot; Correlated with college degree</div>
+        <div class="seg-why">&rarr; Premium purchase intent. High-ticket supplements, longevity programs.</div>
+      </div>
+      <div class="segment-card seg-3">
+        <h4>&#127807; Plant-Based / Clean Living</h4>
+        <div class="seg-size" style="color:var(--purple)">~475</div>
+        <div class="seg-pct">30.3% of diet-profiled</div>
+        <div class="seg-logic">Balanced / plant-based diet &middot; Non-smoker &middot; Non-obese &middot; Healthy BP
+        </div>
+        <div class="seg-why">&rarr; Plant-based brands, clean supplements, functional nutrition.</div>
+      </div>
+      <div class="segment-card seg-4">
+        <h4>&#129504; Longevity Elite (Score 90+)</h4>
+        <div class="seg-size" style="color:var(--gold)">603</div>
+        <div class="seg-pct">38.3% of profiled &middot; 18.9% of total</div>
+        <div class="seg-logic">Longevity score &ge; 90 &middot; Exercise daily &middot; Non-smoker &middot; Healthy diet
+        </div>
+        <div class="seg-why">&rarr; Most engaged, most optimized. Longevity brands, biohacking.</div>
+      </div>
+      <div class="segment-card seg-5">
+        <h4>&#128165; Stress &amp; Mindset Seekers</h4>
+        <div class="seg-size" style="color:var(--pink)">~1,100</div>
+        <div class="seg-pct">~70.7% of stress-profiled</div>
+        <div class="seg-logic">Stress: Somewhat + Moderately + Extremely affected</div>
+        <div class="seg-why">&rarr; Adaptogens, mindfulness apps, sleep optimization.</div>
+      </div>
+      <div class="segment-card seg-6">
+        <h4>&#128188; Educated Active Professionals</h4>
+        <div class="seg-size" style="color:var(--cyan)">~1,198</div>
+        <div class="seg-pct">~80% college-degreed profiled</div>
+        <div class="seg-logic">College degree+ &middot; Exercises regularly &middot; Age 45&ndash;74</div>
+        <div class="seg-why">&rarr; LinkedIn and premium display. Employer wellness.</div>
+      </div>
+    </div>
+    <div class="card">
+      <h3>Segment Overview</h3>
+      <table>
+        <thead>
+          <tr>
+            <th>Segment</th>
+            <th>Est. Size</th>
+            <th>% of 1,573</th>
+            <th>Primary Trait</th>
+            <th>Best Platform</th>
+            <th>Lookalike</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>Elite Active Women 55&ndash;74</td>
+            <td>~272</td>
+            <td>17%</td>
+            <td>Daily exercise &middot; female &middot; age</td>
+            <td>Meta &middot; Pinterest</td>
+            <td><span class="badge green">Excellent</span></td>
+          </tr>
+          <tr>
+            <td>High-Income Wellness</td>
+            <td>~1,043</td>
+            <td>66%</td>
+            <td>Financial comfort &middot; health</td>
+            <td>Meta &middot; LinkedIn &middot; Google</td>
+            <td><span class="badge green">Excellent</span></td>
+          </tr>
+          <tr>
+            <td>Plant-Based / Clean Living</td>
+            <td>~475</td>
+            <td>30%</td>
+            <td>Plant-based diet &middot; clean metrics</td>
+            <td>Meta &middot; Pinterest</td>
+            <td><span class="badge accent">Strong</span></td>
+          </tr>
+          <tr>
+            <td>Longevity Elite (90+ score)</td>
+            <td>603</td>
+            <td>38.3%</td>
+            <td>Maximum longevity behaviors</td>
+            <td>Meta &middot; Google &middot; Direct</td>
+            <td><span class="badge green">Excellent</span></td>
+          </tr>
+          <tr>
+            <td>Stress / Mindset Seekers</td>
+            <td>~1,100</td>
+            <td>70%</td>
+            <td>Stress impact acknowledged</td>
+            <td>Meta &middot; YouTube</td>
+            <td><span class="badge accent">Strong</span></td>
+          </tr>
+          <tr>
+            <td>Educated Active Professionals</td>
+            <td>~1,198</td>
+            <td>76%</td>
+            <td>Education &middot; exercise &middot; stability</td>
+            <td>LinkedIn &middot; Google</td>
+            <td><span class="badge accent">Strong</span></td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- EDITORIAL TAB -->
+  <div class="page" id="tab-editorial">
+    <div class="section-context-banner"><strong>Waitlist campaign analysis</strong> &middot; Static snapshot &middot;
+      Last updated: <strong>Apr 30, 2026, 09:30 AM EST</strong></div>
+    <div class="section-header">
+      <div class="dot purple"></div>
+      <h2>Editorial Engagement</h2>
+    </div>
+    <div class="kpi-row">
+      <div class="kpi-card accent">
+        <div class="label">Total Clicks</div>
+        <div class="value">234,672</div>
+        <div class="sub">All matched click events</div>
+      </div>
+      <div class="kpi-card green">
+        <div class="label">Unique Clickers</div>
+        <div class="value">2,820</div>
+        <div class="sub">88.4% of 3,190 waitlist</div>
+      </div>
+      <div class="kpi-card purple">
+        <div class="label">Avg Clicks / Clicker</div>
+        <div class="value">83.2</div>
+        <div class="sub">Highly engaged</div>
+      </div>
+      <div class="kpi-card gold">
+        <div class="label">Top Domain</div>
+        <div class="value">superage.com</div>
+        <div class="sub">205,232 clicks &middot; 87.5%</div>
+      </div>
+      <div class="kpi-card orange">
+        <div class="label">Top Topic</div>
+        <div class="value">Longevity</div>
+        <div class="sub">72,248 clicks &middot; 30.8%</div>
+      </div>
+      <div class="kpi-card cyan">
+        <div class="label">Newsletter Series</div>
+        <div class="value">The Mindset</div>
+        <div class="sub">Primary click driver</div>
+      </div>
+    </div>
+    <div class="grid-2" style="margin-bottom:18px;">
+      <div class="card">
+        <h3>Content Topic Clicks <span>&mdash; 234,672 events &middot; URL keyword categorization</span></h3>
+        <div class="chart-wrap tall"><canvas id="chart-topics-bar"></canvas></div>
+      </div>
+      <div class="card">
+        <h3>Topic Share of Total Clicks</h3>
+        <div style="height:300px;position:relative;"><canvas id="chart-topics-donut"></canvas></div>
+      </div>
+    </div>
+    <div class="card" style="margin-bottom:18px;">
+      <h3>Topic Breakdown &mdash; Ranked</h3>
+      <table>
+        <thead>
+          <tr>
+            <th>#</th>
+            <th>Topic</th>
+            <th>Clicks</th>
+            <th>% of Total</th>
+            <th>Signal</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>1</td>
+            <td><strong>&#128300; Longevity &amp; Aging</strong></td>
+            <td>72,248</td>
+            <td>30.8%</td>
+            <td><span class="badge green">Dominant</span></td>
+          </tr>
+          <tr>
+            <td>2</td>
+            <td><strong>&#129367; Nutrition &amp; Diet</strong></td>
+            <td>51,921</td>
+            <td>22.1%</td>
+            <td><span class="badge accent">Very High</span></td>
+          </tr>
+          <tr>
+            <td>3</td>
+            <td><strong>&#127947; Fitness &amp; Exercise</strong></td>
+            <td>46,099</td>
+            <td>19.6%</td>
+            <td><span class="badge accent">High</span></td>
+          </tr>
+          <tr>
+            <td>4</td>
+            <td><strong>&#128301; Science &amp; Research</strong></td>
+            <td>32,135</td>
+            <td>13.7%</td>
+            <td><span class="badge purple">Significant</span></td>
+          </tr>
+          <tr>
+            <td>5</td>
+            <td><strong>&#129504; Mental Health &amp; Mindset</strong></td>
+            <td>26,689</td>
+            <td>11.4%</td>
+            <td><span class="badge accent">Notable</span></td>
+          </tr>
+          <tr>
+            <td>6</td>
+            <td><strong>&#127807; Lifestyle &amp; Wellness</strong></td>
+            <td>22,471</td>
+            <td>9.6%</td>
+            <td><span class="badge orange">Moderate</span></td>
+          </tr>
+          <tr>
+            <td>7</td>
+            <td><strong>&#128564; Sleep &amp; Recovery</strong></td>
+            <td>10,038</td>
+            <td>4.3%</td>
+            <td><span class="badge orange">Moderate</span></td>
+          </tr>
+          <tr>
+            <td>8</td>
+            <td><strong>&#128241; Technology &amp; Tracking</strong></td>
+            <td>9,621</td>
+            <td>4.1%</td>
+            <td><span class="badge orange">Moderate</span></td>
+          </tr>
+          <tr>
+            <td>9</td>
+            <td><strong>&#10084; Heart &amp; Cardiovascular</strong></td>
+            <td>8,929</td>
+            <td>3.8%</td>
+            <td><span class="badge cyan">Present</span></td>
+          </tr>
+          <tr>
+            <td>10</td>
+            <td><strong>&#128101; Social &amp; Community</strong></td>
+            <td>4,183</td>
+            <td>1.8%</td>
+            <td><span class="badge red">Low</span></td>
+          </tr>
+        </tbody>
+      </table>
+      <div class="insight"><strong>Longevity dominates as the primary theme.</strong> Nutrition and Fitness are strong
+        secondary interests. Science/research engagement confirms a data-literate, evidence-driven audience.</div>
+    </div>
+    <div class="grid-2">
+      <div class="card">
+        <h3>Top 10 Most-Clicked Articles</h3>
+        <div class="bar-list">
+          <div>
+            <div class="bar-meta"><span class="bar-label">Reverse Heart Aging with 2-Year Workout Plan</span><span
+                class="bar-pct">3,385</span></div>
+            <div class="bar-track">
+              <div class="bar-fill green" style="width:100%"></div>
+            </div>
+          </div>
+          <div>
+            <div class="bar-meta"><span class="bar-label">Longevity Quiz (typeform)</span><span
+                class="bar-pct">3,073</span></div>
+            <div class="bar-track">
+              <div class="bar-fill accent" style="width:90.8%"></div>
+            </div>
+          </div>
+          <div>
+            <div class="bar-meta"><span class="bar-label">superage.com/games (Games landing page)</span><span
+                class="bar-pct">2,791</span></div>
+            <div class="bar-track">
+              <div class="bar-fill gold" style="width:82.4%"></div>
+            </div>
+          </div>
+          <div>
+            <div class="bar-meta"><span class="bar-label">5 Microhabits That Rewire Your Brain</span><span
+                class="bar-pct">2,738</span></div>
+            <div class="bar-track">
+              <div class="bar-fill accent" style="width:80.9%"></div>
+            </div>
+          </div>
+          <div>
+            <div class="bar-meta"><span class="bar-label">Foods That Counteract Alzheimer&apos;s Genes
+                (Harvard)</span><span class="bar-pct">2,329</span></div>
+            <div class="bar-track">
+              <div class="bar-fill purple" style="width:68.8%"></div>
+            </div>
+          </div>
+          <div>
+            <div class="bar-meta"><span class="bar-label">The New Longevity Pantry</span><span
+                class="bar-pct">2,313</span></div>
+            <div class="bar-track">
+              <div class="bar-fill orange" style="width:68.3%"></div>
+            </div>
+          </div>
+          <div>
+            <div class="bar-meta"><span class="bar-label">6 Foods That Help You Live Longer</span><span
+                class="bar-pct">2,167</span></div>
+            <div class="bar-track">
+              <div class="bar-fill cyan" style="width:64.0%"></div>
+            </div>
+          </div>
+          <div>
+            <div class="bar-meta"><span class="bar-label">Your Body Is a Regenerative System</span><span
+                class="bar-pct">2,026</span></div>
+            <div class="bar-track">
+              <div class="bar-fill accent" style="width:59.9%"></div>
+            </div>
+          </div>
+          <div>
+            <div class="bar-meta"><span class="bar-label">5 Essential Longevity Questions for Your Doctor</span><span
+                class="bar-pct">2,021</span></div>
+            <div class="bar-track">
+              <div class="bar-fill orange" style="width:59.7%"></div>
+            </div>
+          </div>
+          <div>
+            <div class="bar-meta"><span class="bar-label">Unsung Molecule That Powers Your Brain</span><span
+                class="bar-pct">1,997</span></div>
+            <div class="bar-track">
+              <div class="bar-fill green" style="width:59.0%"></div>
+            </div>
+          </div>
+        </div>
+        <div class="insight">The <strong>Games landing page</strong> (2,791 clicks) ranks #3 &mdash; strong intentional
+          Games engagement.</div>
+      </div>
+      <div class="card">
+        <h3>Top Newsletter Issues by Clicks</h3>
+        <div class="bar-list">
+          <div>
+            <div class="bar-meta"><span class="bar-label">SA_PF_20260402 (Sponsor: PVOLVE)</span><span
+                class="bar-pct">4,132</span></div>
+            <div class="bar-track">
+              <div class="bar-fill accent" style="width:100%"></div>
+            </div>
+          </div>
+          <div>
+            <div class="bar-meta"><span class="bar-label">SA_PF_20260323 (Sponsor: Oricle)</span><span
+                class="bar-pct">2,967</span></div>
+            <div class="bar-track">
+              <div class="bar-fill accent" style="width:71.8%"></div>
+            </div>
+          </div>
+          <div>
+            <div class="bar-meta"><span class="bar-label">The Mindset &middot; Issue #58 &middot; June 9,
+                2025</span><span class="bar-pct">2,671</span></div>
+            <div class="bar-track">
+              <div class="bar-fill accent" style="width:64.6%"></div>
+            </div>
+          </div>
+          <div>
+            <div class="bar-meta"><span class="bar-label">The Mindset &middot; Issue #135 &middot; Mar 9, 2026
+                (Timeline)</span><span class="bar-pct">2,510</span></div>
+            <div class="bar-track">
+              <div class="bar-fill purple" style="width:60.7%"></div>
+            </div>
+          </div>
+          <div>
+            <div class="bar-meta"><span class="bar-label">The Mindset &middot; Issue #60 &middot; Jun 16, 2025
+                (David)</span><span class="bar-pct">2,502</span></div>
+            <div class="bar-track">
+              <div class="bar-fill accent" style="width:60.6%"></div>
+            </div>
+          </div>
+          <div>
+            <div class="bar-meta"><span class="bar-label">The Mindset &middot; Issue #80 &middot; Aug 25, 2025
+                (Troscriptions)</span><span class="bar-pct">2,474</span></div>
+            <div class="bar-track">
+              <div class="bar-fill accent" style="width:59.8%"></div>
+            </div>
+          </div>
+          <div>
+            <div class="bar-meta"><span class="bar-label">SA_PF_20260326 (Sponsor: Native Path)</span><span
+                class="bar-pct">2,465</span></div>
+            <div class="bar-track">
+              <div class="bar-fill orange" style="width:59.6%"></div>
+            </div>
+          </div>
+          <div>
+            <div class="bar-meta"><span class="bar-label">The Mindset &middot; Issue #63 &middot; Jun 26, 2025 (Berkeley
+                Life)</span><span class="bar-pct">2,362</span></div>
+            <div class="bar-track">
+              <div class="bar-fill accent" style="width:57.1%"></div>
+            </div>
+          </div>
+        </div>
+        <div class="insight"><strong>SA_PF_20260402</strong> leads at 4,132 clicks &mdash; highest Games-campaign
+          engagement.</div>
+      </div>
+    </div>
+    <div class="card" style="margin-bottom:18px;">
+      <h3>Top Sponsor / Product Domains Clicked</h3>
+      <table>
+        <thead>
+          <tr>
+            <th>Domain</th>
+            <th>Clicks</th>
+            <th>% of Total</th>
+            <th>Category</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>superage.com</td>
+            <td>205,232</td>
+            <td>87.5%</td>
+            <td><span class="badge green">Editorial &middot; Primary</span></td>
+          </tr>
+          <tr>
+            <td>ageist.typeform.com</td>
+            <td>3,145</td>
+            <td>1.3%</td>
+            <td><span class="badge accent">Longevity Quiz</span></td>
+          </tr>
+          <tr>
+            <td>amzn.to</td>
+            <td>2,679</td>
+            <td>1.1%</td>
+            <td><span class="badge orange">Commerce &middot; Product links</span></td>
+          </tr>
+          <tr>
+            <td>pendulumlife.com</td>
+            <td>1,932</td>
+            <td>0.8%</td>
+            <td><span class="badge cyan">Gut Health &middot; Sponsor</span></td>
+          </tr>
+          <tr>
+            <td>pardonventures.zoom.us</td>
+            <td>1,647</td>
+            <td>0.7%</td>
+            <td><span class="badge purple">Webinar / Events</span></td>
+          </tr>
+          <tr>
+            <td>games.superage.com</td>
+            <td>1,319</td>
+            <td>0.6%</td>
+            <td><span class="badge gold">Games landing page</span></td>
+          </tr>
+          <tr>
+            <td>fatty15.com</td>
+            <td>1,063</td>
+            <td>0.5%</td>
+            <td><span class="badge gold">Lipid Health &middot; Sponsor</span></td>
+          </tr>
+          <tr>
+            <td>oneskin.pxf.io</td>
+            <td>711</td>
+            <td>0.3%</td>
+            <td><span class="badge pink">Skin Longevity &middot; Sponsor</span></td>
+          </tr>
+          <tr>
+            <td>timeline.com</td>
+            <td>609</td>
+            <td>0.3%</td>
+            <td><span class="badge accent">Longevity &middot; Sponsor</span></td>
+          </tr>
+          <tr>
+            <td>drinkag1.com</td>
+            <td>549</td>
+            <td>0.2%</td>
+            <td><span class="badge green">AG1 / Greens &middot; Sponsor</span></td>
+          </tr>
+          <tr>
+            <td>berkeleylife.com</td>
+            <td>525</td>
+            <td>0.2%</td>
+            <td><span class="badge green">NAD+ / Longevity &middot; Sponsor</span></td>
+          </tr>
+          <tr>
+            <td>health.harvard.edu</td>
+            <td>495</td>
+            <td>0.2%</td>
+            <td><span class="badge accent">Science / Research</span></td>
+          </tr>
+          <tr>
+            <td>fb.nativepath.com</td>
+            <td>492</td>
+            <td>0.2%</td>
+            <td><span class="badge orange">Protein / Nutrition &middot; Sponsor</span></td>
+          </tr>
+          <tr>
+            <td>aramoreskincare.com</td>
+            <td>405</td>
+            <td>0.2%</td>
+            <td><span class="badge pink">Skincare &middot; Sponsor</span></td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <script>
+    const STATIC_DATE = 'Apr 30, 2026, 09:30 AM EST';
+
+    // Theme toggle
+    function toggleTheme() {
+      const dark = document.body.classList.toggle('dark');
+      document.getElementById('toggle-label').textContent = dark ? 'DARK' : 'LIGHT';
+      localStorage.setItem('theme', dark ? 'dark' : 'light');
+      Chart.defaults.color = dark ? '#8b949e' : '#57606a';
+      Chart.defaults.borderColor = dark ? '#30363d' : '#d0d7de';
+      Object.values(Chart.instances || {}).forEach(c => {
+        if (c.options.scales) Object.values(c.options.scales).forEach(s => {
+          if (s.grid) s.grid.color = dark ? '#30363d' : '#d0d7de';
+          if (s.ticks) s.ticks.color = dark ? '#8b949e' : '#57606a';
+        });
+        if (c.options.plugins && c.options.plugins.legend && c.options.plugins.legend.labels)
+          c.options.plugins.legend.labels.color = dark ? '#8b949e' : '#57606a';
+        c.update('none');
+      });
+    }
+    (function () {
+      if (localStorage.getItem('theme') === 'dark') {
+        document.body.classList.add('dark');
+        const lbl = document.getElementById('toggle-label');
+        if (lbl) lbl.textContent = 'DARK';
+      }
+    })();
+
+    Chart.defaults.color = '#8b949e';
+    Chart.defaults.borderColor = '#30363d';
+    Chart.defaults.font.family = "-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif";
+    Chart.defaults.font.size = 12;
+
+    const LABEL_MAP_GLOBAL = {
+      // mediums
+      'email': 'Email', 'organic': 'Organic', 'social': 'Social', 'referral': 'Referral',
+      'website': 'Website', 'testing': 'Testing', 'direct': 'Direct', 'pop-up': 'Pop-Up',
+      'linkedin': 'LinkedIn', 'instagram': 'Instagram',
+      '(none)': 'None', '(not set)': 'Not Set', '(direct)': 'Direct',
+      '(organic)': 'Organic', '(referral)': 'Referral',
+      // sources
+      'superage': 'SuperAge', 'ageist': 'Ageist', 'google': 'Google',
+      'ig': 'Instagram', 'l.instagram.com': 'Instagram', 'Instagram': 'Instagram',
+      'allhealthy': 'AllHealthy', 'healthbrief': 'HealthBrief',
+      'adventure_women': 'Adventure Women', 'global_wellness': 'Global Wellness',
+      'the_pump': 'The Pump', 'fitnessquiz': 'Fitness Quiz',
+      'optimism_team': 'Optimism Team', 'david_stewart': 'David Stewart',
+      'optimism': 'Optimism', 'buck_institute': 'Buck Institute',
+      'stacy': 'Stacy', 'STACY': 'Stacy',
+      // persona
+      'Not specified': 'Not Specified',
+      // gender codes from games_tickets
+      'F': 'Female', 'M': 'Male', 'f': 'Female', 'm': 'Male',
+    };
+    const fmtLabel = v => {
+      if (!v) return v;
+      if (LABEL_MAP_GLOBAL[v]) return LABEL_MAP_GLOBAL[v];
+      if (LABEL_MAP_GLOBAL[v.toLowerCase()]) return LABEL_MAP_GLOBAL[v.toLowerCase()];
+      return v.replace(/_/g, ' ').replace(/\(|\)/g, '').trim()
+               .replace(/\b\w/g, c => c.toUpperCase());
+    };
+
+    const C = {
+      accent: '#58a6ff', green: '#3fb950', orange: '#d29922', purple: '#bc8cff',
+      pink: '#f778ba', cyan: '#39c5cf', gold: '#e3b341', red: '#f85149', teal: '#39d353'
+    };
+    const GRID = '#21262d';
+    const PAL = [C.green, C.accent, C.purple, C.orange, C.cyan, C.gold, C.pink, C.red, C.teal, '#6e7681'];
+
+    function makeDonut(id, labels, data, colors) {
+      const el = document.getElementById(id); if (!el) return;
+      const tot = data.reduce((a, b) => a + b, 0);
+      return new Chart(el, {
+        type: 'doughnut', data: { labels, datasets: [{ data, backgroundColor: colors, borderWidth: 2, borderColor: '#161b22', hoverOffset: 4 }] },
+        options: {
+          responsive: true, maintainAspectRatio: false, cutout: '62%',
+          plugins: {
+            legend: { position: 'right', labels: { boxWidth: 10, padding: 10, font: { size: 11 } } },
+            tooltip: { callbacks: { label: c => `  ${c.label}: ${c.raw.toLocaleString()} (${Math.round(c.raw / tot * 100)}%)` } }
+          }
+        }
+      });
+    }
+
+    function makeHBar(id, labels, data, colors, total) {
+      const el = document.getElementById(id); if (!el) return;
+      const tot = total || data.reduce((a, b) => a + b, 0);
+      return new Chart(el, {
+        type: 'bar', data: { labels, datasets: [{ data, backgroundColor: Array.isArray(colors) ? colors : data.map(() => colors), borderRadius: 4, borderWidth: 0 }] },
+        options: {
+          responsive: true, maintainAspectRatio: false, indexAxis: 'y',
+          scales: { x: { grid: { color: GRID }, beginAtZero: true, ticks: { callback: v => v.toLocaleString() } }, y: { grid: { display: false } } },
+          plugins: { legend: { display: false }, tooltip: { callbacks: { label: c => `${c.raw.toLocaleString()} (${Math.round(c.raw / tot * 100)}%)` } } }
+        }
+      });
+    }
+
+    function makeVBar(id, labels, datasets) {
+      const el = document.getElementById(id); if (!el) return;
+      return new Chart(el, {
+        type: 'bar', data: { labels, datasets },
+        options: {
+          responsive: true, maintainAspectRatio: false,
+          scales: { x: { grid: { color: GRID } }, y: { grid: { color: GRID }, beginAtZero: true } },
+          plugins: { legend: { display: datasets.length > 1, labels: { boxWidth: 10, padding: 10, font: { size: 11 } } } }
+        }
+      });
+    }
+
+    // STATIC CHARTS
+    // Executive Summary
+    makeDonut('chart-source-donut',
+      ['SuperAge', 'Ageist', 'AllHealthy', 'HealthBrief', 'Instagram', 'Optimism', 'Unknown'],
+      [2624, 291, 176, 83, 7, 5, 4],
+      [C.green, C.purple, C.gold, C.teal, C.cyan, C.orange, C.red]);
+
+    makeDonut('chart-coverage-donut',
+      ['With Profile Data', 'Email-Only'],
+      [1573, 1617], [C.accent, '#30363d']);
+
+    makeDonut('chart-gender-donut', ['Female', 'Male'], [1033, 538], [C.pink, C.accent]);
+
+    // Source Analysis
+    makeVBar('chart-source-bar',
+      ['SuperAge', 'Ageist', 'AllHealthy', 'HealthBrief', 'Instagram', 'Optimism', 'Unknown'],
+      [{
+        label: 'Subscribers', data: [2624, 291, 176, 83, 7, 5, 4],
+        backgroundColor: [C.green, C.purple, C.gold, C.teal, C.cyan, C.orange, C.red], borderRadius: 6, borderWidth: 0
+      }]);
+
+    new Chart(document.getElementById('chart-source-gender'), {
+      type: 'bar',
+      data: {
+        labels: ['SuperAge', 'Ageist', 'AllHealthy', 'HealthBrief', 'Instagram'],
+        datasets: [
+          { label: 'Female', data: [920, 60, 35, 16, 2], backgroundColor: C.pink, borderRadius: 4, borderWidth: 0 },
+          { label: 'Male', data: [475, 37, 16, 9, 0], backgroundColor: C.accent, borderRadius: 4, borderWidth: 0 },
+          { label: 'Unknown/No data', data: [1229, 194, 125, 58, 5], backgroundColor: '#30363d', borderRadius: 4, borderWidth: 0 }
+        ]
+      },
+      options: {
+        responsive: true, maintainAspectRatio: false,
+        scales: { x: { stacked: true, grid: { color: GRID } }, y: { stacked: true, grid: { color: GRID }, beginAtZero: true } },
+        plugins: { legend: { display: true, labels: { boxWidth: 10, padding: 10, font: { size: 11 } } } }
+      }
+    });
+
+    makeDonut('chart-camp-sa',
+      ['SA_PF_20260402', 'SA_PF_20260329', 'SA_PF_20260405', 'SA_PF_20260416', 'SA_PF_20260412',
+        'SA_PF_20260406', 'SA_EA_20260331', 'SA_PF_20260330', 'SA_PF_20260409', 'SA_PF_20260413'],
+      [1049, 633, 224, 168, 142, 115, 106, 104, 47, 36], PAL);
+
+    makeDonut('chart-camp-ageist',
+      ['Sunday Mar 29 Games Promo', '487 Karen Hartman', '489 Tim Parr'],
+      [219, 45, 27], [C.purple, C.accent, C.teal]);
+
+    // Demographics
+    makeDonut('chart-gender-pie', ['Female', 'Male'], [1033, 538], [C.pink, C.accent]);
+    makeDonut('chart-marital', ['Married/Partnered', 'Widowed/Divorced', 'Single'], [1108, 293, 145], [C.accent, C.orange, C.purple]);
+
+    makeVBar('chart-age-bar', ['<35', '35-44', '45-54', '55-64', '65-74', '75+'],
+      [{
+        label: 'Subscribers', data: [14, 52, 145, 395, 643, 322],
+        backgroundColor: [C.cyan, C.cyan, C.accent, C.accent, C.green, C.orange], borderRadius: 6, borderWidth: 0
+      }]);
+
+    makeHBar('chart-financial',
+      ['Very Comfortable', 'Comfortable', 'Stable', 'Somewhat Stable', 'Unstable'],
+      [560, 483, 308, 152, 35], [C.green, C.accent, C.gold, C.orange, C.red], 1538);
+
+    // Psychographic
+    makeDonut('chart-alcohol',
+      ['Never', '1-3/week', '4-5/week', '6+/week'],
+      [607, 529, 203, 196], [C.green, C.accent, C.orange, C.red]);
+
+    makeDonut('chart-social',
+      ['Several/week', 'Almost daily', 'Once/week', 'Rarely if ever'],
+      [694, 432, 352, 65], [C.green, C.teal, C.accent, C.orange]);
+
+    // Geo
+    makeHBar('chart-countries',
+      ['United States', 'Canada', 'Australia', 'Mexico', 'United Kingdom', 'Germany', 'Portugal', 'Spain'],
+      [217028, 7645, 1531, 843, 764, 543, 516, 398], C.accent, 234672);
+
+    // Editorial topics
+    const topicLabels = ['Longevity & Aging', 'Nutrition & Diet', 'Fitness & Exercise', 'Science & Research',
+      'Mental Health', 'Lifestyle & Wellness', 'Sleep & Recovery', 'Tech & Tracking', 'Heart Health', 'Social'];
+    const topicData = [72248, 51921, 46099, 32135, 26689, 22471, 10038, 9621, 8929, 4183];
+    makeHBar('chart-topics-bar', topicLabels, topicData, PAL, 234672);
+    makeDonut('chart-topics-donut', topicLabels, topicData, PAL);
+
+    // US MAP
+    (function buildMap() {
+      const stateData = [
+        { n: "California", a: "CA", v: 32487 }, { n: "New York", a: "NY", v: 17523 }, { n: "Florida", a: "FL", v: 15023 },
+        { n: "Texas", a: "TX", v: 12893 }, { n: "New Jersey", a: "NJ", v: 7153 }, { n: "North Carolina", a: "NC", v: 7116 },
+        { n: "Colorado", a: "CO", v: 6939 }, { n: "Arizona", a: "AZ", v: 6910 }, { n: "Massachusetts", a: "MA", v: 6356 },
+        { n: "Pennsylvania", a: "PA", v: 6082 }, { n: "Illinois", a: "IL", v: 6065 }, { n: "Virginia", a: "VA", v: 5729 },
+        { n: "Georgia", a: "GA", v: 5365 }, { n: "Michigan", a: "MI", v: 5342 }, { n: "Washington", a: "WA", v: 4846 },
+        { n: "Ohio", a: "OH", v: 4555 }, { n: "Maryland", a: "MD", v: 4277 }, { n: "Oregon", a: "OR", v: 3951 },
+        { n: "South Carolina", a: "SC", v: 3462 }, { n: "Missouri", a: "MO", v: 3298 }, { n: "Wisconsin", a: "WI", v: 3189 },
+        { n: "Minnesota", a: "MN", v: 3070 }, { n: "Tennessee", a: "TN", v: 2999 }, { n: "Indiana", a: "IN", v: 2637 },
+        { n: "Connecticut", a: "CT", v: 2623 }, { n: "New Mexico", a: "NM", v: 2397 }, { n: "Nevada", a: "NV", v: 2265 },
+        { n: "Utah", a: "UT", v: 2205 }, { n: "Idaho", a: "ID", v: 1657 }, { n: "Hawaii", a: "HI", v: 1499 },
+        { n: "Alabama", a: "AL", v: 1493 }, { n: "Kentucky", a: "KY", v: 1453 }, { n: "Louisiana", a: "LA", v: 1317 },
+        { n: "Kansas", a: "KS", v: 1293 }, { n: "District of Columbia", a: "DC", v: 1215 }, { n: "Maine", a: "ME", v: 1168 },
+        { n: "Rhode Island", a: "RI", v: 1131 }, { n: "Oklahoma", a: "OK", v: 1048 }, { n: "Iowa", a: "IA", v: 999 },
+        { n: "Arkansas", a: "AR", v: 983 }, { n: "Nebraska", a: "NE", v: 820 }, { n: "Delaware", a: "DE", v: 734 },
+        { n: "Montana", a: "MT", v: 590 }, { n: "New Hampshire", a: "NH", v: 518 }, { n: "Vermont", a: "VT", v: 513 },
+        { n: "Alaska", a: "AK", v: 205 }, { n: "Mississippi", a: "MS", v: 179 }, { n: "Wyoming", a: "WY", v: 165 },
+        { n: "North Dakota", a: "ND", v: 104 }, { n: "West Virginia", a: "WV", v: 61 }, { n: "South Dakota", a: "SD", v: 33 }
+      ];
+      const lookup = {}; stateData.forEach(s => { lookup[s.n] = s; });
+      const tt = document.getElementById('map-tt');
+      const wrap = document.getElementById('us-map-wrap'); if (!wrap) return;
+
+      function loadScript(src, cb) {
+        const s = document.createElement('script'); s.src = src; s.onload = cb; document.head.appendChild(s);
+      }
+
+      loadScript('https://cdnjs.cloudflare.com/ajax/libs/d3/7.8.5/d3.min.js', function () {
+        loadScript('https://cdnjs.cloudflare.com/ajax/libs/topojson/3.0.2/topojson.min.js', function () {
+          fetch('https://cdn.jsdelivr.net/npm/us-atlas@3/states-10m.json')
+            .then(r => r.json()).then(us => drawMap(us))
+            .catch(() => { wrap.innerHTML = '<div style="padding:40px;text-align:center;color:#8b949e;font-size:13px;">Map requires network. State data available in tables above.</div>'; });
+        });
+      });
+
+      function drawMap(us) {
+        const W = wrap.offsetWidth || 900, H = Math.round(W * 0.62);
+        const isDark = document.body.classList.contains('dark');
+        const bg = isDark ? '#0d1117' : '#eef1f4';
+        const svg = d3.select(wrap).append('svg')
+          .attr('viewBox', `0 0 ${W} ${H}`).attr('width', '100%')
+          .style('background', bg).style('display', 'block');
+        const proj = d3.geoAlbersUsa().scale(W * 1.28).translate([W / 2, H / 2]);
+        const path = d3.geoPath().projection(proj);
+        const features = topojson.feature(us, us.objects.states);
+        const nameMap = new Map(us.objects.states.geometries.map(d => [d.id, d.properties.name]));
+        const maxV = Math.max(...stateData.map(s => s.v));
+
+        function colorFor(v) {
+          if (!v) return isDark ? '#1a2235' : '#d8e4f0';
+          const t = Math.pow(v / maxV, 0.35);
+          if (isDark) {
+            const r = Math.round(20 + t * (88 - 20)), g = Math.round(32 + t * (166 - 32)), b = Math.round(60 + t * (255 - 60));
+            return `rgb(${r},${g},${b})`;
+          } else {
+            const r = Math.round(200 - t * (200 - 9)), g = Math.round(220 - t * (220 - 105)), b = Math.round(240 - t * (240 - 218));
+            return `rgb(${r},${g},${b})`;
+          }
+        }
+
+        svg.selectAll('path.st').data(features.features).enter().append('path')
+          .attr('class', 'st').attr('d', path)
+          .attr('fill', d => { const s = lookup[nameMap.get(d.id)]; return colorFor(s ? s.v : 0); })
+          .attr('stroke', isDark ? '#0d1117' : '#ffffff').attr('stroke-width', 0.8)
+          .on('mousemove', function (event, d) {
+            const name = nameMap.get(d.id); const s = lookup[name];
+            d3.select(this).attr('stroke', isDark ? '#e6edf3' : '#333').attr('stroke-width', 1.5);
+            if (tt) {
+              tt.style.display = 'block'; tt.style.left = (event.clientX + 14) + 'px'; tt.style.top = (event.clientY - 10) + 'px';
+              tt.innerHTML = `<strong>${name || '—'}</strong><br>${s ? s.v.toLocaleString() : '0'} clicks`;
+            }
+          })
+          .on('mouseleave', function () {
+            d3.select(this).attr('stroke', isDark ? '#0d1117' : '#ffffff').attr('stroke-width', 0.8);
+            if (tt) tt.style.display = 'none';
+          });
+
+        svg.append('path').datum(topojson.mesh(us, us.objects.states, (a, b) => a !== b))
+          .attr('fill', 'none').attr('stroke', isDark ? '#0d1117' : '#ffffff').attr('stroke-width', 0.5).attr('d', path);
+
+        const top15 = stateData.slice(0, 15);
+        features.features.forEach(d => {
+          const name = nameMap.get(d.id); const s = lookup[name];
+          if (!s || !top15.find(t => t.n === name)) return;
+          const c = path.centroid(d); if (!c || isNaN(c[0])) return;
+          const sz = s.v > 5000 ? 10 : s.v > 2000 ? 8 : 7;
+          svg.append('text').attr('x', c[0]).attr('y', c[1] + sz * 0.38)
+            .attr('text-anchor', 'middle').attr('font-size', sz)
+            .attr('font-family', 'sans-serif').attr('font-weight', '700')
+            .attr('fill', s.v > 8000 ? (isDark ? '#0d1117' : '#ffffff') : (isDark ? 'rgba(230,237,243,0.9)' : 'rgba(20,40,80,0.9)'))
+            .attr('pointer-events', 'none').text(s.a);
+        });
+      }
+    })();
+
+    // SALES TICKETS (dynamic)
+    let _salesLoaded = false;
+    const _sc = {};
+
+    let _salesAsOf = null, _salesTicketCount = null;
+
+    function updateHeader(tab) {
+      const clock = document.getElementById('header-clock');
+      const meta = document.getElementById('header-ticket-meta');
+      const badge = document.getElementById('header-refresh-label');
+      const ctx = document.getElementById('header-context-label');
+      const h1 = document.querySelector('.header h1');
+      if (tab === 'sales' || tab === 'persona' || tab === 'funnel') {
+        const titles = {
+          sales:   'SuperAge Games &mdash; <span>Sold Tickets</span>',
+          persona: 'SuperAge Games &mdash; <span>Buyer Persona</span>',
+          funnel:  'SuperAge Games &mdash; <span>Funnel Analysis</span>',
+        };
+        const ctxLabels = {
+          sales:   'Ticket sales analysis',
+          persona: 'Buyer longevity profile',
+          funnel:  'Purchase source attribution',
+        };
+        if (h1) h1.innerHTML = titles[tab];
+        if (badge) badge.textContent = 'Hourly updates during working hours';
+        if (ctx) ctx.textContent = ctxLabels[tab];
+        if (clock) clock.textContent = _salesAsOf || '—';
+        const su = document.getElementById('sales-section-updated');
+        if (su) su.textContent = _salesAsOf || '—';
+        if (meta) meta.innerHTML = _salesTicketCount !== null
+          ? `${ctxLabels[tab]} &nbsp;&middot;&nbsp; <strong>${_salesTicketCount.toLocaleString()}</strong> ticket sales`
+          : ctxLabels[tab];
+      } else {
+        if (h1) h1.innerHTML = 'SuperAge Games &mdash; <span>Waitlist Intelligence</span>';
+        if (badge) badge.textContent = 'Static snapshot';
+        if (ctx) ctx.textContent = 'Waitlist campaign analysis';
+        if (clock) clock.textContent = STATIC_DATE;
+        if (meta) meta.innerHTML = `<strong>3,190</strong> total subscribers &nbsp;&middot;&nbsp; All Active (Ongage)`;
+      }
+    }
+
+    function mkChart(id, config) {
+      if (_sc[id]) { _sc[id].destroy(); delete _sc[id]; }
+      const el = document.getElementById(id); if (!el) return;
+      _sc[id] = new Chart(el, config);
+    }
+    function showEl(id) { const e = document.getElementById(id); if (e) e.style.display = 'block'; }
+    function hideEl(id) { const e = document.getElementById(id); if (e) e.style.display = 'none'; }
+
+  const DASHBOARD_API = 'https://dashboard.pardon-ventures-06b.workers.dev';
+  const API_TOKEN     = 'dashboardkiwilytics123';
+
+  const authHeaders = { headers: { 'X-Auth-Token': API_TOKEN } };
+
+  async function loadSalesData() {
+    const content = document.getElementById('sales-content');
+    const loading = document.getElementById('sales-loading');
+    const errDiv  = document.getElementById('sales-error');
+    loading.style.display = 'flex'; content.style.display = 'none'; errDiv.style.display = 'none';
+    const isLocal = location.hostname === 'localhost' || location.hostname === '127.0.0.1';
+    // Use origin-absolute URL to bypass <base href> when running locally
+    const _url  = isLocal ? `${location.origin}/sales_metrics.json` : `${DASHBOARD_API}/games-sold-tickets/sales_metrics.json`;
+    const _opts = isLocal ? {} : authHeaders;
+    try {
+      const m = await fetch(_url, _opts)
+        .then(r => { if (!r.ok) throw new Error(`HTTP ${r.status}`); return r.json(); });
+      _salesAsOf = m.data_as_of || null;
+      _salesTicketCount = m.total_tickets ?? null;
+      updateHeader('sales');
+
+        document.getElementById('kpi-tickets').textContent = (m.total_tickets || 0).toLocaleString();
+        document.getElementById('kpi-waitlist').textContent = (m.total_waitlist || 0).toLocaleString();
+        document.getElementById('kpi-landing').textContent = (m.landing_events || 0).toLocaleString();
+        if (m.estimated_revenue != null) document.getElementById('kpi-revenue').textContent = '$' + m.estimated_revenue.toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 0 });
+        else document.getElementById('kpi-revenue').textContent = 'N/A';
+        if (m.waitlist_buyers !== null && m.waitlist_buyers !== undefined) {
+          document.getElementById('kpi-crossover').textContent = m.waitlist_buyers.toLocaleString();
+          document.getElementById('kpi-conversion').textContent = m.total_waitlist > 0 ? (m.waitlist_buyers / m.total_waitlist * 100).toFixed(1) + '%' : 'N/A';
+          const pctB = m.total_tickets > 0 ? Math.round(m.waitlist_buyers / m.total_tickets * 100) : 0;
+          document.getElementById('kpi-crossover-sub').textContent = `${pctB}% of all buyers`;
+        } else { document.getElementById('kpi-crossover').textContent = 'N/A'; document.getElementById('kpi-conversion').textContent = 'N/A'; }
+
+        // Funnel
+        const brands = m.landing_our_brands || 0, sponsors = m.landing_sponsors || 0, events = m.landing_events_partners || 0;
+        const total = brands + sponsors + events || 1;
+        const tickets = Math.max(0, (m.total_tickets || 0) - (m.waitlist_buyers || 0));
+        document.getElementById('sales-funnel').innerHTML = `
+      <div style="display:flex;gap:10px;width:100%;justify-content:center;">
+        <div style="flex:1;border:1.5px solid var(--cyan);border-radius:8px;padding:14px 16px;text-align:center;">
+          <div style="font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.6px;color:var(--text-muted);margin-bottom:4px;">Our Brands</div>
+          <div style="font-size:26px;font-weight:700;color:var(--cyan);">${brands.toLocaleString()}</div>
+          <div style="font-size:11px;color:var(--text-muted);">Email + website clicks</div>
+        </div>
+        <div style="flex:1;border:1.5px solid var(--purple);border-radius:8px;padding:14px 16px;text-align:center;">
+          <div style="font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.6px;color:var(--text-muted);margin-bottom:4px;">Sponsor Clicks</div>
+          <div style="font-size:26px;font-weight:700;color:var(--purple);">${sponsors.toLocaleString()}</div>
+          <div style="font-size:11px;color:var(--text-muted);">Partner sites</div>
+        </div>
+        <div style="flex:1;border:1.5px solid var(--gold);border-radius:8px;padding:14px 16px;text-align:center;">
+          <div style="font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.6px;color:var(--text-muted);margin-bottom:4px;">Event Partners</div>
+          <div style="font-size:26px;font-weight:700;color:var(--gold);">${events.toLocaleString()}</div>
+          <div style="font-size:11px;color:var(--text-muted);">Event clicks only</div>
+        </div>
+      </div>
+      <div style="display:flex;flex-direction:column;align-items:center;padding:4px 0;gap:2px;">
+        <span style="font-size:11px;color:var(--accent);font-weight:500;">${(tickets / total * 100).toFixed(1)}% converted</span>
+        <div style="width:1.5px;height:14px;background:var(--card-border);"></div>
+        <div style="width:0;height:0;border-left:5px solid transparent;border-right:5px solid transparent;border-top:6px solid var(--card-border);"></div>
+      </div>
+      <div style="width:${Math.max(32, Math.min(Math.round(tickets / total * 100), 100))}%;border:1.5px solid var(--green);border-radius:8px;padding:14px 16px;text-align:center;">
+        <div style="font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.6px;color:var(--text-muted);margin-bottom:4px;">Ticket Purchases</div>
+        <div style="font-size:26px;font-weight:700;color:var(--green);">${tickets.toLocaleString()}</div>
+        <div style="font-size:11px;color:var(--text-muted);">Direct from landing</div>
+      </div>`;
+
+        const palette = [C.green, C.accent, C.purple, C.orange, C.cyan, C.gold, C.pink, C.red, C.teal, '#6e7681'];
+        const colorN = n => Array.from({ length: n }, (_, i) => palette[i % palette.length]);
+        const hbarCfg = (labels, data, colors, suf) => ({
+          type: 'bar',
+          data: { labels, datasets: [{ data, backgroundColor: colors, borderRadius: 4, borderWidth: 0 }] },
+          options: {
+            responsive: true, maintainAspectRatio: false, indexAxis: 'y',
+            scales: { x: { grid: { color: GRID }, beginAtZero: true, ticks: { callback: v => v.toLocaleString() } }, y: { grid: { display: false } } },
+            plugins: { legend: { display: false }, tooltip: { callbacks: { label: c => `${c.raw.toLocaleString()} ${suf}` } } }
+          }
+        });
+        const donutCfg = (labels, data, colors) => {
+          const tot = data.reduce((a, b) => a + b, 0); return {
+            type: 'doughnut',
+            data: { labels, datasets: [{ data, backgroundColor: colors, borderWidth: 2, borderColor: '#161b22', hoverOffset: 4 }] },
+            options: {
+              responsive: true, maintainAspectRatio: false, cutout: '62%',
+              plugins: {
+                legend: { position: 'right', labels: { boxWidth: 10, padding: 10, font: { size: 11 } } },
+                tooltip: { callbacks: { label: c => `  ${c.label}: ${c.raw.toLocaleString()} (${Math.round(c.raw / tot * 100)}%)` } }
+              }
+            }
+          };
+        };
+
+        const ttData = (m.ticket_types || []).filter(r => (r.total || 0) > 0);
+        if (ttData.length) {
+          mkChart('chart-ticket-types', {
+            type: 'bar', data: {
+              labels: ttData.map(r => r.type),
+              datasets: [{ label: 'Waitlist buyers', data: ttData.map(r => r.on_waitlist || 0), backgroundColor: C.accent, borderRadius: 4, borderWidth: 0 },
+              { label: 'Direct buyers', data: ttData.map(r => r.direct || 0), backgroundColor: C.green, borderRadius: 4, borderWidth: 0 }]
+            },
+            options: {
+              responsive: true, maintainAspectRatio: false,
+              scales: { x: { grid: { color: GRID } }, y: { grid: { color: GRID }, beginAtZero: true, ticks: { callback: v => v.toLocaleString() } } },
+              plugins: { legend: { display: true, labels: { boxWidth: 10, padding: 10, font: { size: 11 } } } }
+            }
+          });
+        } else { hideEl('chart-ticket-types'); showEl('ticket-types-empty'); }
+
+        const ov = m.ticket_waitlist_overlap || {};
+        if (ov.on_waitlist != null && ov.not_on_waitlist != null)
+          mkChart('chart-waitlist-overlap', donutCfg(['From Waitlist', 'Direct Buyers'], [ov.on_waitlist || 0, ov.not_on_waitlist || 0], [C.accent, C.green]));
+        else { hideEl('chart-waitlist-overlap'); showEl('overlap-empty'); }
+
+        const ageDist = (m.age_distribution || []).filter(r => (r.count || 0) > 0);
+        if (ageDist.length) mkChart('chart-age', hbarCfg(ageDist.map(r => r.range), ageDist.map(r => r.count), colorN(ageDist.length), 'buyers'));
+        else { hideEl('chart-age'); showEl('age-empty'); }
+
+        const gd = (m.gender_distribution || []).filter(r => (r.count || 0) > 0);
+        if (gd.length) mkChart('chart-gender', donutCfg(gd.map(r => r.gender), gd.map(r => r.count), colorN(gd.length)));
+        else { hideEl('chart-gender'); showEl('gender-empty'); }
+
+        const cd = (m.city_distribution || []).filter(r => (r.count || 0) > 0);
+        const cl = document.getElementById('cities-list');
+        if (cd.length) {
+          const maxC = Math.max(...cd.map(r => r.count));
+          const fills = ['green', 'accent', 'purple', 'orange', 'cyan', 'gold', 'pink', 'red', 'teal'];
+          cl.innerHTML = cd.map((r, i) => `<div><div class="bar-meta"><span class="bar-label">${r.city}</span><span class="bar-pct">${r.count.toLocaleString()}</span></div><div class="bar-track"><div class="bar-fill ${fills[i % fills.length]}" style="width:${Math.round(r.count / maxC * 100)}%"></div></div></div>`).join('');
+        } else { if (cl) cl.innerHTML = ''; showEl('cities-empty'); }
+
+        if ((m.landing_by_source_brands || []).length)
+          mkChart('chart-landing-source-brands', hbarCfg(m.landing_by_source_brands.map(r => fmtLabel(r.source)), m.landing_by_source_brands.map(r => +r.count), [C.cyan, C.accent, C.green, C.teal, C.pink, C.purple, C.gold], 'events'));
+        else { hideEl('chart-landing-source-brands'); showEl('landing-source-brands-empty'); }
+
+        if ((m.landing_by_source_sponsors || []).length)
+          mkChart('chart-landing-source-sponsors', hbarCfg(m.landing_by_source_sponsors.map(r => fmtLabel(r.source)), m.landing_by_source_sponsors.map(r => +r.count), [C.purple, C.orange, C.pink, C.gold, C.red], 'events'));
+        else { hideEl('chart-landing-source-sponsors'); showEl('landing-source-sponsors-empty'); }
+
+        if ((m.landing_by_source_events || []).length)
+          mkChart('chart-landing-source-events', hbarCfg(m.landing_by_source_events.map(r => fmtLabel(r.source)), m.landing_by_source_events.map(r => +r.count), [C.gold, C.orange, C.teal, C.green, C.cyan], 'events'));
+        else { hideEl('chart-landing-source-events'); showEl('landing-source-events-empty'); }
+
+        if ((m.landing_by_campaign || []).length)
+          mkChart('chart-landing-campaign', hbarCfg(m.landing_by_campaign.map(r => fmtLabel(r.campaign)), m.landing_by_campaign.map(r => +r.count), colorN(m.landing_by_campaign.length), 'events'));
+        else { hideEl('chart-landing-campaign'); showEl('landing-campaign-empty'); }
+
+        if ((m.landing_by_medium || []).length)
+          mkChart('chart-landing-medium', hbarCfg(m.landing_by_medium.map(r => fmtLabel(r.medium)), m.landing_by_medium.map(r => +r.count), colorN(m.landing_by_medium.length), 'events'));
+        else { hideEl('chart-landing-medium'); showEl('landing-medium-empty'); }
+
+        if ((m.landing_by_day || []).length) {
+          const labs = m.landing_by_day.map(r => String(r.day).slice(0, 10));
+          const vals = m.landing_by_day.map(r => +r.count);
+          mkChart('chart-landing-daily', {
+            type: 'line',
+            data: { labels: labs, datasets: [{ label: 'Events', data: vals, borderColor: C.cyan, backgroundColor: 'rgba(57,197,207,.1)', fill: true, tension: .3, pointRadius: labs.length < 5 ? 4 : 2, borderWidth: 1.5 }] },
+            options: {
+              responsive: true, maintainAspectRatio: false,
+              scales: { x: { grid: { display: false }, ticks: { maxTicksLimit: 10, maxRotation: 0 } }, y: { grid: { color: GRID }, beginAtZero: true, ticks: { maxTicksLimit: 5 } } },
+              plugins: { legend: { display: false } }
+            }
+          });
+        } else { hideEl('chart-landing-daily'); showEl('landing-daily-empty'); }
+
+        // Recent tickets table
+        const tix = m.recent_tickets || { columns: [], rows: [] };
+        const rows = (tix.rows || []).slice(0, 10);
+        const tw = document.getElementById('tickets-table-wrap');
+        const tc = document.getElementById('tickets-table-count');
+        if (tc) tc.textContent = rows.length ? `· ${rows.length} most recent` : '';
+        if (!rows.length) { if (tw) tw.innerHTML = '<div style="padding:20px;text-align:center;color:var(--text-muted);">No ticket records</div>'; }
+        else {
+          const skip = new Set(['utm_source', 'utm_medium', 'utm_campaign', 'utm_term', 'utm_content', 'ref_source', 'traffic_source', 'phone', 'email', 'customer_email', 'buyer_email']);
+          const pri = ['oid', 'order_id', 'ticket_type', 'gender', 'country', 'city', 'amount', 'price', 'created_at', 'purchased_at', 'purchase_date', 'name'];
+          const avail = (tix.columns || []).filter(c => !skip.has(c));
+          const cols = [...pri.filter(c => avail.includes(c)), ...avail.filter(c => !pri.includes(c))].slice(0, 6);
+          const lbl = c => ({ created_at: 'Date', purchased_at: 'Date', purchase_date: 'Date', order_id: 'OID' }[c] || c.replace(/_/g, ' '));
+          const head = `<tr>${cols.map(c => `<th>${lbl(c)}</th>`).join('')}</tr>`;
+          const body = rows.map(row => `<tr>${cols.map(c => { const v = row[c]; if (v == null) return '<td style="color:var(--text-dim)">—</td>'; const s = String(v); const d = /^\d{4}-\d{2}-\d{2}/.test(s) && s.length > 10 ? s.slice(0, 10) : null; return `<td>${(d || s).slice(0, 50)}</td>`; }).join('')}</tr>`).join('');
+          if (tw) tw.innerHTML = `<div style="overflow-x:auto"><table><thead>${head}</thead><tbody>${body}</tbody></table></div>`;
+        }
+
+        renderPersona(m);
+        renderFunnel(m);
+
+        loading.style.display = 'none'; content.style.display = 'block'; _salesLoaded = true;
+      } catch (err) {
+        loading.style.display = 'none'; errDiv.style.display = 'flex';
+        const em = errDiv.querySelector('.error-msg'); if (em) em.textContent = err.message;
+        // Hide persona/funnel spinners on error
+        ['persona-loading','funnel-loading'].forEach(id => hideEl(id));
+        console.error('Sales load failed:', err);
+      }
+    }
+
+    document.addEventListener('DOMContentLoaded', () => {
+      updateHeader('sales');
+      if (document.getElementById('tab-sales').classList.contains('active')) loadSalesData();
+    });
+
+    function showTab(id, btn) {
+      document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+      document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+      document.getElementById('tab-' + id).classList.add('active');
+      btn.classList.add('active');
+      updateHeader(id);
+      if ((id === 'sales' || id === 'persona' || id === 'funnel') && !_salesLoaded) loadSalesData();
+    }
+
+    // ─── BUYER PERSONA ───────────────────────────────────────
+    function renderPersona(m) {
+      const p = m.persona || {};
+      const el = document.getElementById('persona-content');
+      if (!el) return;
+      hideEl('persona-loading');
+
+      const matched  = p.matched_buyers || 0;
+      const unique   = p.unique_buyer_emails || 0;
+      const matchPct = p.match_rate_pct != null ? p.match_rate_pct + '%' : '—';
+      const avgLS    = p.avg_longevity_score != null ? (+p.avg_longevity_score).toFixed(1) : '—';
+      const avgAge   = p.avg_age != null ? Math.round(+p.avg_age) : '—';
+      const unmatched = unique - matched;
+
+      function barList(items, key, total, sharedMax) {
+        const tot = total || matched;
+        if (!items || !items.length) return '<div class="empty-msg">No data</div>';
+        const max  = sharedMax || Math.max(...items.map(i => i.count));
+        const fills = ['green','accent','purple','orange','cyan','gold','pink','red','teal'];
+        return items.map((item, i) => `
+          <div>
+            <div class="bar-meta">
+              <span class="bar-label">${fmtLabel(item[key])}</span>
+              <span class="bar-pct">${item.count.toLocaleString()} &middot; ${tot > 0 ? Math.round(item.count / tot * 100) : 0}%</span>
+            </div>
+            <div class="bar-track">
+              <div class="bar-fill ${fills[i % fills.length]}" style="width:${max > 0 ? Math.round(item.count / max * 100) : 0}%"></div>
+            </div>
+          </div>`).join('');
+      }
+
+      // ── Archetype: derive modal values ──
+      const topGender  = (p.gender || [])[0];
+      const topFinance = (p.financial_situation || [])[0];
+      const topMarital = (p.marital_status || [])[0];
+      const topEdu     = (p.education_level || [])[0];
+      const topExercise= (p.exercise_freq || [])[0];
+      const archetypeTraits = [
+        topGender  ? topGender.gender  : null,
+        avgAge !== '—' ? `${avgAge} years old` : null,
+        topMarital ? topMarital.marital_status : null,
+        topEdu     ? topEdu.education_level : null,
+        topExercise? `exercises ${topExercise.exercise_freq.toLowerCase()}` : null,
+        topFinance ? `financially ${topFinance.financial_situation.toLowerCase()}` : null,
+        avgLS !== '—' ? `longevity score ${avgLS}` : null,
+      ].filter(Boolean);
+
+      // ── Health traffic lights ──
+      function healthLight(items, key, greenFn, yellowFn) {
+        const top = (items || []).filter(r => r[key] !== 'Not specified');
+        const total = top.reduce((a, b) => a + b.count, 0);
+        if (!total) return { color: '#6e7681', icon: '—', pct: '—' };
+        const topVal = top[0] ? top[0][key].toLowerCase() : '';
+        const isGreen  = greenFn(topVal, top, total);
+        const isYellow = !isGreen && yellowFn(topVal, top, total);
+        const color = isGreen ? C.green : isYellow ? C.gold : C.orange;
+        const icon  = isGreen ? '✓' : isYellow ? '!' : '↓';
+        const pct   = top[0] ? `${Math.round(top[0].count / total * 100)}% ${top[0][key]}` : '—';
+        return { color, icon, pct };
+      }
+
+      const lights = {
+        exercise: healthLight(p.exercise_freq, 'exercise_freq',
+          v => v.includes('every day'),
+          v => v.includes('few times')),
+        smoking: healthLight(p.smoking_status, 'smoking_status',
+          v => v.includes('never smoked'),
+          v => v.includes('quit')),
+        obesity: healthLight(p.is_obese, 'is_obese',
+          v => v === 'no', () => false),
+        stress: healthLight(p.stress_impact, 'stress_impact',
+          v => v.includes('not at all'),
+          v => v.includes('somewhat')),
+        alcohol: healthLight(p.alcohol_freq, 'alcohol_freq',
+          v => v === 'never' || v.includes('1-3'),
+          v => v.includes('4-5')),
+      };
+
+      function lightCard(label, l) {
+        return `<div style="display:flex;flex-direction:column;align-items:center;gap:8px;padding:16px 12px;background:var(--card);border:1px solid var(--card-border);border-radius:10px;flex:1;min-width:100px;">
+          <div style="width:44px;height:44px;border-radius:50%;background:${l.color}22;border:2px solid ${l.color};display:flex;align-items:center;justify-content:center;font-size:18px;color:${l.color};font-weight:700;">${l.icon}</div>
+          <div style="font-size:12px;font-weight:600;color:var(--text);text-align:center;">${label}</div>
+          <div style="font-size:11px;color:var(--text-muted);text-align:center;line-height:1.3;">${l.pct}</div>
+        </div>`;
+      }
+
+      // ── Longevity comparison ──
+      const allQuizLS = p.all_quiz_avg_longevity;
+      const lsDiff = allQuizLS && p.avg_longevity_score
+        ? (+p.avg_longevity_score - allQuizLS).toFixed(1)
+        : null;
+      const lsDiffHtml = lsDiff !== null
+        ? `<span style="color:${+lsDiff >= 0 ? C.green : C.orange};font-weight:600;">${+lsDiff >= 0 ? '+' : ''}${lsDiff} vs all quiz takers (avg ${(+allQuizLS).toFixed(1)})</span>`
+        : '';
+
+      // ── By ticket type ──
+      const byType = p.by_ticket_type || [];
+      const byTypeHtml = byType.map(t => `
+        <div style="display:flex;justify-content:space-between;align-items:center;padding:10px 0;border-bottom:1px solid var(--card-border);">
+          <div style="font-size:13px;font-weight:600;color:var(--text);">${t.ticket_type}</div>
+          <div style="display:flex;gap:24px;font-size:12px;color:var(--text-muted);">
+            <span><strong style="color:var(--text);">${t.count}</strong> buyers</span>
+            <span>Longevity <strong style="color:${C.green};">${t.avg_longevity != null ? t.avg_longevity : '—'}</strong></span>
+            <span>Avg age <strong style="color:var(--text);">${t.avg_age != null ? Math.round(t.avg_age) : '—'}</strong></span>
+          </div>
+        </div>`).join('');
+
+      // ── Unmatched buyers ──
+      const unmatchedGender = p.unmatched_gender || [];
+      const unmatchedAge    = p.unmatched_age    || [];
+      const topUGender = unmatchedGender[0];
+      const unmatchedSummary = topUGender
+        ? `${Math.round(topUGender.count / unmatched * 100)}% ${fmtLabel(topUGender.gender)}`
+        : '—';
+
+      const sharedBanner = `
+        <div class="section-context-banner">
+          <strong>${matched.toLocaleString()}</strong> of <strong>${unique.toLocaleString()}</strong>
+          ticket buyers took the longevity quiz (${matchPct} match rate)
+        </div>`;
+
+      const sharedKpis = `
+        <div class="kpi-row" style="margin-bottom:24px;">
+          <div class="kpi-card purple">
+            <div class="label">Quiz Participants</div>
+            <div class="value">${matched.toLocaleString()}</div>
+            <div class="sub">Of ${unique.toLocaleString()} unique buyers</div>
+          </div>
+          <div class="kpi-card accent">
+            <div class="label">Match Rate</div>
+            <div class="value">${matchPct}</div>
+            <div class="sub">Took the longevity quiz</div>
+          </div>
+          <div class="kpi-card green">
+            <div class="label">Avg Longevity Score</div>
+            <div class="value">${avgLS}</div>
+            <div class="sub">${lsDiffHtml || 'Out of 100'}</div>
+          </div>
+          <div class="kpi-card gold">
+            <div class="label">Avg Age</div>
+            <div class="value">${avgAge}</div>
+            <div class="sub">Years old</div>
+          </div>
+        </div>`;
+
+      const overviewHtml = `
+        <div class="section-header" style="margin-bottom:14px;">
+          <div class="dot" style="background:var(--green);"></div>
+          <h2>Health Profile</h2>
+        </div>
+        <div style="display:flex;gap:12px;margin-bottom:18px;flex-wrap:wrap;">
+          ${lightCard('Exercise', lights.exercise)}
+          ${lightCard('Non-Smoker', lights.smoking)}
+          ${lightCard('Healthy Weight', lights.obesity)}
+          ${lightCard('Stress', lights.stress)}
+          ${lightCard('Alcohol', lights.alcohol)}
+        </div>
+
+        <div class="grid-2" style="margin-bottom:18px;">
+          <div class="card">
+            <h3>By Ticket Type</h3>
+            ${byTypeHtml || '<div class="empty-msg">No data</div>'}
+          </div>
+          <div class="card">
+            <h3>${unmatched.toLocaleString()} Buyers Without Quiz Data</h3>
+            <div style="font-size:13px;color:var(--text-muted);margin-bottom:12px;">Known from ticket purchase only</div>
+            ${unmatchedGender.length ? (() => {
+              const ugt = unmatchedGender.reduce((s, x) => s + x.count, 0);
+              const uat = unmatchedAge.reduce((s, x) => s + x.count, 0);
+              const sharedMax = Math.max(
+                ...unmatchedGender.map(x => x.count),
+                ...unmatchedAge.map(x => x.count)
+              );
+              return `
+              <div style="margin-bottom:8px;font-size:12px;font-weight:600;color:var(--text-muted);text-transform:uppercase;letter-spacing:.5px;">Gender</div>
+              ${barList(unmatchedGender, 'gender', ugt, sharedMax)}
+              <div style="margin-top:14px;margin-bottom:8px;font-size:12px;font-weight:600;color:var(--text-muted);text-transform:uppercase;letter-spacing:.5px;">Age</div>
+              ${barList(unmatchedAge, 'range', uat, sharedMax)}`;
+            })() : '<div class="empty-msg">No data</div>'}
+          </div>
+        </div>`;
+
+      const depthHtml = `
+        <div class="grid-2" style="margin-bottom:18px;">
+          <div class="card">
+            <h3>Longevity Score Distribution</h3>
+            <div style="height:210px;position:relative;"><canvas id="persona-longevity-donut"></canvas></div>
+          </div>
+          <div class="card">
+            <h3>Gender</h3>
+            <div style="height:210px;position:relative;"><canvas id="persona-gender-donut"></canvas></div>
+          </div>
+        </div>
+        <div class="grid-2" style="margin-bottom:18px;">
+          <div class="card"><h3>Financial Situation</h3><div class="bar-list" style="padding-top:4px;">${barList(p.financial_situation,'financial_situation')}</div></div>
+          <div class="card"><h3>Education Level</h3><div class="bar-list" style="padding-top:4px;">${barList(p.education_level,'education_level')}</div></div>
+        </div>
+        <div class="grid-2" style="margin-bottom:18px;">
+          <div class="card"><h3>Marital Status</h3><div class="bar-list" style="padding-top:4px;">${barList(p.marital_status,'marital_status')}</div></div>
+          <div class="card"><h3>Sleep Hours / Night</h3><div class="bar-list" style="padding-top:4px;">${barList(p.sleep_hours,'sleep_hours')}</div></div>
+        </div>
+        <div class="grid-2" style="margin-bottom:18px;">
+          <div class="card"><h3>Exercise Frequency</h3><div class="bar-list" style="padding-top:4px;">${barList(p.exercise_freq,'exercise_freq')}</div></div>
+          <div class="card"><h3>Stress Impact on Health</h3><div class="bar-list" style="padding-top:4px;">${barList(p.stress_impact,'stress_impact')}</div></div>
+        </div>
+        <div class="grid-2" style="margin-bottom:18px;">
+          <div class="card"><h3>Alcohol Frequency</h3><div class="bar-list" style="padding-top:4px;">${barList(p.alcohol_freq,'alcohol_freq')}</div></div>
+          <div class="card"><h3>Smoking Status</h3><div class="bar-list" style="padding-top:4px;">${barList(p.smoking_status,'smoking_status')}</div></div>
+        </div>
+        <div class="grid-2" style="margin-bottom:18px;">
+          <div class="card"><h3>Obesity (Self-Reported)</h3><div class="bar-list" style="padding-top:4px;">${barList(p.is_obese,'is_obese')}</div></div>
+          <div class="card"><h3>By Ticket Type</h3>${byTypeHtml || '<div class="empty-msg">No data</div>'}</div>
+        </div>`;
+
+      el.innerHTML = `
+        ${sharedBanner}
+        ${sharedKpis}
+        <div style="display:flex;gap:8px;margin-bottom:24px;">
+          <button id="persona-tab-overview" onclick="switchPersonaView('overview')"
+            style="padding:7px 20px;border-radius:20px;border:1px solid var(--accent);background:var(--accent);color:#fff;font-size:13px;font-weight:600;cursor:pointer;">
+            Overview
+          </button>
+          <button id="persona-tab-depth" onclick="switchPersonaView('depth')"
+            style="padding:7px 20px;border-radius:20px;border:1px solid var(--card-border);background:transparent;color:var(--text-muted);font-size:13px;font-weight:600;cursor:pointer;">
+            In Depth
+          </button>
+        </div>
+        <div id="persona-overview">${overviewHtml}</div>
+        <div id="persona-depth" style="display:none;">${depthHtml}</div>`;
+
+      // Render donuts (for In Depth)
+      const lbData = p.longevity_buckets || [];
+      if (lbData.length) {
+        const lbColors = { '<70': C.red, '70-79': C.orange, '80-89': C.accent, '90+': C.green };
+        const tot = lbData.reduce((a, b) => a + b.count, 0);
+        mkChart('persona-longevity-donut', {
+          type: 'doughnut',
+          data: { labels: lbData.map(b => b.bucket), datasets: [{ data: lbData.map(b => b.count), backgroundColor: lbData.map(b => lbColors[b.bucket] || C.accent), borderWidth: 2, borderColor: '#161b22', hoverOffset: 4 }] },
+          options: { responsive: true, maintainAspectRatio: false, cutout: '62%', plugins: { legend: { position: 'right', labels: { boxWidth: 10, padding: 10, font: { size: 11 } } }, tooltip: { callbacks: { label: c => `  ${c.label}: ${c.raw} (${Math.round(c.raw / tot * 100)}%)` } } } }
+        });
+      }
+
+      const gData = p.gender || [];
+      if (gData.length) {
+        const gColors = { 'Female': C.pink, 'Male': C.accent };
+        const tot = gData.reduce((a, b) => a + b.count, 0);
+        mkChart('persona-gender-donut', {
+          type: 'doughnut',
+          data: { labels: gData.map(g => g.gender), datasets: [{ data: gData.map(g => g.count), backgroundColor: gData.map(g => gColors[g.gender] || C.gold), borderWidth: 2, borderColor: '#161b22', hoverOffset: 4 }] },
+          options: { responsive: true, maintainAspectRatio: false, cutout: '62%', plugins: { legend: { position: 'right', labels: { boxWidth: 10, padding: 10, font: { size: 11 } } }, tooltip: { callbacks: { label: c => `  ${c.label}: ${c.raw} (${Math.round(c.raw / tot * 100)}%)` } } } }
+        });
+      }
+
+      showEl('persona-content');
+    }
+
+    function switchPersonaView(view) {
+      const ov = document.getElementById('persona-overview');
+      const dv = document.getElementById('persona-depth');
+      const btnOv = document.getElementById('persona-tab-overview');
+      const btnDv = document.getElementById('persona-tab-depth');
+      if (!ov || !dv) return;
+      const isOverview = view === 'overview';
+      ov.style.display = isOverview ? '' : 'none';
+      dv.style.display = isOverview ? 'none' : '';
+      btnOv.style.background    = isOverview ? 'var(--accent)' : 'transparent';
+      btnOv.style.color         = isOverview ? '#fff' : 'var(--text-muted)';
+      btnOv.style.borderColor   = isOverview ? 'var(--accent)' : 'var(--card-border)';
+      btnDv.style.background    = !isOverview ? 'var(--accent)' : 'transparent';
+      btnDv.style.color         = !isOverview ? '#fff' : 'var(--text-muted)';
+      btnDv.style.borderColor   = !isOverview ? 'var(--accent)' : 'var(--card-border)';
+    }
+
+    // ─── FUNNEL ANALYSIS ─────────────────────────────────────
+    function renderFunnel(m) {
+      const f = m.ticket_funnel || {};
+      const el = document.getElementById('funnel-content');
+      if (!el) return;
+      hideEl('funnel-loading');
+
+      const matched    = f.matched_tickets || 0;
+      const total      = f.total_tickets || 0;
+      const matchPct   = total > 0 ? Math.round(matched / total * 100) : 0;
+      const byType     = f.by_type || [];
+      const palette    = [C.green, C.accent, C.purple, C.orange, C.cyan, C.gold, C.pink, C.red, C.teal, '#6e7681'];
+      const colorN     = n => Array.from({length: n}, (_, i) => palette[i % palette.length]);
+
+      function hBarChart(id, items, key) {
+        if (!items || !items.length) return;
+        const labels = items.map(i => {
+          const base = fmtLabel(i[key]);
+          if (key === 'campaign' && i.source && i.source !== '(not set)' && i.source !== '(direct)') {
+            return `${fmtLabel(i.source)} — ${base}`;
+          }
+          return base;
+        });
+        const data   = items.map(i => i.count);
+        const tot    = data.reduce((a, b) => a + b, 0);
+        mkChart(id, {
+          type: 'bar',
+          data: { labels, datasets: [{ data, backgroundColor: colorN(labels.length), borderRadius: 4, borderWidth: 0 }] },
+          options: {
+            responsive: true, maintainAspectRatio: false, indexAxis: 'y',
+            scales: {
+              x: { grid: { color: GRID }, beginAtZero: true, ticks: { callback: v => v.toLocaleString() } },
+              y: { grid: { display: false } }
+            },
+            plugins: {
+              legend: { display: false },
+              tooltip: { callbacks: { label: c => `${c.raw.toLocaleString()} (${Math.round(c.raw / tot * 100)}%)` } }
+            }
+          }
+        });
+      }
+
+      const matchedTypeNames = new Set(byType.map(t => t.ticket_type));
+      const allTypes = (m.ticket_types || []).filter(t => (t.total || 0) > 0);
+      const noDataTypes = allTypes.filter(t => !matchedTypeNames.has(t.type));
+
+      const typeTotalMap = {};
+      (m.ticket_types || []).forEach(t => { typeTotalMap[t.type] = t.total || 0; });
+
+      const sectionsHtml = byType.map((td, i) => {
+        const mid = `funnel-medium-${i}`;
+        const sid = `funnel-source-${i}`;
+        const cid = `funnel-campaign-${i}`;
+        const sessionCount = (td.by_medium || []).reduce((a, b) => a + b.count, 0);
+        const grandTotal   = typeTotalMap[td.ticket_type] || 0;
+        const chartH = Math.max(140, Math.max(
+          (td.by_medium   || []).length,
+          (td.by_source   || []).length,
+          (td.by_campaign || []).length
+        ) * 36);
+        return `
+          <div class="section-header" style="margin-bottom:14px;">
+            <div class="dot" style="background:${palette[i % palette.length]};"></div>
+            <h2>${td.ticket_type}
+              <small style="font-size:12px;color:var(--text-muted);font-weight:400;margin-left:8px;">
+                ${sessionCount.toLocaleString()} of ${grandTotal.toLocaleString()} tickets with session data
+              </small>
+            </h2>
+          </div>
+          <div class="grid-3" style="margin-bottom:28px;">
+            <div class="card">
+              <h3>By Session Medium</h3>
+              <div class="chart-wrap" style="height:${chartH}px;"><canvas id="${mid}"></canvas></div>
+            </div>
+            <div class="card">
+              <h3>By Session Source</h3>
+              <div class="chart-wrap" style="height:${chartH}px;"><canvas id="${sid}"></canvas></div>
+            </div>
+            <div class="card">
+              <h3>By Campaign</h3>
+              ${(td.by_campaign || []).length
+                ? `<div class="chart-wrap" style="height:${chartH}px;"><canvas id="${cid}"></canvas></div>`
+                : '<div style="height:${chartH}px;display:flex;align-items:center;justify-content:center;color:var(--text-muted);font-size:13px;">No campaign data</div>'}
+            </div>
+          </div>`;
+      }).join('') + noDataTypes.map(t => `
+          <div class="section-header" style="margin-bottom:14px;">
+            <div class="dot" style="background:var(--text-dim);"></div>
+            <h2>${t.type}
+              <small style="font-size:12px;color:var(--text-muted);font-weight:400;margin-left:8px;">
+                ${(t.total || 0).toLocaleString()} tickets &mdash; no session data
+              </small>
+            </h2>
+          </div>
+          <div class="grid-3" style="margin-bottom:28px;">
+            <div class="card" style="display:flex;align-items:center;justify-content:center;min-height:100px;color:var(--text-muted);font-size:13px;">No session data available</div>
+            <div class="card" style="display:flex;align-items:center;justify-content:center;min-height:100px;color:var(--text-muted);font-size:13px;">No session data available</div>
+            <div class="card" style="display:flex;align-items:center;justify-content:center;min-height:100px;color:var(--text-muted);font-size:13px;">No session data available</div>
+          </div>`).join('');
+
+      el.innerHTML = `
+        <div class="section-context-banner">
+          <strong>Purchase Source Funnel</strong> &mdash;
+          <strong>${matched.toLocaleString()}</strong> of <strong>${total.toLocaleString()}</strong>
+          tickets have session data (${matchPct}%)
+        </div>
+        <div class="kpi-row" style="margin-bottom:24px;">
+          <div class="kpi-card accent">
+            <div class="label">Total Tickets</div>
+            <div class="value">${total.toLocaleString()}</div>
+            <div class="sub">All purchases</div>
+          </div>
+          <div class="kpi-card green">
+            <div class="label">With Session Data</div>
+            <div class="value">${matched.toLocaleString()}</div>
+            <div class="sub">${matchPct}% of all tickets</div>
+          </div>
+          <div class="kpi-card purple">
+            <div class="label">Ticket Types</div>
+            <div class="value">3</div>
+            <div class="sub">${byType.length} with session data</div>
+          </div>
+        </div>
+        ${sectionsHtml}`;
+
+      // Render charts after HTML is in DOM
+      byType.forEach((td, i) => {
+        hBarChart(`funnel-medium-${i}`,   td.by_medium,   'medium');
+        hBarChart(`funnel-source-${i}`,   td.by_source,   'source');
+        if ((td.by_campaign || []).length)
+          hBarChart(`funnel-campaign-${i}`, td.by_campaign, 'campaign');
+      });
+
+      // Ticket types with no transaction records
+      showEl('funnel-content');
+    }
+  </script>
+</body>
+
+</html>

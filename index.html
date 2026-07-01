@@ -1,0 +1,1542 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>O PLATFORM</title>
+  <style>
+    @font-face {
+      font-family: 'Graphik';
+      src: url('https://optimism.com/wp-content/themes/optimism/fonts/Graphik-Regular-Web.woff2') format('woff2');
+      font-weight: 400;
+      font-style: normal;
+      font-display: swap;
+    }
+
+    @font-face {
+      font-family: 'Graphik';
+      src: url('https://optimism.com/wp-content/themes/optimism/fonts/Graphik-Medium-Web.woff2') format('woff2');
+      font-weight: 500;
+      font-style: normal;
+      font-display: swap;
+    }
+
+    @font-face {
+      font-family: 'Graphik';
+      src: url('https://optimism.com/wp-content/themes/optimism/fonts/Graphik-Semibold-Web.woff2') format('woff2');
+      font-weight: 600;
+      font-style: normal;
+      font-display: swap;
+    }
+  </style>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link
+    href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;1,9..40,300;1,9..40,400&display=swap"
+    rel="stylesheet" />
+  <style>
+    :root,
+    [data-theme="dark"] {
+      --peach: #ffc586;
+      --peach-dim: rgba(255, 197, 134, .12);
+      --peach-glow: rgba(255, 197, 134, .055);
+      --bg: #000;
+      --surface: #0d0d0f;
+      --border: rgba(255, 255, 255, .07);
+      --border-h: rgba(255, 197, 134, .3);
+      --text: #fff;
+      --muted: rgba(255, 255, 255, .38);
+      --muted-2: rgba(255, 255, 255, .18);
+      --card-num-c: rgba(255, 255, 255, .25);
+      --card-num-h: rgba(255, 255, 255, .55);
+      --card-sub-c: rgba(255, 255, 255, .48);
+      --soon-pill-c: rgba(255, 255, 255, .4);
+      --soon-pill-b: rgba(255, 255, 255, .1);
+      --soon-q-c: rgba(255, 255, 255, .18);
+      --soon-name-c: rgba(255, 255, 255, .15);
+      --toggle-bg: rgba(255, 255, 255, .07);
+      --toggle-icon: rgba(255, 255, 255, .5);
+      --card-title-c: #fff;
+      --card-bg: #0d0d0f;
+      --nav-active: rgba(255, 197, 134, .1);
+      --nav-active-t: var(--peach);
+      --section-count-bg: rgba(255, 255, 255, .06);
+      --section-count-c: rgba(255, 255, 255, .35);
+      --font: 'Graphik', 'DM Sans', sans-serif
+    }
+
+    [data-theme="light"] {
+      --peach: #e8924a;
+      --peach-dim: rgba(232, 146, 74, .08);
+      --peach-glow: rgba(232, 146, 74, .04);
+      --bg: #f5f3f0;
+      --surface: #fff;
+      --border: rgba(0, 0, 0, .08);
+      --border-h: rgba(232, 146, 74, .4);
+      --text: #0d0d0f;
+      --muted: rgba(0, 0, 0, .42);
+      --muted-2: rgba(0, 0, 0, .22);
+      /* FIX: card backgrounds are always dark, so numbers must stay white-based */
+      --card-num-c: rgba(255, 255, 255, .25);
+      --card-num-h: rgba(255, 255, 255, .55);
+      --card-sub-c: rgba(255, 255, 255, .65);
+      --soon-pill-c: rgba(255, 255, 255, .7);
+      --soon-pill-b: rgba(255, 255, 255, .25);
+      --soon-q-c: rgba(255, 255, 255, .45);
+      --soon-name-c: rgba(255, 255, 255, .45);
+      --toggle-bg: rgba(0, 0, 0, .07);
+      --toggle-icon: rgba(0, 0, 0, .45);
+      --card-title-c: #fff;
+      --card-bg: #fff;
+      --nav-active: rgba(232, 146, 74, .08);
+      --nav-active-t: var(--peach);
+      --section-count-bg: rgba(0, 0, 0, .05);
+      --section-count-c: rgba(0, 0, 0, .35)
+    }
+
+    *,
+    *::before,
+    *::after {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0
+    }
+
+    html {
+      scroll-behavior: smooth;
+      overflow-x: hidden;
+    }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: var(--font);
+      -webkit-font-smoothing: antialiased;
+      overflow-x: hidden;
+      overflow-y: scroll;
+      min-height: 100vh;
+      transition: background .35s, color .35s
+    }
+
+    img {
+      display: block;
+      max-width: 104%
+    }
+
+    a {
+      text-decoration: none;
+      color: inherit
+    }
+
+    body::before {
+      content: '';
+      position: fixed;
+      inset: 0;
+      background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='1'/%3E%3C/svg%3E");
+      opacity: .025;
+      pointer-events: none;
+      z-index: 9999
+    }
+
+    .atm-glow {
+      position: fixed;
+      width: 900px;
+      height: 500px;
+      border-radius: 50%;
+      background: radial-gradient(ellipse, var(--peach-glow) 0%, transparent 70%);
+      top: -180px;
+      left: 50%;
+      transform: translateX(-50%);
+      pointer-events: none;
+      z-index: 0;
+      transition: background .35s
+    }
+
+    .page {
+      position: relative;
+      z-index: 1;
+      max-width: 1280px;
+      margin: 0 auto;
+      padding: 0 48px 40px;
+    }
+
+    @media(max-width:768px) {
+      .page {
+        padding: 0 20px 30px
+      }
+    }
+
+    .header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 20px 0 16px;
+      border-bottom: 1px solid var(--border);
+      animation: fadeUp .5s ease both;
+      transition: border-color .35s
+    }
+
+    .logo-area {
+      display: flex;
+      flex-direction: column;
+      gap: 4px
+    }
+
+    .header-logo {
+      height: 86px;
+      width: auto;
+      transition: filter .35s;
+    }
+
+    [data-theme="light"] .header-logo {
+      filter: brightness(0);
+    }
+
+    .header-right {
+      display: flex;
+      align-items: center;
+      gap: 20px
+    }
+
+    .header-status {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 13px;
+      font-weight: 400;
+      color: var(--muted);
+      transition: color .35s
+    }
+
+    .status-dot {
+      width: 7px;
+      height: 7px;
+      border-radius: 50%;
+      background: #4caf7d;
+      box-shadow: 0 0 8px rgba(76, 175, 125, .6);
+      animation: pulse-dot 2.5s ease-in-out infinite;
+      flex-shrink: 0
+    }
+
+    @keyframes pulse-dot {
+      0%, 100% { opacity: 1; box-shadow: 0 0 8px rgba(76, 175, 125, .6) }
+      50% { opacity: .6; box-shadow: 0 0 14px rgba(76, 175, 125, .9) }
+    }
+
+    .theme-toggle {
+      width: 36px;
+      height: 36px;
+      border-radius: 50%;
+      background: var(--toggle-bg);
+      border: 1px solid var(--border);
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: background .35s, border-color .35s, transform .2s;
+      flex-shrink: 0
+    }
+
+    .theme-toggle:hover {
+      background: var(--border);
+      transform: rotate(20deg)
+    }
+
+    .theme-toggle svg {
+      width: 16px;
+      height: 16px
+    }
+
+    .icon-moon { display: block }
+    .icon-sun  { display: none  }
+
+    [data-theme="light"] .icon-moon { display: none  }
+    [data-theme="light"] .icon-sun  { display: block }
+
+    @media(max-width:560px) {
+      .header-status { display: none }
+    }
+
+    /* ── Hero ── */
+    .hero {
+      padding: 32px 0 0;
+      animation: fadeUp .6s ease .1s both
+    }
+
+    .hero-eyebrow {
+      display: inline-flex;
+      align-items: center;
+      gap: 10px;
+      font-size: 11px;
+      font-weight: 500;
+      letter-spacing: .2em;
+      text-transform: uppercase;
+      color: var(--muted);
+      margin-bottom: 12px;
+      transition: color .35s
+    }
+
+    .hero-eyebrow::before {
+      content: '';
+      display: block;
+      width: 24px;
+      height: 1px;
+      background: var(--peach);
+      opacity: .6
+    }
+
+    .hero-h1 {
+      font-size: 40px;
+      font-weight: 400;
+      letter-spacing: -.045em;
+      line-height: 1.08;
+      color: var(--text);
+      max-width: 560px;
+      transition: color .35s
+    }
+
+    .hero-h1 em {
+      font-style: italic;
+      font-weight: 300;
+      color: var(--peach)
+    }
+
+    @media(max-width:768px) {
+      .hero-h1 { font-size: 24px }
+    }
+
+    .hero-desc {
+      font-size: 15px;
+      font-weight: 400;
+      line-height: 1.55;
+      color: var(--muted);
+      margin-top: 12px;
+      max-width: 420px;
+      transition: color .35s
+    }
+
+    /* ── Hero Stats — no box, dividers only ── */
+    .hero-stats {
+      display: flex;
+      margin-top: 32px;
+      max-width: 620px;
+      background: transparent;
+      border: none;
+    }
+
+    .stat-pill {
+      flex: 1;
+      padding: 10px 36px 10px 0;
+      display: flex;
+      flex-direction: column;
+      align-items: flex-start;
+      gap: 8px;
+      border-right: 1px solid var(--border);
+      margin-right: 36px;
+      transition: border-color .35s;
+    }
+
+    .stat-pill:last-child {
+      border-right: none;
+      margin-right: 0;
+    }
+
+    .stat-pill__num {
+      font-size: 48px;
+      font-weight: 600;
+      letter-spacing: -.04em;
+      line-height: 1;
+      color: var(--text);
+      transition: color .35s;
+    }
+
+    .stat-pill__label {
+      font-size: 13px;
+      font-weight: 400;
+      line-height: 1.4;
+      color: var(--muted);
+      max-width: 150px;
+      transition: color .35s;
+    }
+
+    @media(max-width:768px) {
+      .hero-stats {
+        max-width: 100%;
+        overflow-x: auto;
+        scrollbar-width: none;
+      }
+      .hero-stats::-webkit-scrollbar { display: none }
+      .stat-pill {
+        flex: 0 0 auto;
+        min-width: 120px;
+        padding: 6px 24px 6px 0;
+        margin-right: 24px;
+      }
+      .stat-pill__num { font-size: 30px }
+      .stat-pill__label { font-size: 10px; max-width: 110px }
+    }
+
+    /* ── Section Nav ── */
+    .section-nav-wrap {
+      margin-top: 24px;
+      animation: fadeUp .5s ease .25s both;
+      position: sticky;
+      top: 0;
+      z-index: 50;
+      background: var(--bg);
+      padding: 12px 0 10px;
+      transition: background .35s;
+    }
+
+    .nav-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 14px;
+    }
+
+    .section-nav {
+      display: flex;
+      gap: 6px;
+      overflow-x: auto;
+      padding-bottom: 4px;
+      scrollbar-width: none;
+      flex: 1;
+      min-width: 0;
+    }
+
+    .section-nav::-webkit-scrollbar { display: none }
+
+    .section-nav__item {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 9px 16px;
+      border-radius: 10px;
+      border: 1px solid var(--border);
+      background: transparent;
+      font-family: var(--font);
+      font-size: 13px;
+      font-weight: 500;
+      color: var(--muted);
+      white-space: nowrap;
+      cursor: pointer;
+      transition: all .25s;
+      flex-shrink: 0
+    }
+
+    .section-nav__item:hover {
+      border-color: var(--border-h);
+      color: var(--text);
+      background: var(--peach-dim)
+    }
+
+    .section-nav__item.active {
+      border-color: var(--border-h);
+      color: var(--nav-active-t);
+      background: var(--nav-active)
+    }
+
+    .section-nav__item .nav-icon {
+      width: 16px;
+      height: 16px;
+      opacity: .5;
+      transition: opacity .25s;
+      flex-shrink: 0
+    }
+
+    .section-nav__item:hover .nav-icon,
+    .section-nav__item.active .nav-icon { opacity: .85 }
+
+    .section-nav__count {
+      font-size: 11px;
+      font-weight: 500;
+      background: var(--section-count-bg);
+      color: var(--section-count-c);
+      padding: 2px 7px;
+      border-radius: 20px;
+      transition: background .25s, color .25s
+    }
+
+    .section-nav__item.active .section-nav__count {
+      background: rgba(255, 197, 134, .15);
+      color: var(--peach)
+    }
+
+    /* ── Status Filter ── */
+    .status-filter {
+      display: flex;
+      align-items: center;
+      gap: 2px;
+      background: var(--toggle-bg);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 3px;
+      flex-shrink: 0;
+      transition: background .35s, border-color .35s;
+    }
+
+    .status-filter__btn {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      padding: 7px 14px;
+      border-radius: 8px;
+      border: none;
+      background: transparent;
+      font-family: var(--font);
+      font-size: 12px;
+      font-weight: 500;
+      color: var(--muted);
+      white-space: nowrap;
+      cursor: pointer;
+      transition: all .25s;
+    }
+
+    .status-filter__btn:hover { color: var(--text) }
+
+    .status-filter__btn.active {
+      background: var(--surface);
+      color: var(--text);
+      box-shadow: 0 1px 4px rgba(0, 0, 0, .15);
+    }
+
+    .status-filter__dot {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      flex-shrink: 0;
+    }
+
+    .status-filter__dot--live {
+      background: #4caf7d;
+      box-shadow: 0 0 6px rgba(76, 175, 125, .5);
+    }
+
+    .status-filter__dot--soon { background: var(--muted) }
+
+    @media(max-width:768px) {
+      .nav-row {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 8px;
+      }
+      .section-nav {
+        width: 100%;
+      }
+      .status-filter {
+        align-self: flex-start;
+      }
+    }
+
+    /* ── Card filter transitions ── */
+    .card.filter-hidden { display: none }
+
+    .accent-divider {
+      margin: 20px 0 0;
+      height: 1px;
+      background: linear-gradient(to right, transparent, var(--peach) 30%, var(--peach) 70%, transparent);
+      opacity: .18
+    }
+
+    .section-block { scroll-margin-top: 20px }
+
+    .section-wrap {
+      transition: opacity .35s, transform .35s, max-height .4s;
+      opacity: 1;
+      transform: translateY(0);
+      max-height: 2000px;
+      overflow: hidden
+    }
+
+    .section-wrap.hidden {
+      opacity: 0;
+      transform: translateY(10px);
+      max-height: 0;
+      pointer-events: none;
+      margin: 0
+    }
+
+    .grid-label {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin: 18px 0 12px
+    }
+
+    .grid-label__left {
+      display: flex;
+      align-items: center;
+      gap: 12px
+    }
+
+    .grid-label__title {
+      font-size: 15px;
+      font-weight: 500;
+      color: var(--text)
+    }
+
+    .grid-label__badge {
+      font-size: 10px;
+      font-weight: 600;
+      letter-spacing: .08em;
+      text-transform: uppercase;
+      color: var(--peach);
+      background: var(--peach-dim);
+      padding: 3px 10px;
+      border-radius: 20px
+    }
+
+    .grid-label__count { font-size: 12px; color: var(--muted-2) }
+
+    /* ── Card Grid ── */
+    .card-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 10px
+    }
+
+    @media(max-width:1100px) { .card-grid { grid-template-columns: repeat(3, 1fr) } }
+    @media(max-width:768px)  { .card-grid { grid-template-columns: repeat(2, 1fr) } }
+    @media(max-width:480px)  { .card-grid { grid-template-columns: 1fr } }
+
+    .card {
+      position: relative;
+      border-radius: 12px;
+      overflow: hidden;
+      aspect-ratio: 16/9;
+      cursor: pointer;
+      border: 1px solid var(--border);
+      background: var(--card-bg);
+      display: block;
+      transition: border-color .4s, transform .4s cubic-bezier(.25, .46, .45, .94), box-shadow .4s, background .35s
+    }
+
+    .card:hover {
+      border-color: var(--border-h);
+      transform: translateY(-2px);
+      box-shadow: 0 14px 40px rgba(0, 0, 0, .15), 0 0 0 1px rgba(255, 197, 134, .08)
+    }
+
+    .card-img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      transition: transform .7s cubic-bezier(.25, .46, .45, .94)
+    }
+
+    .card:hover .card-img { transform: scale(1.05) }
+
+    .card-fade {
+      position: absolute;
+      inset: 0;
+      background: linear-gradient(to bottom, transparent 30%, rgba(0, 0, 0, .6) 100%);
+      pointer-events: none
+    }
+
+    .card-shade {
+      position: absolute;
+      inset: 0;
+      background: linear-gradient(160deg, rgba(0, 0, 0, .05) 0%, rgba(0, 0, 0, .78) 100%);
+      opacity: 0;
+      transition: opacity .4s
+    }
+
+    .card:hover .card-shade { opacity: 1 }
+
+    .card-top {
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      padding: 10px 12px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      z-index: 3
+    }
+
+    .card-num {
+      font-size: 10px;
+      font-weight: 500;
+      color: var(--card-num-c)
+    }
+
+    .card:hover .card-num { color: var(--card-num-h) }
+
+    .card-live {
+      display: flex;
+      align-items: center;
+      gap: 5px;
+      font-size: 9px;
+      font-weight: 600;
+      letter-spacing: .14em;
+      text-transform: uppercase;
+      color: var(--peach);
+      opacity: 0;
+      transition: opacity .35s
+    }
+
+    .card:hover .card-live { opacity: 1 }
+
+    .card-live-dot {
+      width: 5px;
+      height: 5px;
+      border-radius: 50%;
+      background: var(--peach);
+      animation: pulse-dot 2s ease-in-out infinite;
+      flex-shrink: 0
+    }
+
+    .card-info {
+      position: absolute;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      padding: 10px 12px;
+      z-index: 3;
+      display: flex;
+      align-items: flex-end;
+      justify-content: space-between;
+      gap: 10px
+    }
+
+    .card-info__left {
+      flex: 1;
+      min-width: 0
+    }
+
+    .card-category {
+      font-size: 9px;
+      font-weight: 600;
+      letter-spacing: .16em;
+      text-transform: uppercase;
+      color: var(--peach);
+      margin-bottom: 3px;
+      opacity: .8
+    }
+
+    .card:hover .card-category { opacity: 1 }
+
+    /* ── Card Title with marquee on hover ── */
+    .card-title {
+      font-size: 13px;
+      font-weight: 500;
+      letter-spacing: -.02em;
+      line-height: 1.25;
+      color: var(--card-title-c);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      position: relative;
+    }
+
+    .card-title span {
+      display: inline-block;
+      transition: transform 0s;
+    }
+
+    .card:hover .card-title {
+      text-overflow: clip;
+    }
+
+    .card:hover .card-title span.overflowing {
+      animation: marquee var(--marquee-duration, 4s) linear 0.3s infinite;
+    }
+
+    @keyframes marquee {
+      0%   { transform: translateX(0) }
+      45%  { transform: translateX(var(--marquee-distance)) }
+      55%  { transform: translateX(var(--marquee-distance)) }
+      100% { transform: translateX(0) }
+    }
+
+    .card-sub {
+      font-size: 11px;
+      color: var(--card-sub-c);
+      margin-top: 3px;
+      opacity: 0;
+      transform: translateY(4px);
+      transition: opacity .3s, transform .3s
+    }
+
+    .card:hover .card-sub {
+      opacity: 1;
+      transform: translateY(0)
+    }
+
+    .card-arrow {
+      width: 26px;
+      height: 26px;
+      border-radius: 50%;
+      background: var(--peach);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      opacity: 0;
+      transform: scale(.6);
+      transition: opacity .3s, transform .35s cubic-bezier(.34, 1.56, .64, 1);
+      z-index: 4;
+      flex-shrink: 0
+    }
+
+    .card:hover .card-arrow {
+      opacity: 1;
+      transform: scale(1)
+    }
+
+    .card.soon { cursor: default }
+
+    .card.soon .card-img {
+      filter: blur(6px) brightness(.22) saturate(.3)
+    }
+
+    .card.soon:hover {
+      border-color: var(--border);
+      transform: none;
+      box-shadow: none
+    }
+
+    .card.soon:hover .card-img           { transform: none }
+    .card.soon:hover .card-shade,
+    .card.soon:hover .card-live          { opacity: 0 }
+    .card.soon:hover .card-sub           { opacity: 0; transform: translateY(4px) }
+    .card.soon:hover .card-arrow         { opacity: 0 }
+    .card.soon:hover .card-num           { color: var(--card-num-c) }
+
+    .soon-center {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 6px;
+      z-index: 3
+    }
+
+    .soon-pill {
+      font-size: 9px;
+      font-weight: 600;
+      letter-spacing: .18em;
+      text-transform: uppercase;
+      color: var(--soon-pill-c);
+      border: 1px solid var(--soon-pill-b);
+      padding: 5px 14px;
+      border-radius: 40px;
+      white-space: nowrap
+    }
+
+    .soon-quarter {
+      font-size: 9px;
+      letter-spacing: .1em;
+      text-transform: uppercase;
+      color: var(--soon-q-c)
+    }
+
+    .soon-name {
+      position: absolute;
+      bottom: 10px;
+      left: 12px;
+      font-size: 11px;
+      color: var(--soon-name-c);
+      z-index: 3
+    }
+
+    /* ── Footer ── */
+    .footer {
+      margin-top: 28px;
+      padding-top: 18px;
+      border-top: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      transition: border-color .35s
+    }
+
+    @media(max-width:560px) {
+      .footer {
+        flex-direction: column;
+        gap: 16px;
+        text-align: center
+      }
+    }
+
+    .footer-left { font-size: 12px; color: var(--muted-2) }
+
+    .footer-right { display: flex; gap: 20px }
+
+    .footer-right a {
+      font-size: 12px;
+      color: var(--muted-2);
+      transition: color .25s
+    }
+
+    .footer-right a:hover { color: var(--muted) }
+
+
+
+
+
+    /* ── Maintenance card ── */
+    .card.maintenance { cursor: default }
+
+    .card.maintenance .card-img {
+      filter: none
+    }
+
+    .card.maintenance:hover {
+      border-color: var(--border);
+      transform: none;
+      box-shadow: none
+    }
+
+    .card.maintenance:hover .card-img           { transform: none }
+    .card.maintenance:hover .card-shade,
+    .card.maintenance:hover .card-live          { opacity: 0 }
+    .card.maintenance:hover .card-sub           { opacity: 0; transform: translateY(4px) }
+    .card.maintenance:hover .card-arrow         { opacity: 0 }
+    .card.maintenance:hover .card-num           { color: var(--card-num-c) }
+
+    .maintenance-center {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 6px;
+      z-index: 3
+    }
+
+    .maintenance-pill {
+      font-size: 9px;
+      font-weight: 600;
+      letter-spacing: .18em;
+      text-transform: uppercase;
+      color: #f0a050;
+      border: 1px solid rgba(240, 160, 80, .3);
+      padding: 5px 14px;
+      border-radius: 40px;
+      white-space: nowrap
+    }
+
+    .maintenance-sub {
+      font-size: 9px;
+      letter-spacing: .1em;
+      text-transform: uppercase;
+      color: rgba(240, 160, 80, .45)
+    }
+
+    .maintenance-name {
+      position: absolute;
+      bottom: 10px;
+      left: 12px;
+      font-size: 11px;
+      color: var(--soon-name-c);
+      z-index: 3
+    }
+
+    /* ── Mobile reset — keep original sizes on smaller screens ── */
+    @media(max-width:768px) {
+      .header-status { font-size: 11px; gap: 7px }
+      .status-dot { width: 6px; height: 6px }
+      .theme-toggle { width: 32px; height: 32px }
+      .theme-toggle svg { width: 14px; height: 14px }
+      .hero { padding: 28px 0 0 }
+      .hero-eyebrow { font-size: 9px; gap: 8px; margin-bottom: 10px }
+      .hero-eyebrow::before { width: 20px }
+      .hero-h1 { font-size: 24px }
+      .hero-desc { font-size: 12px; margin-top: 10px; max-width: 380px }
+      .hero-stats { margin-top: 28px }
+      .stat-pill { padding: 6px 24px 6px 0; margin-right: 24px; gap: 8px }
+      .stat-pill__num { font-size: 30px }
+      .stat-pill__label { font-size: 10px; max-width: 110px }
+      .section-nav-wrap { margin-top: 20px; padding: 10px 0 8px }
+      .section-nav__item { font-size: 11px; gap: 7px; padding: 7px 12px; border-radius: 8px }
+      .section-nav__item .nav-icon { width: 14px; height: 14px }
+      .section-nav__count { font-size: 9px; padding: 2px 6px }
+      .status-filter { border-radius: 8px }
+      .status-filter__btn { font-size: 10px; gap: 5px; padding: 5px 10px; border-radius: 6px }
+      .status-filter__dot { width: 5px; height: 5px }
+      .accent-divider { margin: 16px 0 0 }
+      .grid-label { margin: 14px 0 10px }
+      .grid-label__left { gap: 10px }
+      .grid-label__title { font-size: 12px }
+      .grid-label__badge { font-size: 8px; padding: 2px 8px }
+      .grid-label__count { font-size: 10px }
+      .card-grid { gap: 8px }
+      .card { border-radius: 10px }
+      .card-top { padding: 8px 10px }
+      .card-num { font-size: 8px }
+      .card-live { font-size: 7px; gap: 4px }
+      .card-live-dot { width: 4px; height: 4px }
+      .card-info { padding: 8px 10px; gap: 8px }
+      .card-category { font-size: 7px; margin-bottom: 2px }
+      .card-title { font-size: 11px; line-height: 1.2 }
+      .card-sub { font-size: 9px; margin-top: 2px }
+      .card-arrow { width: 22px; height: 22px }
+      .card-arrow svg { width: 10px; height: 7px }
+      .soon-center { gap: 5px }
+      .soon-pill { font-size: 7px; padding: 4px 12px }
+      .soon-quarter { font-size: 7px }
+      .soon-name { font-size: 9px; bottom: 8px; left: 10px }
+      .footer { margin-top: 24px; padding-top: 16px }
+      .footer-left { font-size: 10px }
+      .footer-right a { font-size: 10px }
+
+
+      .maintenance-pill  { font-size: 7px; padding: 4px 12px }
+      .maintenance-sub   { font-size: 7px }
+      .maintenance-name  { font-size: 9px; bottom: 8px; left: 10px }
+    }
+
+    @keyframes fadeUp {
+      from { opacity: 0; transform: translateY(16px) }
+      to   { opacity: 1; transform: translateY(0) }
+    }
+  </style>
+</head>
+
+<body>
+  <div class="atm-glow" aria-hidden="true"></div>
+  <div class="page">
+
+    <!-- ── Header ── -->
+    <header class="header">
+      <div class="logo-area">
+        <div class="logo-wordmark">
+          <img src="Optimism_Platform_Logo.png" alt="Optimism Platform Logo" class="header-logo">
+        </div>
+      </div>
+      <div class="header-right">
+        <div class="header-status">
+          <div class="status-dot" id="statusDot"></div>
+          <span id="statusText">All systems live</span>
+        </div>
+        <button class="theme-toggle" id="themeToggle" aria-label="Toggle dark/light mode">
+          <svg class="icon-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"
+            stroke-linecap="round" stroke-linejoin="round" style="color:var(--toggle-icon)">
+            <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z" />
+          </svg>
+          <svg class="icon-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"
+            stroke-linecap="round" stroke-linejoin="round" style="color:var(--toggle-icon)">
+            <circle cx="12" cy="12" r="5" />
+            <line x1="12" y1="1" x2="12" y2="3" />
+            <line x1="12" y1="21" x2="12" y2="23" />
+            <line x1="4.22" y1="4.22" x2="5.64" y2="5.64" />
+            <line x1="18.36" y1="18.36" x2="19.78" y2="19.78" />
+            <line x1="1" y1="12" x2="3" y2="12" />
+            <line x1="21" y1="12" x2="23" y2="12" />
+            <line x1="4.22" y1="19.78" x2="5.64" y2="18.36" />
+            <line x1="18.36" y1="5.64" x2="19.78" y2="4.22" />
+          </svg>
+        </button>
+      </div>
+    </header>
+
+    <!-- ── Hero ── -->
+    <section class="hero">
+      <div class="hero-eyebrow">Intelligence Hub</div>
+      <h1 class="hero-h1"><em>O Platform</em> Intelligence Hub</h1>
+      <p class="hero-desc">Unified intelligence platform, powered by O Brain.</p>
+
+      <!-- ── Stats — 3-column large number style ── -->
+      <div class="hero-stats">
+        <div class="stat-pill">
+          <span class="stat-pill__num" id="statTotalSubs">—</span>
+          <span class="stat-pill__label">Total unique subscribers</span>
+        </div>
+        <div class="stat-pill">
+          <span class="stat-pill__num" id="statActiveSubs">—</span>
+          <span class="stat-pill__label">Total unique active subscribers</span>
+        </div>
+        <div class="stat-pill">
+          <span class="stat-pill__num">5</span>
+          <span class="stat-pill__label">Brands</span>
+        </div>
+      </div>
+    </section>
+
+    <!-- ── Section Nav ── -->
+    <div class="section-nav-wrap" id="sectionNavWrap">
+      <div class="nav-row">
+        <nav class="section-nav" id="sectionNav">
+          <button class="section-nav__item active" data-target="all">
+            <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+              <rect x="3" y="3" width="7" height="7" />
+              <rect x="14" y="3" width="7" height="7" />
+              <rect x="3" y="14" width="7" height="7" />
+              <rect x="14" y="14" width="7" height="7" />
+            </svg>All Sections<span class="section-nav__count">6</span>
+          </button>
+
+          <button class="section-nav__item" data-target="sec-pulse">
+            <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+              <polyline points="22 12 18 12 15 21 9 3 6 12 2 12" />
+            </svg>Pulse<span class="section-nav__count">2</span>
+          </button>
+
+          <button class="section-nav__item" data-target="sec-growth">
+            <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+              <polyline points="23 6 13.5 15.5 8.5 10.5 1 18" />
+              <polyline points="17 6 23 6 23 12" />
+            </svg>Growth Dashboard<span class="section-nav__count">1</span>
+          </button>
+
+
+          <button class="section-nav__item" data-target="sec-games">
+            <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+              <rect x="2" y="6" width="20" height="12" rx="2" />
+              <line x1="6" y1="12" x2="10" y2="12" />
+              <line x1="8" y1="10" x2="8" y2="14" />
+              <circle cx="16" cy="10" r=".5" fill="currentColor" />
+              <circle cx="18" cy="12" r=".5" fill="currentColor" />
+            </svg>Games<span class="section-nav__count">2</span>
+          </button>
+        </nav>
+
+        <!-- ── Status Filter ── -->
+        <div class="status-filter" id="statusFilter">
+          <button class="status-filter__btn" data-status="all">All</button>
+          <button class="status-filter__btn active" data-status="live">
+            <span class="status-filter__dot status-filter__dot--live"></span>Live
+          </button>
+          <button class="status-filter__btn" data-status="soon">
+            <span class="status-filter__dot status-filter__dot--soon"></span>Soon
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── Pulse ── -->
+    <div class="section-wrap" data-section="sec-pulse">
+      <div class="accent-divider"></div>
+      <div class="section-block" id="sec-pulse">
+        <div class="grid-label">
+          <div class="grid-label__left">
+            <span class="grid-label__title">Pulse</span>
+            <span class="grid-label__badge">1 Live</span>
+          </div>
+          <span class="grid-label__count">0 coming soon</span>
+        </div>
+        <div class="card-grid">
+
+
+          <a class="card" href="https://o.optimism.com/optimism-pulse/">
+            <div class="card-img" style="width:100%;height:100%;background:#0a0a0a;display:flex;align-items:center;justify-content:center;gap:24px;">
+              <img src="https://optimism.com/wp-content/themes/optimism/images/Ofavicon-white.png"
+                style="width:80px;height:80px;object-fit:contain;opacity:0.85;" alt="" />
+              <img src="https://logo-img-dshb.s3.us-west-1.amazonaws.com/pulse-svgrepo-com+(1).svg"
+                style="width:80px;height:80px;object-fit:contain;opacity:0.85;" alt="" />
+            </div>
+            <div class="card-fade"></div>
+            <div class="card-shade"></div>
+            <div class="card-top"><span class="card-num">01</span><span class="card-live"><span
+                  class="card-live-dot"></span>Live</span></div>
+            <div class="card-info">
+              <div class="card-info__left">
+                <div class="card-category">OPTIMISM</div>
+                <div class="card-title"><span>OPTIMISM PULSE</span></div>
+                <div class="card-sub"></div>
+              </div>
+              <div class="card-arrow"><svg width="11" height="8" viewBox="0 0 13 8" fill="none">
+                  <path d="M1 4H12M9 1L12 4L9 7" stroke="#000" stroke-width="1.5" stroke-linecap="round"
+                    stroke-linejoin="round" />
+                </svg></div>
+            </div>
+          </a>
+
+<!--
+          <div class="card maintenance">
+            <div class="card-img" style="width:100%;height:100%;background:#0a0a0a;display:flex;align-items:center;justify-content:center;">
+              <img src="https://logo-img-dshb.s3.us-west-1.amazonaws.com/maintenance-ezgif.com-gif-maker.gif"
+                style="width:98px;height:98px;object-fit:contain;opacity:0.25;filter:invert(1);" alt="DASHBOARD NAME" />
+            </div>
+            <div class="card-top"><span class="card-num">01</span></div>
+            <div class="maintenance-center">
+              <div class="maintenance-pill">Under Maintenance</div>
+            </div>
+            <div class="maintenance-name">OPTIMISM PULSE</div>
+          </div>
+
+-->
+          <a class="card" href="https://o.optimism.com/superage-dashboard/">
+            <div class="card-img" style="width:100%;height:100%;background:#0a0a0a;display:flex;align-items:center;justify-content:center;gap:24px;">
+              <img src="https://superage.com/wp-content/themes/super-age/public/img/favicon-dark-mode.png"
+                style="width:80px;height:80px;object-fit:contain;opacity:0.85;" alt="" />
+              <img src="https://logo-img-dshb.s3.us-west-1.amazonaws.com/pulse-svgrepo-com+(1).svg"
+                style="width:80px;height:80px;object-fit:contain;opacity:0.85;" alt="" />
+            </div>
+            <div class="card-fade"></div>
+            <div class="card-shade"></div>
+            <div class="card-top"><span class="card-num">02</span><span class="card-live"><span
+                  class="card-live-dot"></span>Live</span></div>
+            <div class="card-info">
+              <div class="card-info__left">
+                <div class="card-category">SUPERAGE</div>
+                <div class="card-title"><span>SUPERAGE PULSE</span></div>
+                <div class="card-sub"></div>
+              </div>
+              <div class="card-arrow"><svg width="11" height="8" viewBox="0 0 13 8" fill="none">
+                  <path d="M1 4H12M9 1L12 4L9 7" stroke="#000" stroke-width="1.5" stroke-linecap="round"
+                    stroke-linejoin="round" />
+                </svg></div>
+            </div>
+          </a>
+
+      
+          <!-- <div class="card soon">
+            <div class="card-img" style="width:100%;height:100%;background:#0a0a0a;display:flex;align-items:center;justify-content:center;">
+              <img src="https://superage.com/wp-content/themes/super-age/public/img/favicon-dark-mode.png"
+                style="width:98px;height:98px;object-fit:contain;opacity:0.85;" alt="SUPERAGE" />
+            </div>
+            <div class="card-top"><span class="card-num">01</span></div>
+            <div class="soon-center">
+              <div class="soon-pill">Coming Soon</div>
+              <div class="soon-quarter">May 2026</div>
+            </div>
+            <div class="soon-name">SUPERAGE</div>
+          </div>
+          
+
+          <div class="card soon">
+            <div class="card-img" style="width:100%;height:100%;background:#0a0a0a;display:flex;align-items:center;justify-content:center;">
+              <img src="https://optimism.com/wp-content/themes/optimism/images/Ofavicon-white.png"
+                style="width:108px;height:108px;object-fit:contain;opacity:0.85;" alt="OPTIMISM" />
+            </div>
+            <div class="card-top"><span class="card-num">02</span></div>
+            <div class="soon-center">
+              <div class="soon-pill">Coming Soon</div>
+              <div class="soon-quarter">May 2026</div>
+            </div>
+            <div class="soon-name">OPTIMISM</div>
+          </div> -->
+
+        </div>
+      </div>
+    </div>
+
+    <!-- ── Growth Dashboard ── -->
+    <div class="section-wrap" data-section="sec-growth">
+      <div class="accent-divider"></div>
+      <div class="section-block" id="sec-growth">
+        <div class="grid-label">
+          <div class="grid-label__left">
+            <span class="grid-label__title">Growth Dashboard</span>
+            <span class="grid-label__badge">1 Live</span>
+          </div>
+          <span class="grid-label__count">1 active</span>
+        </div>
+        <div class="card-grid">
+
+          
+          <a class="card" href="https://o.optimism.com/retention-dashboard/">
+            <div class="card-img" style="width:100%;height:100%;background:#0a0a0a;display:flex;align-items:center;justify-content:center;gap:24px;">
+              <img src="https://healthbrief.com/wp-content/themes/health-brief/public/img/favicon/favicon.svg"
+                style="width:80px;height:80px;object-fit:contain;opacity:1;" alt="HealthBrief" />
+              <div style="width:70px;height:57px;background:#fff;border-radius:10000px;display:flex;align-items:center;justify-content:center;padding:0px;">
+                <img src="https://images.retention.com/assets/logo-full-page-9096b409aa2183cd0c79ff00c83d5633d510bfac204098e17d13523469ac4521.png"
+                  style="width:80px;height:80px;object-fit:contain;" alt="Retention" />
+              </div>
+            </div>
+            <div class="card-fade"></div>
+            <div class="card-shade"></div>
+            <div class="card-top">
+              <span class="card-num">01</span>
+              <span class="card-live"><span class="card-live-dot"></span>Live</span>
+            </div>
+            <div class="card-info">
+              <div class="card-info__left">
+                <div class="card-category">HealthBrief</div>
+                <div class="card-title"><span>RETENTION DASHBOARD</span></div>
+                <div class="card-sub">Engagement &amp; conversion pathways</div>
+              </div>
+              <div class="card-arrow">
+                <svg width="11" height="8" viewBox="0 0 13 8" fill="none">
+                  <path d="M1 4H12M9 1L12 4L9 7" stroke="#000" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" />
+                </svg>
+              </div>
+            </div>
+          </a>
+
+        </div>
+      </div>
+    </div>
+
+
+    <!-- ── Games ── -->
+    <div class="section-wrap" data-section="sec-games">
+      <div class="accent-divider"></div>
+      <div class="section-block" id="sec-games">
+        <div class="grid-label">
+          <div class="grid-label__left">
+            <span class="grid-label__title">Games Tickets</span>
+            <span class="grid-label__badge">1 Live</span>
+          </div>
+          <span class="grid-label__count">2 active · 2 coming soon</span>
+        </div>
+        <div class="card-grid">
+
+          <a class="card" href="https://o.optimism.com/games-sold-tickets/">
+            <div class="card-img" style="width:100%;height:100%;background:#0a0a0a;display:flex;align-items:center;justify-content:center;gap:24px;">
+              <img src="https://games.superage.com/wp-content/uploads/2026/03/Group-1001.svg"
+                style="width:80px;height:80px;object-fit:contain;opacity:0.85;" alt="SUPERAGE GAMES" />
+              <img src="https://logo-img-dshb.s3.us-west-1.amazonaws.com/ticket-svgrepo-com.svg"
+                style="width:80px;height:80px;object-fit:contain;opacity:0.85;" alt="Tickets" />
+            </div>
+            <div class="card-fade"></div>
+            <div class="card-shade"></div>
+            <div class="card-top">
+              <span class="card-num">01</span>
+              <span class="card-live"><span class="card-live-dot"></span>Live</span>
+            </div>
+            <div class="card-info">
+              <div class="card-info__left">
+                <div class="card-category">SuperAge Games</div>
+                <div class="card-title"><span>SUPERAGE GAMES - SOLD TICKETS</span></div>
+                <div class="card-sub">REVENUE OF TICKETS</div>
+              </div>
+              <div class="card-arrow">
+                <svg width="11" height="8" viewBox="0 0 13 8" fill="none">
+                  <path d="M1 4H12M9 1L12 4L9 7" stroke="#000" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" />
+                </svg>
+              </div>
+            </div>
+          </a>
+
+          <a class="card" href="https://o.optimism.com/game-campaigns/">
+            <div class="card-img" style="width:100%;height:100%;background:#0a0a0a;display:flex;align-items:center;justify-content:center;gap:24px;">
+              <img src="https://games.superage.com/wp-content/uploads/2026/03/Group-1001.svg"
+                style="width:80px;height:80px;object-fit:contain;opacity:0.85;" alt="SUPERAGE GAMES" />
+              <img src="https://logo-img-dshb.s3.us-west-1.amazonaws.com/analytics-svgrepo-com.svg"
+                style="width:80px;height:80px;object-fit:contain;opacity:0.85;" alt="Campgain" />
+            </div>
+            <div class="card-fade"></div>
+            <div class="card-shade"></div>
+            <div class="card-top"><span class="card-num">02</span><span class="card-live"><span
+                  class="card-live-dot"></span>Live</span></div>
+            <div class="card-info">
+              <div class="card-info__left">
+                <div class="card-category">SuperAge Games</div>
+                <div class="card-title"><span>SUPERAGE GAMES - CAMPAIGN ANALYTICS</span></div>
+                <div class="card-sub">Games Campaign Analytics</div>
+              </div>
+              <div class="card-arrow"><svg width="11" height="8" viewBox="0 0 13 8" fill="none">
+                  <path d="M1 4H12M9 1L12 4L9 7" stroke="#000" stroke-width="1.5" stroke-linecap="round"
+                    stroke-linejoin="round" />
+                </svg></div>
+            </div>
+          </a>
+
+        </div>
+      </div>
+    </div>
+
+  </div><!-- /page -->
+
+  <script>
+    /* ── Theme Toggle ── */
+    const toggle = document.getElementById('themeToggle');
+    const html   = document.documentElement;
+    const saved  = localStorage.getItem('opt-theme');
+    if (saved) html.setAttribute('data-theme', saved);
+    toggle.addEventListener('click', () => {
+      const next = html.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
+      html.setAttribute('data-theme', next);
+      localStorage.setItem('opt-theme', next);
+    });
+
+    /* ── Section Nav ── */
+    const navBtns      = document.querySelectorAll('.section-nav__item');
+    const sectionWraps = document.querySelectorAll('.section-wrap');
+
+    function filterSections(target) {
+      navBtns.forEach(b => b.classList.remove('active'));
+      const activeBtn = document.querySelector(`.section-nav__item[data-target="${target}"]`);
+      if (activeBtn) activeBtn.classList.add('active');
+      if (target === 'all') {
+        sectionWraps.forEach(w => w.classList.remove('hidden'));
+      } else {
+        sectionWraps.forEach(w => {
+          w.dataset.section === target ? w.classList.remove('hidden') : w.classList.add('hidden');
+        });
+      }
+      applyStatusFilter(currentStatus);
+    }
+
+    navBtns.forEach(btn => {
+      btn.addEventListener('click', () => {
+        filterSections(btn.dataset.target);
+        if (btn.dataset.target !== 'all') window.scrollTo({ top: 0, behavior: 'instant' });
+      });
+    });
+
+    /* ── Status Filter ── */
+    let currentStatus = 'live';
+    const statusBtns  = document.querySelectorAll('.status-filter__btn');
+
+    function cardMatchesFilter(card, status) {
+      if (status === 'all') return true;
+      const isSoon = card.classList.contains('soon');
+      if (status === 'live' && isSoon) return false;
+      if (status === 'soon' && !isSoon) return false;
+      return true;
+    }
+
+    function applyStatusFilter(status) {
+      currentStatus = status;
+
+      statusBtns.forEach(b => b.classList.remove('active'));
+      const activeBtn = document.querySelector(`.status-filter__btn[data-status="${status}"]`);
+      if (activeBtn) activeBtn.classList.add('active');
+
+      document.querySelectorAll('.card-grid .card').forEach(card => {
+        card.classList.toggle('filter-hidden', !cardMatchesFilter(card, status));
+      });
+
+      const activeSectionBtn = document.querySelector('.section-nav__item.active');
+      const sectionTarget    = activeSectionBtn ? activeSectionBtn.dataset.target : 'all';
+
+      sectionWraps.forEach(wrap => {
+        const grid = wrap.querySelector('.card-grid');
+        if (!grid) return;
+        const visibleCards  = grid.querySelectorAll('.card:not(.filter-hidden)');
+        const sectionMatch  = sectionTarget === 'all' || wrap.dataset.section === sectionTarget;
+        if (sectionMatch && visibleCards.length > 0) {
+          wrap.classList.remove('hidden');
+        } else {
+          wrap.classList.add('hidden');
+        }
+      });
+
+      updateNavCounts();
+      updateSectionLabels();
+      updateHeaderStatus();
+    }
+
+    statusBtns.forEach(btn => {
+      btn.addEventListener('click', () => applyStatusFilter(btn.dataset.status));
+    });
+
+    applyStatusFilter('live');
+
+    /* ── Dynamic header status ── */
+    function updateHeaderStatus() {
+      const liveCount = document.querySelectorAll('.card-grid .card:not(.soon)').length;
+      const soonCount = document.querySelectorAll('.card-grid .card.soon').length;
+      const dot  = document.getElementById('statusDot');
+      const text = document.getElementById('statusText');
+      if (!dot || !text) return;
+      if (liveCount > 0) {
+        text.textContent   = liveCount + ' Live · ' + soonCount + ' Upcoming';
+        dot.style.background = '#4caf7d';
+      } else {
+        text.textContent   = soonCount + ' Upcoming · 0 Live';
+        dot.style.background = '#f0a050';
+      }
+    }
+
+    /* ── Dynamic nav counts ── */
+    function updateNavCounts() {
+      let totalCards = 0;
+      navBtns.forEach(btn => {
+        const target  = btn.dataset.target;
+        const countEl = btn.querySelector('.section-nav__count');
+        if (!countEl || target === 'all') return;
+        const section = document.querySelector(`.section-wrap[data-section="${target}"]`);
+        if (section) {
+          const cards = section.querySelectorAll('.card-grid .card');
+          let count = 0;
+          cards.forEach(card => { if (cardMatchesFilter(card, currentStatus)) count++; });
+          countEl.textContent = count;
+          totalCards += count;
+        }
+      });
+      const allBtn = document.querySelector('.section-nav__item[data-target="all"] .section-nav__count');
+      if (allBtn) allBtn.textContent = totalCards;
+    }
+
+    /* ── Dynamic section labels ── */
+    function updateSectionLabels() {
+      document.querySelectorAll('.section-block').forEach(section => {
+        const grid = section.querySelector('.card-grid');
+        if (!grid) return;
+        const allCards = grid.querySelectorAll('.card');
+        let liveCount = 0;
+        let soonCount = 0;
+        allCards.forEach(card => {
+          if (!cardMatchesFilter(card, currentStatus)) return;
+          card.classList.contains('soon') ? soonCount++ : liveCount++;
+        });
+        const badge = section.querySelector('.grid-label__badge');
+        const count = section.querySelector('.grid-label__count');
+        if (badge) {
+          if (currentStatus === 'soon') {
+            badge.textContent = soonCount + ' Soon';
+          } else if (currentStatus === 'live') {
+            badge.textContent = liveCount + ' Live';
+          } else {
+            badge.textContent = liveCount + ' Live';
+          }
+        }
+        if (count) {
+          const parts = [];
+          if (liveCount > 0) parts.push(liveCount + ' active');
+          if (soonCount > 0) parts.push(soonCount + ' coming soon');
+          count.textContent = parts.join(' · ') || '0 dashboards';
+        }
+      });
+    }
+
+    /* ── Subscriber metrics from metrics-OPLATFORM.json ── */
+    (function loadSubscriberMetrics() {
+      fetch('metrics-OPLATFORM.json?_=' + Date.now())
+        .then(r => r.ok ? r.json() : Promise.reject(r.status))
+        .then(data => {
+          const totalEl  = document.getElementById('statTotalSubs');
+          const activeEl = document.getElementById('statActiveSubs');
+          if (totalEl  && data.total_unique_subscribers_fmt) totalEl.textContent  = data.total_unique_subscribers_fmt;
+          if (activeEl && data.total_unique_active_fmt)      activeEl.textContent = data.total_unique_active_fmt;
+        })
+        .catch(err => console.warn('metrics-OPLATFORM.json not available:', err));
+    })();
+
+    /* ── Marquee for overflowing card titles ── */
+    document.querySelectorAll('.card-title').forEach(title => {
+      const span = title.querySelector('span');
+      if (!span) return;
+
+      const check = () => {
+        if (span.scrollWidth > title.clientWidth) {
+          span.classList.add('overflowing');
+          const distance = span.scrollWidth - title.clientWidth + 20;
+          span.style.setProperty('--marquee-distance', `-${distance}px`);
+          span.style.setProperty('--marquee-duration', `${distance / 30}s`);
+        } else {
+          span.classList.remove('overflowing');
+        }
+      };
+
+      title.closest('.card')?.addEventListener('mouseenter', check);
+      title.closest('.card')?.addEventListener('mouseleave', () => {
+        span.classList.remove('overflowing');
+        span.style.transform = '';
+      });
+    });
+
+    /* ── Status Filter — add maintenance handling ── */
+    function cardMatchesFilter(card, status) {
+      if (status === 'all') return true;
+      const isSoon        = card.classList.contains('soon');
+      const isMaintenance = card.classList.contains('maintenance');
+      if (status === 'live' && (isSoon || isMaintenance)) return false;
+      if (status === 'soon' && (!isSoon && !isMaintenance)) return false;
+      return true;
+    }
+  </script>
+</body>
+</html>

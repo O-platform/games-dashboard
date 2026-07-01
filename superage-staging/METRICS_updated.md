@@ -1,6 +1,6 @@
 # SuperAge Analytics Dashboard — Metrics Reference
 
-_Last updated: **2026-06-15** — Q18b expanded with rolling 90d window and unique-click definition (DISTINCT email/issue\_name/issue\_date); survival curve extended to Month 24 (alive\_30…alive\_730); acquisition trend MoM/WoW total growth chart added to Audience tab; NULL-safe engagement\_segment guard applied to all Active filters; date filter migrated from `date_joined` to `COALESCE(date_subscribed, date_joined)` throughout._
+_Last updated: **2026-06-15** — Q18b expanded with rolling 90d window, unique-click definition (DISTINCT email/issue\_name/issue\_date), and 1+ total clicker base (`total_1plus_7d/30d/90d`); survival curve extended to Month 24 (alive\_30…alive\_730); acquisition trend MoM/WoW % change chart added to Overview and Audience tab; NULL-safe engagement\_segment guard applied to all Active filters; date filter migrated from `date_joined` to `COALESCE(date_subscribed, date_joined)` throughout._
 
 _Prior (2026-05-25): acquisition source priority chain expanded to 4 levels: `acquisition_utm_source >> url_variables (Meta only) >> sub_source >> source >> 'Organic'`. `website`/`games_website`/`homepage`/`home`/`web`/`site` moved to Website bucket. `organic` and `direct` explicit Organic stops. `sub_source` column added as Level 3._
 
@@ -862,7 +862,10 @@ per_email_90d AS (SELECT email, COUNT(*) AS clicks FROM cc_recent               
 SELECT
     (SELECT COUNT(*) FROM per_email_7d  WHERE clicks >= 2) AS repeat_7d,
     (SELECT COUNT(*) FROM per_email_30d WHERE clicks >= 2) AS repeat_30d,
-    (SELECT COUNT(*) FROM per_email_90d WHERE clicks >= 2) AS repeat_90d;
+    (SELECT COUNT(*) FROM per_email_90d WHERE clicks >= 2) AS repeat_90d,
+    (SELECT COUNT(*) FROM per_email_7d  WHERE clicks >= 1) AS total_1plus_7d,
+    (SELECT COUNT(*) FROM per_email_30d WHERE clicks >= 1) AS total_1plus_30d,
+    (SELECT COUNT(*) FROM per_email_90d WHERE clicks >= 1) AS total_1plus_90d;
 ```
 
 > Sourced from `Campaigns_Clicks` (not the `subscriber_clicks` rollup) so the window genuinely scopes recent activity. The `DISTINCT (email, issue_name, issue_date)` in `cc_recent` is what defines a "unique click" — multiple events on the same campaign by the same email count as one. The `EmailAddress ` column has a literal trailing space — keep the double quotes.
@@ -870,7 +873,7 @@ SELECT
 Feeds:
 - `M.total_article_clickers` ← `total_clickers` (Q18)
 - `M.clicker_buckets` ← `{ b_1, b_2_5, b_6_10, b_11_20, b_20_plus }` (Q18)
-- `M.clicker_repeat` ← `{ repeat_7d, repeat_30d, repeat_90d }` (Q18b)
+- `M.clicker_repeat` ← `{ repeat_7d, repeat_30d, repeat_90d, total_1plus_7d, total_1plus_30d, total_1plus_90d }` (Q18b)
 
 ## Q19 — Audience: Acquisition Quality by Source (Engagement Table)
 

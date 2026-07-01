@@ -1,0 +1,469 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Games — Campaign Analytics</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js"></script>
+<style>
+:root {
+  --bg:#f6f8fa; --card:#ffffff; --card-2:#f0f2f5; --card-border:#d0d7de;
+  --text:#1f2328; --text-muted:#57606a; --text-dim:#8c959f;
+  --accent:#0969da; --green:#1a7f37; --red:#cf222e; --orange:#9a6700;
+  --purple:#8250df; --pink:#bf3989; --cyan:#1b7c83; --gold:#7d4e00;
+  --header-bg:linear-gradient(160deg,#dce8f5 0%,#f6f8fa 60%);
+  --row-hover:#f0f2f5; --row-border:#d0d7de;
+}
+body.dark {
+  --bg:#0d1117; --card:#161b22; --card-2:#1c2128; --card-border:#30363d;
+  --text:#e6edf3; --text-muted:#8b949e; --text-dim:#484f58;
+  --accent:#58a6ff; --green:#3fb950; --red:#f85149; --orange:#d29922;
+  --purple:#bc8cff; --pink:#f778ba; --cyan:#39c5cf; --gold:#e3b341;
+  --header-bg:linear-gradient(160deg,#0d1b2e 0%,#0d1117 60%);
+  --row-hover:#1c2128; --row-border:#30363d;
+}
+*{margin:0;padding:0;box-sizing:border-box;}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:var(--bg);color:var(--text);font-size:14px;}
+.header{background:var(--header-bg);border-bottom:1px solid var(--card-border);padding:14px 32px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:100;}
+.header-left{display:flex;align-items:center;gap:14px;}
+.header-badge{background:linear-gradient(135deg,#1f4e79,#1a6cad);border:1px solid #2a7fc5;color:#7ec8f0;font-size:10px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;padding:4px 10px;border-radius:20px;white-space:nowrap;}
+.header h1{font-size:17px;font-weight:600;color:var(--text);}.header h1 span{color:var(--accent);}
+.header-right{display:flex;align-items:center;gap:16px;}
+.theme-toggle{display:flex;align-items:center;gap:7px;cursor:pointer;background:var(--card);border:1px solid var(--card-border);border-radius:20px;padding:5px 12px 5px 8px;transition:all 0.2s;}
+.theme-toggle:hover{border-color:var(--accent);}.toggle-track{width:34px;height:18px;background:var(--accent);border-radius:9px;position:relative;flex-shrink:0;}
+.toggle-thumb{width:13px;height:13px;background:#fff;border-radius:50%;position:absolute;top:2.5px;left:2.5px;transition:transform 0.25s;box-shadow:0 1px 3px rgba(0,0,0,0.3);}body.dark .toggle-thumb{transform:translateX(16px);}.toggle-label{font-size:11px;font-weight:600;color:var(--text-muted);letter-spacing:0.3px;}
+.tabs{display:flex;gap:2px;padding:0 32px;background:var(--bg);border-bottom:1px solid var(--card-border);overflow-x:auto;scrollbar-width:none;}.tabs::-webkit-scrollbar{display:none;}
+.tab{padding:11px 16px;font-size:13px;font-weight:500;color:var(--text-muted);border:none;background:none;cursor:pointer;border-bottom:2px solid transparent;transition:all 0.2s;white-space:nowrap;}.tab:hover{color:var(--text);}.tab.active{color:var(--accent);border-bottom-color:var(--accent);}
+.page{display:none;padding:26px 32px;width:100%;max-width:1800px;margin:0 auto;}.page.active{display:block;}
+.section-header{display:flex;align-items:center;gap:10px;margin-bottom:18px;padding-bottom:12px;border-bottom:1px solid var(--card-border);}.section-header h2{font-size:15px;font-weight:600;}
+.dot{width:7px;height:7px;border-radius:50%;background:var(--accent);flex-shrink:0;}.dot.green{background:var(--green);}.dot.orange{background:var(--orange);}.dot.purple{background:var(--purple);}.dot.pink{background:var(--pink);}.dot.cyan{background:var(--cyan);}
+.grid-2{display:grid;grid-template-columns:1fr 1fr;gap:18px;margin-bottom:18px;}.grid-3{display:grid;grid-template-columns:repeat(3,1fr);gap:18px;margin-bottom:18px;}@media(max-width:1100px){.grid-3{grid-template-columns:1fr 1fr;}}@media(max-width:900px){.grid-2,.grid-3{grid-template-columns:1fr;}.header{padding:14px 18px;}.page{padding:20px 18px;}.tabs{padding:0 18px;}}
+.kpi-row{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:12px;margin-bottom:24px;}@media(max-width:1450px){.kpi-row{grid-template-columns:repeat(3,minmax(0,1fr));}}@media(max-width:800px){.kpi-row{grid-template-columns:repeat(2,minmax(0,1fr));}}@media(max-width:560px){.kpi-row{grid-template-columns:1fr;}}.kpi-card{background:var(--card);border:1px solid var(--card-border);border-radius:10px;padding:16px 18px;min-height:112px;}.kpi-card .label{font-size:11px;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.6px;margin-bottom:8px;}.kpi-card .value{font-size:28px;font-weight:700;line-height:1;}.kpi-card .sub{font-size:11px;color:var(--text-muted);margin-top:6px;}.kpi-card.accent .value{color:var(--accent);}.kpi-card.green .value{color:var(--green);}.kpi-card.orange .value{color:var(--orange);}.kpi-card.purple .value{color:var(--purple);}.kpi-card.cyan .value{color:var(--cyan);}.kpi-card.gold .value{color:var(--gold);}
+.card{background:var(--card);border:1px solid var(--card-border);border-radius:10px;padding:18px 20px;margin-bottom:0;}.card h3{font-size:12px;font-weight:600;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.6px;margin-bottom:14px;}.card h3 span{color:var(--accent);font-weight:400;text-transform:none;letter-spacing:0;font-size:11px;}.chart-wrap{position:relative;height:220px;}.chart-wrap.tall{height:290px;}
+.funnel-wrap{display:flex;flex-direction:column;align-items:center;padding:8px 0 4px;gap:0;}.funnel-step{border:1.5px solid;border-radius:8px;padding:14px 24px;text-align:center;box-sizing:border-box;transition:width 0.5s ease;}.funnel-step-label{font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:0.6px;color:var(--text-muted);margin-bottom:4px;}.funnel-step-count{font-size:26px;font-weight:700;line-height:1.1;margin-bottom:3px;}.funnel-step-sub{font-size:11px;color:var(--text-muted);}.funnel-arrow{display:flex;flex-direction:column;align-items:center;padding:4px 0;gap:2px;}.funnel-rate{font-size:11px;color:var(--accent);font-weight:500;}.funnel-arrow-line{width:1.5px;height:14px;background:var(--card-border);}.funnel-arrow-head{width:0;height:0;border-left:5px solid transparent;border-right:5px solid transparent;border-top:6px solid var(--card-border);}
+.camp-nav{display:flex;align-items:center;gap:8px;margin-bottom:8px;}.camp-nav select{flex:1;background:var(--card-2);border:1px solid var(--card-border);color:var(--text);border-radius:6px;padding:6px 10px;font-size:12px;}.nav-btn{background:var(--card-2);border:1px solid var(--card-border);color:var(--text-muted);border-radius:6px;padding:6px 14px;cursor:pointer;font-size:13px;transition:all 0.15s;}.nav-btn:hover{background:var(--accent);color:#fff;border-color:var(--accent);}.nav-btn:disabled{opacity:0.3;cursor:not-allowed;}
+.stat-row{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:16px;}.stat-chip{background:var(--card-2);border:1px solid var(--card-border);border-radius:8px;padding:10px 14px;min-width:90px;}.stat-chip .sc-label{font-size:10px;color:var(--text-dim);text-transform:uppercase;letter-spacing:0.04em;margin-bottom:3px;}.stat-chip .sc-val{font-size:17px;font-weight:700;color:var(--text);}.sc-accent{color:var(--accent)!important;}.sc-green{color:var(--green)!important;}.sc-orange{color:var(--orange)!important;}.sc-purple{color:var(--purple)!important;}.sc-cyan{color:var(--cyan)!important;}.sc-gold{color:var(--gold)!important;}.sc-red{color:var(--red)!important;}
+table{width:100%;border-collapse:collapse;font-size:13px;}th{text-align:left;font-size:11px;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.5px;padding:7px 10px;border-bottom:1px solid var(--card-border);}td{padding:8px 10px;border-bottom:1px solid var(--row-border);color:var(--text);vertical-align:middle;}.campaign-link{color:var(--accent);text-decoration:none;font-weight:500;}.campaign-link:hover{text-decoration:underline;}tr:last-child td{border-bottom:none;}tr:hover td{background:var(--row-hover);}.td-r{text-align:right;}
+.pagination{display:flex;align-items:center;justify-content:space-between;margin-top:10px;font-size:12px;color:var(--text-muted);}.page-btns{display:flex;gap:4px;}.pg-btn{padding:3px 9px;background:var(--card-2);border:1px solid var(--card-border);border-radius:4px;cursor:pointer;font-size:12px;color:var(--text-muted);}.pg-btn:hover,.pg-btn.active{background:var(--accent);color:#fff;border-color:var(--accent);}
+.src-badge{display:inline-block;font-size:9px;font-weight:700;letter-spacing:1px;text-transform:uppercase;padding:2px 7px;border-radius:10px;vertical-align:middle;margin-left:4px;}.src-badge.sa{background:rgba(9,105,218,0.12);color:var(--accent);border:1px solid rgba(9,105,218,0.25);}.src-badge.ah{background:rgba(26,127,55,0.12);color:var(--green);border:1px solid rgba(26,127,55,0.25);}.src-badge.ag{background:rgba(191,57,137,0.12);color:var(--pink);border:1px solid rgba(191,57,137,0.25);}.src-badge.hb{background:rgba(27,124,131,0.12);color:var(--cyan);border:1px solid rgba(27,124,131,0.25);}body.dark .src-badge.sa{background:rgba(88,166,255,0.12);color:var(--accent);border-color:rgba(88,166,255,0.25);}body.dark .src-badge.ah{background:rgba(63,185,80,0.12);color:var(--green);border-color:rgba(63,185,80,0.25);}body.dark .src-badge.ag{background:rgba(247,120,186,0.12);color:var(--pink);border-color:rgba(247,120,186,0.25);}body.dark .src-badge.hb{background:rgba(57,197,207,0.12);color:var(--cyan);border-color:rgba(57,197,207,0.25);}
+.src-toggle{display:flex;gap:0;border:1px solid var(--card-border);border-radius:8px;overflow:hidden;width:fit-content;margin-bottom:16px;}.src-toggle button{padding:7px 18px;font-size:12px;font-weight:600;border:none;background:var(--card-2);color:var(--text-muted);cursor:pointer;transition:all 0.15s;}.src-toggle button.active-sa{background:var(--accent);color:#fff;}.src-toggle button.active-ah{background:var(--green);color:#fff;}.src-toggle button.active-ag{background:var(--pink);color:#fff;}.src-toggle button.active-hb{background:var(--cyan);color:#fff;}
+.empty{font-size:13px;color:var(--text-muted);padding:22px;text-align:center;border:1px dashed var(--card-border);border-radius:8px;background:var(--card-2);}
+.view-camp-wrap{margin-bottom:14px;min-height:28px;}
+.freshness-badge{display:inline-flex;align-items:center;border:1px solid var(--card-border);background:var(--card-2);color:var(--accent);border-radius:999px;padding:2px 8px;font-size:10px;font-weight:700;letter-spacing:.6px;text-transform:uppercase;line-height:1.4;}
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div class="header-left">
+    <div class="header-badge">Campaign Intel</div>
+    <h1>Games — <span>Campaign Analytics</span></h1>
+  </div>
+  <div class="header-right">
+    <div style="text-align:right;line-height:1.5;">
+      <div style="display:flex;align-items:center;justify-content:flex-end;gap:8px;">
+        <span class="freshness-badge">Hourly updates during working hours</span>
+        <span id="header-clock" style="font-size:13px;font-weight:600;color:var(--text);">—</span>
+      </div>
+      <div style="font-size:11px;color:var(--text-dim);">Waitlist campaign analysis &middot; Last updated</div>
+    </div>
+    <div style="width:1px;height:28px;background:var(--card-border);"></div>
+    <button class="theme-toggle" onclick="toggleTheme()">
+      <div class="toggle-track"><div class="toggle-thumb"></div></div>
+      <span class="toggle-label" id="toggle-label">DARK</span>
+    </button>
+  </div>
+</div>
+
+<div class="tabs">
+  <button class="tab active" onclick="showTab('overview',this)">Overview</button>
+  <button class="tab" onclick="showTab('detail',this)">Campaign Detail</button>
+</div>
+
+<div class="page active" id="tab-overview">
+  <div id="overview-kpis"></div>
+
+  <div class="section-header"><div class="dot orange"></div><h2>Funnel Analysis</h2></div>
+  <div class="grid-2" id="overview-funnels"></div>
+
+  <div class="section-header"><div class="dot purple"></div><h2>Monthly Trends</h2></div>
+  <div class="grid-2" id="overview-monthly"></div>
+
+  <div class="section-header"><div class="dot cyan"></div><h2>Campaign Performance</h2></div>
+  <div id="overview-trends"></div>
+</div>
+
+<div class="page" id="tab-detail">
+  <div class="section-header"><div class="dot"></div><h2>Campaign Browser</h2></div>
+
+  <div class="src-toggle" id="source-toggle"></div>
+
+  <div class="card" style="margin-bottom:18px;">
+    <h3 id="detail-source-label">Select Campaign</h3>
+    <div class="camp-nav">
+      <button class="nav-btn" id="camp-prev" onclick="navigateCampaign(-1)">&#8592; Prev</button>
+      <select id="camp-select" onchange="renderCampaignDetail(+this.value)"></select>
+      <button class="nav-btn" id="camp-next" onclick="navigateCampaign(1)">Next &#8594;</button>
+    </div>
+    <!-- View Campaign button — only visible for SuperAge campaigns that have a URL -->
+    <div class="view-camp-wrap" id="view-camp-wrap" style="display:none;">
+      <a id="view-campaign-btn"
+         class="nav-btn"
+         target="_blank"
+         rel="noopener"
+         style="text-decoration:none;display:inline-block;">
+        &#128279; View Campaign
+      </a>
+    </div>
+    <div class="stat-row" id="camp-stats"></div>
+  </div>
+
+  <div class="grid-2" style="margin-bottom:18px;">
+    <div class="card">
+      <h3>Campaign Funnel</h3>
+      <div class="funnel-wrap" id="camp-funnel"></div>
+    </div>
+    <div class="card">
+      <h3>Open Rate / Click Rate / Games CTR <span id="camp-chart-name"></span></h3>
+      <div class="chart-wrap"><canvas id="chart-camp-rates"></canvas></div>
+    </div>
+  </div>
+
+  <div class="section-header"><div class="dot purple"></div><h2>All Campaigns</h2></div>
+  <div class="card">
+    <h3>Campaigns Table <span id="table-count"></span></h3>
+    <div style="overflow-x:auto;">
+      <table>
+        <thead>
+          <tr>
+            <th>Campaign</th><th>Sent Date</th>
+            <th class="td-r" id="th-recipients">Total Recipients</th><th class="td-r">Total Opens</th>
+            <th class="td-r">Open Rate</th><th class="td-r">Games Clicks</th>
+            <th class="td-r">Unique Games</th><th class="td-r">Games CTR</th>
+            <th class="td-r">Unsubs</th>
+          </tr>
+        </thead>
+        <tbody id="camp-tbody"></tbody>
+      </table>
+    </div>
+    <div class="pagination">
+      <span id="page-info"></span>
+      <div class="page-btns" id="page-btns"></div>
+    </div>
+  </div>
+</div>
+
+<script>
+const SOURCES={
+  sa:{key:'superage',label:'SuperAge Games',badge:'SuperAge',short:'SA',badgeClass:'sa',dot:'',recipientLabel:'Total Recipients',targetedSub:'non-unique total recipients',clickerSub:'distinct email addresses'},
+  ah:{key:'allhealthy',label:'AllHealthy Games',badge:'AllHealthy',short:'AH',badgeClass:'ah',dot:'green',recipientLabel:'Total Recipients',targetedSub:'non-unique total recipients',clickerSub:'distinct subscribers'},
+  ag:{key:'ageist',label:'Ageist Games',badge:'Ageist',short:'AG',badgeClass:'ag',dot:'pink',recipientLabel:'Total Recipients',targetedSub:'non-unique total recipients',clickerSub:'deduped across Ageist games campaigns'},
+  hb:{key:'healthbrief',label:'HealthBrief Games',badge:'HealthBrief',short:'HB',badgeClass:'hb',dot:'cyan',recipientLabel:'Total Recipients',targetedSub:'non-unique total recipients',clickerSub:'distinct email addresses deduped across campaigns'}
+};
+const SOURCE_ORDER=['sa','ah','ag','hb'];
+const charts={};
+let DATA=null;
+let currentSource='sa';
+let tablePage=0;
+const TABLE_SIZE=10;
+const TREND_PAGE=12;
+const trendOffset={sa:0,ah:0,ag:0,hb:0};
+
+function gc(){return document.body.classList.contains('dark')?'#30363d':'#d0d7de';}
+function tc(){return document.body.classList.contains('dark')?'#8b949e':'#57606a';}
+function colorFor(src,alpha){
+  const palette={sa:`rgba(88,166,255,${alpha})`,ah:`rgba(63,185,80,${alpha})`,ag:`rgba(247,120,186,${alpha})`,hb:`rgba(20,184,166,${alpha})`};
+  return palette[src]||`rgba(88,166,255,${alpha})`;
+}
+function toggleTheme(){
+  const dark=document.body.classList.toggle('dark');
+  document.getElementById('toggle-label').textContent=dark?'DARK':'LIGHT';
+  localStorage.setItem('theme',dark?'dark':'light');
+  rebuildCharts();
+}
+(function(){
+  const s=localStorage.getItem('theme')||(window.matchMedia('(prefers-color-scheme:dark)').matches?'dark':'light');
+  if(s==='dark'){document.body.classList.add('dark');document.getElementById('toggle-label').textContent='DARK';}
+  else{document.getElementById('toggle-label').textContent='LIGHT';}
+})();
+function setHeaderClock(ts){
+  document.getElementById('header-clock').textContent = ts || '—';
+}
+function showTab(id,btn){
+  document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
+  document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
+  document.getElementById('tab-'+id).classList.add('active');
+  btn.classList.add('active');
+}
+function mkChart(id,cfg){if(charts[id])charts[id].destroy();const el=document.getElementById(id);if(!el)return;charts[id]=new Chart(el,cfg);}
+function sourceData(src){const cfg=SOURCES[src];return (DATA&&DATA[cfg.key])?DATA[cfg.key]:{};}
+function currentCamps(){return sourceData(currentSource).campaigns||[];}
+function fmtNum(v){const n=Number(v||0);return Number.isFinite(n)?n.toLocaleString():'0';}
+function pctOf(n,d){return d?(100*n/d).toFixed(2)+'%':'0.00%';}
+function escHtml(v){return String(v??'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
+function escAttr(v){return escHtml(v).replace(/"/g,'&quot;');}
+
+// ── Dashboard API config ─────────────────────────────────────────────────────
+const DASHBOARD_API = 'https://dashboard.pardon-ventures-06b.workers.dev';
+const API_TOKEN     = 'dashboardkiwilytics123';
+
+const authHeaders = { headers: { 'X-Auth-Token': API_TOKEN } };
+
+// ── loadData ─────────────────────────────────────────────────────────────────
+async function loadData() {
+  const isLocal = location.hostname === 'localhost' || location.hostname === '127.0.0.1';
+  const url     = isLocal ? 'campaigns_life.json' : `${DASHBOARD_API}/game-campaigns/campaigns_life.json`;
+  const opts    = isLocal ? {} : authHeaders;
+  try {
+    const r = await fetch(url, opts);
+    if (!r.ok) throw new Error('HTTP ' + r.status);
+    DATA = await r.json();
+    setHeaderClock(DATA.last_updated);
+    renderAll();
+  } catch (e) {
+    console.error('loadData', e);
+    document.getElementById('overview-kpis').innerHTML =
+      '<div class="empty">Could not load campaigns_life.json. ' +
+      (isLocal ? 'Run test_local.py first to generate the file.' : 'Check the Worker URL, token, and R2 bucket.') +
+      '</div>';
+  }
+}
+
+function renderAll(){
+  renderOverviewShell();
+  SOURCE_ORDER.forEach(src=>{
+    renderKpis(src);
+    renderFunnel(src+'-funnel',sourceData(src).funnel||{});
+    renderMonthly(src);
+    renderTrend(src);
+  });
+  renderSourceToggle();
+  switchSource(currentSource,true);
+}
+function rebuildCharts(){
+  if(!DATA)return;
+  SOURCE_ORDER.forEach(src=>{renderMonthly(src);renderTrend(src);});
+  renderCampRates(+(document.getElementById('camp-select').value||0));
+}
+function renderOverviewShell(){
+  document.getElementById('overview-kpis').innerHTML=SOURCE_ORDER.map(src=>{
+    const s=SOURCES[src];
+    return `<div class="section-header"><div class="dot ${s.dot}"></div><h2>${s.label} — KPIs</h2><span class="src-badge ${s.badgeClass}">${s.badge}</span></div>
+    <div class="kpi-row" id="${src}-kpis">
+      <div class="kpi-card accent"><div class="label">Campaigns</div><div class="value" data-kpi="campaigns">—</div><div class="sub">with games link clicks</div></div>
+      <div class="kpi-card green"><div class="label">${s.recipientLabel}</div><div class="value" data-kpi="recipients">—</div><div class="sub">${s.targetedSub}</div></div>
+      <div class="kpi-card orange"><div class="label">Total Opens</div><div class="value" data-kpi="opens">—</div><div class="sub" data-kpi="opens-sub">non-unique total opens</div></div>
+      <div class="kpi-card purple"><div class="label">Games Clicks</div><div class="value" data-kpi="clicks">—</div><div class="sub">total clicks on games URLs</div></div>
+      <div class="kpi-card cyan"><div class="label">Unique Games Clickers</div><div class="value" data-kpi="unique">—</div><div class="sub">${s.clickerSub}</div></div>
+      <div class="kpi-card gold"><div class="label">Games CTR</div><div class="value" data-kpi="ctr">—</div><div class="sub">unique clickers / opens</div></div>
+    </div>`;
+  }).join('');
+  const PAIRED_ORDER=['sa','ag','ah','hb'];
+  document.getElementById('overview-funnels').innerHTML=PAIRED_ORDER.map(src=>{
+    const s=SOURCES[src];
+    return `<div class="card"><h3>${s.label} Funnel <span class="src-badge ${s.badgeClass}">${s.short}</span></h3><div class="funnel-wrap" id="${src}-funnel"></div></div>`;
+  }).join('');
+  document.getElementById('overview-monthly').innerHTML=PAIRED_ORDER.map(src=>{
+    const s=SOURCES[src];
+    return `<div class="card"><h3>${s.label} — Monthly Clicks <span class="src-badge ${s.badgeClass}">${s.short}</span></h3><div class="chart-wrap"><canvas id="chart-${src}-monthly"></canvas></div></div>`;
+  }).join('');
+  document.getElementById('overview-trends').innerHTML=SOURCE_ORDER.map(src=>{
+    const s=SOURCES[src];
+    return `<div class="card" style="margin-bottom:18px;"><h3>${s.label} — Campaign Trend <span class="src-badge ${s.badgeClass}">${s.short}</span></h3>
+      <div class="camp-nav" style="margin-bottom:10px;"><button class="nav-btn" id="${src}-trend-prev" onclick="shiftTrend('${src}',-1)">&#8592;</button><span style="font-size:12px;color:var(--text-muted);flex:1;text-align:center;" id="${src}-trend-label"></span><button class="nav-btn" id="${src}-trend-next" onclick="shiftTrend('${src}',1)">&#8594;</button></div>
+      <div class="chart-wrap tall"><canvas id="chart-${src}-trend"></canvas></div></div>`;
+  }).join('');
+}
+function renderKpis(src){
+  const root=document.getElementById(src+'-kpis');if(!root)return;
+  const k=sourceData(src).kpis||{};
+  root.querySelector('[data-kpi="campaigns"]').textContent=k.total_campaigns??0;
+  root.querySelector('[data-kpi="recipients"]').textContent=k.total_recipients_fmt||'0';
+  root.querySelector('[data-kpi="opens"]').textContent=k.total_unique_opens_fmt||'0';
+  root.querySelector('[data-kpi="opens-sub"]').textContent='non-unique total opens';
+  root.querySelector('[data-kpi="clicks"]').textContent=k.total_game_clicks_fmt||'0';
+  root.querySelector('[data-kpi="unique"]').textContent=k.total_game_unique_fmt||'0';
+  root.querySelector('[data-kpi="ctr"]').textContent=k.game_ctr||'0.00%';
+}
+const FUNNEL_COLS=['var(--accent)','var(--cyan)','var(--green)','var(--purple)','var(--gold)'];
+function renderFunnel(elId,f){
+  const el=document.getElementById(elId);if(!el)return;
+  const labels=f.labels||[],data=f.data||[],pcts=f.pcts||[];
+  if(!labels.length){el.innerHTML='<div class="empty">No data</div>';return;}
+  const base=data[0]||1;
+  let html='';
+  labels.forEach((lbl,i)=>{
+    const displayLbl=String(lbl).replace(/Unique Opens/g,'Total Opens').replace(/^Opens$/,'Total Opens');
+    const w=Math.min(100,Math.max(35,Math.round((data[i]||0)/base*100)));
+    const col=FUNNEL_COLS[i%FUNNEL_COLS.length];
+    if(i>0)html+=`<div class="funnel-arrow"><span class="funnel-rate">${pcts[i]||''} of total</span><div class="funnel-arrow-line"></div><div class="funnel-arrow-head"></div></div>`;
+    html+=`<div class="funnel-step" style="width:${w}%;border-color:${col}"><div class="funnel-step-label">${escHtml(displayLbl)}</div><div class="funnel-step-count" style="color:${col}">${fmtNum(data[i])}</div><div class="funnel-step-sub">${pcts[i]||''} of recipients</div></div>`;
+  });
+  el.innerHTML=html;
+}
+function renderMonthly(src){
+  const t=sourceData(src).monthly_trend||{};
+  mkChart('chart-'+src+'-monthly',{type:'bar',
+    data:{labels:t.labels||[],datasets:[
+      {label:'Games Clicks',data:t.clicks||[],backgroundColor:colorFor(src,0.75),borderRadius:4,borderWidth:0},
+      {label:'Unique Games Clickers',data:t.unique_clicks||[],backgroundColor:'rgba(210,153,34,0.70)',borderRadius:4,borderWidth:0}
+    ]},
+    options:{responsive:true,maintainAspectRatio:false,scales:{x:{grid:{color:gc()},ticks:{color:tc(),maxRotation:0}},y:{grid:{color:gc()},ticks:{color:tc()},beginAtZero:true}},plugins:{legend:{labels:{color:tc(),font:{size:11}}},tooltip:{mode:'index',intersect:false}}}
+  });
+}
+function renderTrend(src){
+  const t=sourceData(src).campaign_trend||{};
+  const all=t.labels||[],total=all.length,off=trendOffset[src]||0;
+  const start=Math.max(0,total-TREND_PAGE-off),end=Math.max(0,total-off);
+  const sl=all.slice(start,end),su=(t.game_unique||[]).slice(start,end),sc=(t.game_clicks||[]).slice(start,end);
+  const label=document.getElementById(src+'-trend-label');if(label)label.textContent=total?`Showing ${start+1}–${end} of ${total} campaigns`:'No data';
+  const prev=document.getElementById(src+'-trend-prev'),next=document.getElementById(src+'-trend-next');if(prev)prev.disabled=start<=0;if(next)next.disabled=off<=0;
+  mkChart('chart-'+src+'-trend',{type:'bar',
+    data:{labels:sl,datasets:[
+      {label:'Unique Games Clickers',data:su,backgroundColor:colorFor(src,0.85),borderRadius:4,borderWidth:0},
+      {label:'Total Games Clicks',data:sc,backgroundColor:'rgba(188,140,255,0.5)',borderRadius:4,borderWidth:0}
+    ]},
+    options:{responsive:true,maintainAspectRatio:false,scales:{x:{grid:{color:gc()},ticks:{color:tc(),maxRotation:45,font:{size:10}}},y:{grid:{color:gc()},ticks:{color:tc()},beginAtZero:true}},plugins:{legend:{labels:{color:tc(),font:{size:11}}},tooltip:{mode:'index',intersect:false}}}
+  });
+}
+function shiftTrend(src,dir){
+  const total=((sourceData(src).campaign_trend||{}).labels||[]).length;
+  trendOffset[src]=Math.max(0,Math.min(Math.max(0,total-TREND_PAGE),(trendOffset[src]||0)-dir*TREND_PAGE));
+  renderTrend(src);
+}
+function renderSourceToggle(){
+  document.getElementById('source-toggle').innerHTML=SOURCE_ORDER.map(src=>`<button id="btn-src-${src}" onclick="switchSource('${src}')">${SOURCES[src].label}</button>`).join('');
+}
+function switchSource(src,silent){
+  currentSource=src;
+  SOURCE_ORDER.forEach(s=>{const b=document.getElementById('btn-src-'+s);if(b)b.className=s===src?'active-'+s:'';});
+  const cfg=SOURCES[src];
+  document.getElementById('detail-source-label').innerHTML=`Select Campaign <span class="src-badge ${cfg.badgeClass}">${cfg.badge}</span>`;
+  document.getElementById('th-recipients').textContent=cfg.recipientLabel;
+  tablePage=0;
+  populateSelect();
+  renderTable(0);
+  if(currentCamps().length)renderCampaignDetail(0);else clearCampaignDetail();
+}
+function populateSelect(){
+  const camps=currentCamps();
+  document.getElementById('camp-select').innerHTML=camps.map((c,i)=>`<option value="${i}">${escHtml(c.sent_date||'')} — ${escHtml(String(c.name||'').substring(0,70))}</option>`).join('');
+  document.getElementById('table-count').textContent=`· ${camps.length} campaigns`;
+}
+function navigateCampaign(dir){
+  const sel=document.getElementById('camp-select');
+  const next=Math.max(0,Math.min(currentCamps().length-1,+sel.value+dir));
+  sel.value=next;renderCampaignDetail(next);
+}
+function _updateViewCampaignBtn(c){
+  const wrap=document.getElementById('view-camp-wrap');
+  const btn=document.getElementById('view-campaign-btn');
+  if(!wrap||!btn)return;
+  // Only show for SuperAge campaigns that have a non-empty URL
+  const url=(currentSource==='sa'&&c&&c.url)?String(c.url).trim():'';
+  if(url){
+    btn.href=url;
+    wrap.style.display='block';
+  }else{
+    wrap.style.display='none';
+  }
+}
+function clearCampaignDetail(){
+  document.getElementById('camp-stats').innerHTML='<div class="empty">No campaigns found for this source.</div>';
+  document.getElementById('camp-funnel').innerHTML='<div class="empty">No data</div>';
+  const wrap=document.getElementById('view-camp-wrap');
+  if(wrap)wrap.style.display='none';
+}
+function renderCampaignDetail(idx){
+  const camps=currentCamps();const c=camps[idx];if(!c){clearCampaignDetail();return;}
+  const cfg=SOURCES[currentSource];
+  document.getElementById('camp-select').value=idx;
+  document.getElementById('camp-prev').disabled=idx<=0;
+  document.getElementById('camp-next').disabled=idx>=camps.length-1;
+  document.getElementById('camp-chart-name').textContent='· '+String(c.name||'').substring(0,30);
+
+  // Show/hide "View Campaign" link button (SuperAge only, when URL is present)
+  _updateViewCampaignBtn(c);
+
+  const specClicks=c.game_clicks||0,specUnique=c.game_unique||0,specCtr=c.game_ctr||'0.00%';
+  const chips=[
+    {lbl:'Sent Date',val:c.sent_date||'—',cls:''},
+    {lbl:cfg.recipientLabel,val:fmtNum(c.recipients),cls:'sc-accent'},
+    {lbl:'Total Opens',val:fmtNum(c.unique_opens),cls:'sc-orange'},
+    {lbl:'Open Rate',val:c.open_rate||'0.00%',cls:'sc-green'},
+    {lbl:'Games Clicks',val:fmtNum(specClicks),cls:'sc-purple'},
+    {lbl:'Unique Games',val:fmtNum(specUnique),cls:'sc-cyan'},
+    {lbl:'Games CTR',val:specCtr,cls:'sc-gold'},
+    {lbl:'Unsubs',val:fmtNum(c.unsubs),cls:'sc-red'},
+  ];
+  document.getElementById('camp-stats').innerHTML=chips.map(ch=>`<div class="stat-chip"><div class="sc-label">${escHtml(ch.lbl)}</div><div class="sc-val ${ch.cls}">${escHtml(ch.val)}</div></div>`).join('');
+  renderFunnel('camp-funnel',{labels:[cfg.recipientLabel,'Total Opens','Games Clicks','Unique Games Clickers'],data:[c.recipients||0,c.unique_opens||0,specClicks,specUnique],pcts:['100%',c.open_rate||'0.00%',pctOf(specClicks,c.recipients||0),specCtr]});
+  renderCampRates(idx);
+}
+function renderCampRates(idx){
+  const c=currentCamps()[idx];
+  if(!c)return;
+
+  const openR=parseFloat(String(c.open_rate||'0').replace('%',''))||0;
+  const clickR=parseFloat(String(c.click_rate||'0').replace('%',''))||0;
+  const specCtr=parseFloat(String(c.game_ctr||'0').replace('%',''))||0;
+
+  mkChart('chart-camp-rates',{
+    type:'bar',
+    data:{
+      labels:['Open Rate','Click Rate','Games CTR'],
+      datasets:[{
+        data:[openR,clickR,specCtr],
+        backgroundColor:[
+          'rgba(210,153,34,0.85)',
+          'rgba(88,166,255,0.85)',
+          colorFor(currentSource,0.85)
+        ],
+        borderRadius:6,
+        borderWidth:0
+      }]
+    },
+    options:{
+      responsive:true,
+      maintainAspectRatio:false,
+      indexAxis:'y',
+      scales:{
+        x:{
+          grid:{color:gc()},
+          ticks:{color:tc(),callback:v=>v+'%'},
+          beginAtZero:true
+        },
+        y:{
+          grid:{display:false},
+          ticks:{color:tc()}
+        }
+      },
+      plugins:{
+        legend:{display:false},
+        tooltip:{callbacks:{label:ctx=>Number(ctx.raw||0).toFixed(2)+'%'}}
+      }
+    }
+  });
+}
+function campaignCell(c){
+  const name=String(c.name||''),shortName=name.substring(0,42),url=String(c.url||'').trim();
+  if(currentSource!=='ag' && url){return `<a class="campaign-link" href="${escAttr(url)}" onclick="event.stopPropagation();" title="${escAttr(name)}" target="_blank" rel="noopener">${escHtml(shortName)}</a>`;}
+  return `<span title="${escAttr(name)}">${escHtml(shortName)}</span>`;
+}
+function renderTable(page){
+  tablePage=page;
+  const camps=currentCamps(),total=camps.length,slice=camps.slice(page*TABLE_SIZE,(page+1)*TABLE_SIZE);
+  document.getElementById('camp-tbody').innerHTML=slice.map((c,i)=>`<tr style="cursor:pointer" onclick="jumpTo(${page*TABLE_SIZE+i})"><td>${campaignCell(c)}</td><td>${escHtml(c.sent_date||'')}</td><td class="td-r">${escHtml(c.recipients_fmt||fmtNum(c.recipients))}</td><td class="td-r">${escHtml(c.unique_opens_fmt||fmtNum(c.unique_opens))}</td><td class="td-r" style="color:var(--orange)">${escHtml(c.open_rate||'0.00%')}</td><td class="td-r" style="color:var(--purple)">${escHtml(c.game_clicks_fmt||fmtNum(c.game_clicks))}</td><td class="td-r" style="color:var(--cyan)">${escHtml(c.game_unique_fmt||fmtNum(c.game_unique))}</td><td class="td-r" style="color:var(--green)">${escHtml(c.game_ctr||'0.00%')}</td><td class="td-r">${escHtml(c.unsubs??0)}</td></tr>`).join('');
+  const totalPages=Math.ceil(total/TABLE_SIZE)||1;
+  document.getElementById('page-info').textContent=total?`${page*TABLE_SIZE+1}–${Math.min((page+1)*TABLE_SIZE,total)} of ${total}`:'0 campaigns';
+  let btns='';
+  if(page>0)btns+=`<button class="pg-btn" onclick="renderTable(${page-1})">&#8592;</button>`;
+  for(let p=Math.max(0,page-2);p<=Math.min(totalPages-1,page+2);p++)btns+=`<button class="pg-btn${p===page?' active':''}" onclick="renderTable(${p})">${p+1}</button>`;
+  if(page<totalPages-1)btns+=`<button class="pg-btn" onclick="renderTable(${page+1})">&#8594;</button>`;
+  document.getElementById('page-btns').innerHTML=btns;
+}
+function jumpTo(idx){showTab('detail',document.querySelectorAll('.tab')[1]);renderCampaignDetail(idx);}
+loadData();
+</script>
+</body>
+</html>

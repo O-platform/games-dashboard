@@ -1411,10 +1411,6 @@ function _isSundayCampaign(c) {
   return !isNaN(d) && d.getDay() === 0; /* 0 = Sunday */
 }
 function _rawMetric(series) {
-  const metric = (document.getElementById('clicksMetric') || {}).value || 'clicks';
-  if (metric === 'unique_clicks') {
-    return (_ssOn() || !(series && Array.isArray(series.unique_clicks_no_ss))) ? 'unique_clicks' : 'unique_clicks_no_ss';
-  }
   if (_ssOn()) return 'clicks';
   return (series && Array.isArray(series.clicks_no_ss)) ? 'clicks_no_ss' : 'clicks';
 }
@@ -1718,8 +1714,7 @@ function _setRawWeeklyWindow(n) {
   const series = _sliceSeries(_rawClicksData.raw_clicks_weekly || {}, n);
   const m = _rawMetric(series);
   _clickTrendChart('cnt-raw-weekly-bar', series, m, '#bf3989', 'Click events');
-  const um = (series && Array.isArray(series.unique_clicks_no_ss) && !_ssOn()) ? 'unique_clicks_no_ss' : 'unique_clicks';
-  _clickTrendChart('cnt-raw-weekly-unique-bar', series, um, '#1a7f37', 'Unique clicks');
+  _renderClickTrendRight();
   const badge = document.getElementById('cnt-raw-weekly-badge');
   if (badge) badge.textContent = `— last ${(series.labels||[]).length || 0} ISO weeks`;
   const ins = document.getElementById('cnt-raw-weekly-insight');
@@ -1736,8 +1731,6 @@ function _renderRawMonthly() {
   const series = _rawClicksData.raw_clicks_monthly || {};
   const m = _rawMetric(series);
   _clickTrendChart('cnt-raw-monthly-bar', series, m, '#9a6700', 'Click events');
-  const um = (series && Array.isArray(series.unique_clicks_no_ss) && !_ssOn()) ? 'unique_clicks_no_ss' : 'unique_clicks';
-  _clickTrendChart('cnt-raw-monthly-unique-bar', series, um, '#1a7f37', 'Unique clicks');
   const badge = document.getElementById('cnt-raw-monthly-badge');
   if (badge) badge.textContent = `— last ${(series.labels||[]).length || 0} months`;
   const ins = document.getElementById('cnt-raw-monthly-insight');
@@ -1747,6 +1740,43 @@ function _renderRawMonthly() {
       ? `MoM (last 2 completed months): ${txt}. The faded bar is the current (in-progress) month — excluded from the comparison.`
       : `Not enough completed months for a MoM comparison yet.`;
   }
+}
+
+function _renderClickTrendRight() {
+  const metric = (document.getElementById('clicksMetric') || {}).value || 'unique_clicks';
+  const pctFmt = v => Number(v).toFixed(2) + '%';
+  if (metric === 'unique_clicks') {
+    const ws = _sliceSeries(_rawClicksData && _rawClicksData.raw_clicks_weekly || {}, window._rawWeeklyN || 8);
+    const wm = (ws && Array.isArray(ws.unique_clicks_no_ss) && !_ssOn()) ? 'unique_clicks_no_ss' : 'unique_clicks';
+    _clickTrendChart('cnt-raw-weekly-unique-bar', ws, wm, '#1a7f37', 'Unique clicks');
+    const ms = (_rawClicksData && _rawClicksData.raw_clicks_monthly) || {};
+    const mm = (ms && Array.isArray(ms.unique_clicks_no_ss) && !_ssOn()) ? 'unique_clicks_no_ss' : 'unique_clicks';
+    _clickTrendChart('cnt-raw-monthly-unique-bar', ms, mm, '#1a7f37', 'Unique clicks');
+    _updateRightChartTitles('Unique Clicks', '— one per subscriber per campaign');
+  } else {
+    const rows = _ssOn()
+      ? ((_rawClicksData && _rawClicksData.campaign_table) || [])
+      : ((_rawClicksData && _rawClicksData.campaign_table) || []).filter(c => !_isSundayCampaign(c));
+    const ws = _buildCampaignSeries(rows, _isoWeekStart, _fmtWeekLabel, window._rawWeeklyN || 8);
+    const ms = _buildCampaignSeries(rows, _monthStart,   _fmtMonthLabel, 6);
+    if (metric === 'ctor') {
+      _clickTrendChart('cnt-raw-weekly-unique-bar',  ws, 'ctor', '#8250df', 'CTOR %', pctFmt);
+      _clickTrendChart('cnt-raw-monthly-unique-bar', ms, 'ctor', '#8250df', 'CTOR %', pctFmt);
+      _updateRightChartTitles('Click-to-Open %', '— clicks ÷ unique opens per period');
+    } else {
+      _clickTrendChart('cnt-raw-weekly-unique-bar',  ws, 'ctr', '#cf222e', 'CTR %', pctFmt);
+      _clickTrendChart('cnt-raw-monthly-unique-bar', ms, 'ctr', '#cf222e', 'CTR %', pctFmt);
+      _updateRightChartTitles('CTR %', '— clicks ÷ recipients per period');
+    }
+  }
+}
+function _updateRightChartTitles(label, badge) {
+  const wh = document.getElementById('cnt-right-weekly-title');
+  const wb = document.getElementById('cnt-raw-weekly-unique-badge');
+  const mh = document.getElementById('cnt-right-monthly-title');
+  if (wh) wh.textContent = 'Weekly — ' + label;
+  if (wb) wb.textContent = badge;
+  if (mh) mh.textContent = 'Monthly — ' + label;
 }
 
 /* Re-render every chart on the Click Analysis tab. Called when the
@@ -1988,13 +2018,7 @@ function renderContent(M) {
     <h3 style="margin:18px 0 10px;font-size:13px;text-transform:uppercase;letter-spacing:.5px;color:var(--text-muted);">Click Trends</h3>
     <div class="chart-card">
       <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;margin-bottom:6px;flex-wrap:wrap;">
-        <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
-          <h3 style="margin:0;">Same Weekday <span class="badge-inline" id="cnt-raw-weekday-badge">— last N sends per weekday</span></h3>
-          <select id="clicksMetric" onchange="_setWeekdayWindow(window._rawWeekdayN||3)" style="font-size:12px;padding:4px 8px;border:1px solid var(--card-border);border-radius:6px;background:var(--card);color:var(--text);">
-            <option value="clicks">Total click events</option>
-            <option value="unique_clicks" selected>Unique clicks</option>
-          </select>
-        </div>
+        <h3 style="margin:0;">Same Weekday <span class="badge-inline" id="cnt-raw-weekday-badge">— last N sends per weekday</span></h3>
         <div style="display:flex;gap:4px;" id="cnt-raw-weekday-btns">
           <button onclick="_setWeekdayWindow(2)" id="rwd-2" style="font-size:11px;padding:3px 8px;border:1px solid var(--card-border);border-radius:5px;background:var(--card);color:var(--text-muted);cursor:pointer;">2 weeks</button>
           <button onclick="_setWeekdayWindow(3)" id="rwd-3" style="font-size:11px;padding:3px 8px;border:1px solid var(--card-border);border-radius:5px;background:var(--accent);color:#fff;cursor:pointer;">3 weeks</button>
@@ -2004,6 +2028,14 @@ function renderContent(M) {
       <div class="chart-container h300"><canvas id="cnt-raw-weekday-bar"></canvas></div>
       <div class="insight" id="cnt-raw-weekday-insight"></div>
       <div id="cnt-raw-weekday-table"></div>
+    </div>
+    <div style="display:flex;align-items:center;gap:8px;margin:14px 0 8px;">
+      <span style="font-size:12px;color:var(--text-muted);font-weight:500;">Right chart metric:</span>
+      <select id="clicksMetric" onchange="_renderClickTrendRight()" style="font-size:12px;padding:4px 10px;border:1px solid var(--card-border);border-radius:6px;background:var(--card);color:var(--text);">
+        <option value="unique_clicks" selected>Unique clicks</option>
+        <option value="ctor">Click-to-Open %</option>
+        <option value="ctr">CTR %</option>
+      </select>
     </div>
     <div class="grid-2">
       <div class="chart-card">
@@ -2020,7 +2052,7 @@ function renderContent(M) {
       </div>
       <div class="chart-card">
         <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;margin-bottom:6px;flex-wrap:wrap;">
-          <h3 style="margin:0;">Weekly — Unique Clicks <span class="badge-inline" id="cnt-raw-weekly-unique-badge">— unique clicks per week</span></h3>
+          <h3 style="margin:0;" id="cnt-right-weekly-title">Weekly — Unique Clicks <span class="badge-inline" id="cnt-raw-weekly-unique-badge">— one per subscriber per campaign</span></h3>
           <div style="display:flex;gap:4px;">
             <button onclick="_setRawWeeklyWindow(4)"  id="rwu-4"  style="font-size:11px;padding:3px 8px;border:1px solid var(--card-border);border-radius:5px;background:var(--card);color:var(--text-muted);cursor:pointer;">4w</button>
             <button onclick="_setRawWeeklyWindow(8)"  id="rwu-8"  style="font-size:11px;padding:3px 8px;border:1px solid var(--card-border);border-radius:5px;background:var(--accent);color:#fff;cursor:pointer;">8w</button>
@@ -2037,7 +2069,7 @@ function renderContent(M) {
         <div class="insight" id="cnt-raw-monthly-insight"></div>
       </div>
       <div class="chart-card">
-        <h3>Monthly — Unique Clicks <span class="badge-inline">— unique clicks per month</span></h3>
+        <h3 id="cnt-right-monthly-title">Monthly — Unique Clicks <span class="badge-inline">— one per subscriber per campaign</span></h3>
         <div class="chart-container h240"><canvas id="cnt-raw-monthly-unique-bar"></canvas></div>
       </div>
     </div>

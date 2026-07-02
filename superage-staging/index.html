@@ -1756,10 +1756,13 @@ function _renderClickTrendRight() {
     _updateRightChartTitles('Unique Clickers', '— raw events · distinct subscribers who clicked');
   } else {
     // avg_click_rate from campaign summary (AVG UClickRate per week/month)
+    // When SS is off, use avg_click_rate_no_ss which excludes Sunday campaigns from the AVG.
     const ws = _sliceSeries(_rawClicksData && _rawClicksData.campaign_clicks_weekly || {}, window._rawWeeklyN || 8);
-    _clickTrendChart('cnt-raw-weekly-unique-bar', ws, 'avg_click_rate', '#cf222e', 'Avg Click Rate %', pctFmt);
+    const wCRKey = (ws && Array.isArray(ws.avg_click_rate_no_ss) && !_ssOn()) ? 'avg_click_rate_no_ss' : 'avg_click_rate';
+    _clickTrendChart('cnt-raw-weekly-unique-bar', ws, wCRKey, '#cf222e', 'Avg Click Rate %', pctFmt);
     const ms = (_rawClicksData && _rawClicksData.campaign_clicks_monthly) || {};
-    _clickTrendChart('cnt-raw-monthly-unique-bar', ms, 'avg_click_rate', '#cf222e', 'Avg Click Rate %', pctFmt);
+    const mCRKey = (ms && Array.isArray(ms.avg_click_rate_no_ss) && !_ssOn()) ? 'avg_click_rate_no_ss' : 'avg_click_rate';
+    _clickTrendChart('cnt-raw-monthly-unique-bar', ms, mCRKey, '#cf222e', 'Avg Click Rate %', pctFmt);
     _updateRightChartTitles('Avg Click Rate', '— campaign summary · avg UClickRate across campaigns');
   }
 }

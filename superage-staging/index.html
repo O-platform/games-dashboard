@@ -1897,7 +1897,8 @@ function _renderOpensSection2() {
   _renderOpenerWeeklyChart();
   // Monthly unique openers from raw events
   const ms = (_rawClicksData && _rawClicksData.raw_opens_monthly) || {};
-  _clickTrendChart('op-s2-monthly-bar', ms, 'unique_openers', '#1a7f37', 'Unique Openers', v => Number(v).toLocaleString());
+  const mKey = (ms && Array.isArray(ms.unique_openers_no_ss) && !_ssOn()) ? 'unique_openers_no_ss' : 'unique_openers';
+  _clickTrendChart('op-s2-monthly-bar', ms, mKey, '#1a7f37', 'Unique Openers', v => Number(v).toLocaleString());
   _renderAvgOpenRateCharts();
 }
 
@@ -1913,18 +1914,21 @@ function _renderOpenerKpis(M) {
 function _renderOpenerWeeklyChart() {
   // Weekly unique openers from raw events (COUNT DISTINCT email per ISO week)
   const ws = _sliceSeries((_rawClicksData && _rawClicksData.raw_opens_weekly) || {}, window._rawWeeklyN || 8);
-  _clickTrendChart('op-weekly-chart', ws, 'unique_openers', '#1a7f37', 'Unique Openers', v => Number(v).toLocaleString());
+  const wKey = (ws && Array.isArray(ws.unique_openers_no_ss) && !_ssOn()) ? 'unique_openers_no_ss' : 'unique_openers';
+  _clickTrendChart('op-weekly-chart', ws, wKey, '#1a7f37', 'Unique Openers', v => Number(v).toLocaleString());
 }
 
 function _renderAvgOpenRateCharts() {
   const pctFmt = v => v != null ? Number(v).toFixed(2) + '%' : null;
   const ws = _sliceSeries((_rawClicksData && _rawClicksData.campaign_clicks_weekly) || {}, window._rawWeeklyN || 8);
   const ms = (_rawClicksData && _rawClicksData.campaign_clicks_monthly) || {};
-  const mkLine = (canvasId, series, label, color) => {
+  const wORKey = (ws && Array.isArray(ws.avg_open_rate_no_ss) && !_ssOn()) ? 'avg_open_rate_no_ss' : 'avg_open_rate';
+  const mORKey = (ms && Array.isArray(ms.avg_open_rate_no_ss) && !_ssOn()) ? 'avg_open_rate_no_ss' : 'avg_open_rate';
+  const mkLine = (canvasId, series, orKey, label, color) => {
     const ctx = _resetCanvas(canvasId);
     if (!ctx) return;
     const labels = series.labels || [];
-    const data   = (series.avg_open_rate || []).map(v => v != null ? Number(v) : null);
+    const data   = (series[orKey] || []).map(v => v != null ? Number(v) : null);
     const isCur  = series.is_current || [];
     ctx._chart = _newChart(ctx, {
       type: 'line',
@@ -1953,8 +1957,8 @@ function _renderAvgOpenRateCharts() {
       },
     });
   };
-  mkLine('op-avg-open-rate-weekly',  ws, 'Avg Open Rate %', '#0969da');
-  mkLine('op-avg-open-rate-monthly', ms, 'Avg Open Rate %', '#0969da');
+  mkLine('op-avg-open-rate-weekly',  ws, wORKey, 'Avg Open Rate %', '#0969da');
+  mkLine('op-avg-open-rate-monthly', ms, mORKey, 'Avg Open Rate %', '#0969da');
 }
 
 /* Click-volume distribution bar — buckets subscribers by their lifetime

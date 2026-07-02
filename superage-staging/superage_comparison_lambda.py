@@ -295,7 +295,8 @@ def lambda_handler(event, context):
                         COALESCE(SUM("UniqueOpened"), 0)             AS unique_opens,
                         COUNT(*)                                     AS campaigns,
                         ROUND(AVG("UOpenRate")::numeric,  2)         AS avg_open_rate,
-                        ROUND(AVG("UClickRate")::numeric, 2)         AS avg_click_rate
+                        ROUND(AVG("UClickRate")::numeric, 2)         AS avg_click_rate,
+                        ROUND(AVG("UClickRate") FILTER (WHERE EXTRACT(DOW FROM "Sent Date "::date) != 0)::numeric, 2) AS avg_click_rate_no_ss
                     FROM {S}."Campaigns"
                     WHERE "Sent Date " IS NOT NULL
                       AND "Sent Date "::date < CURRENT_DATE
@@ -311,6 +312,7 @@ def lambda_handler(event, context):
                     COALESCE(a.campaigns, 0)                                 AS campaigns,
                     a.avg_open_rate,
                     a.avg_click_rate,
+                    a.avg_click_rate_no_ss,
                     (w.week_start = DATE_TRUNC('week', CURRENT_DATE)::date)  AS is_current
                 FROM weeks w
                 LEFT JOIN agg a USING (week_start)
@@ -334,7 +336,8 @@ def lambda_handler(event, context):
                         COALESCE(SUM("UniqueOpened"), 0)              AS unique_opens,
                         COUNT(*)                                      AS campaigns,
                         ROUND(AVG("UOpenRate")::numeric,  2)          AS avg_open_rate,
-                        ROUND(AVG("UClickRate")::numeric, 2)          AS avg_click_rate
+                        ROUND(AVG("UClickRate")::numeric, 2)          AS avg_click_rate,
+                        ROUND(AVG("UClickRate") FILTER (WHERE EXTRACT(DOW FROM "Sent Date "::date) != 0)::numeric, 2) AS avg_click_rate_no_ss
                     FROM {S}."Campaigns"
                     WHERE "Sent Date " IS NOT NULL
                       AND "Sent Date "::date < CURRENT_DATE
@@ -345,12 +348,13 @@ def lambda_handler(event, context):
                 SELECT
                     m.month_start,
                     TO_CHAR(m.month_start, 'Mon YYYY')                         AS label,
-                    COALESCE(a.clicks, 0)                                      AS clicks,
-                    COALESCE(a.unique_opens, 0)                                AS unique_opens,
-                    COALESCE(a.campaigns, 0)                                   AS campaigns,
+                    COALESCE(a.clicks, 0)                                       AS clicks,
+                    COALESCE(a.unique_opens, 0)                                 AS unique_opens,
+                    COALESCE(a.campaigns, 0)                                    AS campaigns,
                     a.avg_open_rate,
                     a.avg_click_rate,
-                    (m.month_start = DATE_TRUNC('month', CURRENT_DATE)::date)  AS is_current
+                    a.avg_click_rate_no_ss,
+                    (m.month_start = DATE_TRUNC('month', CURRENT_DATE)::date)   AS is_current
                 FROM months m
                 LEFT JOIN agg a USING (month_start)
                 ORDER BY m.month_start
@@ -994,24 +998,26 @@ def lambda_handler(event, context):
         "weekly_trend":      weekly_trend,
         # Click Analysis trends (Section A — campaign aggregates)
         "campaign_clicks_weekly": {
-            "labels":          [str(r["label"])      for r in campaign_weekly_rows],
-            "week_starts":     [str(r["week_start"]) for r in campaign_weekly_rows],
-            "clicks":          [safe_int(r["clicks"])       for r in campaign_weekly_rows],
-            "unique_opens":    [safe_int(r["unique_opens"]) for r in campaign_weekly_rows],
-            "campaigns":       [safe_int(r["campaigns"])    for r in campaign_weekly_rows],
-            "avg_open_rate":   [safe_float(r["avg_open_rate"])  if r.get("avg_open_rate")  is not None else None for r in campaign_weekly_rows],
-            "avg_click_rate":  [safe_float(r["avg_click_rate"]) if r.get("avg_click_rate") is not None else None for r in campaign_weekly_rows],
-            "is_current":      [bool(r["is_current"])       for r in campaign_weekly_rows],
+            "labels":                [str(r["label"])      for r in campaign_weekly_rows],
+            "week_starts":           [str(r["week_start"]) for r in campaign_weekly_rows],
+            "clicks":                [safe_int(r["clicks"])       for r in campaign_weekly_rows],
+            "unique_opens":          [safe_int(r["unique_opens"]) for r in campaign_weekly_rows],
+            "campaigns":             [safe_int(r["campaigns"])    for r in campaign_weekly_rows],
+            "avg_open_rate":         [safe_float(r["avg_open_rate"])         if r.get("avg_open_rate")         is not None else None for r in campaign_weekly_rows],
+            "avg_click_rate":        [safe_float(r["avg_click_rate"])        if r.get("avg_click_rate")        is not None else None for r in campaign_weekly_rows],
+            "avg_click_rate_no_ss":  [safe_float(r["avg_click_rate_no_ss"])  if r.get("avg_click_rate_no_ss")  is not None else None for r in campaign_weekly_rows],
+            "is_current":            [bool(r["is_current"])       for r in campaign_weekly_rows],
         },
         "campaign_clicks_monthly": {
-            "labels":          [str(r["label"])       for r in campaign_monthly_rows],
-            "month_starts":    [str(r["month_start"]) for r in campaign_monthly_rows],
-            "clicks":          [safe_int(r["clicks"])       for r in campaign_monthly_rows],
-            "unique_opens":    [safe_int(r["unique_opens"]) for r in campaign_monthly_rows],
-            "campaigns":       [safe_int(r["campaigns"])    for r in campaign_monthly_rows],
-            "avg_open_rate":   [safe_float(r["avg_open_rate"])  if r.get("avg_open_rate")  is not None else None for r in campaign_monthly_rows],
-            "avg_click_rate":  [safe_float(r["avg_click_rate"]) if r.get("avg_click_rate") is not None else None for r in campaign_monthly_rows],
-            "is_current":      [bool(r["is_current"])       for r in campaign_monthly_rows],
+            "labels":                [str(r["label"])       for r in campaign_monthly_rows],
+            "month_starts":          [str(r["month_start"]) for r in campaign_monthly_rows],
+            "clicks":                [safe_int(r["clicks"])       for r in campaign_monthly_rows],
+            "unique_opens":          [safe_int(r["unique_opens"]) for r in campaign_monthly_rows],
+            "campaigns":             [safe_int(r["campaigns"])    for r in campaign_monthly_rows],
+            "avg_open_rate":         [safe_float(r["avg_open_rate"])         if r.get("avg_open_rate")         is not None else None for r in campaign_monthly_rows],
+            "avg_click_rate":        [safe_float(r["avg_click_rate"])        if r.get("avg_click_rate")        is not None else None for r in campaign_monthly_rows],
+            "avg_click_rate_no_ss":  [safe_float(r["avg_click_rate_no_ss"])  if r.get("avg_click_rate_no_ss")  is not None else None for r in campaign_monthly_rows],
+            "is_current":            [bool(r["is_current"])       for r in campaign_monthly_rows],
         },
         "campaign_clicks_same_weekday": {
             "labels":       [str(r["label"]) for r in campaign_same_weekday_rows],

@@ -294,10 +294,10 @@ def lambda_handler(event, context):
                         COALESCE(SUM("Clicks"), 0)                   AS clicks,
                         COALESCE(SUM("UniqueOpened"), 0)             AS unique_opens,
                         COUNT(*)                                     AS campaigns,
-                        ROUND(AVG("UOpenRate")::numeric,  2)         AS avg_open_rate,
-                        ROUND(AVG("UOpenRate")  FILTER (WHERE EXTRACT(DOW FROM "Sent Date "::date) != 0)::numeric, 2) AS avg_open_rate_no_ss,
-                        ROUND(AVG("UClickRate")::numeric, 2)         AS avg_click_rate,
-                        ROUND(AVG("UClickRate") FILTER (WHERE EXTRACT(DOW FROM "Sent Date "::date) != 0)::numeric, 2) AS avg_click_rate_no_ss
+                        ROUND(AVG("UOpenRate")::numeric,  2)                                                        AS avg_open_rate,
+                        ROUND((AVG("UOpenRate")  FILTER (WHERE EXTRACT(DOW FROM "Sent Date "::date) != 0))::numeric, 2) AS avg_open_rate_no_ss,
+                        ROUND(AVG("UClickRate")::numeric, 2)                                                        AS avg_click_rate,
+                        ROUND((AVG("UClickRate") FILTER (WHERE EXTRACT(DOW FROM "Sent Date "::date) != 0))::numeric, 2) AS avg_click_rate_no_ss
                     FROM {S}."Campaigns"
                     WHERE "Sent Date " IS NOT NULL
                       AND "Sent Date "::date < CURRENT_DATE
@@ -312,6 +312,7 @@ def lambda_handler(event, context):
                     COALESCE(a.unique_opens, 0)                              AS unique_opens,
                     COALESCE(a.campaigns, 0)                                 AS campaigns,
                     a.avg_open_rate,
+                    a.avg_open_rate_no_ss,
                     a.avg_click_rate,
                     a.avg_click_rate_no_ss,
                     (w.week_start = DATE_TRUNC('week', CURRENT_DATE)::date)  AS is_current
@@ -336,10 +337,10 @@ def lambda_handler(event, context):
                         COALESCE(SUM("Clicks"), 0)                    AS clicks,
                         COALESCE(SUM("UniqueOpened"), 0)              AS unique_opens,
                         COUNT(*)                                      AS campaigns,
-                        ROUND(AVG("UOpenRate")::numeric,  2)          AS avg_open_rate,
-                        ROUND(AVG("UOpenRate")  FILTER (WHERE EXTRACT(DOW FROM "Sent Date "::date) != 0)::numeric, 2) AS avg_open_rate_no_ss,
-                        ROUND(AVG("UClickRate")::numeric, 2)          AS avg_click_rate,
-                        ROUND(AVG("UClickRate") FILTER (WHERE EXTRACT(DOW FROM "Sent Date "::date) != 0)::numeric, 2) AS avg_click_rate_no_ss
+                        ROUND(AVG("UOpenRate")::numeric,  2)                                                         AS avg_open_rate,
+                        ROUND((AVG("UOpenRate")  FILTER (WHERE EXTRACT(DOW FROM "Sent Date "::date) != 0))::numeric, 2) AS avg_open_rate_no_ss,
+                        ROUND(AVG("UClickRate")::numeric, 2)                                                         AS avg_click_rate,
+                        ROUND((AVG("UClickRate") FILTER (WHERE EXTRACT(DOW FROM "Sent Date "::date) != 0))::numeric, 2) AS avg_click_rate_no_ss
                     FROM {S}."Campaigns"
                     WHERE "Sent Date " IS NOT NULL
                       AND "Sent Date "::date < CURRENT_DATE
@@ -354,6 +355,7 @@ def lambda_handler(event, context):
                     COALESCE(a.unique_opens, 0)                                 AS unique_opens,
                     COALESCE(a.campaigns, 0)                                    AS campaigns,
                     a.avg_open_rate,
+                    a.avg_open_rate_no_ss,
                     a.avg_click_rate,
                     a.avg_click_rate_no_ss,
                     (m.month_start = DATE_TRUNC('month', CURRENT_DATE)::date)   AS is_current

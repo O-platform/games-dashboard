@@ -1394,6 +1394,12 @@ function _ssOn() {
   const el = document.getElementById('clicksIncludeSS');
   return el ? el.checked : false;
 }
+function _syncSSToggle(src) {
+  ['clicksIncludeSS', 'opensIncludeSS'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el && el !== src) el.checked = src.checked;
+  });
+}
 /* Sunday-Spotlight detection — by send-date day-of-week, not by campaign
  * name. Sunday Spotlight is the digest blast that goes out on Sunday, so
  * the canonical test is "was this campaign sent on a Sunday?". The
@@ -1476,8 +1482,8 @@ function _buildCampaignSeries(rows, periodFn, formatter, limit) {
 function _renderClickSection1() {
   const includeSS = _ssOn();
   const metric    = (document.getElementById('clicksMetric') || {}).value || 'clicks';
-  const stateEl   = document.getElementById('clicks-ss-state');
-  if (stateEl) stateEl.textContent = includeSS ? 'Including branded digest sends' : 'Excluding branded digest sends';
+  const ssLabel = includeSS ? 'Including branded digest sends' : 'Excluding branded digest sends';
+  ['clicks-ss-state', 'opens-ss-state'].forEach(id => { const el = document.getElementById(id); if (el) el.textContent = ssLabel; });
   const table = (_rawClicksData && _rawClicksData.campaign_table) || [];
   const rows  = table.filter(c => includeSS ? true : !_isSundayCampaign(c));
   const weekly  = _buildCampaignSeries(rows, _isoWeekStart, _fmtWeekLabel,  8);
@@ -2034,20 +2040,6 @@ function renderContent(M) {
       <button id="eng-tab-opens"  onclick="_setEngTab('opens')"  style="font-size:13px;font-weight:600;padding:6px 18px;border:1px solid var(--card-border);border-radius:7px;background:var(--card);color:var(--text-muted);cursor:pointer;">Opens</button>
     </div>
 
-    <!-- Shared toolbar — SS toggle always visible, metric dropdown only in clicks mode -->
-    <div class="camp-toolbar" style="margin-bottom:16px;">
-      <div class="camp-toolbar-left">
-        <label class="switch" for="clicksIncludeSS" title="Include Sunday Spotlight campaigns">
-          <input type="checkbox" id="clicksIncludeSS" onchange="_refreshClicksTab()">
-          <span class="slider-round"></span>
-        </label>
-        <div>
-          <div style="font-size:13px;font-weight:600;color:var(--text);">Include Sunday Spotlight</div>
-          <div style="font-size:11px;color:var(--text-muted);" id="clicks-ss-state">Excluding branded digest sends</div>
-        </div>
-      </div>
-    </div>
-
     <!-- ── CLICKS PANEL ── -->
     <div id="eng-panel-clicks">
       <div class="kpi-row" style="grid-template-columns:repeat(auto-fit,minmax(200px,1fr));margin-bottom:16px;">
@@ -2065,6 +2057,19 @@ function renderContent(M) {
           <div class="label">Unique Clickers — Last 90d</div>
           <div class="value" id="sc-kpi-uniq-90d">—</div>
           <div class="sub">of which <span id="sc-kpi-90d">—</span> (<span id="sc-kpi-pct-90d">—</span>%) clicked 2+ campaigns</div>
+        </div>
+      </div>
+      <!-- SS toggle — below KPIs, only affects charts not KPI tiles -->
+      <div class="camp-toolbar" style="margin-bottom:16px;">
+        <div class="camp-toolbar-left">
+          <label class="switch" for="clicksIncludeSS" title="Include Sunday Spotlight campaigns">
+            <input type="checkbox" id="clicksIncludeSS" onchange="_syncSSToggle(this);_refreshClicksTab()">
+            <span class="slider-round"></span>
+          </label>
+          <div>
+            <div style="font-size:13px;font-weight:600;color:var(--text);">Include Sunday Spotlight</div>
+            <div style="font-size:11px;color:var(--text-muted);" id="clicks-ss-state">Excluding branded digest sends</div>
+          </div>
         </div>
       </div>
 
@@ -2154,6 +2159,19 @@ function renderContent(M) {
           <div class="label">Unique Openers — Last 90d</div>
           <div class="value" id="op-kpi-90d">—</div>
           <div class="sub">Distinct subscribers who opened at least one campaign</div>
+        </div>
+      </div>
+      <!-- SS toggle — below KPIs, only affects charts not KPI tiles -->
+      <div class="camp-toolbar" style="margin-bottom:16px;">
+        <div class="camp-toolbar-left">
+          <label class="switch" for="opensIncludeSS" title="Include Sunday Spotlight campaigns">
+            <input type="checkbox" id="opensIncludeSS" onchange="_syncSSToggle(this);_refreshClicksTab()">
+            <span class="slider-round"></span>
+          </label>
+          <div>
+            <div style="font-size:13px;font-weight:600;color:var(--text);">Include Sunday Spotlight</div>
+            <div style="font-size:11px;color:var(--text-muted);" id="opens-ss-state">Excluding branded digest sends</div>
+          </div>
         </div>
       </div>
 

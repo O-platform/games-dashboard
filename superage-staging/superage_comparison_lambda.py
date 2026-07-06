@@ -901,7 +901,7 @@ def lambda_handler(event, context):
                     FROM {S}.subscribers s
                     LEFT JOIN sa_acq sa ON sa.email = LOWER(TRIM(s.email))
                     WHERE COALESCE(s.date_subscribed, s.date_joined) IS NOT NULL
-                      AND COALESCE(s.date_subscribed, s.date_joined)::date >= DATE_TRUNC('week', CURRENT_DATE)::date - INTERVAL '2 weeks'
+                      AND COALESCE(s.date_subscribed, s.date_joined)::date >= DATE_TRUNC('week', CURRENT_DATE)::date - INTERVAL '13 weeks'
                       AND COALESCE(s.date_subscribed, s.date_joined)::date <  DATE_TRUNC('week', CURRENT_DATE)::date
                 )
                 SELECT
@@ -913,6 +913,48 @@ def lambda_handler(event, context):
                 ORDER BY week_start DESC, subs DESC
             """)
             top_source_rows = cur.fetchall()
+
+            # (C1b) Max article clicks per week — the single highest-clicking
+            # article/destination for each of the last 13 completed ISO weeks.
+            # Grouped by (week_start, article_title, url) then ranked so only
+            # the top row per week is returned. Powers the "Weekly Max Article
+            # Clicks" chart in the Weekly Digest section.
+            cur.execute(f"""
+                WITH wks AS (
+                    SELECT generate_series(
+                        DATE_TRUNC('week', CURRENT_DATE)::date - INTERVAL '12 weeks',
+                        DATE_TRUNC('week', CURRENT_DATE)::date - INTERVAL '1 week',
+                        INTERVAL '1 week'
+                    )::date AS week_start
+                ),
+                best AS (
+                    SELECT
+                        DATE_TRUNC('week', ac.issue_date::date)::date AS week_start,
+                        ac.article_title,
+                        ac.url,
+                        SUM(ac.unique_clicks) AS unique_clicks
+                    FROM {S}.articles_clicks ac
+                    WHERE ac.issue_date IS NOT NULL
+                      AND ac.issue_date::date >= DATE_TRUNC('week', CURRENT_DATE)::date - INTERVAL '12 weeks'
+                      AND ac.issue_date::date <  DATE_TRUNC('week', CURRENT_DATE)::date
+                    GROUP BY 1, ac.article_title, ac.url
+                ),
+                ranked AS (
+                    SELECT *,
+                           ROW_NUMBER() OVER (PARTITION BY week_start ORDER BY unique_clicks DESC NULLS LAST) AS rn
+                    FROM best
+                )
+                SELECT
+                    wks.week_start,
+                    TO_CHAR(wks.week_start, 'Mon DD')   AS label,
+                    COALESCE(r.article_title, '')        AS article_title,
+                    COALESCE(r.url, '')                  AS url,
+                    COALESCE(r.unique_clicks, 0)         AS max_unique_clicks
+                FROM wks
+                LEFT JOIN ranked r ON r.week_start = wks.week_start AND r.rn = 1
+                ORDER BY wks.week_start
+            """)
+            max_article_weekly_rows = cur.fetchall()
 
             # (C2) Article-level activity for the **last completed Mon–Sun**
             # ISO week, restricted to the three placement types the digest
@@ -961,6 +1003,20 @@ def lambda_handler(event, context):
         r["ctor"]           = round(safe_int(r["unique_clicks"])       / openers * 100, 2) if openers else None
         r["ctor_no_ss"]     = round(safe_int(r["unique_clicks_no_ss"]) / openers * 100, 2) if openers else None
         r["unique_openers"] = openers
+
+    # Organic subs per week — last 13 completed ISO weeks, derived from
+    # top_source_rows (already covers 13 weeks after the range extension).
+    _cur_week_mon = today - timedelta(days=today.weekday())
+    _organic_13wks = [_cur_week_mon - timedelta(weeks=w) for w in range(13, 0, -1)]
+    _organic_by_week = {
+        str(r['week_start']): safe_int(r['subs'])
+        for r in top_source_rows if str(r['bucket']) == 'Organic'
+    }
+    organic_subs_weekly = {
+        "labels":       [d.strftime('%b %d') for d in _organic_13wks],
+        "week_starts":  [d.isoformat() for d in _organic_13wks],
+        "organic_subs": [_organic_by_week.get(d.isoformat(), 0) for d in _organic_13wks],
+    }
 
     if not all_rows:
         result = {"data_as_of": today.isoformat(), "error": "no qualifying campaigns found"}
@@ -1187,6 +1243,16 @@ def lambda_handler(event, context):
                 for r in digest_articles_rows
                 if (r["atype"] or "") == "immersion"
             ],
+            # New organic subs per week (last 13 completed weeks)
+            "organic_subs_weekly": organic_subs_weekly,
+            # Top-clicking article per week (last 13 completed weeks)
+            "max_article_weekly": {
+                "labels":            [str(r["label"])          for r in max_article_weekly_rows],
+                "week_starts":       [str(r["week_start"])     for r in max_article_weekly_rows],
+                "max_unique_clicks": [safe_int(r["max_unique_clicks"]) for r in max_article_weekly_rows],
+                "article_titles":    [str(r["article_title"])  for r in max_article_weekly_rows],
+                "urls":              [str(r["url"])             for r in max_article_weekly_rows],
+            },
         },
     }
 

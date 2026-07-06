@@ -946,7 +946,7 @@ def lambda_handler(event, context):
                 )
                 SELECT
                     wks.week_start,
-                    TO_CHAR(wks.week_start, 'Mon DD')   AS label,
+                    TO_CHAR(wks.week_start, 'DD') || '–' || TO_CHAR(wks.week_start + INTERVAL '6 days', 'DD Mon') AS label,
                     COALESCE(r.article_title, '')        AS article_title,
                     COALESCE(r.url, '')                  AS url,
                     COALESCE(r.unique_clicks, 0)         AS max_unique_clicks
@@ -1013,7 +1013,7 @@ def lambda_handler(event, context):
         for r in top_source_rows if str(r['bucket']) == 'Organic'
     }
     organic_subs_weekly = {
-        "labels":       [d.strftime('%b %d') for d in _organic_13wks],
+        "labels":       [str(d.day) + '–' + str((d + timedelta(days=6)).day) + ' ' + (d + timedelta(days=6)).strftime('%b') for d in _organic_13wks],
         "week_starts":  [d.isoformat() for d in _organic_13wks],
         "organic_subs": [_organic_by_week.get(d.isoformat(), 0) for d in _organic_13wks],
     }

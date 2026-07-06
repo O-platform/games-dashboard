@@ -1221,8 +1221,8 @@ function _initDigestCharts() {
         plugins: {
           legend: { display: false },
           tooltip: { callbacks: { label: c => {
-            const pct = totalNew ? (Math.abs(c.parsed) / totalNew * 100).toFixed(1) : '0.0';
-            return `${Number(Math.abs(c.parsed)).toLocaleString()} (${pct}%)`;
+            const pct = totalNew ? (c.parsed.x / totalNew * 100).toFixed(1) : '0.0';
+            return `${Number(c.parsed.x).toLocaleString()} (${pct}%)`;
           }}}
         },
         scales: {

@@ -383,7 +383,7 @@ function renderOverview(M) {
     <div class="kpi-row" style="grid-template-columns:repeat(4,1fr);">
       <div class="kpi-card green"><div class="label">Active (Send-to)</div><div class="value">${fmt(M.send_to_active)}</div><div class="sub">&nbsp;</div></div>
       <div class="kpi-card cyan"><div class="label">Avg Open Rate</div><div class="value">${M.avg_open_rate}</div><div class="sub">&nbsp;</div></div>
-      <div class="kpi-card blue"><div class="label">Avg Click Rate</div><div class="value">${M.avg_click_rate}</div><div class="sub">&nbsp;</div></div>
+      <div class="kpi-card blue"><div class="label">CTR</div><div class="value">${M.avg_click_rate}</div><div class="sub">&nbsp;</div></div>
       <div class="kpi-card orange"><div class="label">Campaigns Sent</div><div class="value">${fmt(M.total_campaigns)}</div><div class="sub">${fmt(M.total_recipients)} total recipients</div></div>
     </div>
 
@@ -832,7 +832,7 @@ function renderDigest(M) {
     { label: 'Churn % of Sends',         value: num(wd.churn_pct_of_sends), prior: prv(wd.churn_pct_of_sends), spark: sparkOf('churn_pct_of_sends'), fmt: v => v == null ? '—' : Number(v).toFixed(3) + '%',                       higherIsBetter: false, spark_color: '#cf222e', isRate: true  },
     { label: 'Campaigns Sent',           value: num(wd.campaigns_sent), prior: prv(wd.campaigns_sent), spark: sparkOf('campaigns_sent'), fmt: v => v == null ? '—' : Number(v).toLocaleString(),                                higherIsBetter: null,  spark_color: '#8250df', isRate: false },
     { label: 'Avg Open Rate',            value: num(wd.avg_open_rate),  prior: prv(wd.avg_open_rate),  spark: sparkOf('avg_open_rate'),  fmt: v => v == null ? '—' : Number(v).toFixed(2) + '%',                                higherIsBetter: true,  spark_color: '#1a7f37', isRate: true  },
-    { label: 'Avg Click Rate',           value: num(wd.avg_click_rate), prior: prv(wd.avg_click_rate), spark: sparkOf('avg_click_rate'), fmt: v => v == null ? '—' : Number(v).toFixed(2) + '%',                                higherIsBetter: true,  spark_color: '#0969da', isRate: true  },
+    { label: 'CTR',                       value: num(wd.avg_click_rate), prior: prv(wd.avg_click_rate), spark: sparkOf('avg_click_rate'), fmt: v => v == null ? '—' : Number(v).toFixed(2) + '%',                                higherIsBetter: true,  spark_color: '#0969da', isRate: true  },
   ];
 
   // Delta always uses the **absolute** difference (current − prior):
@@ -984,16 +984,16 @@ function _digestSummaryBody(wd, lastIdx, priorIdx, lastLabel) {
       </div>
     </div>`;
 
-  // ── Source breakdown — was a text line, now a doughnut with the
-  // canonical labels + sub counts driving the slices. Cache the dataset
-  // on window so _initDigestCharts can read it after innerHTML.
+  // ── Source breakdown — horizontal bar chart, sorted by subs desc.
+  // Cache the dataset on window so _initDigestCharts can read it.
   const lastWeekStart = wd.week_starts && wd.week_starts[lastIdx];
   const allSrc = (wd.top_sources_by_week || []).filter(r => r.week_start === lastWeekStart);
   const totalNew = allSrc.reduce((a, r) => a + (Number(r.subs) || 0), 0);
   window._digSrcData = allSrc;
   window._digSrcTotal = totalNew;
 
-  // ── Card 2: Sources doughnut
+  // ── Card 2: Sources bar chart
+  const srcBarH = Math.max(200, allSrc.length * 36 + 40);
   const sourceBlock = (allSrc.length === 0)
     ? `<div class="chart-card">
         <h3>New Subscribers by Source</h3>
@@ -1001,9 +1001,27 @@ function _digestSummaryBody(wd, lastIdx, priorIdx, lastLabel) {
       </div>`
     : `<div class="chart-card">
         <h3>New Subscribers by Source <span class="badge-inline">total: ${fmtN(totalNew)}</span></h3>
-        <div class="chart-container h300"><canvas id="dig-src-pie"></canvas></div>
-        <div class="insight">Canonical-source split of subscribers who joined during the last completed week. Click a legend entry to hide that slice.</div>
+        <div class="chart-container" style="height:${srcBarH}px;"><canvas id="dig-src-bar"></canvas></div>
+        <div class="insight">Canonical-source split of subscribers who joined during the last completed week.</div>
       </div>`;
+
+  // ── Organic subs per week (last 13 completed weeks)
+  const orgData = wd.organic_subs_weekly || {};
+  window._digOrgData = orgData;
+  const orgBlock = `<div class="chart-card">
+    <h3>New Organic Subscribers — Weekly <span class="badge-inline">last 13 weeks</span></h3>
+    <div class="chart-container h260"><canvas id="dig-org-subs"></canvas></div>
+    <div class="insight">Subscribers whose acquisition source resolved to <code>Organic</code> — direct / unattributed sign-ups with no paid-channel UTM.</div>
+  </div>`;
+
+  // ── Max article clicks per week (last 13 completed weeks)
+  const maxArtData = wd.max_article_weekly || {};
+  window._digMaxArtData = maxArtData;
+  const maxArtBlock = `<div class="chart-card">
+    <h3>Weekly Max Article Clicks <span class="badge-inline">last 13 weeks</span></h3>
+    <div class="chart-container h260"><canvas id="dig-max-art"></canvas></div>
+    <div class="insight">Unique clicks to the single highest-performing article / destination each week, across all content types.</div>
+  </div>`;
 
   // ── Three article-section horizontal bars — Editorial / Sponsor /
   // Immersion. Each canvas is sized to fit ~5 rows; rendered by
@@ -1069,7 +1087,7 @@ function _digestSummaryBody(wd, lastIdx, priorIdx, lastLabel) {
   // The three article cards stack vertically (each its own row), and all
   // three now use the text-row format so the article URL is visible
   // at-a-glance without needing a hover.
-  return overall + sourceBlock + editorial + sponsors + immersions;
+  return overall + sourceBlock + orgBlock + maxArtBlock + editorial + sponsors + immersions;
 }
 
 /* Instantiates the Chart.js charts inside the Weekly Digest summary block.
@@ -1079,36 +1097,87 @@ function _digestSummaryBody(wd, lastIdx, priorIdx, lastLabel) {
 function _initDigestCharts() {
   const palette = ['#0969da','#cf222e','#8250df','#9a6700','#bf3989','#1b7c83','#1a7f37','#58a6ff','#3fb950','#fb8500','#fb6f92','#7d4e00','#4f8cff','#34d399','#a78bfa','#f87171','#fbbf24'];
 
-  // Sources doughnut
-  const srcCanvas = document.getElementById('dig-src-pie');
+  // Sources horizontal bar chart
+  const srcCanvas = document.getElementById('dig-src-bar');
   const allSrc = window._digSrcData || [];
   const totalNew = window._digSrcTotal || 0;
   if (srcCanvas && allSrc.length) {
     new Chart(srcCanvas, {
-      type: 'doughnut',
+      type: 'bar',
       data: {
         labels: allSrc.map(r => utmLabel(r.bucket)),
-        datasets: [{ data: allSrc.map(r => Number(r.subs) || 0),
-                     backgroundColor: allSrc.map((_, i) => palette[i % palette.length]),
-                     borderWidth: 1 }]
+        datasets: [{
+          label: 'New Subscribers',
+          data: allSrc.map(r => Number(r.subs) || 0),
+          backgroundColor: allSrc.map((_, i) => palette[i % palette.length]),
+          borderRadius: 4,
+          borderWidth: 0,
+        }]
       },
       options: {
         responsive: true, maintainAspectRatio: false,
+        indexAxis: 'y',
         plugins: {
-          legend: { position: 'right', labels: { font: { size: 11 }, padding: 6, boxWidth: 12 } },
+          legend: { display: false },
           tooltip: { callbacks: { label: c => {
-            const pct = totalNew ? (c.parsed / totalNew * 100).toFixed(2) : '0.00';
-            return `${c.label}: ${Number(c.parsed).toLocaleString()} (${pct}%)`;
+            const pct = totalNew ? (c.parsed.x / totalNew * 100).toFixed(1) : '0.0';
+            return `${Number(c.parsed.x).toLocaleString()} (${pct}%)`;
           }}}
-        }
+        },
+        scales: { x: { beginAtZero: true, ticks: { callback: v => Number(v).toLocaleString() } } }
       }
     });
   }
 
-  // The per-article horizontal-bar charts that used to live here were
-  // retired when Editorial / Sponsor / Immersion all switched to the
-  // text-row representation. _initDigestCharts() now only handles the
-  // Sources doughnut.
+  // Organic subs per week — last 13 completed weeks
+  const orgCanvas = document.getElementById('dig-org-subs');
+  const orgData = window._digOrgData || {};
+  if (orgCanvas && (orgData.labels || []).length) {
+    new Chart(orgCanvas, {
+      type: 'bar',
+      data: {
+        labels: orgData.labels,
+        datasets: [{ label: 'Organic Subs', data: orgData.organic_subs,
+                     backgroundColor: '#1a7f37', borderRadius: 3, borderWidth: 0 }]
+      },
+      options: {
+        responsive: true, maintainAspectRatio: false,
+        plugins: { legend: { display: false }, tooltip: { callbacks: {
+          label: c => `${Number(c.parsed.y).toLocaleString()} organic subs`
+        }}},
+        scales: { y: { beginAtZero: true, ticks: { callback: v => Number(v).toLocaleString() } } }
+      }
+    });
+  }
+
+  // Max article clicks per week — last 13 completed weeks
+  const maxArtCanvas = document.getElementById('dig-max-art');
+  const maxArtData = window._digMaxArtData || {};
+  if (maxArtCanvas && (maxArtData.labels || []).length) {
+    new Chart(maxArtCanvas, {
+      type: 'bar',
+      data: {
+        labels: maxArtData.labels,
+        datasets: [{ label: 'Max Article Clicks', data: maxArtData.max_unique_clicks,
+                     backgroundColor: '#0969da', borderRadius: 3, borderWidth: 0 }]
+      },
+      options: {
+        responsive: true, maintainAspectRatio: false,
+        plugins: {
+          legend: { display: false },
+          tooltip: { callbacks: { label: c => {
+            const idx = c.dataIndex;
+            const title = (maxArtData.article_titles || [])[idx] || '';
+            return [
+              `${Number(c.parsed.y).toLocaleString()} unique clicks`,
+              title ? `"${title.length > 60 ? title.slice(0, 60) + '…' : title}"` : ''
+            ].filter(Boolean);
+          }}}
+        },
+        scales: { y: { beginAtZero: true, ticks: { callback: v => Number(v).toLocaleString() } } }
+      }
+    });
+  }
 }
 
 function renderCampaigns(M) {
@@ -1134,7 +1203,7 @@ function renderCampaigns(M) {
     <div class="kpi-row" style="grid-template-columns:repeat(5,1fr);">
       <div class="kpi-card accent"><div class="label">Campaigns</div><div class="value" id="kpi-camp-count">—</div><div class="sub">Campaigns sent</div></div>
       <div class="kpi-card cyan"><div class="label">Avg Open Rate</div><div class="value" id="kpi-avg-open">—</div><div class="sub">Unique opens / recipients</div></div>
-      <div class="kpi-card blue"><div class="label">Avg Click Rate</div><div class="value" id="kpi-avg-click">—</div><div class="sub">Clicks / recipients</div></div>
+      <div class="kpi-card blue"><div class="label">CTR</div><div class="value" id="kpi-avg-click">—</div><div class="sub">Clicks / recipients</div></div>
       <div class="kpi-card green"><div class="label">Best Open Rate</div><div class="value" id="kpi-best-open">—</div><div class="sub">Single campaign peak</div></div>
       <div class="kpi-card orange"><div class="label">Total Sent Emails</div><div class="value" id="kpi-recipients">—</div><div class="sub"><span id="kpi-unique-opens">—</span> unique opens</div></div>
     </div>
@@ -1765,11 +1834,11 @@ function _renderClickTrendRight() {
     // When SS is off, use avg_click_rate_no_ss which excludes Sunday campaigns from the AVG.
     const ws = _sliceSeries(_rawClicksData && _rawClicksData.campaign_clicks_weekly || {}, window._rawWeeklyN || 8);
     const wCRKey = (ws && Array.isArray(ws.avg_click_rate_no_ss) && !_ssOn()) ? 'avg_click_rate_no_ss' : 'avg_click_rate';
-    _clickTrendChart('cnt-raw-weekly-unique-bar', ws, wCRKey, '#cf222e', 'Avg Click Rate %', pctFmt);
+    _clickTrendChart('cnt-raw-weekly-unique-bar', ws, wCRKey, '#cf222e', 'CTR %', pctFmt);
     const ms = (_rawClicksData && _rawClicksData.campaign_clicks_monthly) || {};
     const mCRKey = (ms && Array.isArray(ms.avg_click_rate_no_ss) && !_ssOn()) ? 'avg_click_rate_no_ss' : 'avg_click_rate';
-    _clickTrendChart('cnt-raw-monthly-unique-bar', ms, mCRKey, '#cf222e', 'Avg Click Rate %', pctFmt);
-    _updateRightChartTitles('Avg Click Rate', '— campaign summary · avg UClickRate across campaigns');
+    _clickTrendChart('cnt-raw-monthly-unique-bar', ms, mCRKey, '#cf222e', 'CTR %', pctFmt);
+    _updateRightChartTitles('CTR', '— campaign summary · avg click rate (unique clicks ÷ recipients) across campaigns');
   }
 }
 function _updateMetricNote() {
@@ -2113,7 +2182,7 @@ function renderContent(M) {
       <hr style="flex:1;border:none;border-top:1px solid var(--card-border);">
       <select id="clicksMetric" onchange="_renderClickTrendRight();_updateMetricNote()" style="font-size:12px;padding:4px 10px;border:1px solid var(--card-border);border-radius:6px;background:var(--card);color:var(--text);">
         <option value="unique_clicks" selected>Unique clickers</option>
-        <option value="avg_click_rate">Avg Click Rate</option>
+        <option value="avg_click_rate">CTR</option>
       </select>
       <hr style="flex:1;border:none;border-top:1px solid var(--card-border);">
     </div>

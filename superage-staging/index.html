@@ -1129,37 +1129,46 @@ function _initDigestCharts() {
     });
   }
 
-  // Organic subs per week — last 13 completed weeks
+  // Organic subs per week — last 13 completed weeks (line/area)
   const orgCanvas = document.getElementById('dig-org-subs');
   const orgData = window._digOrgData || {};
   if (orgCanvas && (orgData.labels || []).length) {
     new Chart(orgCanvas, {
-      type: 'bar',
+      type: 'line',
       data: {
         labels: orgData.labels,
-        datasets: [{ label: 'Organic Subs', data: orgData.organic_subs,
-                     backgroundColor: '#1a7f37', borderRadius: 3, borderWidth: 0 }]
+        datasets: [{
+          label: 'Organic Subs', data: orgData.organic_subs,
+          borderColor: '#1a7f37', backgroundColor: 'rgba(26,127,55,0.12)',
+          fill: true, tension: 0.35, pointRadius: 3, pointHoverRadius: 5, borderWidth: 2
+        }]
       },
       options: {
         responsive: true, maintainAspectRatio: false,
         plugins: { legend: { display: false }, tooltip: { callbacks: {
           label: c => `${Number(c.parsed.y).toLocaleString()} organic subs`
         }}},
-        scales: { y: { beginAtZero: true, ticks: { callback: v => Number(v).toLocaleString() } } }
+        scales: {
+          x: { ticks: { font: { size: 11 }, maxRotation: 45 } },
+          y: { beginAtZero: true, ticks: { callback: v => Number(v).toLocaleString() } }
+        }
       }
     });
   }
 
-  // Max article clicks per week — last 13 completed weeks
+  // Max article clicks per week — last 13 completed weeks (line/area)
   const maxArtCanvas = document.getElementById('dig-max-art');
   const maxArtData = window._digMaxArtData || {};
   if (maxArtCanvas && (maxArtData.labels || []).length) {
     new Chart(maxArtCanvas, {
-      type: 'bar',
+      type: 'line',
       data: {
         labels: maxArtData.labels,
-        datasets: [{ label: 'Max Article Clicks', data: maxArtData.max_unique_clicks,
-                     backgroundColor: '#0969da', borderRadius: 3, borderWidth: 0 }]
+        datasets: [{
+          label: 'Max Article Clicks', data: maxArtData.max_unique_clicks,
+          borderColor: '#0969da', backgroundColor: 'rgba(9,105,218,0.10)',
+          fill: true, tension: 0.35, pointRadius: 3, pointHoverRadius: 5, borderWidth: 2
+        }]
       },
       options: {
         responsive: true, maintainAspectRatio: false,
@@ -1174,7 +1183,10 @@ function _initDigestCharts() {
             ].filter(Boolean);
           }}}
         },
-        scales: { y: { beginAtZero: true, ticks: { callback: v => Number(v).toLocaleString() } } }
+        scales: {
+          x: { ticks: { font: { size: 11 }, maxRotation: 45 } },
+          y: { beginAtZero: true, ticks: { callback: v => Number(v).toLocaleString() } }
+        }
       }
     });
   }

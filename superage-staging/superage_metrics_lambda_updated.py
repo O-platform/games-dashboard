@@ -942,15 +942,7 @@ def lambda_handler(event, context):
                 COUNT(*) AS cnt
             FROM {S}.subscriber_quiz
             GROUP BY 1
-            ORDER BY
-                CASE COALESCE(NULLIF(financial_situation, ''), 'Unknown')
-                    WHEN 'Very comfortable' THEN 1
-                    WHEN 'Comfortable'      THEN 2
-                    WHEN 'Somewhat stable'  THEN 3
-                    WHEN 'Stable'           THEN 4
-                    WHEN 'Unstable'         THEN 5
-                    ELSE 6
-                END
+            ORDER BY 2 DESC
         """)
         financial_rows = cur.fetchall()
 

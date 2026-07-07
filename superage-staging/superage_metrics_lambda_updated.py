@@ -938,6 +938,24 @@ def lambda_handler(event, context):
 
         cur.execute(f"""
             SELECT
+                COALESCE(NULLIF(financial_situation, ''), 'Unknown') AS label,
+                COUNT(*) AS cnt
+            FROM {S}.subscriber_quiz
+            GROUP BY 1
+            ORDER BY
+                CASE COALESCE(NULLIF(financial_situation, ''), 'Unknown')
+                    WHEN 'Very comfortable' THEN 1
+                    WHEN 'Comfortable'      THEN 2
+                    WHEN 'Somewhat stable'  THEN 3
+                    WHEN 'Stable'           THEN 4
+                    WHEN 'Unstable'         THEN 5
+                    ELSE 6
+                END
+        """)
+        financial_rows = cur.fetchall()
+
+        cur.execute(f"""
+            SELECT
                 CASE
                     WHEN is_obese IS NULL THEN 'Unknown'
                     WHEN LOWER(is_obese::text) IN ('1','true','yes','y') THEN 'Obese'
@@ -1834,6 +1852,10 @@ def lambda_handler(event, context):
         "labels": [r["label"] for r in marital_rows],
         "data":   [safe_int(r["cnt"]) for r in marital_rows],
         "colors": color_list(len(marital_rows)),
+    }
+    M["quiz_financial_dist"] = {
+        "labels": [r["label"] for r in financial_rows],
+        "data":   [safe_int(r["cnt"]) for r in financial_rows],
     }
     M["quiz_obesity_dist"] = {
         "labels": [r["label"] for r in obesity_rows],

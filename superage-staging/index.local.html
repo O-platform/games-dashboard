@@ -3140,6 +3140,10 @@ function renderQuiz(M) {
       <h3>Education Level</h3>
       <div class="chart-container h260"><canvas id="quiz-education"></canvas></div>
     </div>
+    <div class="chart-card">
+      <h3>Financial Situation</h3>
+      <div class="chart-container h260"><canvas id="quiz-financial"></canvas></div>
+    </div>
     <h2 style="font-size:14px;font-weight:600;color:var(--text);margin:18px 0 10px;">Lifestyle Indicators</h2>
     <div class="grid-2">
       <div class="chart-card">
@@ -3161,10 +3165,6 @@ function renderQuiz(M) {
         <div class="chart-container h260"><canvas id="quiz-obesity"></canvas></div>
       </div>
     </div>
-    <div class="chart-card">
-      <h3>Financial Situation</h3>
-      <div class="chart-container h260"><canvas id="quiz-financial"></canvas></div>
-    </div>
   `;
   const palette = ['#0969da','#1a7f37','#cf222e','#9a6700','#8250df','#bf3989','#1b7c83','#58a6ff','#3fb950','#f85149'];
   function barH(id, d, label, color) {
@@ -3184,7 +3184,7 @@ function renderQuiz(M) {
   barH('quiz-sleep',      M.quiz_sleep_dist,     'Count',  '#1b7c83');
   pie ('quiz-marital',    M.quiz_marital_dist);
   pie ('quiz-obesity',    M.quiz_obesity_dist);
-  barH('quiz-financial',  M.quiz_financial_dist, 'Count', '#9a6700');
+  barH('quiz-financial',  M.quiz_financial_dist, 'Count', '#1b7c83');
 }
 
 /* ═══════════════════════════════════════

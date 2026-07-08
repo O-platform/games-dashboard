@@ -1011,6 +1011,18 @@
           <div class="sub">Known sources only</div>
         </div>
       </div>
+      <div class="card" style="margin-bottom:18px;">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;">
+          <h3 style="margin-bottom:0;">Ticket Sales Trend</h3>
+          <div style="display:flex;gap:6px;" id="sales-trend-toggles">
+            <button onclick="setSalesTrend('daily')"   id="trend-btn-daily"   style="padding:4px 12px;border-radius:14px;font-size:11px;font-weight:600;cursor:pointer;border:1px solid var(--accent);background:var(--accent);color:#fff;">Daily</button>
+            <button onclick="setSalesTrend('weekly')"  id="trend-btn-weekly"  style="padding:4px 12px;border-radius:14px;font-size:11px;font-weight:600;cursor:pointer;border:1px solid var(--card-border);background:transparent;color:var(--text-muted);">Weekly</button>
+            <button onclick="setSalesTrend('monthly')" id="trend-btn-monthly" style="padding:4px 12px;border-radius:14px;font-size:11px;font-weight:600;cursor:pointer;border:1px solid var(--card-border);background:transparent;color:var(--text-muted);">Monthly</button>
+          </div>
+        </div>
+        <div class="chart-wrap"><canvas id="chart-tickets-trend"></canvas></div>
+        <div id="chart-tickets-trend-empty" class="empty-msg" style="display:none;">No sales date data</div>
+      </div>
       <div style="margin-bottom:18px;" class="section-header">
         <div class="dot" style="background:var(--cyan);"></div>
         <h2>Landing Analysis</h2>
@@ -1056,7 +1068,15 @@
         </div>
       </div>
       <div class="card" style="margin-bottom:18px;">
-        <h3>Landing Events &mdash; Daily Trend</h3>
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;">
+          <h3 style="margin-bottom:0;">Landing Events Trend</h3>
+          <div style="display:flex;gap:6px;" id="landing-trend-toggles">
+            <button onclick="setLandingTrend('all')"     id="ltbtn-all"     style="font-size:11px;padding:3px 10px;border-radius:4px;border:1px solid;cursor:pointer;background:var(--green);border-color:var(--green);color:#fff;">All</button>
+            <button onclick="setLandingTrend('daily')"   id="ltbtn-daily"   style="font-size:11px;padding:3px 10px;border-radius:4px;border:1px solid;cursor:pointer;background:transparent;border-color:var(--card-border);color:var(--text-muted);">Daily</button>
+            <button onclick="setLandingTrend('weekly')"  id="ltbtn-weekly"  style="font-size:11px;padding:3px 10px;border-radius:4px;border:1px solid;cursor:pointer;background:transparent;border-color:var(--card-border);color:var(--text-muted);">Weekly</button>
+            <button onclick="setLandingTrend('monthly')" id="ltbtn-monthly" style="font-size:11px;padding:3px 10px;border-radius:4px;border:1px solid;cursor:pointer;background:transparent;border-color:var(--card-border);color:var(--text-muted);">Monthly</button>
+          </div>
+        </div>
         <div class="chart-wrap"><canvas id="chart-landing-daily"></canvas></div>
         <div id="landing-daily-empty" class="empty-msg" style="display:none;">No date data</div>
       </div>
@@ -1101,6 +1121,15 @@
     <div id="funnel-loading" class="sales-loading">
       <div class="sales-spinner"></div>
       <div style="font-size:13px;color:var(--text-muted);">Loading funnel data&hellip;</div>
+    </div>
+    <div id="funnel-period-bar" style="display:none;margin-bottom:18px;display:flex;gap:6px;flex-wrap:wrap;align-items:center;">
+      <span style="font-size:12px;color:var(--text-muted);margin-right:4px;">Period:</span>
+      <button onclick="setFunnelPeriod('all')"        id="fpbtn-all"        style="font-size:11px;padding:3px 10px;border-radius:4px;border:1px solid var(--green);cursor:pointer;background:var(--green);color:#fff;">All Time</button>
+      <button onclick="setFunnelPeriod('last_week')"  id="fpbtn-last_week"  style="font-size:11px;padding:3px 10px;border-radius:4px;border:1px solid var(--card-border);cursor:pointer;background:transparent;color:var(--text-muted);">Last Week</button>
+      <button onclick="setFunnelPeriod('this_month')" id="fpbtn-this_month" style="font-size:11px;padding:3px 10px;border-radius:4px;border:1px solid var(--card-border);cursor:pointer;background:transparent;color:var(--text-muted);">This Month</button>
+      <button onclick="setFunnelPeriod('last_month')" id="fpbtn-last_month" style="font-size:11px;padding:3px 10px;border-radius:4px;border:1px solid var(--card-border);cursor:pointer;background:transparent;color:var(--text-muted);">Last Month</button>
+      <button onclick="setFunnelPeriod('30d')"        id="fpbtn-30d"        style="font-size:11px;padding:3px 10px;border-radius:4px;border:1px solid var(--card-border);cursor:pointer;background:transparent;color:var(--text-muted);">Last 30 Days</button>
+      <span id="funnel-period-label" style="font-size:11px;color:var(--text-muted);margin-left:6px;"></span>
     </div>
     <div id="funnel-content" style="display:none;"></div>
   </div>
@@ -3475,6 +3504,55 @@
           document.getElementById('kpi-crossover-sub').textContent = `${pctB}% of all buyers`;
         } else { document.getElementById('kpi-crossover').textContent = 'N/A'; document.getElementById('kpi-conversion').textContent = 'N/A'; }
 
+        // Ticket Sales Trend chart
+        const _trendRaw = m.tickets_by_day || [];
+        function _aggTrend(period) {
+          if (period === 'daily') return { labels: _trendRaw.map(r => r.day), counts: _trendRaw.map(r => r.count) };
+          const map = {};
+          _trendRaw.forEach(r => {
+            const d = new Date(r.day + 'T00:00:00');
+            let key;
+            if (period === 'weekly') {
+              const dow = d.getDay();
+              const diff = dow === 0 ? -6 : 1 - dow;
+              const mon = new Date(d); mon.setDate(d.getDate() + diff);
+              key = 'Wk ' + mon.toISOString().slice(0, 10);
+            } else {
+              key = r.day.slice(0, 7);
+            }
+            map[key] = (map[key] || 0) + r.count;
+          });
+          const keys = Object.keys(map).sort();
+          return { labels: keys, counts: keys.map(k => map[k]) };
+        }
+        function _renderTrend(period) {
+          const agg = _aggTrend(period);
+          if (!agg.labels.length) { hideEl('chart-tickets-trend'); showEl('chart-tickets-trend-empty'); return; }
+          mkChart('chart-tickets-trend', {
+            type: 'line',
+            data: { labels: agg.labels, datasets: [{ data: agg.counts, borderColor: C.green, backgroundColor: C.green + '33', fill: true, tension: 0.35, pointRadius: agg.labels.length > 20 ? 2 : 4, pointHoverRadius: 6, borderWidth: 2 }] },
+            options: {
+              responsive: true, maintainAspectRatio: false,
+              scales: {
+                x: { grid: { display: false }, ticks: { maxRotation: 45, autoSkip: true, maxTicksLimit: 14, font: { size: 11 } } },
+                y: { grid: { display: false }, beginAtZero: true, ticks: { stepSize: 1, callback: v => Number.isInteger(v) ? v : '' } }
+              },
+              plugins: { legend: { display: false }, tooltip: { callbacks: { label: c => ` ${c.raw} ticket${c.raw !== 1 ? 's' : ''}` } } }
+            }
+          });
+          ['daily','weekly','monthly'].forEach(p => {
+            const btn = document.getElementById('trend-btn-' + p);
+            if (!btn) return;
+            const active = p === period;
+            btn.style.background  = active ? C.green : 'transparent';
+            btn.style.borderColor = active ? C.green : 'var(--card-border)';
+            btn.style.color       = active ? '#fff'  : 'var(--text-muted)';
+          });
+        }
+        window.setSalesTrend = p => _renderTrend(p);
+        if (_trendRaw.length) _renderTrend('daily');
+        else { hideEl('chart-tickets-trend'); showEl('chart-tickets-trend-empty'); }
+
         // Funnel
         const brands = m.landing_our_brands || 0, sponsors = m.landing_sponsors || 0, events = m.landing_events_partners || 0;
         const total = brands + sponsors + events || 1;
@@ -3582,19 +3660,55 @@
           mkChart('chart-landing-medium', hbarCfg(m.landing_by_medium.map(r => fmtLabel(r.medium)), m.landing_by_medium.map(r => +r.count), colorN(m.landing_by_medium.length), 'events'));
         else { hideEl('chart-landing-medium'); showEl('landing-medium-empty'); }
 
-        if ((m.landing_by_day || []).length) {
-          const labs = m.landing_by_day.map(r => String(r.day).slice(0, 10));
-          const vals = m.landing_by_day.map(r => +r.count);
+        const _landingRaw = m.landing_by_day || [];
+        function _aggLanding(period) {
+          if (period === 'all' || period === 'daily') {
+            return { labels: _landingRaw.map(r => String(r.day).slice(0, 10)), counts: _landingRaw.map(r => +r.count) };
+          }
+          const map = {};
+          _landingRaw.forEach(r => {
+            const d = new Date(String(r.day).slice(0, 10) + 'T00:00:00');
+            let key;
+            if (period === 'weekly') {
+              const dow = d.getDay();
+              const diff = dow === 0 ? -6 : 1 - dow;
+              const mon = new Date(d); mon.setDate(d.getDate() + diff);
+              key = 'Wk ' + mon.toISOString().slice(0, 10);
+            } else {
+              key = String(r.day).slice(0, 7);
+            }
+            map[key] = (map[key] || 0) + (+r.count);
+          });
+          const keys = Object.keys(map).sort();
+          return { labels: keys, counts: keys.map(k => map[k]) };
+        }
+        function _renderLandingTrend(period) {
+          if (!_landingRaw.length) { hideEl('chart-landing-daily'); showEl('landing-daily-empty'); return; }
+          const agg = _aggLanding(period);
           mkChart('chart-landing-daily', {
             type: 'line',
-            data: { labels: labs, datasets: [{ label: 'Events', data: vals, borderColor: C.cyan, backgroundColor: 'rgba(57,197,207,.1)', fill: true, tension: .3, pointRadius: labs.length < 5 ? 4 : 2, borderWidth: 1.5 }] },
+            data: { labels: agg.labels, datasets: [{ data: agg.counts, borderColor: C.cyan, backgroundColor: 'rgba(57,197,207,.1)', fill: true, tension: .3, pointRadius: agg.labels.length > 20 ? 2 : 4, borderWidth: 1.5 }] },
             options: {
               responsive: true, maintainAspectRatio: false,
-              scales: { x: { grid: { display: false }, ticks: { maxTicksLimit: 10, maxRotation: 0 } }, y: { grid: { color: GRID }, beginAtZero: true, ticks: { maxTicksLimit: 5 } } },
-              plugins: { legend: { display: false } }
+              scales: {
+                x: { grid: { display: false }, ticks: { maxTicksLimit: 14, maxRotation: 45, autoSkip: true, font: { size: 11 } } },
+                y: { grid: { display: false }, beginAtZero: true, ticks: { maxTicksLimit: 5, callback: v => Number.isInteger(v) ? v : '' } }
+              },
+              plugins: { legend: { display: false }, tooltip: { callbacks: { label: c => ` ${c.raw.toLocaleString()} events` } } }
             }
           });
-        } else { hideEl('chart-landing-daily'); showEl('landing-daily-empty'); }
+          ['all','daily','weekly','monthly'].forEach(p => {
+            const btn = document.getElementById('ltbtn-' + p);
+            if (!btn) return;
+            const active = p === period;
+            btn.style.background  = active ? C.cyan  : 'transparent';
+            btn.style.borderColor = active ? C.cyan  : 'var(--card-border)';
+            btn.style.color       = active ? '#fff'  : 'var(--text-muted)';
+          });
+        }
+        window.setLandingTrend = p => _renderLandingTrend(p);
+        if (_landingRaw.length) _renderLandingTrend('all');
+        else { hideEl('chart-landing-daily'); showEl('landing-daily-empty'); }
 
         // Recent tickets table
         const tix = m.recent_tickets || { columns: [], rows: [] };
@@ -3938,18 +4052,92 @@
     }
 
     // ─── FUNNEL ANALYSIS ─────────────────────────────────────
-    function renderFunnel(m) {
-      const f = m.ticket_funnel || {};
-      const el = document.getElementById('funnel-content');
-      if (!el) return;
-      hideEl('funnel-loading');
+    let _funnelM = null;
 
-      const matched    = f.matched_tickets || 0;
-      const total      = f.total_tickets || 0;
-      const matchPct   = total > 0 ? Math.round(matched / total * 100) : 0;
-      const byType     = f.by_type || [];
-      const palette    = [C.green, C.accent, C.purple, C.orange, C.cyan, C.gold, C.pink, C.red, C.teal, '#6e7681'];
-      const colorN     = n => Array.from({length: n}, (_, i) => palette[i % palette.length]);
+    function _funnelPeriodRange(period) {
+      const today = new Date();
+      const iso = d => d.toISOString().slice(0, 10);
+      if (period === 'all') return { start: null, end: null };
+      if (period === '30d') {
+        const s = new Date(today); s.setDate(today.getDate() - 30);
+        return { start: iso(s), end: iso(today) };
+      }
+      if (period === 'this_month') {
+        return { start: iso(new Date(today.getFullYear(), today.getMonth(), 1)), end: iso(today) };
+      }
+      if (period === 'last_month') {
+        return {
+          start: iso(new Date(today.getFullYear(), today.getMonth() - 1, 1)),
+          end:   iso(new Date(today.getFullYear(), today.getMonth(), 0))
+        };
+      }
+      if (period === 'last_week') {
+        const dow = today.getDay();
+        const monOffset = dow === 0 ? -6 : 1 - dow;
+        const monThis = new Date(today); monThis.setDate(today.getDate() + monOffset);
+        const monLast = new Date(monThis); monLast.setDate(monThis.getDate() - 7);
+        const sunLast = new Date(monThis); sunLast.setDate(monThis.getDate() - 1);
+        return { start: iso(monLast), end: iso(sunLast) };
+      }
+      return { start: null, end: null };
+    }
+
+    function _aggregateFunnelTs(rows, start, end) {
+      const filtered = rows.filter(r => (!start || r.day >= start) && (!end || r.day <= end));
+      const byTypeMap = {};
+      filtered.forEach(r => {
+        if (!byTypeMap[r.ticket_type]) byTypeMap[r.ticket_type] = { medium: {}, source: {}, campaign: {} };
+        const tt = byTypeMap[r.ticket_type];
+        tt.medium[r.medium] = (tt.medium[r.medium] || 0) + r.count;
+        tt.source[r.source] = (tt.source[r.source] || 0) + r.count;
+        if (r.campaign !== '(not set)') {
+          const k = r.source + '|||' + r.campaign;
+          if (!tt.campaign[k]) tt.campaign[k] = { campaign: r.campaign, source: r.source, count: 0 };
+          tt.campaign[k].count += r.count;
+        }
+      });
+      const srt = (a, b) => b.count - a.count;
+      return Object.entries(byTypeMap).map(([type, tt]) => ({
+        ticket_type: type,
+        by_medium:   Object.entries(tt.medium).map(([k, v]) => ({ medium: k, count: v })).sort(srt),
+        by_source:   Object.entries(tt.source).map(([k, v]) => ({ source: k, count: v })).sort(srt),
+        by_campaign: Object.values(tt.campaign).sort(srt),
+      })).sort((a, b) =>
+        b.by_medium.reduce((s, x) => s + x.count, 0) - a.by_medium.reduce((s, x) => s + x.count, 0)
+      );
+    }
+
+    function _renderFunnelPeriod(period) {
+      if (!_funnelM) return;
+      const f   = _funnelM.ticket_funnel || {};
+      const ts  = f.timeseries || [];
+      const { start, end } = _funnelPeriodRange(period);
+
+      const byType = ts.length
+        ? _aggregateFunnelTs(ts, start, end)
+        : (period === 'all' ? (f.by_type || []) : []);
+
+      // Update period toggle button styles
+      ['all','last_week','this_month','last_month','30d'].forEach(p => {
+        const btn = document.getElementById('fpbtn-' + p);
+        if (!btn) return;
+        const active = p === period;
+        btn.style.background  = active ? C.green : 'transparent';
+        btn.style.borderColor = active ? C.green : 'var(--card-border)';
+        btn.style.color       = active ? '#fff'  : 'var(--text-muted)';
+      });
+
+      // Update period label
+      const lbl = document.getElementById('funnel-period-label');
+      if (lbl && start) lbl.textContent = `${start} → ${end}`;
+      else if (lbl)     lbl.textContent = '';
+
+      const el        = document.getElementById('funnel-content');
+      const matched   = f.matched_tickets || 0;
+      const total     = f.total_tickets || 0;
+      const matchPct  = total > 0 ? Math.round(matched / total * 100) : 0;
+      const palette   = [C.green, C.accent, C.purple, C.orange, C.cyan, C.gold, C.pink, C.red, C.teal, '#6e7681'];
+      const colorN    = n => Array.from({length: n}, (_, i) => palette[i % palette.length]);
 
       function hBarChart(id, items, key) {
         if (!items || !items.length) return;
@@ -3960,8 +4148,8 @@
           }
           return base;
         });
-        const data   = items.map(i => i.count);
-        const tot    = data.reduce((a, b) => a + b, 0);
+        const data = items.map(i => i.count);
+        const tot  = data.reduce((a, b) => a + b, 0);
         mkChart(id, {
           type: 'bar',
           data: { labels, datasets: [{ data, backgroundColor: colorN(labels.length), borderRadius: 4, borderWidth: 0 }] },
@@ -3979,19 +4167,13 @@
         });
       }
 
-      const matchedTypeNames = new Set(byType.map(t => t.ticket_type));
-      const allTypes = (m.ticket_types || []).filter(t => (t.total || 0) > 0);
-      const noDataTypes = allTypes.filter(t => !matchedTypeNames.has(t.type));
+      const periodTotal = byType.reduce((s, t) => s + t.by_medium.reduce((a, b) => a + b.count, 0), 0);
 
-      const typeTotalMap = {};
-      (m.ticket_types || []).forEach(t => { typeTotalMap[t.type] = t.total || 0; });
-
-      const sectionsHtml = byType.map((td, i) => {
+      const sectionsHtml = byType.length ? byType.map((td, i) => {
         const mid = `funnel-medium-${i}`;
         const sid = `funnel-source-${i}`;
         const cid = `funnel-campaign-${i}`;
         const sessionCount = (td.by_medium || []).reduce((a, b) => a + b.count, 0);
-        const grandTotal   = typeTotalMap[td.ticket_type] || 0;
         const chartH = Math.max(140, Math.max(
           (td.by_medium   || []).length,
           (td.by_source   || []).length,
@@ -4002,7 +4184,7 @@
             <div class="dot" style="background:${palette[i % palette.length]};"></div>
             <h2>${td.ticket_type}
               <small style="font-size:12px;color:var(--text-muted);font-weight:400;margin-left:8px;">
-                ${sessionCount.toLocaleString()} of ${grandTotal.toLocaleString()} tickets with session data
+                ${sessionCount.toLocaleString()} tickets with session data
               </small>
             </h2>
           </div>
@@ -4019,29 +4201,17 @@
               <h3>By Campaign</h3>
               ${(td.by_campaign || []).length
                 ? `<div class="chart-wrap" style="height:${chartH}px;"><canvas id="${cid}"></canvas></div>`
-                : '<div style="height:${chartH}px;display:flex;align-items:center;justify-content:center;color:var(--text-muted);font-size:13px;">No campaign data</div>'}
+                : `<div style="height:${chartH}px;display:flex;align-items:center;justify-content:center;color:var(--text-muted);font-size:13px;">No campaign data</div>`}
             </div>
           </div>`;
-      }).join('') + noDataTypes.map(t => `
-          <div class="section-header" style="margin-bottom:14px;">
-            <div class="dot" style="background:var(--text-dim);"></div>
-            <h2>${t.type}
-              <small style="font-size:12px;color:var(--text-muted);font-weight:400;margin-left:8px;">
-                ${(t.total || 0).toLocaleString()} tickets &mdash; no session data
-              </small>
-            </h2>
-          </div>
-          <div class="grid-3" style="margin-bottom:28px;">
-            <div class="card" style="display:flex;align-items:center;justify-content:center;min-height:100px;color:var(--text-muted);font-size:13px;">No session data available</div>
-            <div class="card" style="display:flex;align-items:center;justify-content:center;min-height:100px;color:var(--text-muted);font-size:13px;">No session data available</div>
-            <div class="card" style="display:flex;align-items:center;justify-content:center;min-height:100px;color:var(--text-muted);font-size:13px;">No session data available</div>
-          </div>`).join('');
+      }).join('') : `<div class="empty-msg" style="padding:32px 0;">No session data for this period</div>`;
 
       el.innerHTML = `
-        <div class="section-context-banner">
+        <div class="section-context-banner" style="margin-bottom:18px;">
           <strong>Purchase Source Funnel</strong> &mdash;
           <strong>${matched.toLocaleString()}</strong> of <strong>${total.toLocaleString()}</strong>
           tickets have session data (${matchPct}%)
+          ${period !== 'all' ? `&mdash; showing <strong>${periodTotal.toLocaleString()}</strong> in selected period` : ''}
         </div>
         <div class="kpi-row" style="margin-bottom:24px;">
           <div class="kpi-card accent">
@@ -4055,14 +4225,13 @@
             <div class="sub">${matchPct}% of all tickets</div>
           </div>
           <div class="kpi-card purple">
-            <div class="label">Ticket Types</div>
-            <div class="value">3</div>
-            <div class="sub">${byType.length} with session data</div>
+            <div class="label">${period === 'all' ? 'Ticket Types' : 'In Period'}</div>
+            <div class="value">${period === 'all' ? byType.length : periodTotal.toLocaleString()}</div>
+            <div class="sub">${period === 'all' ? `${byType.length} with session data` : 'tickets with session data'}</div>
           </div>
         </div>
         ${sectionsHtml}`;
 
-      // Render charts after HTML is in DOM
       byType.forEach((td, i) => {
         hBarChart(`funnel-medium-${i}`,   td.by_medium,   'medium');
         hBarChart(`funnel-source-${i}`,   td.by_source,   'source');
@@ -4070,9 +4239,19 @@
           hBarChart(`funnel-campaign-${i}`, td.by_campaign, 'campaign');
       });
 
-      // Ticket types with no transaction records
       showEl('funnel-content');
     }
+
+    function renderFunnel(m) {
+      if (!document.getElementById('funnel-content')) return;
+      hideEl('funnel-loading');
+      _funnelM = m;
+      const pb = document.getElementById('funnel-period-bar');
+      if (pb) pb.style.display = 'flex';
+      _renderFunnelPeriod('all');
+    }
+
+    window.setFunnelPeriod = p => _renderFunnelPeriod(p);
   </script>
 </body>
 

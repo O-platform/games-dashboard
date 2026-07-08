@@ -781,7 +781,7 @@ def lambda_handler(event, context):
             weekly_digest_rows = cur.fetchall()
 
             # Top acquisition source for the last two completed ISO weeks.
-            # Label priority: sa.acquisition_utm_source >> s.source >> 'Organic'.
+            # Label priority: sa.acquisition_utm_source >> url_variables (Meta) >> sub_source >> source >> utm_source >> 'Organic'.
             # KEEP THIS BRANCH LIST IN SYNC WITH `_canon_source` IN THE METRICS
             # LAMBDA AND `utmLabel()` IN index.html.
             cur.execute(f"""
@@ -895,6 +895,13 @@ def lambda_handler(event, context):
                                 WHEN LOWER(TRIM(s.source)) = 'refind'                                    THEN 'Refind'
                                 WHEN LOWER(TRIM(s.source)) = 'superage'                                  THEN 'SuperAge'
                                 ELSE NULLIF(TRIM(s.source), '')
+                            END,
+                            -- Level 5: utm_source on subscribers table (catches Meta subs missing acquisition record)
+                            CASE
+                                WHEN LOWER(TRIM(s.utm_source)) IN ('none','null','(none)','(null)','-','n/a') OR TRIM(s.utm_source) IS NULL OR TRIM(s.utm_source) = '' THEN NULL
+                                WHEN LOWER(TRIM(s.utm_source)) IN ('facebook','meta','fb','ig')               THEN 'Meta'
+                                WHEN LOWER(TRIM(s.utm_source)) IN ('organic','direct')                        THEN 'Organic'
+                                ELSE NULLIF(TRIM(s.utm_source), '')
                             END,
                             'Organic'
                         ) AS bucket

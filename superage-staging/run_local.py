@@ -47,6 +47,13 @@ os.environ.setdefault("WRITE_TO_R2", "false")
 os.environ.setdefault("SA_SCHEMA", "superage")
 os.environ.setdefault("DB_SSLMODE", "require")
 
+# ── DB credentials (do not commit with real values) ──
+os.environ.setdefault("DB_HOST",     "powerbi.ctqeq4e88wx8.us-west-1.rds.amazonaws.com")
+os.environ.setdefault("DB_PORT",     "5432")
+os.environ.setdefault("DB_NAME",     "postgres")
+os.environ.setdefault("DB_USER",     "postgres")
+os.environ.setdefault("DB_PASSWORD", "PostgresAdmin1234")
+
 
 def _local_db_secret():
     """Returns a secret dict built from env vars — no AWS call."""

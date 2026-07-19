@@ -786,9 +786,11 @@ def lambda_handler(event, context):
             # LAMBDA AND `utmLabel()` IN index.html.
             cur.execute(f"""
                 WITH sa_acq AS (
-                    SELECT LOWER(TRIM(email)) AS email, acquisition_utm_source
+                    SELECT DISTINCT ON (LOWER(TRIM(email)))
+                        LOWER(TRIM(email)) AS email, acquisition_utm_source
                     FROM {S}.subscriber_acquisition
                     WHERE acquisition_status IN ('added', 'resubscribed')
+                    ORDER BY LOWER(TRIM(email)), acquisition_date DESC NULLS LAST
                 ),
                 src AS (
                     -- Priority: acquisition_utm_source >> url_variables (Meta only)
@@ -801,7 +803,8 @@ def lambda_handler(event, context):
                                 WHEN LOWER(TRIM(sa.acquisition_utm_source)) IN ('none','null','(none)','(null)','-','n/a') OR TRIM(sa.acquisition_utm_source) IS NULL OR TRIM(sa.acquisition_utm_source) = '' THEN NULL
                                 WHEN LOWER(TRIM(sa.acquisition_utm_source)) IN ('organic','direct')                        THEN 'Organic'
                                 WHEN LOWER(TRIM(sa.acquisition_utm_source)) IN ('website','homepage','home','web','site','games_website') THEN 'Website'
-                                WHEN LOWER(TRIM(sa.acquisition_utm_source)) IN ('facebook','meta','fb','ig')               THEN 'Meta'
+                                WHEN LOWER(TRIM(sa.acquisition_utm_source)) IN ('facebook','meta','fb','ig',
+                                     'fitness_power_quiz','longivity_quiz','longevity_quiz','fitness_quiz') THEN 'Meta'
                                 WHEN LOWER(TRIM(sa.acquisition_utm_source)) IN ('ahcpl1','allhealthy','allhealthy.com')     THEN 'AllHealthy'
                                 WHEN LOWER(TRIM(sa.acquisition_utm_source)) = 'tdcpl1'                                     THEN 'TDCPL'
                                 WHEN LOWER(TRIM(sa.acquisition_utm_source)) = 'tdcpl2'                                     THEN 'TDCPL'
@@ -839,7 +842,8 @@ def lambda_handler(event, context):
                                 WHEN LOWER(TRIM(s.sub_source)) IN ('none','null','(none)','(null)','-','n/a') OR TRIM(s.sub_source) IS NULL OR TRIM(s.sub_source) = '' THEN NULL
                                 WHEN LOWER(TRIM(s.sub_source)) IN ('organic','direct')                        THEN 'Organic'
                                 WHEN LOWER(TRIM(s.sub_source)) IN ('website','homepage','home','web','site','games_website') THEN 'Website'
-                                WHEN LOWER(TRIM(s.sub_source)) IN ('facebook','meta','fb','ig')               THEN 'Meta'
+                                WHEN LOWER(TRIM(s.sub_source)) IN ('facebook','meta','fb','ig',
+                                     'fitness_power_quiz','longivity_quiz','longevity_quiz','fitness_quiz') THEN 'Meta'
                                 WHEN LOWER(TRIM(s.sub_source)) IN ('ahcpl1','allhealthy','allhealthy.com')     THEN 'AllHealthy'
                                 WHEN LOWER(TRIM(s.sub_source)) = 'tdcpl1'                                     THEN 'TDCPL'
                                 WHEN LOWER(TRIM(s.sub_source)) = 'tdcpl2'                                     THEN 'TDCPL'
@@ -870,7 +874,8 @@ def lambda_handler(event, context):
                                 WHEN LOWER(TRIM(s.source)) IN ('none','null','(none)','(null)','-','n/a') OR TRIM(s.source) IS NULL OR TRIM(s.source) = '' THEN NULL
                                 WHEN LOWER(TRIM(s.source)) IN ('organic','direct')                        THEN 'Organic'
                                 WHEN LOWER(TRIM(s.source)) IN ('website','homepage','home','web','site','games_website') THEN 'Website'
-                                WHEN LOWER(TRIM(s.source)) IN ('facebook','meta','fb','ig')               THEN 'Meta'
+                                WHEN LOWER(TRIM(s.source)) IN ('facebook','meta','fb','ig',
+                                     'fitness_power_quiz','longivity_quiz','longevity_quiz','fitness_quiz') THEN 'Meta'
                                 WHEN LOWER(TRIM(s.source)) IN ('ahcpl1','allhealthy','allhealthy.com')     THEN 'AllHealthy'
                                 WHEN LOWER(TRIM(s.source)) = 'tdcpl1'                                     THEN 'TDCPL'
                                 WHEN LOWER(TRIM(s.source)) = 'tdcpl2'                                     THEN 'TDCPL'
@@ -899,7 +904,8 @@ def lambda_handler(event, context):
                             -- Level 5: utm_source on subscribers table (catches Meta subs missing acquisition record)
                             CASE
                                 WHEN LOWER(TRIM(s.utm_source)) IN ('none','null','(none)','(null)','-','n/a') OR TRIM(s.utm_source) IS NULL OR TRIM(s.utm_source) = '' THEN NULL
-                                WHEN LOWER(TRIM(s.utm_source)) IN ('facebook','meta','fb','ig')               THEN 'Meta'
+                                WHEN LOWER(TRIM(s.utm_source)) IN ('facebook','meta','fb','ig',
+                                     'fitness_power_quiz','longivity_quiz','longevity_quiz','fitness_quiz') THEN 'Meta'
                                 WHEN LOWER(TRIM(s.utm_source)) IN ('organic','direct')                        THEN 'Organic'
                                 ELSE NULLIF(TRIM(s.utm_source), '')
                             END,

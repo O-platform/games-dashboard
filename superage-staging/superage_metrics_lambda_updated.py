@@ -625,8 +625,10 @@ def lambda_handler(event, context):
                 WHEN {lc} LIKE 'td_cpl2%%'                              THEN 'TDCPL'
                 -- LSCPL: CPL1, CPL2 and the .com variant
                 WHEN {lc} IN ('lscpl1', 'lscpl2', 'ls_cpl2', 'livingsimply', 'livingsimply.com') THEN 'LSCPL'
-                -- Meta: facebook + instagram only (IF / IFCPL1 split out below)
-                WHEN {lc} IN ('facebook', 'meta', 'fb', 'ig')           THEN 'Meta'
+                -- Meta: facebook + instagram variants, and known Meta campaign sub_source names
+                WHEN {lc} IN ('facebook', 'meta', 'fb', 'ig',
+                               'fitness_power_quiz', 'longivity_quiz', 'longevity_quiz',
+                               'fitness_quiz')                           THEN 'Meta'
                 -- IFCPL: IF short code + IFCPL1 batch (its own brand, not Meta)
                 WHEN {lc} IN ('if', 'ifcpl1')                           THEN 'IFCPL'
                 -- Taboola (LOWER handles taboola/Taboola/TABOOLA)
@@ -698,12 +700,13 @@ def lambda_handler(event, context):
                 click_filter = f"AND cc.\"Date\"::date >= CURRENT_DATE - INTERVAL '{int(since_days)} days'"
             cur.execute(f"""
                 WITH sa_acq AS (
-                    SELECT
+                    SELECT DISTINCT ON (LOWER(TRIM(email)))
                         LOWER(TRIM(email))           AS email,
                         acquisition_utm_source,
                         (acquisition_date AT TIME ZONE 'UTC' AT TIME ZONE 'America/Denver')::date AS acquisition_date
                     FROM {S}.subscriber_acquisition
                     WHERE acquisition_status IN ('added', 'resubscribed')
+                    ORDER BY LOWER(TRIM(email)), acquisition_date DESC NULLS LAST
                 ),
                 s AS (
                     SELECT

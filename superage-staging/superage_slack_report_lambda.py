@@ -665,7 +665,8 @@ def compute_new_subscribers_for_window_from_rds(
                     -- Taboola is only trusted at L1 (sub_source/source/utm_source matches drop through)
                     WHEN acq_utm LIKE 'taboola%%'
                         THEN 'taboola'
-                    WHEN acq_utm IN ('facebook', 'meta', 'fb', 'ig')
+                    WHEN acq_utm IN ('facebook', 'meta', 'fb', 'ig',
+                                     'fitness_power_quiz', 'longivity_quiz', 'longevity_quiz', 'fitness_quiz')
                         THEN 'meta'
                     WHEN acq_utm <> '' AND acq_utm NOT IN ('none', 'null', '(none)', '(null)', '-', 'n/a')
                         THEN 'other_brands'
@@ -675,19 +676,22 @@ def compute_new_subscribers_for_window_from_rds(
                         THEN 'meta'
 
                     -- L3: sub_source
-                    WHEN sub_src IN ('facebook', 'meta', 'fb', 'ig')
+                    WHEN sub_src IN ('facebook', 'meta', 'fb', 'ig',
+                                     'fitness_power_quiz', 'longivity_quiz', 'longevity_quiz', 'fitness_quiz')
                         THEN 'meta'
                     WHEN sub_src <> '' AND sub_src NOT IN ('none', 'null', '(none)', '(null)', '-', 'n/a')
                         THEN 'other_brands'
 
                     -- L4: source
-                    WHEN src IN ('facebook', 'meta', 'fb', 'ig')
+                    WHEN src IN ('facebook', 'meta', 'fb', 'ig',
+                                 'fitness_power_quiz', 'longivity_quiz', 'longevity_quiz', 'fitness_quiz')
                         THEN 'meta'
                     WHEN src <> '' AND src NOT IN ('none', 'null', '(none)', '(null)', '-', 'n/a')
                         THEN 'other_brands'
 
                     -- L5: utm_source (previously missing — caused Meta subs to appear as Organic)
-                    WHEN utm_src IN ('facebook', 'meta', 'fb', 'ig')
+                    WHEN utm_src IN ('facebook', 'meta', 'fb', 'ig',
+                                     'fitness_power_quiz', 'longivity_quiz', 'longevity_quiz', 'fitness_quiz')
                         THEN 'meta'
                     WHEN utm_src <> '' AND utm_src NOT IN ('none', 'null', '(none)', '(null)', '-', 'n/a')
                         THEN 'other_brands'

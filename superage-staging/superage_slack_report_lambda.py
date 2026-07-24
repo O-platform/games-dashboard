@@ -622,34 +622,30 @@ def compute_new_subscribers_for_window_from_rds(
 
     # Derive schema from subscribers_table (e.g. superage."subscribers" -> superage)
     schema = subscribers_table.split(".")[0].strip('"')
-    sa_table = f"{schema}.subscriber_acquisition"
+    mv_table = f"{schema}.mv_subscriber_acquisition"
 
-    # Attribution priority (mirrors _priority_source in superage_metrics_lambda_updated.py):
-    # L1: acquisition_utm_source (most trusted — Taboola only recognised here)
-    # L2: url_variables Meta gate
-    # L3: sub_source
-    # L4: source
-    # L5: utm_source on subscribers table (catches Meta subs missing acquisition record)
-    # Fallback: unknown (all blank) or organic
+    # Source label comes from the mv_subscriber_acquisition materialized view —
+    # the single source of truth for the 5-level chain (acquisition_utm_source
+    # >> url_variables Meta gate >> sub_source >> source >> utm_source >>
+    # 'Organic', Taboola gated to L1). See sql/mv_subscriber_acquisition.sql.
+    #
+    # The Slack post groups sources into 5 coarse buckets. source_label maps
+    # straight onto taboola / meta / organic; everything else is other_brands.
+    # 'unknown' (subscriber with NO source signal at all) is distinguished from
+    # 'organic' by checking the raw chain inputs the MV still carries — the MV
+    # itself collapses the all-blank case into 'Organic'.
     query = f"""
-        WITH sa_acq AS (
-            SELECT DISTINCT ON (LOWER(TRIM(email)))
-                LOWER(TRIM(email))   AS email,
-                acquisition_utm_source
-            FROM {sa_table}
-            WHERE acquisition_status IN ('added', 'resubscribed')
-            ORDER BY LOWER(TRIM(email)), acquisition_date DESC NULLS LAST
-        ),
-        base AS (
+        WITH base AS (
             SELECT DISTINCT ON (LOWER(TRIM(s.email)))
-                LOWER(TRIM(s.email))                                  AS email,
-                LOWER(TRIM(COALESCE(sa.acquisition_utm_source, ''))) AS acq_utm,
-                LOWER(TRIM(COALESCE(s.sub_source, '')))              AS sub_src,
-                LOWER(TRIM(COALESCE(s.source, '')))                  AS src,
-                LOWER(TRIM(COALESCE(s.utm_source, '')))              AS utm_src,
-                LOWER(COALESCE(s.url_variables, ''))                 AS url_vars
+                LOWER(TRIM(s.email))                          AS email,
+                mv.source_label                               AS source_label,
+                COALESCE(TRIM(mv.acquisition_utm_source), '') AS acq_utm,
+                COALESCE(TRIM(mv.sub_source), '')             AS sub_src,
+                COALESCE(TRIM(mv.source), '')                 AS src,
+                COALESCE(TRIM(mv.utm_source), '')             AS utm_src,
+                COALESCE(TRIM(mv.url_variables), '')          AS url_vars
             FROM {subscribers_table} s
-            LEFT JOIN sa_acq sa ON sa.email = LOWER(TRIM(s.email))
+            LEFT JOIN {mv_table} mv ON mv.email = LOWER(TRIM(s.email))
             WHERE s.date_joined >= %s
               AND s.date_joined < %s
               AND s.email IS NOT NULL
@@ -661,47 +657,15 @@ def compute_new_subscribers_for_window_from_rds(
             SELECT
                 email,
                 CASE
-                    -- L1: acquisition_utm_source
-                    -- Taboola is only trusted at L1 (sub_source/source/utm_source matches drop through)
-                    WHEN acq_utm LIKE 'taboola%%'
-                        THEN 'taboola'
-                    WHEN acq_utm IN ('facebook', 'meta', 'fb', 'ig',
-                                     'fitness_power_quiz', 'longivity_quiz', 'longevity_quiz', 'fitness_quiz')
-                        THEN 'meta'
-                    WHEN acq_utm <> '' AND acq_utm NOT IN ('none', 'null', '(none)', '(null)', '-', 'n/a')
-                        THEN 'other_brands'
-
-                    -- L2: url_variables Meta gate
-                    WHEN LOWER(TRIM(SUBSTRING(url_vars FROM 'utm_source=([^,&]+)'))) = 'meta'
-                        THEN 'meta'
-
-                    -- L3: sub_source
-                    WHEN sub_src IN ('facebook', 'meta', 'fb', 'ig',
-                                     'fitness_power_quiz', 'longivity_quiz', 'longevity_quiz', 'fitness_quiz')
-                        THEN 'meta'
-                    WHEN sub_src <> '' AND sub_src NOT IN ('none', 'null', '(none)', '(null)', '-', 'n/a')
-                        THEN 'other_brands'
-
-                    -- L4: source
-                    WHEN src IN ('facebook', 'meta', 'fb', 'ig',
-                                 'fitness_power_quiz', 'longivity_quiz', 'longevity_quiz', 'fitness_quiz')
-                        THEN 'meta'
-                    WHEN src <> '' AND src NOT IN ('none', 'null', '(none)', '(null)', '-', 'n/a')
-                        THEN 'other_brands'
-
-                    -- L5: utm_source (previously missing — caused Meta subs to appear as Organic)
-                    WHEN utm_src IN ('facebook', 'meta', 'fb', 'ig',
-                                     'fitness_power_quiz', 'longivity_quiz', 'longevity_quiz', 'fitness_quiz')
-                        THEN 'meta'
-                    WHEN utm_src <> '' AND utm_src NOT IN ('none', 'null', '(none)', '(null)', '-', 'n/a')
-                        THEN 'other_brands'
-
-                    -- Truly blank across all fields
-                    WHEN acq_utm = '' AND sub_src = '' AND src = '' AND utm_src = '' AND url_vars = ''
-                        THEN 'unknown'
-
-                    -- Organic fallback
-                    ELSE 'organic'
+                    WHEN source_label = 'Taboola' THEN 'taboola'
+                    WHEN source_label = 'Meta'    THEN 'meta'
+                    WHEN source_label = 'Organic' OR source_label IS NULL THEN
+                        CASE
+                            WHEN acq_utm = '' AND sub_src = '' AND src = '' AND utm_src = '' AND url_vars = ''
+                                THEN 'unknown'
+                            ELSE 'organic'
+                        END
+                    ELSE 'other_brands'
                 END AS source_bucket
             FROM base
         )

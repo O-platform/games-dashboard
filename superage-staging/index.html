@@ -142,6 +142,9 @@
   .badge-inline { font-size: 11px; font-weight: 500; color: var(--text-muted); }
   .insight { font-size: 12px; color: var(--text-muted); margin-top: 10px; line-height: 1.5; }
   .section-context-banner { background: var(--card-2); border: 1px solid var(--card-border); border-radius: 8px; padding: 10px 14px; font-size: 12px; color: var(--text-muted); margin-bottom: 16px; line-height: 1.5; }
+  .ads-status { display: inline-block; padding: 1px 8px; border-radius: 10px; font-size: 11px; font-weight: 600; }
+  .ads-status-on  { background: rgba(26,127,55,0.15); color: #1a7f37; }
+  .ads-status-off { background: rgba(154,103,0,0.15);  color: #9a6700; }
   .loading-overlay { position: fixed; inset: 0; background: var(--bg); display: flex; flex-direction: column; align-items: center; justify-content: center; z-index: 999; gap: 12px; }
   .spinner { width: 40px; height: 40px; border: 3px solid var(--card-border); border-top-color: var(--accent); border-radius: 50%; animation: spin 0.8s linear infinite; }
   @keyframes spin { to { transform: rotate(360deg); } }
@@ -221,6 +224,7 @@
 <nav class="tab-bar" id="tab-bar">
   <button class="tab active" onclick="showPage('overview',this)">Overview</button>
   <button class="tab" onclick="showPage('digest',this)">Weekly Digest</button>
+  <button class="tab" onclick="showPage('ads',this)">Ads Performance</button>
   <button class="tab" onclick="showPage('campaigns',this)">Campaigns</button>
   <button class="tab" onclick="showPage('content',this)">Engagement</button>
   <button class="tab" onclick="showPage('content-ref',this)">Content Reference</button>
@@ -233,6 +237,7 @@
 
 <div id="overview" class="page active"></div>
 <div id="digest" class="page"></div>
+<div id="ads" class="page"></div>
 <div id="campaigns" class="page"></div>
 <div id="content" class="page"></div>
 <div id="content-ref" class="page"></div>
@@ -344,14 +349,16 @@ const DASHBOARD_API = 'https://dashboard.pardon-ventures-06b.workers.dev';
 const _API_HEADERS = { 'X-Auth-Token': 'dashboardkiwilytics123' };
 Promise.all([
   fetch(`${DASHBOARD_API}/superage-dashboard/superage-metrics.json`,   { headers: _API_HEADERS }).then(r => r.json()),
-  fetch(`${DASHBOARD_API}/superage-dashboard/superage-comparison.json`, { headers: _API_HEADERS }).then(r => r.ok ? r.json() : {}).catch(() => ({}))
+  fetch(`${DASHBOARD_API}/superage-dashboard/superage-comparison.json`, { headers: _API_HEADERS }).then(r => r.ok ? r.json() : {}).catch(() => ({})),
+  fetch(`${DASHBOARD_API}/superage-dashboard/superage-ads.json`,        { headers: _API_HEADERS }).then(r => r.ok ? r.json() : {}).catch(() => ({}))
 ])
-  .then(([metrics, comparison]) => {
-    const M = Object.assign({}, metrics, comparison);
+  .then(([metrics, comparison, ads]) => {
+    const M = Object.assign({}, metrics, comparison, ads);
     const asOf = M.data_as_of || '—';
     document.getElementById('as-of-label').textContent = asOf;
     renderOverview(M);
     renderDigest(M);
+    renderAds(M);
     renderCampaigns(M);
     renderContent(M);
     renderContentRef(M);
@@ -938,6 +945,206 @@ function renderDigest(M) {
 
   // Doughnut + three horizontal-bar charts inside the summary block.
   _initDigestCharts();
+}
+
+/* ═══════════════════════════════════════
+   ADS PERFORMANCE
+   ───────────────────────────────────────
+   Reads M.ads.meta (produced by superage_ads_lambda.py / sa-dashboard-ads-metrics).
+   Channel-agnostic shape: M.ads.meta today; M.ads.google slots in later.
+   Conversions = custom_conversions (FB pixel custom conversion — the real
+   lead event for these campaigns; the standard `leads` column is 0). Revenue
+   / ROAS intentionally omitted (lead-gen, purchase_value ≈ 0).
+═══════════════════════════════════════ */
+window._adsCharts = window._adsCharts || [];
+function renderAds(M) {
+  const root = document.getElementById('ads');
+  if (!root) return;
+  const meta = (M.ads && M.ads.meta) ? M.ads.meta : null;
+  const k = meta && meta.kpis ? meta.kpis : null;
+
+  if (!k) {
+    root.innerHTML = `
+      <div class="section-context-banner">
+        <strong>Ads Performance</strong> — Not populated yet. Run the
+        <code>sa-dashboard-ads-metrics</code> lambda to ship the <code>ads</code> payload.
+      </div>`;
+    return;
+  }
+
+  // Formatters
+  const money0 = n => '$' + Number(n || 0).toLocaleString(undefined, { maximumFractionDigits: 0 });
+  const money2 = n => '$' + Number(n || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  const num0   = n => Number(n || 0).toLocaleString(undefined, { maximumFractionDigits: 0 });
+  const pct2   = n => Number(n || 0).toFixed(2) + '%';
+
+  const win = meta.window || {};
+  const winLabel = (win.start && win.end)
+    ? `${win.start} → ${win.end} (${win.days || '—'} days)`
+    : `last ${win.days || 90} days`;
+
+  // Headline KPI tiles.
+  const tiles = [
+    { label: 'Spend',              value: money0(k.spend),               cls: 'accent', sub: winLabel },
+    { label: 'Conversions',        value: num0(k.conversions),           cls: 'green',  sub: 'FB pixel custom conversions' },
+    { label: 'Cost / Conversion',  value: money2(k.cost_per_conversion), cls: 'cyan',   sub: 'spend ÷ conversions' },
+    { label: 'Link Clicks',        value: num0(k.link_clicks),           cls: 'blue',   sub: `CPC ${money2(k.cpc)}` },
+    { label: 'Impressions',        value: num0(k.impressions),           cls: 'purple', sub: `CPM ${money2(k.cpm)}` },
+    { label: 'Reach',              value: num0(k.reach),                 cls: 'orange', sub: `Frequency ${Number(k.frequency||0).toFixed(2)}` },
+    { label: 'Link CTR',           value: pct2(k.link_ctr),              cls: 'green',  sub: `All-click CTR ${pct2(k.ctr)}` },
+    { label: 'Landing Page Views', value: num0(k.landing_page_views),    cls: 'cyan',   sub: '&nbsp;' },
+    { label: 'Active Campaigns',   value: num0(k.active_campaigns),      cls: 'blue',   sub: `${num0(k.total_campaigns)} total in window` },
+  ];
+
+  const daily = meta.daily || { dates: [], spend: [], conversions: [], link_clicks: [] };
+  const byCampaign = meta.by_campaign || [];
+  const byGoal = meta.by_goal || [];
+
+  // Top-10 campaigns by spend for the horizontal bar.
+  const topCamp = byCampaign.slice(0, 10);
+
+  const campRows = byCampaign.map((c, i) => `
+    <tr>
+      <td>${i + 1}</td>
+      <td>${esc(c.campaign_name || '—')}</td>
+      <td class="nowrap"><span class="ads-status ads-status-${(c.delivery_status||'').toLowerCase() === 'active' ? 'on' : 'off'}">${esc(c.delivery_status || '—')}</span></td>
+      <td class="nowrap">${esc(c.optimization_goal || '—')}</td>
+      <td>${money0(c.spend)}</td>
+      <td>${num0(c.impressions)}</td>
+      <td>${num0(c.link_clicks)}</td>
+      <td>${pct2(c.link_ctr)}</td>
+      <td>${money2(c.cpc)}</td>
+      <td>${num0(c.conversions)}</td>
+      <td>${c.conversions ? money2(c.cost_per_conversion) : '—'}</td>
+    </tr>`).join('');
+
+  const goalRows = byGoal.map(g => `
+    <tr>
+      <td>${esc(g.goal || '—')}</td>
+      <td>${money0(g.spend)}</td>
+      <td>${num0(g.link_clicks)}</td>
+      <td>${num0(g.conversions)}</td>
+      <td>${g.conversions ? money2(g.cost_per_conversion) : '—'}</td>
+    </tr>`).join('');
+
+  root.innerHTML = `
+    <div class="section-context-banner">
+      <strong>Ads Performance — Meta</strong> for <strong>${esc(winLabel)}</strong>. Headline KPIs and
+      the campaign / optimization-goal breakdowns come from <code>meta_ad_totals</code> (period snapshot);
+      the daily trend comes from <code>meta_ad_performance</code>.
+      <strong>Conversions</strong> = FB pixel custom conversions (the real lead event for these campaigns —
+      the standard <code>leads</code> field is 0). Revenue / ROAS is omitted (lead-gen, not e-commerce).
+      Google Ads will appear here as a second channel once its tables land.
+    </div>
+
+    <div class="kpi-row" style="grid-template-columns:repeat(auto-fit,minmax(200px,1fr));">
+      ${tiles.map(t => `
+        <div class="kpi-card ${t.cls}">
+          <div class="label">${t.label}</div>
+          <div class="value" style="font-size:24px;">${t.value}</div>
+          <div class="sub">${t.sub}</div>
+        </div>`).join('')}
+    </div>
+
+    <div class="chart-card" style="margin-top:18px;">
+      <h3>Daily Spend &amp; Conversions</h3>
+      <div class="chart-container" style="height:300px;position:relative;">
+        <canvas id="ads-daily"></canvas>
+      </div>
+    </div>
+
+    <div class="chart-card">
+      <h3>Spend by Campaign (Top ${topCamp.length})</h3>
+      <div class="chart-container" style="height:${Math.max(220, topCamp.length * 34)}px;position:relative;">
+        <canvas id="ads-campaign-bar"></canvas>
+      </div>
+    </div>
+
+    <div class="chart-card">
+      <h3>Campaign Breakdown</h3>
+      <div class="tbl-wrap"><table class="dash-table">
+        <thead><tr>
+          <th>#</th><th>Campaign</th><th>Status</th><th>Goal</th><th>Spend</th>
+          <th>Impressions</th><th>Link Clicks</th><th>Link CTR</th><th>CPC</th>
+          <th>Conversions</th><th>Cost / Conv</th>
+        </tr></thead>
+        <tbody>${campRows || '<tr><td colspan="11">No campaigns in window.</td></tr>'}</tbody>
+      </table></div>
+    </div>
+
+    <div class="chart-card">
+      <h3>By Optimization Goal</h3>
+      <div class="tbl-wrap"><table class="dash-table">
+        <thead><tr>
+          <th>Goal</th><th>Spend</th><th>Link Clicks</th><th>Conversions</th><th>Cost / Conv</th>
+        </tr></thead>
+        <tbody>${goalRows || '<tr><td colspan="5">No data.</td></tr>'}</tbody>
+      </table></div>
+    </div>
+  `;
+
+  // Tear down any prior charts (re-render safety).
+  (window._adsCharts || []).forEach(c => { try { c.destroy(); } catch (e) {} });
+  window._adsCharts = [];
+
+  const dark = document.body.classList.contains('dark');
+  const gridColor = dark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.06)';
+  const tickColor = dark ? '#9aa4b2' : '#57606a';
+
+  // Daily spend (bars) + conversions (line, right axis).
+  const dEl = document.getElementById('ads-daily');
+  if (dEl) {
+    window._adsCharts.push(new Chart(dEl, {
+      data: {
+        labels: daily.dates,
+        datasets: [
+          {
+            type: 'bar', label: 'Spend ($)', data: daily.spend,
+            backgroundColor: '#4f8cff88', borderColor: '#4f8cff', borderWidth: 1,
+            yAxisID: 'y', order: 2,
+          },
+          {
+            type: 'line', label: 'Conversions', data: daily.conversions,
+            borderColor: '#34d399', backgroundColor: '#34d39922',
+            tension: 0.3, pointRadius: 0, borderWidth: 2, yAxisID: 'y1', order: 1,
+          },
+        ]
+      },
+      options: {
+        responsive: true, maintainAspectRatio: false,
+        interaction: { mode: 'index', intersect: false },
+        plugins: { legend: { position: 'bottom', labels: { font: { size: 11 }, padding: 10 } } },
+        scales: {
+          x: { ticks: { color: tickColor, maxRotation: 0, autoSkip: true, maxTicksLimit: 12 }, grid: { color: gridColor } },
+          y:  { position: 'left',  title: { display: true, text: 'Spend ($)' }, ticks: { color: tickColor, callback: v => '$' + Number(v).toLocaleString() }, grid: { color: gridColor } },
+          y1: { position: 'right', title: { display: true, text: 'Conversions' }, ticks: { color: tickColor }, grid: { drawOnChartArea: false } },
+        }
+      }
+    }));
+  }
+
+  // Spend by campaign — horizontal bar.
+  const cEl = document.getElementById('ads-campaign-bar');
+  if (cEl && topCamp.length) {
+    window._adsCharts.push(new Chart(cEl, {
+      type: 'bar',
+      data: {
+        labels: topCamp.map(c => (c.campaign_name || '—').length > 42 ? (c.campaign_name || '—').slice(0, 40) + '…' : (c.campaign_name || '—')),
+        datasets: [{
+          label: 'Spend ($)', data: topCamp.map(c => c.spend),
+          backgroundColor: '#a78bfa', borderColor: '#8250df', borderWidth: 1,
+        }]
+      },
+      options: {
+        indexAxis: 'y', responsive: true, maintainAspectRatio: false,
+        plugins: { legend: { display: false }, tooltip: { callbacks: { label: c => ' ' + money0(c.parsed.x) } } },
+        scales: {
+          x: { ticks: { color: tickColor, callback: v => '$' + Number(v).toLocaleString() }, grid: { color: gridColor } },
+          y: { ticks: { color: tickColor, font: { size: 11 } }, grid: { display: false } },
+        }
+      }
+    }));
+  }
 }
 
 /* Builds the visual summary block under the Weekly Digest tiles as a

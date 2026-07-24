@@ -24,6 +24,7 @@ Usage:
 Outputs written here:
     superage-staging/superage-metrics.json
     superage-staging/superage-comparison.json
+    superage-staging/superage-ads.json
 """
 
 import json
@@ -113,11 +114,32 @@ def run_comparison_lambda():
         log.info("Comparison done.")
 
 
+def run_ads_lambda():
+    import superage_ads_lambda as al
+
+    def _fake_write(content: str):
+        _write_local(content, "superage-ads.json")
+        return {"written": True, "local": True}
+
+    with patch.object(al, "_get_db_secret", side_effect=_local_db_secret), \
+         patch.object(al, "write_to_r2", side_effect=_fake_write):
+        log.info("─── Running ads lambda ───")
+        result = al.lambda_handler({}, {})
+        body = json.loads(result.get("body", "{}"))
+        log.info(
+            "Ads done — spend=%s  conversions=%s  campaigns=%s",
+            body.get("spend"),
+            body.get("conversions"),
+            body.get("total_campaigns"),
+        )
+
+
 if __name__ == "__main__":
     run_metrics_lambda()
     run_comparison_lambda()
+    run_ads_lambda()
 
-    print("\n✓ Both lambdas complete.")
+    print("\n✓ All lambdas complete.")
     print("Start a local server and open the dashboard:")
     print("  python -m http.server 8080")
     print("  http://localhost:8080/index.local.html")

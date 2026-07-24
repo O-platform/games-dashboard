@@ -607,84 +607,20 @@ def lambda_handler(event, context):
         # psycopg2 prepares with `%s` parameter binding. Any literal `%` in
         # the SQL must be doubled so psycopg2 doesn't read the LIKE-pattern
         # wildcards as positional placeholders (caused an IndexError before).
-        def _canon_source(col_sql: str) -> str:
-            lc = f"LOWER(TRIM({col_sql}))"
-            return f"""
-            CASE
-                -- True empty/placeholder strings — fall through to next priority level.
-                WHEN {lc} IN ('none', 'null', '(none)', '(null)', '-', 'n/a') THEN NULL
-                -- Organic: null-equivalent intent or explicit direct traffic.
-                WHEN {lc} IN ('organic', 'direct') THEN 'Organic'
-                -- Website: subscribers who joined via a web property (not a partner).
-                WHEN {lc} IN ('website', 'homepage', 'home', 'web', 'site', 'games_website') THEN 'Website'
-                -- AllHealthy
-                WHEN {lc} IN ('ahcpl1', 'allhealthy', 'allhealthy.com') THEN 'AllHealthy'
-                -- TDCPL: TDCPL1, TDCPL2, and every TD_CPL2_YYYYMMDD batch
-                WHEN {lc} = 'tdcpl1'                                    THEN 'TDCPL'
-                WHEN {lc} = 'tdcpl2'                                    THEN 'TDCPL'
-                WHEN {lc} LIKE 'td_cpl2%%'                              THEN 'TDCPL'
-                -- LSCPL: CPL1, CPL2 and the .com variant
-                WHEN {lc} IN ('lscpl1', 'lscpl2', 'ls_cpl2', 'livingsimply', 'livingsimply.com') THEN 'LSCPL'
-                -- Meta: facebook + instagram variants, and known Meta campaign sub_source names
-                WHEN {lc} IN ('facebook', 'meta', 'fb', 'ig',
-                               'fitness_power_quiz', 'longivity_quiz', 'longevity_quiz',
-                               'fitness_quiz')                           THEN 'Meta'
-                -- IFCPL: IF short code + IFCPL1 batch (its own brand, not Meta)
-                WHEN {lc} IN ('if', 'ifcpl1')                           THEN 'IFCPL'
-                -- Taboola (LOWER handles taboola/Taboola/TABOOLA)
-                WHEN {lc} = 'taboola'                                   THEN 'Taboola'
-                -- HealthBrief / SuperAge Quiz
-                WHEN {lc} = 'healthbrief'                               THEN 'HealthBrief'
-                WHEN {lc} IN ('superagequiz', 'longevity_quiz')         THEN 'SuperAge Quiz'
-                -- TheAgeist + every sample/request/etc. issue
-                WHEN {lc} IN ('theageist', 'theageist001', 'ageist')    THEN 'TheAgeist'
-                WHEN {lc} LIKE 'ageist_%%'                              THEN 'TheAgeist'
-                WHEN {lc} LIKE 'ageistrequest%%'                        THEN 'TheAgeist'
-                -- RRCPL (new canonical label)
-                WHEN {lc} IN ('recommendedreads.com', 'rr_cpl2')        THEN 'RRCPL'
-                WHEN {lc} LIKE 'rrcpl1%%'                               THEN 'RRCPL'
-                -- Campaign Monitor (case-only collapse)
-                WHEN {lc} = 'campaign_monitor'                          THEN 'Campaign Monitor'
-                -- Welcome Flow (URL-encoded variant)
-                WHEN {lc} IN ('welcome flow', 'welcome+flow')           THEN 'Welcome Flow'
-                -- NNCPL family (NNCPL1 + every NN_CPL2_* batch + NN1_CPL2oneclick)
-                WHEN {lc} = 'nncpl1'                                    THEN 'NNCPL'
-                WHEN {lc} LIKE 'nn_cpl2%%'                              THEN 'NNCPL'
-                WHEN {lc} LIKE 'nn1_cpl2%%'                             THEN 'NNCPL'
-                -- ISCPL family
-                WHEN {lc} IN ('is', 'iscpl1')                           THEN 'ISCPL'
-                -- AI referrers (ChatGPT, Perplexity, Nbot, etc.)
-                WHEN {lc} IN ('chatgpt.com', 'perplexity', 'nbot.ai')   THEN 'AI'
-                -- Refind / SuperAge (kept as their own labels — note SuperAge
-                -- is distinct from SuperAge Quiz above)
-                WHEN {lc} = 'refind'                                    THEN 'Refind'
-                WHEN {lc} = 'superage'                                  THEN 'SuperAge'
-                ELSE NULLIF(TRIM({col_sql}), '')
-            END
-            """
         def _priority_source(sub_alias: str = 's', sa_alias: str = 'sa') -> str:
-            """5-level canonical source COALESCE:
-            acquisition_utm_source >> url_variables (Meta only) >> sub_source >> source >> utm_source >> 'Organic'
-            sub_alias: subscribers table alias; sa_alias: subscriber_acquisition CTE alias.
-            Taboola is gated to L1 only — sub_source/source/utm_source matches on 'taboola' fall through
-            (acquisition_utm_source is the only trustworthy Taboola signal)."""
-            url_meta = (
-                f"CASE WHEN LOWER(TRIM(SUBSTRING({sub_alias}.url_variables "
-                f"FROM 'utm_source=([^,&]+)'))) = 'meta' "
-                f"AND COALESCE({sub_alias}.date_subscribed, {sub_alias}.date_joined)::date >= '2025-11-01' "
-                f"THEN 'Meta' ELSE NULL END"
-            )
-            no_taboola = lambda expr: f"CASE WHEN {expr} = 'Taboola' THEN NULL ELSE {expr} END"
-            return (
-                f"COALESCE(\n"
-                f"                        {_canon_source(f'{sa_alias}.acquisition_utm_source')},\n"
-                f"                        {url_meta},\n"
-                f"                        {no_taboola(_canon_source(f'{sub_alias}.sub_source'))},\n"
-                f"                        {no_taboola(_canon_source(f'{sub_alias}.source'))},\n"
-                f"                        {no_taboola(_canon_source(f'{sub_alias}.utm_source'))},\n"
-                f"                        'Organic'\n"
-                f"                    )"
-            )
+            """Canonical source label — now sourced from the
+            superage.mv_subscriber_acquisition materialized view (see
+            sql/mv_subscriber_acquisition.sql), which embeds the full 5-level
+            chain (acquisition_utm_source >> url_variables Meta gate >>
+            sub_source >> source >> utm_source >> 'Organic', Taboola gated to
+            L1) so it lives in exactly one place.
+
+            The signature is kept for call-site compatibility: `sa_alias` is the
+            CTE/alias that selects from the MV and exposes `source_label`;
+            `sub_alias` is unused now (the subscriber-column logic moved into the
+            view). COALESCE to 'Organic' is a belt-and-suspenders guard — the MV
+            never emits NULL for source_label."""
+            return f"COALESCE({sa_alias}.source_label, 'Organic')"
 
         def fetch_acquisition_rows(fallback_label: str, since_days=None, limit: int = 12):
             # Label priority: acquisition_utm_source >> url_variables (Meta) >> sub_source >> source >> fallback
@@ -700,13 +636,9 @@ def lambda_handler(event, context):
                 click_filter = f"AND cc.\"Date\"::date >= CURRENT_DATE - INTERVAL '{int(since_days)} days'"
             cur.execute(f"""
                 WITH sa_acq AS (
-                    SELECT DISTINCT ON (LOWER(TRIM(email)))
-                        LOWER(TRIM(email))           AS email,
-                        acquisition_utm_source,
-                        (acquisition_date AT TIME ZONE 'UTC' AT TIME ZONE 'America/Denver')::date AS acquisition_date
-                    FROM {S}.subscriber_acquisition
-                    WHERE acquisition_status IN ('added', 'resubscribed')
-                    ORDER BY LOWER(TRIM(email)), acquisition_date DESC NULLS LAST
+                    -- Canonical source per email — precomputed in the MV.
+                    SELECT email, source_label, acquisition_date
+                    FROM {S}.mv_subscriber_acquisition
                 ),
                 s AS (
                     SELECT
@@ -783,9 +715,9 @@ def lambda_handler(event, context):
         # ─────────────────────────────────────────────────────
         cur.execute(f"""
             WITH sa_acq AS (
-                SELECT LOWER(TRIM(email)) AS email, acquisition_utm_source
-                FROM {S}.subscriber_acquisition
-                WHERE acquisition_status IN ('added', 'resubscribed')
+                -- Canonical source per email — precomputed in the MV.
+                SELECT email, source_label, acquisition_date
+                FROM {S}.mv_subscriber_acquisition
             ),
             labeled AS (
                 SELECT
@@ -821,12 +753,9 @@ def lambda_handler(event, context):
         # Output rows: [{period, source, new_subs}, ...]
         cur.execute(f"""
             WITH sa_acq AS (
-                SELECT
-                    LOWER(TRIM(email)) AS email,
-                    acquisition_utm_source,
-                    (acquisition_date AT TIME ZONE 'UTC' AT TIME ZONE 'America/Denver')::date AS acquisition_date
-                FROM {S}.subscriber_acquisition
-                WHERE acquisition_status IN ('added', 'resubscribed')
+                -- Canonical source per email — precomputed in the MV.
+                SELECT email, source_label, acquisition_date
+                FROM {S}.mv_subscriber_acquisition
             ),
             classified AS (
                 SELECT
@@ -1142,12 +1071,9 @@ def lambda_handler(event, context):
         # chart for bulk control.
         cur.execute(f"""
             WITH sa_acq AS (
-                SELECT
-                    LOWER(TRIM(email))           AS email,
-                    acquisition_utm_source,
-                    (acquisition_date AT TIME ZONE 'UTC' AT TIME ZONE 'America/Denver')::date AS acquisition_date
-                FROM {S}.subscriber_acquisition
-                WHERE acquisition_status IN ('added', 'resubscribed')
+                -- Canonical source per email — precomputed in the MV.
+                SELECT email, source_label, acquisition_date
+                FROM {S}.mv_subscriber_acquisition
             ),
             s AS (
                 SELECT
@@ -1215,12 +1141,9 @@ def lambda_handler(event, context):
         # chart line stops naturally rather than drawing a misleading flat segment.
         cur.execute(f"""
             WITH sa_acq AS (
-                SELECT
-                    LOWER(TRIM(email))           AS email,
-                    acquisition_utm_source,
-                    (acquisition_date AT TIME ZONE 'UTC' AT TIME ZONE 'America/Denver')::date AS acquisition_date
-                FROM {S}.subscriber_acquisition
-                WHERE acquisition_status IN ('added', 'resubscribed')
+                -- Canonical source per email — precomputed in the MV.
+                SELECT email, source_label, acquisition_date
+                FROM {S}.mv_subscriber_acquisition
             ),
             s AS (
                 SELECT
@@ -1365,12 +1288,9 @@ def lambda_handler(event, context):
         # "Active Now" uses the same two-condition Active rule as Q1b / Q35.
         cur.execute(f"""
             WITH sa_acq AS (
-                SELECT
-                    LOWER(TRIM(email))           AS email,
-                    acquisition_utm_source,
-                    (acquisition_date AT TIME ZONE 'UTC' AT TIME ZONE 'America/Denver')::date AS acquisition_date
-                FROM {S}.subscriber_acquisition
-                WHERE acquisition_status IN ('added', 'resubscribed')
+                -- Canonical source per email — precomputed in the MV.
+                SELECT email, source_label, acquisition_date
+                FROM {S}.mv_subscriber_acquisition
             ),
             s AS (
                 SELECT

@@ -79,7 +79,14 @@ LANGUAGE sql
 IMMUTABLE
 AS $$
     SELECT CASE
-        WHEN LOWER(TRIM(col)) IN ('none','null','(none)','(null)','-','n/a')            THEN NULL
+        -- Empty / placeholder AND quiz/o_event tokens → NULL so the chain keeps
+        -- going. Quiz names (fitness_power_quiz, longevity_quiz, …) are NOT
+        -- acquisition sources — they must not short-circuit the chain or force a
+        -- label. A quiz sub only becomes Meta if it actually reaches a real Meta
+        -- signal (facebook/ig, url_variables utm_source=meta) further down.
+        WHEN LOWER(TRIM(col)) IN ('none','null','(none)','(null)','-','n/a',
+                                  'fitness_power_quiz','fitness_quiz',
+                                  'longivity_quiz','longevity_quiz')            THEN NULL
         WHEN LOWER(TRIM(col)) IN ('organic','direct')                                    THEN 'Organic'
         WHEN LOWER(TRIM(col)) IN ('website','homepage','home','web','site','games_website') THEN 'Website'
         WHEN LOWER(TRIM(col)) IN ('ahcpl1','allhealthy','allhealthy.com')                THEN 'AllHealthy'
@@ -87,9 +94,10 @@ AS $$
         WHEN LOWER(TRIM(col)) = 'tdcpl2'                                                 THEN 'TDCPL'
         WHEN LOWER(TRIM(col)) LIKE 'td_cpl2%'                                            THEN 'TDCPL'
         WHEN LOWER(TRIM(col)) IN ('lscpl1','lscpl2','ls_cpl2','livingsimply','livingsimply.com') THEN 'LSCPL'
-        -- Meta: facebook + instagram variants, and known Meta campaign names
-        WHEN LOWER(TRIM(col)) IN ('facebook','meta','fb','ig',
-                                  'fitness_power_quiz','longivity_quiz','longevity_quiz','fitness_quiz') THEN 'Meta'
+        -- Meta = genuine Meta signals only (facebook / instagram). Quiz campaign
+        -- names are handled above (pass-through) — the Meta decision comes from
+        -- an actual Meta value in the chain, never from a quiz name.
+        WHEN LOWER(TRIM(col)) IN ('facebook','meta','fb','ig')                           THEN 'Meta'
         WHEN LOWER(TRIM(col)) IN ('if','ifcpl1')                                         THEN 'IFCPL'
         WHEN LOWER(TRIM(col)) = 'taboola'                                                THEN 'Taboola'
         WHEN LOWER(TRIM(col)) = 'healthbrief'                                            THEN 'HealthBrief'

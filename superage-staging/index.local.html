@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>SuperAge — Brand Pulse Dashboard [LOCAL]</title>
+<title>SuperAge — Brand Pulse Dashboard</title>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js"></script>
 <style>
   :root {
@@ -188,9 +188,6 @@
 </style>
 </head>
 <body>
-<div style="background:#9a6700;color:#fff;text-align:center;padding:5px 12px;font-size:12px;font-weight:600;letter-spacing:.5px;position:sticky;top:0;z-index:9999;">
-  ⚠ LOCAL DEV — reading from local JSON files (run_local.py output)
-</div>
 <div id="loading-overlay" class="loading-overlay">
   <div class="spinner"></div>
   <div style="font-size:13px;color:var(--text-muted);">Loading dashboard data…</div>
@@ -348,7 +345,7 @@ function utmLabel(raw) {
    `superage-dashboard/*.json` keys are written by the two refresh
    Lambdas (see superage_metrics_lambda_updated.py + superage_comparison_lambda.py).
 ═══════════════════════════════════════ */
-// LOCAL DEV — reads JSON files from the same directory.
+// LOCAL DEV — reads JSON files from the same directory (written by run_local.py).
 // Run: python -m http.server 8080  then open http://localhost:8080/index.local.html
 Promise.all([
   fetch('./superage-metrics.json').then(r => r.json()),
@@ -470,19 +467,6 @@ function renderOverview(M) {
       </div>
       <p style="font-size:12px;color:var(--text-muted);margin:0 0 10px;">Green bars (gained) sit above zero; red bars (lost) sit below zero. The blue <strong>Net Gain / Loss</strong> filled area crosses through — a positive bucket sits above the zero gridline, a negative bucket dips below. Purple dashed line on the right axis is the running Total Subscribers (latest snapshot per bucket — Send-To base).</p>
       <div class="chart-container h340"><canvas id="ov-growth"></canvas></div>
-    </div>
-
-    <div class="chart-card" style="margin-bottom:18px;">
-      <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;margin-bottom:6px;">
-        <h3 style="margin:0;">Subscriber Growth Rate <span class="badge-inline" id="ov-growth-rate-badge">— MoM</span></h3>
-        <div style="display:flex;gap:4px;">
-          <button onclick="_setOvRateGran('monthly')" id="ovgr-monthly" style="font-size:11px;padding:3px 10px;border:1px solid var(--card-border);border-radius:5px;background:var(--accent);color:#fff;cursor:pointer;">MoM</button>
-          <button onclick="_setOvRateGran('weekly')"  id="ovgr-weekly"  style="font-size:11px;padding:3px 10px;border:1px solid var(--card-border);border-radius:5px;background:var(--card);color:var(--text-muted);cursor:pointer;">WoW</button>
-          <button onclick="_setOvRateGran('daily')"   id="ovgr-daily"   style="font-size:11px;padding:3px 10px;border:1px solid var(--card-border);border-radius:5px;background:var(--card);color:var(--text-muted);cursor:pointer;">DoD</button>
-        </div>
-      </div>
-      <p style="font-size:12px;color:var(--text-muted);margin:0 0 10px;">Period-over-period % change in Total Subscribers. Green = growth, red = contraction. Y-axis auto-scales to the data range; extreme outliers capped with ⚠ in tooltip. Hover to see exact % and Total Subscribers.</p>
-      <div class="chart-container h240"><canvas id="ov-growth-rate"></canvas></div>
     </div>
 
     <div class="chart-card">
@@ -715,10 +699,6 @@ function _ovGrowthChart(gd, n) {
   const unsubNeg = unsub.map(v => -Math.abs(Number(v) || 0));
   const net      = newS.map((v, i) => (Number(v) || 0) - Math.abs(Number(unsub[i]) || 0));
 
-  // Rate chart — standalone, driven by _renderOvRateChart()
-  if (!window._ovRateGranInit) { window._ovRateGranInit = true; window._ovRateGran = 'monthly'; }
-  _renderOvRateChart();
-
   const ctx = document.getElementById('ov-growth');
   if (!ctx) return;
   if (ctx._chart) ctx._chart.destroy();
@@ -777,77 +757,6 @@ function _ovGrowthChart(gd, n) {
       } }
   });
 }
-
-function _renderOvRateChart() {
-  const gran = window._ovRateGran || 'monthly';
-  const series = window._ovGrowthSeries || {};
-  const gd = series[gran] || series.monthly || { labels:[], active_count:[] };
-  const rawLabels = gd.labels || [];
-  const rawActive = gd.active_count || [];
-  const pct = rawActive.map((v, i) => {
-    if (i === 0 || !rawActive[i - 1]) return null;
-    return ((v - rawActive[i - 1]) / rawActive[i - 1]) * 100;
-  });
-  const trim = pct.length > 1 ? pct.length - 1 : pct.length;
-  const pctSlice    = pct.slice(1, trim);
-  const activeSlice = rawActive.slice(1, trim);
-  const rawLblSlice = rawLabels.slice(1, trim);
-  const mo = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
-  const fmtLabel = l => {
-    if (gran === 'monthly') { const d = new Date(l + '-01T00:00:00'); return isNaN(d) ? l : d.toLocaleDateString('en-US', { month: 'short', year: 'numeric' }); }
-    const d = new Date(l + 'T00:00:00'); if (isNaN(d)) return l;
-    if (gran === 'weekly') { const end = new Date(d.getTime() + 6 * 86400000); return mo[d.getMonth()] + ' ' + d.getDate() + '–' + (d.getMonth() !== end.getMonth() ? mo[end.getMonth()] + ' ' : '') + end.getDate(); }
-    return mo[d.getMonth()] + ' ' + d.getDate();
-  };
-  const labels = rawLblSlice.map(fmtLabel);
-  const absVals  = pctSlice.filter(v => v != null).map(Math.abs).sort((a,b) => a-b);
-  const p95idx   = Math.floor(absVals.length * 0.95);
-  const rawCap   = Math.max(0.5, (absVals[p95idx] || absVals[absVals.length - 1] || 2) * 1.3);
-  const niceSteps = [0.05, 0.1, 0.2, 0.25, 0.5, 1, 2, 5, 10];
-  const STEP  = niceSteps.find(s => rawCap / s <= 4) || 1;
-  const CAP   = STEP * Math.ceil(rawCap / STEP);
-  const cappedPct = pctSlice.map(v => v == null ? null : Math.max(-CAP, Math.min(CAP, v)));
-  ['monthly','weekly','daily'].forEach(g => {
-    const idMap = { monthly:'ovgr-monthly', weekly:'ovgr-weekly', daily:'ovgr-daily' };
-    const btn = document.getElementById(idMap[g]);
-    if (!btn) return;
-    btn.style.background = g === gran ? 'var(--accent)' : 'var(--card)';
-    btn.style.color      = g === gran ? '#fff'          : 'var(--text-muted)';
-  });
-  const badge = document.getElementById('ov-growth-rate-badge');
-  if (badge) badge.textContent = gran === 'monthly' ? '— MoM' : gran === 'weekly' ? '— WoW' : '— DoD';
-  const rateCtx = document.getElementById('ov-growth-rate');
-  if (!rateCtx) return;
-  if (rateCtx._chart) rateCtx._chart.destroy();
-  rateCtx._chart = new Chart(rateCtx, {
-    type: 'line',
-    data: { labels, datasets: [{ label: '% Change', data: cappedPct,
-      segment: { borderColor: ctx2 => (ctx2.p1.parsed.y < 0) ? '#cf222e' : '#1a7f37' },
-      backgroundColor: 'transparent', tension: 0.25,
-      pointRadius: gran === 'daily' ? 2 : 4, borderWidth: 2,
-      pointBackgroundColor: ctx2 => (ctx2.parsed.y < 0) ? '#cf222e' : '#1a7f37', spanGaps: false,
-    }]},
-    options: { responsive: true, maintainAspectRatio: false,
-      plugins: { legend: { display: false },
-        tooltip: { callbacks: { label: item => {
-          const raw = pctSlice[item.dataIndex]; const v = Number(raw);
-          const sign = v >= 0 ? '+' : '';
-          const capped = Math.abs(v) > CAP ? ' ⚠ capped' : '';
-          const tot = activeSlice[item.dataIndex];
-          return ['% Change: ' + sign + v.toFixed(2) + '%' + capped, 'Total Subscribers: ' + (tot != null ? Number(tot).toLocaleString() : '—')];
-        }}}},
-      scales: {
-        x: { ticks: { font: { size: 10 }, maxTicksLimit: gran === 'daily' ? 20 : 14, maxRotation: 45 } },
-        y: { beginAtZero: false, min: -CAP, max: CAP,
-             grid: { color: c => c.tick.value === 0 ? 'rgba(127,127,127,.55)' : 'rgba(127,127,127,.12)', lineWidth: c => c.tick.value === 0 ? 2 : 1 },
-             ticks: { font: { size: 11 }, stepSize: STEP, callback: v => (v > 0 ? '+' : '') + v.toFixed(STEP < 0.1 ? 2 : STEP < 1 ? 1 : 0) + '%' },
-             title: { display: true, text: '% Change vs previous period', font: { size: 11 } } }
-      }
-    }
-  });
-}
-function _setOvRateGran(gran) { window._ovRateGran = gran; _renderOvRateChart(); }
-
 /* ═══════════════════════════════════════
    CAMPAIGNS
 ═══════════════════════════════════════ */
@@ -1299,8 +1208,8 @@ function _digestSummaryBody(wd, lastIdx, priorIdx, lastLabel) {
       </div>`
     : `<div class="chart-card">
         <h3>New Subscribers by Source <span class="badge-inline">total: ${fmtN(totalNew)}</span></h3>
-        <div class="chart-container" style="height:${srcBarH}px;"><canvas id="dig-src-pie"></canvas></div>
-        <div class="insight">Canonical-source split of subscribers who joined during the last completed week, sorted by volume.</div>
+        <div class="chart-container" style="height:${srcBarH}px;"><canvas id="dig-src-bar"></canvas></div>
+        <div class="insight">Canonical-source split of subscribers who joined during the last completed week.</div>
       </div>`;
 
   // ── Organic subs per week (last 13 completed weeks)
@@ -1395,36 +1304,26 @@ function _digestSummaryBody(wd, lastIdx, priorIdx, lastLabel) {
 function _initDigestCharts() {
   const palette = ['#0969da','#cf222e','#8250df','#9a6700','#bf3989','#1b7c83','#1a7f37','#58a6ff','#3fb950','#fb8500','#fb6f92','#7d4e00','#4f8cff','#34d399','#a78bfa','#f87171','#fbbf24'];
 
-  // Sources doughnut
-  const srcCanvas = document.getElementById('dig-src-pie');
+  // Sources horizontal bar chart
+  const srcCanvas = document.getElementById('dig-src-bar');
   const allSrc = window._digSrcData || [];
   const totalNew = window._digSrcTotal || 0;
   if (srcCanvas && allSrc.length) {
-    const sorted = [...allSrc].sort((a, b) => (Number(b.subs)||0) - (Number(a.subs)||0));
     new Chart(srcCanvas, {
       type: 'bar',
       data: {
-        labels: sorted.map(r => utmLabel(r.bucket)),
-        datasets: [{ data: sorted.map(r => Number(r.subs) || 0),
-                     backgroundColor: sorted.map((_, i) => palette[i % palette.length]),
-                     borderRadius: 3 }]
+        labels: allSrc.map(r => utmLabel(r.bucket)),
+        datasets: [{
+          label: 'New Subscribers',
+          data: allSrc.map(r => Number(r.subs) || 0),
+          backgroundColor: allSrc.map((_, i) => palette[i % palette.length]),
+          borderRadius: 4,
+          borderWidth: 0,
+        }]
       },
-      plugins: [{ id: 'barLabels', afterDatasetsDraw(chart) {
-        const { ctx } = chart;
-        chart.data.datasets.forEach((ds, i) => {
-          chart.getDatasetMeta(i).data.forEach((bar, idx) => {
-            const v = ds.data[idx]; if (!v) return;
-            ctx.save(); ctx.fillStyle = '#ccc'; ctx.font = '11px sans-serif';
-            ctx.textAlign = 'left'; ctx.textBaseline = 'middle';
-            ctx.fillText(Number(v).toLocaleString(), bar.x + 4, bar.y);
-            ctx.restore();
-          });
-        });
-      }}],
       options: {
         responsive: true, maintainAspectRatio: false,
         indexAxis: 'y',
-        layout: { padding: { right: 60 } },
         plugins: {
           legend: { display: false },
           tooltip: { callbacks: { label: c => {
@@ -1432,10 +1331,7 @@ function _initDigestCharts() {
             return `${Number(c.parsed.x).toLocaleString()} (${pct}%)`;
           }}}
         },
-        scales: {
-          x: { beginAtZero: true, ticks: { font: { size: 11 } } },
-          y: { ticks: { font: { size: 11 } } }
-        }
+        scales: { x: { beginAtZero: true, ticks: { callback: v => Number(v).toLocaleString() } } }
       }
     });
   }
@@ -1786,6 +1682,12 @@ function _ssOn() {
   const el = document.getElementById('clicksIncludeSS');
   return el ? el.checked : false;
 }
+function _syncSSToggle(src) {
+  ['clicksIncludeSS', 'opensIncludeSS'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el && el !== src) el.checked = src.checked;
+  });
+}
 /* Sunday-Spotlight detection — by send-date day-of-week, not by campaign
  * name. Sunday Spotlight is the digest blast that goes out on Sunday, so
  * the canonical test is "was this campaign sent on a Sunday?". The
@@ -1868,8 +1770,8 @@ function _buildCampaignSeries(rows, periodFn, formatter, limit) {
 function _renderClickSection1() {
   const includeSS = _ssOn();
   const metric    = (document.getElementById('clicksMetric') || {}).value || 'clicks';
-  const stateEl   = document.getElementById('clicks-ss-state');
-  if (stateEl) stateEl.textContent = includeSS ? 'Including branded digest sends' : 'Excluding branded digest sends';
+  const ssLabel = includeSS ? 'Including branded digest sends' : 'Excluding branded digest sends';
+  ['clicks-ss-state', 'opens-ss-state'].forEach(id => { const el = document.getElementById(id); if (el) el.textContent = ssLabel; });
   const table = (_rawClicksData && _rawClicksData.campaign_table) || [];
   const rows  = table.filter(c => includeSS ? true : !_isSundayCampaign(c));
   const weekly  = _buildCampaignSeries(rows, _isoWeekStart, _fmtWeekLabel,  8);
@@ -2210,10 +2112,10 @@ function _renderClickKpis() {
   });
   const avg = camps ? Math.round(clicks / camps) : 0;
   const set = (id, txt) => { const el = document.getElementById(id); if (el) el.textContent = txt; };
-  set('ca-kpi-camps',  camps.toLocaleString());
-  set('ca-kpi-recip',  recip.toLocaleString());
   let totalOpens = 0;
   rows.forEach(c => { totalOpens += _campNum(c.unique_opens); });
+  set('ca-kpi-camps',  camps.toLocaleString());
+  set('ca-kpi-recip',  recip.toLocaleString());
   set('ca-kpi-clicks', clicks.toLocaleString());
   set('ca-kpi-opens',  totalOpens ? totalOpens.toLocaleString() : '—');
 }
@@ -2241,12 +2143,6 @@ function _renderOpenerKpis(M) {
     const tot = o[`total_${w}`];
     set(`op-kpi-${w}`, tot != null ? Number(tot).toLocaleString() : '—');
   });
-}
-
-function _renderOpenerWeeklyChart() {
-  // Weekly unique openers from raw events (COUNT DISTINCT email per ISO week)
-  const ws = _sliceSeries((_rawClicksData && _rawClicksData.raw_opens_weekly) || {}, window._rawWeeklyN || 8);
-  _clickTrendChart('op-weekly-chart', ws, 'unique_openers', '#1a7f37', 'Unique Openers', v => Number(v).toLocaleString());
 }
 
 function _setEngTab(tab) {
@@ -2295,19 +2191,38 @@ function _renderOpensSection2() {
   _renderOpenerWeeklyChart();
   // Monthly unique openers from raw events
   const ms = (_rawClicksData && _rawClicksData.raw_opens_monthly) || {};
-  _clickTrendChart('op-s2-monthly-bar', ms, 'unique_openers', '#1a7f37', 'Unique Openers', v => Number(v).toLocaleString());
+  const mKey = (ms && Array.isArray(ms.unique_openers_no_ss) && !_ssOn()) ? 'unique_openers_no_ss' : 'unique_openers';
+  _clickTrendChart('op-s2-monthly-bar', ms, mKey, '#1a7f37', 'Unique Openers', v => Number(v).toLocaleString());
   _renderAvgOpenRateCharts();
+}
+
+function _renderOpenerKpis(M) {
+  const o   = (M && M.opener_kpis) || {};
+  const set = (id, v) => { const el = document.getElementById(id); if (el) el.textContent = v; };
+  ['7d','30d','90d'].forEach(w => {
+    const tot = o[`total_${w}`];
+    set(`op-kpi-${w}`, tot != null ? Number(tot).toLocaleString() : '—');
+  });
+}
+
+function _renderOpenerWeeklyChart() {
+  // Weekly unique openers from raw events (COUNT DISTINCT email per ISO week)
+  const ws = _sliceSeries((_rawClicksData && _rawClicksData.raw_opens_weekly) || {}, window._rawWeeklyN || 8);
+  const wKey = (ws && Array.isArray(ws.unique_openers_no_ss) && !_ssOn()) ? 'unique_openers_no_ss' : 'unique_openers';
+  _clickTrendChart('op-weekly-chart', ws, wKey, '#1a7f37', 'Unique Openers', v => Number(v).toLocaleString());
 }
 
 function _renderAvgOpenRateCharts() {
   const pctFmt = v => v != null ? Number(v).toFixed(2) + '%' : null;
   const ws = _sliceSeries((_rawClicksData && _rawClicksData.campaign_clicks_weekly) || {}, window._rawWeeklyN || 8);
   const ms = (_rawClicksData && _rawClicksData.campaign_clicks_monthly) || {};
-  const mkLine = (canvasId, series, label, color) => {
+  const wORKey = (ws && Array.isArray(ws.avg_open_rate_no_ss) && !_ssOn()) ? 'avg_open_rate_no_ss' : 'avg_open_rate';
+  const mORKey = (ms && Array.isArray(ms.avg_open_rate_no_ss) && !_ssOn()) ? 'avg_open_rate_no_ss' : 'avg_open_rate';
+  const mkLine = (canvasId, series, orKey, label, color) => {
     const ctx = _resetCanvas(canvasId);
     if (!ctx) return;
     const labels = series.labels || [];
-    const data   = (series.avg_open_rate || []).map(v => v != null ? Number(v) : null);
+    const data   = (series[orKey] || []).map(v => v != null ? Number(v) : null);
     const isCur  = series.is_current || [];
     ctx._chart = _newChart(ctx, {
       type: 'line',
@@ -2336,8 +2251,8 @@ function _renderAvgOpenRateCharts() {
       },
     });
   };
-  mkLine('op-avg-open-rate-weekly',  ws, 'Avg Open Rate %', '#0969da');
-  mkLine('op-avg-open-rate-monthly', ms, 'Avg Open Rate %', '#0969da');
+  mkLine('op-avg-open-rate-weekly',  ws, wORKey, 'Avg Open Rate %', '#0969da');
+  mkLine('op-avg-open-rate-monthly', ms, mORKey, 'Avg Open Rate %', '#0969da');
 }
 
 /* Click-volume distribution bar — buckets subscribers by their lifetime
@@ -2413,20 +2328,6 @@ function renderContent(M) {
       <button id="eng-tab-opens"  onclick="_setEngTab('opens')"  style="font-size:13px;font-weight:600;padding:6px 18px;border:1px solid var(--card-border);border-radius:7px;background:var(--card);color:var(--text-muted);cursor:pointer;">Opens</button>
     </div>
 
-    <!-- Shared toolbar — SS toggle always visible, metric dropdown only in clicks mode -->
-    <div class="camp-toolbar" style="margin-bottom:16px;">
-      <div class="camp-toolbar-left">
-        <label class="switch" for="clicksIncludeSS" title="Include Sunday Spotlight campaigns">
-          <input type="checkbox" id="clicksIncludeSS" onchange="_refreshClicksTab()">
-          <span class="slider-round"></span>
-        </label>
-        <div>
-          <div style="font-size:13px;font-weight:600;color:var(--text);">Include Sunday Spotlight</div>
-          <div style="font-size:11px;color:var(--text-muted);" id="clicks-ss-state">Excluding branded digest sends</div>
-        </div>
-      </div>
-    </div>
-
     <!-- ── CLICKS PANEL ── -->
     <div id="eng-panel-clicks">
       <div class="kpi-row" style="grid-template-columns:repeat(auto-fit,minmax(200px,1fr));margin-bottom:16px;">
@@ -2444,6 +2345,19 @@ function renderContent(M) {
           <div class="label">Unique Clickers — Last 90d</div>
           <div class="value" id="sc-kpi-uniq-90d">—</div>
           <div class="sub">of which <span id="sc-kpi-90d">—</span> (<span id="sc-kpi-pct-90d">—</span>%) clicked 2+ campaigns</div>
+        </div>
+      </div>
+      <!-- SS toggle — below KPIs, only affects charts not KPI tiles -->
+      <div class="camp-toolbar" style="margin-bottom:16px;">
+        <div class="camp-toolbar-left">
+          <label class="switch" for="clicksIncludeSS" title="Include Sunday Spotlight campaigns">
+            <input type="checkbox" id="clicksIncludeSS" onchange="_syncSSToggle(this);_refreshClicksTab()">
+            <span class="slider-round"></span>
+          </label>
+          <div>
+            <div style="font-size:13px;font-weight:600;color:var(--text);">Include Sunday Spotlight</div>
+            <div style="font-size:11px;color:var(--text-muted);" id="clicks-ss-state">Excluding branded digest sends</div>
+          </div>
         </div>
       </div>
 
@@ -2496,11 +2410,11 @@ function renderContent(M) {
     <!-- Metric charts row -->
     <div class="grid-2">
       <div class="chart-card">
-        <h3><span id="cnt-right-weekly-title">Weekly — Unique Clicks</span> <span class="badge-inline" id="cnt-raw-weekly-unique-badge">— unique clicks ÷ sends</span></h3>
+        <h3><span id="cnt-right-weekly-title">Weekly — Unique Clickers</span> <span class="badge-inline" id="cnt-raw-weekly-unique-badge">— raw events · distinct subscribers who clicked</span></h3>
         <div class="chart-container h240"><canvas id="cnt-raw-weekly-unique-bar"></canvas></div>
       </div>
       <div class="chart-card">
-        <h3><span id="cnt-right-monthly-title">Monthly — Unique Clicks</span> <span class="badge-inline" id="cnt-right-monthly-badge">— unique clicks ÷ sends</span></h3>
+        <h3><span id="cnt-right-monthly-title">Monthly — Unique Clickers</span> <span class="badge-inline" id="cnt-right-monthly-badge">— raw events · distinct subscribers who clicked</span></h3>
         <div class="chart-container h240"><canvas id="cnt-raw-monthly-unique-bar"></canvas></div>
       </div>
     </div>
@@ -2533,6 +2447,19 @@ function renderContent(M) {
           <div class="label">Unique Openers — Last 90d</div>
           <div class="value" id="op-kpi-90d">—</div>
           <div class="sub">Distinct subscribers who opened at least one campaign</div>
+        </div>
+      </div>
+      <!-- SS toggle — below KPIs, only affects charts not KPI tiles -->
+      <div class="camp-toolbar" style="margin-bottom:16px;">
+        <div class="camp-toolbar-left">
+          <label class="switch" for="opensIncludeSS" title="Include Sunday Spotlight campaigns">
+            <input type="checkbox" id="opensIncludeSS" onchange="_syncSSToggle(this);_refreshClicksTab()">
+            <span class="slider-round"></span>
+          </label>
+          <div>
+            <div style="font-size:13px;font-weight:600;color:var(--text);">Include Sunday Spotlight</div>
+            <div style="font-size:11px;color:var(--text-muted);" id="opens-ss-state">Excluding branded digest sends</div>
+          </div>
         </div>
       </div>
 
@@ -3121,7 +3048,7 @@ function renderAudience(M) {
     <div class="grid-2">
       <div class="chart-card">
         <h3>Acquisition by Source</h3>
-        <div class="chart-container h340"><canvas id="aud-source-pie"></canvas></div>
+        <div class="chart-container h300"><canvas id="aud-source-pie"></canvas></div>
       </div>
       <div class="chart-card">
         <h3>Source Clicks Performance</h3>
@@ -3146,34 +3073,25 @@ function renderAudience(M) {
       </table></div>
     </div>
 
+    <div class="chart-card" style="margin-top:18px;">
+      <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;margin-bottom:14px;">
+        <h3 style="margin:0;">Subscriber Growth Rate <span class="badge-inline" id="growth-trend-badge">— last 12 months</span></h3>
+        <div style="display:flex;gap:6px;">
+          <button id="growth-trend-mom" onclick="window._growthTrendSetGrain('month')"
+            style="font-size:12px;padding:3px 10px;border:1px solid var(--card-border);border-radius:5px;cursor:pointer;background:var(--accent);color:#fff;">MoM</button>
+          <button id="growth-trend-wow" onclick="window._growthTrendSetGrain('week')"
+            style="font-size:12px;padding:3px 10px;border:1px solid var(--card-border);border-radius:5px;cursor:pointer;background:var(--card);color:var(--text-muted);">WoW</button>
+        </div>
+      </div>
+      <div class="chart-container h340"><canvas id="growth-trend-chart"></canvas></div>
+      <div class="insight">% change in <code>total_active</code> vs the previous period. Green = growth, red = contraction. MoM = last 12 months; WoW = last 12 weeks. Sourced from <code>growth_history</code> snapshots. Hover for the absolute Total Active.</div>
+    </div>
   `;
   // Build pie + bar with empty data; _setAcqWindow fills them.
-  const _barLabelPlugin = { id: 'barLabels', afterDatasetsDraw(chart) {
-    const { ctx } = chart;
-    chart.data.datasets.forEach((ds, i) => {
-      chart.getDatasetMeta(i).data.forEach((bar, idx) => {
-        const v = ds.data[idx]; if (!v) return;
-        ctx.save(); ctx.fillStyle = '#ccc'; ctx.font = '11px sans-serif';
-        ctx.textAlign = 'left'; ctx.textBaseline = 'middle';
-        ctx.fillText(Number(v).toLocaleString(), bar.x + 4, bar.y);
-        ctx.restore();
-      });
-    });
-  }};
   window._audPieChart = new Chart(document.getElementById('aud-source-pie'), {
-    type: 'bar',
-    data: { labels: [], datasets: [{ label: 'New Subscribers', data: [], backgroundColor: '#0969da', borderRadius: 3 }] },
-    plugins: [_barLabelPlugin],
-    options: {
-      responsive: true, maintainAspectRatio: false,
-      indexAxis: 'y',
-      layout: { padding: { right: 60 } },
-      plugins: { legend: { display: false } },
-      scales: {
-        x: { beginAtZero: true, ticks: { font: { size: 11 } } },
-        y: { ticks: { font: { size: 11 } } }
-      }
-    }
+    type: 'doughnut',
+    data: { labels: [], datasets: [{ data: [], backgroundColor: ['#0969da','#1a7f37','#cf222e','#9a6700','#8250df','#bf3989','#1b7c83','#7d4e00','#58a6ff','#3fb950'] }] },
+    options: { responsive:true, maintainAspectRatio:false, plugins:{ legend:{position:'bottom',labels:{font:{size:11},padding:6}} } }
   });
   window._audBarChart = new Chart(document.getElementById('aud-utm-clicks'), {
     type: 'bar',
@@ -3192,6 +3110,121 @@ function renderAudience(M) {
   window._M_total_subscribers = M.total_subscribers || 0;
   _setAcqWindow('all');
 
+  // ── Subscriber Growth % Change (MoM / WoW) ──
+  // Period-over-period % change in total_active. Overview already shows the
+  // gained/lost bar chart — this chart is the growth-rate view (e.g. +0.56% MoM).
+  const _growthSeries = (M.subscriber_growth_series) || { monthly: { labels:[], active_count:[] }, weekly: { labels:[], active_count:[] } };
+
+  function _buildGrowthTrend(grain) {
+    const s = grain === 'month' ? _growthSeries.monthly : _growthSeries.weekly;
+    const rawLabels = s.labels || [];
+    const rawActive = s.active_count || [];
+    // Trim current incomplete period (last label)
+    const trim = rawLabels.length > 1 ? rawLabels.length - 1 : rawLabels.length;
+    const cap = grain === 'month' ? 12 : 12;  // last 12 periods for readability
+    const labelsAll = rawLabels.slice(0, trim);
+    const activeAll = rawActive.slice(0, trim);
+    // Compute % change vs previous period
+    const pct = activeAll.map((v, i) => {
+      if (i === 0 || !activeAll[i - 1]) return null;
+      return ((v - activeAll[i - 1]) / activeAll[i - 1]) * 100;
+    });
+    // Slice to last `cap` periods AFTER computing % so first bar isn't lost
+    const labelsCapped = labelsAll.slice(-cap).map(l => {
+      if (grain === 'month') {
+        const d = new Date(l + '-01T00:00:00');
+        return isNaN(d) ? l : d.toLocaleDateString('en-US', { month: 'short', year: '2-digit' });
+      }
+      const d = new Date(l + 'T00:00:00');
+      if (isNaN(d)) return l;
+      const end = new Date(d.getTime() + 6 * 86400000);
+      const mo = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+      return mo[d.getMonth()] + ' ' + d.getDate() + '–' + (d.getMonth() !== end.getMonth() ? mo[end.getMonth()] + ' ' : '') + end.getDate();
+    });
+    return {
+      labels: labelsCapped,
+      pct:    pct.slice(-cap),
+      active: activeAll.slice(-cap),
+    };
+  }
+
+  const _growthTrendCanvas = document.getElementById('growth-trend-chart');
+  if (_growthTrendCanvas) {
+    const initData = _buildGrowthTrend('month');
+    window._growthTrendChart = new Chart(_growthTrendCanvas, {
+      type: 'bar',
+      data: {
+        labels: initData.labels,
+        datasets: [{
+          label: '% Change',
+          data: initData.pct,
+          backgroundColor: ctx => {
+            const v = Number(ctx.raw);
+            return (v != null && v < 0) ? '#cf222e' : '#1a7f37';
+          },
+          borderRadius: 4,
+        }]
+      },
+      options: {
+        responsive: true, maintainAspectRatio: false,
+        plugins: {
+          legend: { display: false },
+          tooltip: {
+            callbacks: {
+              label: item => {
+                const v = Number(item.raw);
+                const sign = v >= 0 ? '+' : '';
+                const active = initData.active[item.dataIndex];
+                return [
+                  '% Change: ' + sign + v.toFixed(2) + '%',
+                  'Total Active: ' + (active != null ? active.toLocaleString() : '—'),
+                ];
+              }
+            }
+          }
+        },
+        scales: {
+          x: { ticks: { font: { size: 11 } } },
+          y: {
+            beginAtZero: false,
+            grid: {
+              color: ctx => ctx.tick.value === 0 ? 'rgba(0,0,0,0.4)' : 'rgba(0,0,0,0.08)',
+            },
+            ticks: { font: { size: 11 }, callback: v => (v > 0 ? '+' : '') + v.toFixed(2) + '%' },
+            title: { display: true, text: '% Change vs previous period', font: { size: 11 } },
+          }
+        }
+      }
+    });
+  }
+
+  window._growthTrendSetGrain = function(grain) {
+    ['growth-trend-mom','growth-trend-wow'].forEach(id => {
+      const btn = document.getElementById(id);
+      if (!btn) return;
+      const active = (grain === 'month' && id === 'growth-trend-mom') || (grain === 'week' && id === 'growth-trend-wow');
+      btn.style.background = active ? 'var(--accent)' : 'var(--card)';
+      btn.style.color      = active ? '#fff'          : 'var(--text-muted)';
+    });
+    const badge = document.getElementById('growth-trend-badge');
+    if (badge) badge.textContent = grain === 'month' ? '— last 12 months' : '— last 12 weeks';
+    if (!window._growthTrendChart) return;
+    const d = _buildGrowthTrend(grain);
+    window._growthTrendChart._latestActive = d.active;
+    window._growthTrendChart.data.labels = d.labels;
+    window._growthTrendChart.data.datasets[0].data = d.pct;
+    // Patch tooltip to use new active series
+    window._growthTrendChart.options.plugins.tooltip.callbacks.label = item => {
+      const v = Number(item.raw);
+      const sign = v >= 0 ? '+' : '';
+      const active = d.active[item.dataIndex];
+      return [
+        '% Change: ' + sign + v.toFixed(2) + '%',
+        'Total Active: ' + (active != null ? active.toLocaleString() : '—'),
+      ];
+    };
+    window._growthTrendChart.update();
+  };
 }
 
 /* Single shared time-window driver for the whole Audience tab.
@@ -3267,11 +3300,10 @@ function _setAcqWindow(win) {
   if (topSrcEl) topSrcEl.textContent = topName;
   if (topPctEl) topPctEl.textContent = topPct;
 
-  // Bar — Acquisition by Source (sorted descending)
+  // Pie — Acquisition by Source
   if (window._audPieChart) {
-    const sorted = [...rows].sort((a, b) => (Number(b.subscribers)||0) - (Number(a.subscribers)||0));
-    window._audPieChart.data.labels = sorted.map(r => utmLabel(r.label));
-    window._audPieChart.data.datasets[0].data = sorted.map(r => Number(r.subscribers) || 0);
+    window._audPieChart.data.labels = rows.map(r => utmLabel(r.label));
+    window._audPieChart.data.datasets[0].data = rows.map(r => Number(r.subscribers) || 0);
     window._audPieChart.update();
   }
 
@@ -3391,7 +3423,7 @@ function renderQuiz(M) {
   barH('quiz-sleep',      M.quiz_sleep_dist,     'Count',  '#1b7c83');
   pie ('quiz-marital',    M.quiz_marital_dist);
   pie ('quiz-obesity',    M.quiz_obesity_dist);
-  barH('quiz-financial',  M.quiz_financial_dist, 'Count', '#1b7c83');
+  barH('quiz-financial',  M.quiz_financial_dist, 'Count',  '#1b7c83');
 }
 
 /* ═══════════════════════════════════════

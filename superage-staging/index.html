@@ -345,12 +345,13 @@ function utmLabel(raw) {
    `superage-dashboard/*.json` keys are written by the two refresh
    Lambdas (see superage_metrics_lambda_updated.py + superage_comparison_lambda.py).
 ═══════════════════════════════════════ */
-const DASHBOARD_API = 'https://dashboard.pardon-ventures-06b.workers.dev';
-const _API_HEADERS = { 'X-Auth-Token': 'dashboardkiwilytics123' };
+const _LOCAL = location.hostname === 'localhost' || location.hostname === '127.0.0.1' || location.protocol === 'file:';
+const _BASE   = _LOCAL ? '.' : 'https://dashboard.pardon-ventures-06b.workers.dev/superage-dashboard';
+const _OPTS   = _LOCAL ? {} : { headers: { 'X-Auth-Token': 'dashboardkiwilytics123' } };
 Promise.all([
-  fetch(`${DASHBOARD_API}/superage-dashboard/superage-metrics.json`,   { headers: _API_HEADERS }).then(r => r.json()),
-  fetch(`${DASHBOARD_API}/superage-dashboard/superage-comparison.json`, { headers: _API_HEADERS }).then(r => r.ok ? r.json() : {}).catch(() => ({})),
-  fetch(`${DASHBOARD_API}/superage-dashboard/superage-ads.json`,        { headers: _API_HEADERS }).then(r => r.ok ? r.json() : {}).catch(() => ({}))
+  fetch(`${_BASE}/superage-metrics.json`,   _OPTS).then(r => r.json()),
+  fetch(`${_BASE}/superage-comparison.json`, _OPTS).then(r => r.ok ? r.json() : {}).catch(() => ({})),
+  fetch(`${_BASE}/superage-ads.json`,        _OPTS).then(r => r.ok ? r.json() : {}).catch(() => ({}))
 ])
   .then(([metrics, comparison, ads]) => {
     const M = Object.assign({}, metrics, comparison, ads);

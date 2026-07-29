@@ -659,6 +659,7 @@ def compute_new_subscribers_for_window_from_rds(
                 CASE
                     WHEN source_label = 'Taboola' THEN 'taboola'
                     WHEN source_label = 'Meta'    THEN 'meta'
+                    WHEN source_label = 'Website' THEN 'website'
                     WHEN source_label = 'Organic' OR source_label IS NULL THEN
                         CASE
                             WHEN acq_utm = '' AND sub_src = '' AND src = '' AND utm_src = '' AND url_vars = ''
@@ -673,6 +674,7 @@ def compute_new_subscribers_for_window_from_rds(
             COUNT(*)                                                AS new_subscribers,
             COUNT(*) FILTER (WHERE source_bucket = 'taboola')      AS taboola_subscribers,
             COUNT(*) FILTER (WHERE source_bucket = 'meta')         AS meta_subscribers,
+            COUNT(*) FILTER (WHERE source_bucket = 'website')      AS website_subscribers,
             COUNT(*) FILTER (WHERE source_bucket = 'other_brands') AS other_brand_subscribers,
             COUNT(*) FILTER (WHERE source_bucket = 'organic')      AS organic_subscribers,
             COUNT(*) FILTER (WHERE source_bucket = 'unknown')      AS unknown_subscribers
@@ -693,18 +695,20 @@ def compute_new_subscribers_for_window_from_rds(
     new_subscribers = int(row[0] or 0)
     taboola_subscribers = int(row[1] or 0)
     meta_subscribers = int(row[2] or 0)
-    other_brand_subscribers = int(row[3] or 0)
-    organic_subscribers = int(row[4] or 0)
-    unknown_subscribers = int(row[5] or 0)
+    website_subscribers = int(row[3] or 0)
+    other_brand_subscribers = int(row[4] or 0)
+    organic_subscribers = int(row[5] or 0)
+    unknown_subscribers = int(row[6] or 0)
 
     def safe_pct(value):
         return round((value / new_subscribers) * 100, 2) if new_subscribers else 0
 
     LOG.info(
-        "SUBSCRIBERS_RDS DONE: total=%s taboola=%s meta=%s other_brands=%s organic=%s unknown=%s",
+        "SUBSCRIBERS_RDS DONE: total=%s taboola=%s meta=%s website=%s other_brands=%s organic=%s unknown=%s",
         new_subscribers,
         taboola_subscribers,
         meta_subscribers,
+        website_subscribers,
         other_brand_subscribers,
         organic_subscribers,
         unknown_subscribers,
@@ -718,6 +722,9 @@ def compute_new_subscribers_for_window_from_rds(
 
         "meta_subscribers": meta_subscribers,
         "meta_subscribers_pct": safe_pct(meta_subscribers),
+
+        "website_subscribers": website_subscribers,
+        "website_subscribers_pct": safe_pct(website_subscribers),
 
         "other_brand_subscribers": other_brand_subscribers,
         "other_brand_subscribers_pct": safe_pct(other_brand_subscribers),
@@ -1511,6 +1518,8 @@ def build_report_text(
             f"[{subscriber_summary.get('taboola_subscribers_pct', 0)}%], "
             f"{subscriber_summary.get('meta_subscribers', 0):,} Meta "
             f"[{subscriber_summary.get('meta_subscribers_pct', 0)}%], "
+            f"{subscriber_summary.get('website_subscribers', 0):,} Website "
+            f"[{subscriber_summary.get('website_subscribers_pct', 0)}%], "
             f"{subscriber_summary.get('other_brand_subscribers', 0):,} Others "
             f"[{subscriber_summary.get('other_brand_subscribers_pct', 0)}%], "
             f"{subscriber_summary.get('organic_subscribers', 0):,} organic "
@@ -1630,6 +1639,8 @@ def lambda_handler(event, context):
         "taboola_subscribers_pct": 0,
         "meta_subscribers": 0,
         "meta_subscribers_pct": 0,
+        "website_subscribers": 0,
+        "website_subscribers_pct": 0,
         "other_brand_subscribers": 0,
         "other_brand_subscribers_pct": 0,
         "organic_subscribers": 0,

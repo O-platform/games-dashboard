@@ -405,8 +405,29 @@ def build_ads(cur, S, _t):
 
 
 # ─────────────────────────────────────────────────────────────
-# Shopify section builder  (new)
+# Vendor name normalization — Shopify's `vendor` field is free text and the
+# same brand can arrive under different casing/spacing (e.g. "Super Age" vs
+# "superage"). Group on a whitespace-stripped, lowercased key and display a
+# single canonical label so sales for one brand don't split across bars/rows.
 # ─────────────────────────────────────────────────────────────
+
+_VENDOR_CANONICAL = {
+    "superage": "SuperAge",
+}
+
+
+def _vendor_expr(alias: str = "li") -> str:
+    """SQL expression yielding the canonical vendor label for GROUP BY / display."""
+    key = f"LOWER(REGEXP_REPLACE(TRIM({alias}.vendor), '\\s+', '', 'g'))"
+    cases = "\n            ".join(
+        f"WHEN {key} = '{norm_key}' THEN '{canonical}'"
+        for norm_key, canonical in _VENDOR_CANONICAL.items()
+    )
+    return f"""CASE
+            {cases}
+            ELSE COALESCE(NULLIF(TRIM({alias}.vendor), ''), '—')
+        END"""
+
 
 def build_shopify(cur, S, _t):
     """Builds the Shopify Sales payload from shopify_orders +
@@ -545,9 +566,11 @@ def build_shopify(cur, S, _t):
     }
 
     # 4. By vendor (line-item grain, windowed, non-cancelled orders).
+    #    Vendor is normalized via _vendor_expr() so casing/spacing variants
+    #    of the same brand (e.g. "Super Age" / "superage") roll up together.
     cur.execute(f"""
         SELECT
-            COALESCE(NULLIF(TRIM(li.vendor), ''), '—')  AS vendor,
+            {_vendor_expr('li')}                        AS vendor,
             COALESCE(SUM(li.gross_sales), 0)            AS gross_sales,
             COALESCE(SUM(li.quantity), 0)               AS units,
             COUNT(DISTINCT li.order_id)                 AS orders
@@ -597,11 +620,11 @@ def build_shopify(cur, S, _t):
         for r in ptype_rows
     ]
 
-    # 6. Top products (by title + vendor).
+    # 6. Top products (by title + vendor). Same vendor normalization as #4.
     cur.execute(f"""
         SELECT
             COALESCE(NULLIF(TRIM(li.title), ''), '—')   AS title,
-            COALESCE(NULLIF(TRIM(li.vendor), ''), '—')  AS vendor,
+            {_vendor_expr('li')}                        AS vendor,
             COALESCE(SUM(li.gross_sales), 0)            AS gross_sales,
             COALESCE(SUM(li.quantity), 0)               AS units,
             COUNT(DISTINCT li.order_id)                 AS orders

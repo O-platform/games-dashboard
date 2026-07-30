@@ -40,6 +40,8 @@ export default {
       "game-campaigns/campaigns_life.json",
       "superage-dashboard/superage-metrics.json",
       "superage-dashboard/superage-comparison.json",
+      "superage-dashboard/superage-ads.json",
+      "superage-dashboard/superage-shopify.json",
     ]);
 
     const origin       = request.headers.get("Origin");

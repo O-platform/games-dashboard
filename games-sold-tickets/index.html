@@ -1010,6 +1010,11 @@
           <div class="value" id="kpi-landing">&#8212;</div>
           <div class="sub">Known sources only</div>
         </div>
+        <div class="kpi-card red">
+          <div class="label">Google Ads</div>
+          <div class="value" id="kpi-google-ads">&#8212;</div>
+          <div class="sub">google_ads_games clicks</div>
+        </div>
       </div>
       <div class="card" style="margin-bottom:18px;">
         <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;">
@@ -3495,6 +3500,7 @@
         document.getElementById('kpi-tickets').textContent = (m.total_tickets || 0).toLocaleString();
         document.getElementById('kpi-waitlist').textContent = (m.total_waitlist || 0).toLocaleString();
         document.getElementById('kpi-landing').textContent = (m.landing_events || 0).toLocaleString();
+        document.getElementById('kpi-google-ads').textContent = (m.landing_google_ads != null ? m.landing_google_ads : 0).toLocaleString();
         if (m.estimated_revenue != null) document.getElementById('kpi-revenue').textContent = '$' + m.estimated_revenue.toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 0 });
         else document.getElementById('kpi-revenue').textContent = 'N/A';
         if (m.waitlist_buyers !== null && m.waitlist_buyers !== undefined) {

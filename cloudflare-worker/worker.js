@@ -40,6 +40,7 @@ export default {
       "game-campaigns/campaigns_life.json",
       "superage-dashboard/superage-metrics.json",
       "superage-dashboard/superage-comparison.json",
+      "awe-course/awe_course.json",
     ]);
 
     const origin       = request.headers.get("Origin");

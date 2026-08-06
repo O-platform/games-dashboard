@@ -1,66 +1,66 @@
 {
-  "data_as_of": "2026-05-22",
-  "launch_cutoff": "2026-05-20",
+  "data_as_of": "2026-07-29",
+  "launch_cutoff": "2026-07-27",
   "current_week": {
-    "start": "2026-05-18",
-    "end": "2026-05-24"
+    "start": "2026-07-27",
+    "end": "2026-08-02"
   },
   "previous_week": {
-    "start": "2026-05-11",
-    "end": "2026-05-17"
+    "start": "2026-07-20",
+    "end": "2026-07-26"
   },
   "week_over_week": {
     "current": {
       "campaigns": 1,
-      "recipients": 817633,
-      "unique_opens": 365772,
-      "clicks": 23884,
-      "unsubs": 1496,
-      "bounced": 2937,
-      "avg_open_rate": 44.74,
-      "avg_click_rate": 2.92,
-      "best_open_rate": 44.74,
-      "best_click_rate": 2.92
+      "recipients": 769446,
+      "unique_opens": 376828,
+      "clicks": 36431,
+      "unsubs": 1029,
+      "bounced": 2880,
+      "avg_open_rate": 48.97,
+      "avg_click_rate": 4.73,
+      "best_open_rate": 48.97,
+      "best_click_rate": 4.73
     },
     "previous": {
-      "campaigns": 3,
-      "recipients": 2149600,
-      "unique_opens": 974897,
-      "clicks": 44736,
-      "unsubs": 3881,
-      "bounced": 6258,
-      "avg_open_rate": 46.33,
-      "avg_click_rate": 2.06,
-      "best_open_rate": 53.73,
-      "best_click_rate": 2.39
+      "campaigns": 5,
+      "recipients": 2037691,
+      "unique_opens": 1119099,
+      "clicks": 79534,
+      "unsubs": 3169,
+      "bounced": 3105,
+      "avg_open_rate": 60.27,
+      "avg_click_rate": 2.96,
+      "best_open_rate": 69.47,
+      "best_click_rate": 5.13
     },
     "delta": {
       "campaigns": {
-        "value": -2,
-        "pct_change": -66.7
+        "value": -4,
+        "pct_change": -80.0
       },
       "recipients": {
-        "value": -1331967,
-        "pct_change": -62.0
+        "value": -1268245,
+        "pct_change": -62.2
       },
       "unique_opens": {
-        "value": -609125,
-        "pct_change": -62.5
+        "value": -742271,
+        "pct_change": -66.3
       },
       "clicks": {
-        "value": -20852,
-        "pct_change": -46.6
+        "value": -43103,
+        "pct_change": -54.2
       },
       "unsubs": {
-        "value": -2385,
-        "pct_change": -61.5
+        "value": -2140,
+        "pct_change": -67.5
       },
       "avg_open_rate": {
-        "value": -1.59,
+        "value": -11.3,
         "unit": "pp"
       },
       "avg_click_rate": {
-        "value": 0.86,
+        "value": 1.77,
         "unit": "pp"
       }
     }
@@ -68,32 +68,32 @@
   "day_comparison": [
     {
       "weekday": "Monday",
-      "current_date": "2026-05-18",
-      "previous_date": "2026-05-11",
+      "current_date": "2026-07-27",
+      "previous_date": "2026-07-20",
       "comparison": {
         "current": {
           "campaigns": 1,
-          "recipients": 817633,
-          "unique_opens": 365772,
-          "clicks": 23884,
-          "unsubs": 1496,
-          "bounced": 2937,
-          "avg_open_rate": 44.74,
-          "avg_click_rate": 2.92,
-          "best_open_rate": 44.74,
-          "best_click_rate": 2.92
+          "recipients": 769446,
+          "unique_opens": 376828,
+          "clicks": 36431,
+          "unsubs": 1029,
+          "bounced": 2880,
+          "avg_open_rate": 48.97,
+          "avg_click_rate": 4.73,
+          "best_open_rate": 48.97,
+          "best_click_rate": 4.73
         },
         "previous": {
           "campaigns": 1,
-          "recipients": 824240,
-          "unique_opens": 274354,
-          "clicks": 19706,
-          "unsubs": 1192,
-          "bounced": 3355,
-          "avg_open_rate": 33.29,
-          "avg_click_rate": 2.39,
-          "best_open_rate": 33.29,
-          "best_click_rate": 2.39
+          "recipients": 772025,
+          "unique_opens": 375148,
+          "clicks": 34633,
+          "unsubs": 1089,
+          "bounced": 1773,
+          "avg_open_rate": 48.59,
+          "avg_click_rate": 4.49,
+          "best_open_rate": 48.59,
+          "best_click_rate": 4.49
         },
         "delta": {
           "campaigns": {
@@ -101,78 +101,103 @@
             "pct_change": 0.0
           },
           "recipients": {
-            "value": -6607,
-            "pct_change": -0.8
+            "value": -2579,
+            "pct_change": -0.3
           },
           "unique_opens": {
-            "value": 91418,
-            "pct_change": 33.3
+            "value": 1680,
+            "pct_change": 0.4
           },
           "clicks": {
-            "value": 4178,
-            "pct_change": 21.2
+            "value": 1798,
+            "pct_change": 5.2
           },
           "unsubs": {
-            "value": 304,
-            "pct_change": 25.5
+            "value": -60,
+            "pct_change": -5.5
           },
           "avg_open_rate": {
-            "value": 11.45,
+            "value": 0.38,
             "unit": "pp"
           },
           "avg_click_rate": {
-            "value": 0.53,
+            "value": 0.24,
             "unit": "pp"
           }
         }
       },
       "current_campaigns": [
         {
-          "name": "SA_PF_20260518 (Sponsor: Eight Sleep | BTL)",
-          "subject": "Your Inner Ear Governs Your Balance. Here\u2019s How to Train It",
-          "sent_date": "2026-05-18",
+          "name": "The Mindset: July 27, 2026 (Verily)",
+          "subject": "Three Exercises That Reverse Muscle Aging",
+          "sent_date": "2026-07-27",
           "weekday": "Monday",
-          "recipients": 817633,
-          "unique_opens": 365772,
-          "clicks": 23884,
-          "unsubs": 1496,
-          "open_rate": 44.74,
-          "click_rate": 2.92,
-          "url": "http://createsend.com/t/y-12114A04AA3A4EA92540EF23F30FEDED"
+          "recipients": 769446,
+          "unique_opens": 376828,
+          "clicks": 36431,
+          "unsubs": 1029,
+          "open_rate": 48.97,
+          "click_rate": 4.73,
+          "url": "http://createsend.com/t/y-AB70057E613D4A932540EF23F30FEDED"
         }
       ],
       "previous_campaigns": [
         {
-          "name": "SA_PF_20260511 (Sponsor: Berkeley Life | Pvolve)",
-          "subject": "The Blood Pressure Number Your Doctor Isn't Checking",
-          "sent_date": "2026-05-11",
+          "name": "The Mindset: July 20, 2026 (Altra)",
+          "subject": "MRI Scans Reveal Diet That Slows Brain Aging",
+          "sent_date": "2026-07-20",
           "weekday": "Monday",
-          "recipients": 824240,
-          "unique_opens": 274354,
-          "clicks": 19706,
-          "unsubs": 1192,
-          "open_rate": 33.29,
-          "click_rate": 2.39,
-          "url": "http://createsend.com/t/y-10C1604E3BC6F9462540EF23F30FEDED"
+          "recipients": 772025,
+          "unique_opens": 375148,
+          "clicks": 34633,
+          "unsubs": 1089,
+          "open_rate": 48.59,
+          "click_rate": 4.49,
+          "url": "http://createsend.com/t/y-BD3D00ABA69FDC312540EF23F30FEDED"
         }
       ]
     },
     {
       "weekday": "Tuesday",
-      "current_date": "2026-05-19",
-      "previous_date": "2026-05-12",
+      "current_date": "2026-07-28",
+      "previous_date": "2026-07-21",
       "comparison": {
         "current": null,
-        "previous": null,
+        "previous": {
+          "campaigns": 1,
+          "recipients": 23196,
+          "unique_opens": 16114,
+          "clicks": 568,
+          "unsubs": 86,
+          "bounced": 29,
+          "avg_open_rate": 69.47,
+          "avg_click_rate": 2.45,
+          "best_open_rate": 69.47,
+          "best_click_rate": 2.45
+        },
         "delta": {}
       },
       "current_campaigns": [],
-      "previous_campaigns": []
+      "previous_campaigns": [
+        {
+          "name": "Extended Hyatt Dates",
+          "subject": "Athletes in Their 20s to Their 80s Are Training for This",
+          "sent_date": "2026-07-21",
+          "weekday": "Tuesday",
+          "recipients": 23196,
+          "unique_opens": 16114,
+          "clicks": 568,
+          "unsubs": 86,
+          "open_rate": 69.47,
+          "click_rate": 2.45,
+          "url": "http://createsend.com/t/y-D879C288276D67BE2540EF23F30FEDED"
+        }
+      ]
     },
     {
       "weekday": "Wednesday",
-      "current_date": "2026-05-20",
-      "previous_date": "2026-05-13",
+      "current_date": "2026-07-29",
+      "previous_date": "2026-07-22",
       "comparison": {
         "current": null,
         "previous": null,
@@ -183,45 +208,45 @@
     },
     {
       "weekday": "Thursday",
-      "current_date": "2026-05-21",
-      "previous_date": "2026-05-14",
+      "current_date": "2026-07-30",
+      "previous_date": "2026-07-23",
       "comparison": {
         "current": null,
         "previous": {
           "campaigns": 1,
-          "recipients": 662852,
-          "unique_opens": 344568,
-          "clicks": 14194,
-          "unsubs": 1373,
-          "bounced": 1507,
-          "avg_open_rate": 51.98,
-          "avg_click_rate": 2.14,
-          "best_open_rate": 51.98,
-          "best_click_rate": 2.14
+          "recipients": 611033,
+          "unique_opens": 360735,
+          "clicks": 31337,
+          "unsubs": 995,
+          "bounced": 611,
+          "avg_open_rate": 59.04,
+          "avg_click_rate": 5.13,
+          "best_open_rate": 59.04,
+          "best_click_rate": 5.13
         },
         "delta": {}
       },
       "current_campaigns": [],
       "previous_campaigns": [
         {
-          "name": "SA_PF_20260514 (Sponsor: Pendulum)",
-          "subject": "Tonight Is a Good Night to Start This One Sleep Change",
-          "sent_date": "2026-05-14",
+          "name": "The Mindset: July 23, 2026 (Babbel)",
+          "subject": "Eat These Carbs to Thrive As You Age",
+          "sent_date": "2026-07-23",
           "weekday": "Thursday",
-          "recipients": 662852,
-          "unique_opens": 344568,
-          "clicks": 14194,
-          "unsubs": 1373,
-          "open_rate": 51.98,
-          "click_rate": 2.14,
-          "url": "http://createsend.com/t/y-979D9C5A33A1355C2540EF23F30FEDED"
+          "recipients": 611033,
+          "unique_opens": 360735,
+          "clicks": 31337,
+          "unsubs": 995,
+          "open_rate": 59.04,
+          "click_rate": 5.13,
+          "url": "http://createsend.com/t/y-C95EB81415E27F632540EF23F30FEDED"
         }
       ]
     },
     {
       "weekday": "Friday",
-      "current_date": "2026-05-22",
-      "previous_date": "2026-05-15",
+      "current_date": "2026-07-31",
+      "previous_date": "2026-07-24",
       "comparison": {
         "current": null,
         "previous": null,
@@ -232,8 +257,8 @@
     },
     {
       "weekday": "Saturday",
-      "current_date": "2026-05-23",
-      "previous_date": "2026-05-16",
+      "current_date": "2026-08-01",
+      "previous_date": "2026-07-25",
       "comparison": {
         "current": null,
         "previous": null,
@@ -244,234 +269,313 @@
     },
     {
       "weekday": "Sunday",
-      "current_date": "2026-05-24",
-      "previous_date": "2026-05-17",
+      "current_date": "2026-08-02",
+      "previous_date": "2026-07-26",
       "comparison": {
         "current": null,
         "previous": {
-          "campaigns": 1,
-          "recipients": 662508,
-          "unique_opens": 355975,
-          "clicks": 10836,
-          "unsubs": 1316,
-          "bounced": 1396,
-          "avg_open_rate": 53.73,
-          "avg_click_rate": 1.64,
-          "best_open_rate": 53.73,
-          "best_click_rate": 1.64
+          "campaigns": 2,
+          "recipients": 631437,
+          "unique_opens": 367102,
+          "clicks": 12996,
+          "unsubs": 999,
+          "bounced": 692,
+          "avg_open_rate": 62.13,
+          "avg_click_rate": 1.37,
+          "best_open_rate": 66.44,
+          "best_click_rate": 2.11
         },
         "delta": {}
       },
       "current_campaigns": [],
       "previous_campaigns": [
         {
-          "name": "SA_PF_20260517 (Sponsor: ReadyRX)",
-          "subject": "Normal Blood Pressure. Elevated Risk. Here's Why.",
-          "sent_date": "2026-05-17",
+          "name": "Sunday Spotlight: July 26, 2026 (Aramore)",
+          "subject": "3 Ways to Protect Your Working Memory",
+          "sent_date": "2026-07-26",
           "weekday": "Sunday",
-          "recipients": 662508,
-          "unique_opens": 355975,
-          "clicks": 10836,
-          "unsubs": 1316,
-          "open_rate": 53.73,
-          "click_rate": 1.64,
-          "url": "http://createsend.com/t/y-A8FE4855F4724ED22540EF23F30FEDED"
+          "recipients": 608315,
+          "unique_opens": 351740,
+          "clicks": 12851,
+          "unsubs": 919,
+          "open_rate": 57.82,
+          "click_rate": 2.11,
+          "url": "http://createsend.com/t/y-F7B200ECB27FB83E2540EF23F30FEDED"
+        },
+        {
+          "name": "Founding Athlete Series: Greg Scheinman",
+          "subject": "Founding Athlete Series: Greg Scheinman",
+          "sent_date": "2026-07-26",
+          "weekday": "Sunday",
+          "recipients": 23122,
+          "unique_opens": 15362,
+          "clicks": 145,
+          "unsubs": 80,
+          "open_rate": 66.44,
+          "click_rate": 0.63,
+          "url": "http://createsend.com/t/y-5CA734779C1EFD7C2540EF23F30FEDED"
         }
       ]
     }
   ],
   "current_campaigns": [
     {
-      "name": "SA_PF_20260518 (Sponsor: Eight Sleep | BTL)",
-      "subject": "Your Inner Ear Governs Your Balance. Here\u2019s How to Train It",
-      "sent_date": "2026-05-18",
+      "name": "The Mindset: July 27, 2026 (Verily)",
+      "subject": "Three Exercises That Reverse Muscle Aging",
+      "sent_date": "2026-07-27",
       "weekday": "Monday",
-      "recipients": 817633,
-      "unique_opens": 365772,
-      "clicks": 23884,
-      "unsubs": 1496,
-      "open_rate": 44.74,
-      "click_rate": 2.92,
-      "url": "http://createsend.com/t/y-12114A04AA3A4EA92540EF23F30FEDED"
+      "recipients": 769446,
+      "unique_opens": 376828,
+      "clicks": 36431,
+      "unsubs": 1029,
+      "open_rate": 48.97,
+      "click_rate": 4.73,
+      "url": "http://createsend.com/t/y-AB70057E613D4A932540EF23F30FEDED"
     }
   ],
   "previous_campaigns": [
     {
-      "name": "SA_PF_20260511 (Sponsor: Berkeley Life | Pvolve)",
-      "subject": "The Blood Pressure Number Your Doctor Isn't Checking",
-      "sent_date": "2026-05-11",
+      "name": "The Mindset: July 20, 2026 (Altra)",
+      "subject": "MRI Scans Reveal Diet That Slows Brain Aging",
+      "sent_date": "2026-07-20",
       "weekday": "Monday",
-      "recipients": 824240,
-      "unique_opens": 274354,
-      "clicks": 19706,
-      "unsubs": 1192,
-      "open_rate": 33.29,
-      "click_rate": 2.39,
-      "url": "http://createsend.com/t/y-10C1604E3BC6F9462540EF23F30FEDED"
+      "recipients": 772025,
+      "unique_opens": 375148,
+      "clicks": 34633,
+      "unsubs": 1089,
+      "open_rate": 48.59,
+      "click_rate": 4.49,
+      "url": "http://createsend.com/t/y-BD3D00ABA69FDC312540EF23F30FEDED"
     },
     {
-      "name": "SA_PF_20260514 (Sponsor: Pendulum)",
-      "subject": "Tonight Is a Good Night to Start This One Sleep Change",
-      "sent_date": "2026-05-14",
+      "name": "Extended Hyatt Dates",
+      "subject": "Athletes in Their 20s to Their 80s Are Training for This",
+      "sent_date": "2026-07-21",
+      "weekday": "Tuesday",
+      "recipients": 23196,
+      "unique_opens": 16114,
+      "clicks": 568,
+      "unsubs": 86,
+      "open_rate": 69.47,
+      "click_rate": 2.45,
+      "url": "http://createsend.com/t/y-D879C288276D67BE2540EF23F30FEDED"
+    },
+    {
+      "name": "The Mindset: July 23, 2026 (Babbel)",
+      "subject": "Eat These Carbs to Thrive As You Age",
+      "sent_date": "2026-07-23",
       "weekday": "Thursday",
-      "recipients": 662852,
-      "unique_opens": 344568,
-      "clicks": 14194,
-      "unsubs": 1373,
-      "open_rate": 51.98,
-      "click_rate": 2.14,
-      "url": "http://createsend.com/t/y-979D9C5A33A1355C2540EF23F30FEDED"
+      "recipients": 611033,
+      "unique_opens": 360735,
+      "clicks": 31337,
+      "unsubs": 995,
+      "open_rate": 59.04,
+      "click_rate": 5.13,
+      "url": "http://createsend.com/t/y-C95EB81415E27F632540EF23F30FEDED"
     },
     {
-      "name": "SA_PF_20260517 (Sponsor: ReadyRX)",
-      "subject": "Normal Blood Pressure. Elevated Risk. Here's Why.",
-      "sent_date": "2026-05-17",
+      "name": "Sunday Spotlight: July 26, 2026 (Aramore)",
+      "subject": "3 Ways to Protect Your Working Memory",
+      "sent_date": "2026-07-26",
       "weekday": "Sunday",
-      "recipients": 662508,
-      "unique_opens": 355975,
-      "clicks": 10836,
-      "unsubs": 1316,
-      "open_rate": 53.73,
-      "click_rate": 1.64,
-      "url": "http://createsend.com/t/y-A8FE4855F4724ED22540EF23F30FEDED"
+      "recipients": 608315,
+      "unique_opens": 351740,
+      "clicks": 12851,
+      "unsubs": 919,
+      "open_rate": 57.82,
+      "click_rate": 2.11,
+      "url": "http://createsend.com/t/y-F7B200ECB27FB83E2540EF23F30FEDED"
+    },
+    {
+      "name": "Founding Athlete Series: Greg Scheinman",
+      "subject": "Founding Athlete Series: Greg Scheinman",
+      "sent_date": "2026-07-26",
+      "weekday": "Sunday",
+      "recipients": 23122,
+      "unique_opens": 15362,
+      "clicks": 145,
+      "unsubs": 80,
+      "open_rate": 66.44,
+      "click_rate": 0.63,
+      "url": "http://createsend.com/t/y-5CA734779C1EFD7C2540EF23F30FEDED"
     }
   ],
   "weekly_trend": {
     "labels": [
-      "Mar 02",
-      "Mar 09",
-      "Mar 16",
-      "Mar 23",
-      "Mar 30",
-      "Apr 06",
-      "Apr 13",
-      "Apr 20",
-      "Apr 27",
-      "May 04",
       "May 11",
-      "May 18"
+      "May 18",
+      "May 25",
+      "Jun 01",
+      "Jun 08",
+      "Jun 15",
+      "Jun 22",
+      "Jun 29",
+      "Jul 06",
+      "Jul 13",
+      "Jul 20",
+      "Jul 27"
     ],
     "campaigns": [
-      4,
-      3,
-      3,
       3,
       4,
+      6,
       4,
       3,
+      4,
+      4,
+      4,
+      3,
+      4,
       5,
-      5,
-      4,
-      3,
       1
     ],
     "avg_open_rate": [
-      56.64,
-      55.74,
-      55.5,
-      56.07,
-      57.55,
-      57.81,
-      49.21,
-      52.81,
-      54.66,
-      57.03,
-      46.33,
-      44.74
+      47.18,
+      60.48,
+      62.83,
+      57.05,
+      55.35,
+      58.01,
+      60.75,
+      58.27,
+      56.09,
+      56.66,
+      60.27,
+      48.97
     ],
     "avg_click_rate": [
-      1.08,
-      3.85,
-      2.72,
-      2.92,
-      1.45,
-      1.19,
-      2.54,
-      6.02,
-      2.47,
-      9.65,
-      2.06,
-      2.92
+      2.1,
+      12.39,
+      5.65,
+      2.33,
+      2.05,
+      1.98,
+      11.8,
+      1.97,
+      1.65,
+      1.83,
+      2.96,
+      4.73
     ],
     "recipients": [
-      2284059,
-      2158192,
-      2151715,
-      2151304,
-      2175880,
-      2236787,
-      2304906,
-      2544161,
-      2297178,
-      2165997,
       2149600,
-      817633
+      2137331,
+      2147460,
+      2103757,
+      2061473,
+      2060687,
+      2046928,
+      2061401,
+      2025345,
+      2625112,
+      2037691,
+      769446
     ],
     "clicks": [
-      28865,
-      85946,
-      57011,
-      63956,
-      38848,
-      31712,
-      58322,
-      58531,
-      61161,
-      32500,
-      44736,
-      23884
+      45745,
+      59277,
+      36464,
+      51632,
+      41053,
+      47579,
+      44178,
+      48684,
+      33779,
+      49395,
+      79534,
+      36431
     ]
   },
   "campaign_clicks_weekly": {
     "labels": [
-      "Mar 30",
-      "Apr 06",
-      "Apr 13",
-      "Apr 20",
-      "Apr 27",
-      "May 04",
-      "May 11",
-      "May 18"
+      "Jun 08",
+      "Jun 15",
+      "Jun 22",
+      "Jun 29",
+      "Jul 06",
+      "Jul 13",
+      "Jul 20",
+      "Jul 27"
     ],
     "week_starts": [
-      "2026-03-30",
-      "2026-04-06",
-      "2026-04-13",
-      "2026-04-20",
-      "2026-04-27",
-      "2026-05-04",
-      "2026-05-11",
-      "2026-05-18"
+      "2026-06-08",
+      "2026-06-15",
+      "2026-06-22",
+      "2026-06-29",
+      "2026-07-06",
+      "2026-07-13",
+      "2026-07-20",
+      "2026-07-27"
     ],
     "clicks": [
-      38848,
-      31712,
-      58322,
-      58531,
-      61161,
-      32500,
-      44736,
-      39022
+      41053,
+      47579,
+      44178,
+      48684,
+      33779,
+      49395,
+      79534,
+      36431
     ],
     "unique_opens": [
-      1159976,
-      1137508,
-      1104445,
-      1090207,
-      1087210,
-      1106052,
-      974897,
-      682468
+      1125999,
+      1143898,
+      1151092,
+      1135153,
+      1121584,
+      1472841,
+      1119099,
+      376828
     ],
     "campaigns": [
+      3,
+      4,
       4,
       4,
       3,
-      5,
-      5,
       4,
-      3,
-      2
+      5,
+      1
+    ],
+    "avg_open_rate": [
+      55.35,
+      58.01,
+      60.75,
+      58.27,
+      56.09,
+      56.66,
+      60.27,
+      48.97
+    ],
+    "avg_open_rate_no_ss": [
+      52.42,
+      57.66,
+      60.6,
+      57.92,
+      53.55,
+      52.98,
+      59.03,
+      48.97
+    ],
+    "avg_click_rate": [
+      2.05,
+      1.98,
+      11.8,
+      1.97,
+      1.65,
+      1.83,
+      2.96,
+      4.73
+    ],
+    "avg_click_rate_no_ss": [
+      1.67,
+      2.29,
+      15.47,
+      2.34,
+      2.08,
+      2.51,
+      4.02,
+      4.73
     ],
     "is_current": [
       false,
@@ -486,44 +590,76 @@
   },
   "campaign_clicks_monthly": {
     "labels": [
-      "Dec 2025",
-      "Jan 2026",
       "Feb 2026",
       "Mar 2026",
       "Apr 2026",
-      "May 2026"
+      "May 2026",
+      "Jun 2026",
+      "Jul 2026"
     ],
     "month_starts": [
-      "2025-12-01",
-      "2026-01-01",
       "2026-02-01",
       "2026-03-01",
       "2026-04-01",
-      "2026-05-01"
+      "2026-05-01",
+      "2026-06-01",
+      "2026-07-01"
     ],
     "clicks": [
-      224185,
-      233336,
-      222736,
-      270301,
-      209324,
-      133961
+      223110,
+      271076,
+      210380,
+      192363,
+      204748,
+      227517
     ],
     "unique_opens": [
-      5081514,
-      5438543,
-      4834515,
-      5541592,
-      4786525,
-      3154940
+      4837383,
+      5547495,
+      4799126,
+      4698171,
+      4909792,
+      4833704
     ],
     "campaigns": [
       12,
-      14,
-      12,
       16,
       17,
-      11
+      19,
+      17,
+      15
+    ],
+    "avg_open_rate": [
+      56.65,
+      56.19,
+      53.98,
+      58.74,
+      57.89,
+      57.56
+    ],
+    "avg_open_rate_no_ss": [
+      53.77,
+      53.55,
+      53.1,
+      59.68,
+      57.5,
+      55.33
+    ],
+    "avg_click_rate": [
+      2.56,
+      2.38,
+      3.16,
+      7.04,
+      4.35,
+      2.42
+    ],
+    "avg_click_rate_no_ss": [
+      2.77,
+      2.64,
+      3.55,
+      8.92,
+      5.2,
+      3.29
     ],
     "is_current": [
       false,
@@ -536,36 +672,36 @@
   },
   "campaign_clicks_same_weekday": {
     "labels": [
-      "Fri Apr 24",
-      "Fri May 01",
-      "Fri May 08",
-      "Fri May 15",
-      "Fri May 22"
+      "Wed Jul 01",
+      "Wed Jul 08",
+      "Wed Jul 15",
+      "Wed Jul 22",
+      "Wed Jul 29"
     ],
     "days": [
-      "2026-04-24",
-      "2026-05-01",
-      "2026-05-08",
-      "2026-05-15",
-      "2026-05-22"
+      "2026-07-01",
+      "2026-07-08",
+      "2026-07-15",
+      "2026-07-22",
+      "2026-07-29"
     ],
     "clicks": [
       0,
-      235,
+      0,
       0,
       0,
       0
     ],
     "unique_opens": [
       0,
-      10093,
+      0,
       0,
       0,
       0
     ],
     "campaigns": [
       0,
-      1,
+      0,
       0,
       0,
       0
@@ -580,33 +716,33 @@
   },
   "campaign_clicks_same_dom": {
     "labels": [
-      "Feb 22, 2026",
-      "Mar 22, 2026",
-      "Apr 22, 2026",
-      "May 22, 2026"
+      "Apr 29, 2026",
+      "May 29, 2026",
+      "Jun 29, 2026",
+      "Jul 29, 2026"
     ],
     "days": [
-      "2026-02-22",
-      "2026-03-22",
-      "2026-04-22",
-      "2026-05-22"
+      "2026-04-29",
+      "2026-05-29",
+      "2026-06-29",
+      "2026-07-29"
     ],
     "clicks": [
-      17855,
-      8182,
       0,
+      254,
+      20128,
       0
     ],
     "unique_opens": [
-      398508,
-      370458,
       0,
+      13595,
+      376558,
       0
     ],
     "campaigns": [
-      1,
-      1,
       0,
+      2,
+      1,
       0
     ],
     "is_current": [
@@ -618,31 +754,31 @@
   },
   "raw_clicks_same_weekday": {
     "labels": [
-      "Fri Apr 24",
-      "Fri May 01",
-      "Fri May 08",
-      "Fri May 15",
-      "Fri May 22"
+      "Wed Jul 01",
+      "Wed Jul 08",
+      "Wed Jul 15",
+      "Wed Jul 22",
+      "Wed Jul 29"
     ],
     "days": [
-      "2026-04-24",
-      "2026-05-01",
-      "2026-05-08",
-      "2026-05-15",
-      "2026-05-22"
+      "2026-07-01",
+      "2026-07-08",
+      "2026-07-15",
+      "2026-07-22",
+      "2026-07-29"
     ],
     "clicks": [
-      1871,
-      2016,
-      2229,
-      2096,
-      0
+      1105,
+      1068,
+      981,
+      1922,
+      1
     ],
     "clicks_no_ss": [
-      1871,
-      2016,
-      2229,
-      2096,
+      1011,
+      963,
+      903,
+      1670,
       0
     ],
     "is_current": [
@@ -656,32 +792,32 @@
   "raw_clicks_by_weekday": {
     "Mon": {
       "labels": [
-        "Mon Apr 20",
-        "Mon Apr 27",
-        "Mon May 04",
-        "Mon May 11",
-        "Mon May 18"
+        "Mon Jun 29",
+        "Mon Jul 06",
+        "Mon Jul 13",
+        "Mon Jul 20",
+        "Mon Jul 27"
       ],
       "days": [
-        "2026-04-20",
-        "2026-04-27",
-        "2026-05-04",
-        "2026-05-11",
-        "2026-05-18"
+        "2026-06-29",
+        "2026-07-06",
+        "2026-07-13",
+        "2026-07-20",
+        "2026-07-27"
       ],
       "clicks": [
-        43922,
-        46673,
-        13526,
-        24127,
-        28249
+        24897,
+        18304,
+        24830,
+        45062,
+        43210
       ],
       "clicks_no_ss": [
-        43922,
-        46673,
-        13526,
-        24127,
-        28249
+        24370,
+        17702,
+        24315,
+        42439,
+        41468
       ],
       "is_current": [
         false,
@@ -693,32 +829,32 @@
     },
     "Tue": {
       "labels": [
-        "Tue Apr 21",
-        "Tue Apr 28",
-        "Tue May 05",
-        "Tue May 12",
-        "Tue May 19"
+        "Tue Jun 30",
+        "Tue Jul 07",
+        "Tue Jul 14",
+        "Tue Jul 21",
+        "Tue Jul 28"
       ],
       "days": [
-        "2026-04-21",
-        "2026-04-28",
-        "2026-05-05",
-        "2026-05-12",
-        "2026-05-19"
+        "2026-06-30",
+        "2026-07-07",
+        "2026-07-14",
+        "2026-07-21",
+        "2026-07-28"
       ],
       "clicks": [
-        6026,
-        5516,
-        2508,
-        3086,
-        3899
+        2894,
+        2269,
+        2604,
+        4936,
+        5189
       ],
       "clicks_no_ss": [
-        6026,
-        5516,
-        2508,
-        3086,
-        3899
+        2698,
+        2056,
+        2438,
+        4366,
+        4656
       ],
       "is_current": [
         false,
@@ -730,69 +866,69 @@
     },
     "Wed": {
       "labels": [
-        "Wed Apr 22",
-        "Wed Apr 29",
-        "Wed May 06",
-        "Wed May 13",
-        "Wed May 20"
+        "Wed Jul 01",
+        "Wed Jul 08",
+        "Wed Jul 15",
+        "Wed Jul 22",
+        "Wed Jul 29"
       ],
       "days": [
-        "2026-04-22",
-        "2026-04-29",
-        "2026-05-06",
-        "2026-05-13",
-        "2026-05-20"
+        "2026-07-01",
+        "2026-07-08",
+        "2026-07-15",
+        "2026-07-22",
+        "2026-07-29"
       ],
       "clicks": [
-        1977,
-        2042,
-        1246,
-        1175,
-        1600
+        1105,
+        1068,
+        981,
+        1922,
+        1
       ],
       "clicks_no_ss": [
-        1977,
-        2042,
-        1246,
-        1175,
-        1600
+        1011,
+        963,
+        903,
+        1670,
+        0
       ],
       "is_current": [
         false,
         false,
         false,
         false,
-        false
+        true
       ]
     },
     "Thu": {
       "labels": [
-        "Thu Apr 23",
-        "Thu Apr 30",
-        "Thu May 07",
-        "Thu May 14",
-        "Thu May 21"
+        "Thu Jun 25",
+        "Thu Jul 02",
+        "Thu Jul 09",
+        "Thu Jul 16",
+        "Thu Jul 23"
       ],
       "days": [
-        "2026-04-23",
-        "2026-04-30",
-        "2026-05-07",
-        "2026-05-14",
-        "2026-05-21"
+        "2026-06-25",
+        "2026-07-02",
+        "2026-07-09",
+        "2026-07-16",
+        "2026-07-23"
       ],
       "clicks": [
-        9926,
-        10259,
-        16412,
-        17727,
-        19472
+        13767,
+        26152,
+        15935,
+        17364,
+        32697
       ],
       "clicks_no_ss": [
-        9926,
-        10259,
-        16412,
-        17727,
-        19472
+        13669,
+        26088,
+        15880,
+        17302,
+        32532
       ],
       "is_current": [
         false,
@@ -804,69 +940,69 @@
     },
     "Fri": {
       "labels": [
-        "Fri Apr 24",
-        "Fri May 01",
-        "Fri May 08",
-        "Fri May 15",
-        "Fri May 22"
+        "Fri Jun 26",
+        "Fri Jul 03",
+        "Fri Jul 10",
+        "Fri Jul 17",
+        "Fri Jul 24"
       ],
       "days": [
-        "2026-04-24",
-        "2026-05-01",
-        "2026-05-08",
-        "2026-05-15",
-        "2026-05-22"
+        "2026-06-26",
+        "2026-07-03",
+        "2026-07-10",
+        "2026-07-17",
+        "2026-07-24"
       ],
       "clicks": [
-        1871,
-        2016,
-        2229,
-        2096,
-        0
+        1611,
+        2849,
+        1747,
+        1849,
+        3520
       ],
       "clicks_no_ss": [
-        1871,
-        2016,
-        2229,
-        2096,
-        0
+        1530,
+        2808,
+        1694,
+        1814,
+        3406
       ],
       "is_current": [
         false,
         false,
         false,
         false,
-        true
+        false
       ]
     },
     "Sat": {
       "labels": [
-        "Sat Apr 18",
-        "Sat Apr 25",
-        "Sat May 02",
-        "Sat May 09",
-        "Sat May 16"
+        "Sat Jun 27",
+        "Sat Jul 04",
+        "Sat Jul 11",
+        "Sat Jul 18",
+        "Sat Jul 25"
       ],
       "days": [
-        "2026-04-18",
-        "2026-04-25",
-        "2026-05-02",
-        "2026-05-09",
-        "2026-05-16"
+        "2026-06-27",
+        "2026-07-04",
+        "2026-07-11",
+        "2026-07-18",
+        "2026-07-25"
       ],
       "clicks": [
-        1018,
-        1083,
-        1151,
-        1161,
-        1059
+        1012,
+        1271,
+        966,
+        958,
+        1482
       ],
       "clicks_no_ss": [
-        1018,
-        1083,
-        1151,
-        1161,
-        1059
+        942,
+        1222,
+        907,
+        917,
+        1389
       ],
       "is_current": [
         false,
@@ -878,32 +1014,32 @@
     },
     "Sun": {
       "labels": [
-        "Sun Apr 19",
-        "Sun Apr 26",
-        "Sun May 03",
-        "Sun May 10",
-        "Sun May 17"
+        "Sun Jun 28",
+        "Sun Jul 05",
+        "Sun Jul 12",
+        "Sun Jul 19",
+        "Sun Jul 26"
       ],
       "days": [
-        "2026-04-19",
-        "2026-04-26",
-        "2026-05-03",
-        "2026-05-10",
-        "2026-05-17"
+        "2026-06-28",
+        "2026-07-05",
+        "2026-07-12",
+        "2026-07-19",
+        "2026-07-26"
       ],
       "clicks": [
-        25532,
-        19061,
-        20346,
-        10043,
-        11780
+        5611,
+        6046,
+        5664,
+        13677,
+        14669
       ],
       "clicks_no_ss": [
-        25532,
-        19061,
-        20346,
-        10043,
-        11780
+        733,
+        936,
+        679,
+        711,
+        1036
       ],
       "is_current": [
         false,
@@ -916,60 +1052,130 @@
   },
   "raw_clicks_weekly": {
     "labels": [
-      "Mar 02",
-      "Mar 09",
-      "Mar 16",
-      "Mar 23",
-      "Mar 30",
-      "Apr 06",
-      "Apr 13",
-      "Apr 20",
-      "Apr 27",
-      "May 04",
       "May 11",
-      "May 18"
+      "May 18",
+      "May 25",
+      "Jun 01",
+      "Jun 08",
+      "Jun 15",
+      "Jun 22",
+      "Jun 29",
+      "Jul 06",
+      "Jul 13",
+      "Jul 20",
+      "Jul 27"
     ],
     "week_starts": [
-      "2026-03-02",
-      "2026-03-09",
-      "2026-03-16",
-      "2026-03-23",
-      "2026-03-30",
-      "2026-04-06",
-      "2026-04-13",
-      "2026-04-20",
-      "2026-04-27",
-      "2026-05-04",
       "2026-05-11",
-      "2026-05-18"
+      "2026-05-18",
+      "2026-05-25",
+      "2026-06-01",
+      "2026-06-08",
+      "2026-06-15",
+      "2026-06-22",
+      "2026-06-29",
+      "2026-07-06",
+      "2026-07-13",
+      "2026-07-20",
+      "2026-07-27"
     ],
     "clicks": [
-      40354,
-      102418,
-      77902,
-      87943,
-      52472,
-      42450,
-      75968,
-      83866,
-      88003,
-      47125,
       61050,
-      53220
+      72532,
+      51095,
+      66194,
+      51067,
+      65508,
+      59953,
+      65214,
+      45953,
+      62263,
+      104288,
+      48400
     ],
     "clicks_no_ss": [
-      31444,
-      83837,
-      73822,
-      87505,
-      52297,
-      42333,
-      75941,
-      83866,
-      88003,
-      47125,
-      61050,
-      53220
+      47337,
+      56112,
+      42856,
+      54507,
+      31429,
+      55405,
+      53578,
+      59133,
+      39881,
+      48400,
+      86838,
+      46124
+    ],
+    "unique_clicks": [
+      37952,
+      45315,
+      32566,
+      41502,
+      33350,
+      39343,
+      38083,
+      39057,
+      28585,
+      37114,
+      61709,
+      37827
+    ],
+    "unique_clicks_no_ss": [
+      30673,
+      37530,
+      28459,
+      35275,
+      21367,
+      34783,
+      35240,
+      36767,
+      25679,
+      30634,
+      55771,
+      36875
+    ],
+    "unique_openers": [
+      442826,
+      472567,
+      465480,
+      463532,
+      472370,
+      461140,
+      467608,
+      450409,
+      454116,
+      464700,
+      453632,
+      383227
+    ],
+    "ctor": [
+      8.57,
+      9.59,
+      7.0,
+      8.95,
+      7.06,
+      8.53,
+      8.14,
+      8.67,
+      6.29,
+      7.99,
+      13.6,
+      9.87
+    ],
+    "ctor_no_ss": [
+      6.93,
+      7.94,
+      6.11,
+      7.61,
+      4.52,
+      7.54,
+      7.54,
+      8.16,
+      5.65,
+      6.59,
+      12.29,
+      9.62
     ],
     "is_current": [
       false,
@@ -988,36 +1194,190 @@
   },
   "raw_clicks_monthly": {
     "labels": [
-      "Dec 2025",
-      "Jan 2026",
       "Feb 2026",
       "Mar 2026",
       "Apr 2026",
-      "May 2026"
+      "May 2026",
+      "Jun 2026",
+      "Jul 2026"
     ],
     "month_starts": [
-      "2025-12-01",
-      "2026-01-01",
       "2026-02-01",
       "2026-03-01",
       "2026-04-01",
-      "2026-05-01"
+      "2026-05-01",
+      "2026-06-01",
+      "2026-07-01"
     ],
     "clicks": [
-      305470,
-      305811,
       286673,
       350530,
       290551,
-      184908
+      255315,
+      270513,
+      298327
     ],
     "clicks_no_ss": [
-      233530,
-      220639,
       219962,
-      306411,
-      290294,
-      184908
+      286534,
+      227962,
+      183769,
+      221987,
+      253308
+    ],
+    "unique_clicks": [
+      111470,
+      128319,
+      112253,
+      100528,
+      101910,
+      110053
+    ],
+    "unique_clicks_no_ss": [
+      95132,
+      116262,
+      98359,
+      82095,
+      91192,
+      102874
+    ],
+    "unique_openers": [
+      608599,
+      606235,
+      607437,
+      588281,
+      578898,
+      561735
+    ],
+    "ctor": [
+      18.32,
+      21.17,
+      18.48,
+      17.09,
+      17.6,
+      19.59
+    ],
+    "ctor_no_ss": [
+      15.63,
+      19.18,
+      16.19,
+      13.96,
+      15.75,
+      18.31
+    ],
+    "is_current": [
+      false,
+      false,
+      false,
+      false,
+      false,
+      true
+    ]
+  },
+  "raw_opens_weekly": {
+    "labels": [
+      "May 11",
+      "May 18",
+      "May 25",
+      "Jun 01",
+      "Jun 08",
+      "Jun 15",
+      "Jun 22",
+      "Jun 29",
+      "Jul 06",
+      "Jul 13",
+      "Jul 20",
+      "Jul 27"
+    ],
+    "week_starts": [
+      "2026-05-11",
+      "2026-05-18",
+      "2026-05-25",
+      "2026-06-01",
+      "2026-06-08",
+      "2026-06-15",
+      "2026-06-22",
+      "2026-06-29",
+      "2026-07-06",
+      "2026-07-13",
+      "2026-07-20",
+      "2026-07-27"
+    ],
+    "unique_openers": [
+      442826,
+      472567,
+      465480,
+      463532,
+      472370,
+      461140,
+      467608,
+      450409,
+      454116,
+      464700,
+      453632,
+      383227
+    ],
+    "unique_openers_no_ss": [
+      393458,
+      439937,
+      418118,
+      431620,
+      437481,
+      436807,
+      435366,
+      423594,
+      421078,
+      413604,
+      425655,
+      375886
+    ],
+    "is_current": [
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      true
+    ]
+  },
+  "raw_opens_monthly": {
+    "labels": [
+      "Feb 2026",
+      "Mar 2026",
+      "Apr 2026",
+      "May 2026",
+      "Jun 2026",
+      "Jul 2026"
+    ],
+    "month_starts": [
+      "2026-02-01",
+      "2026-03-01",
+      "2026-04-01",
+      "2026-05-01",
+      "2026-06-01",
+      "2026-07-01"
+    ],
+    "unique_openers": [
+      608599,
+      606235,
+      607437,
+      588281,
+      578898,
+      561735
+    ],
+    "unique_openers_no_ss": [
+      589886,
+      586897,
+      588209,
+      555098,
+      557651,
+      534035
     ],
     "is_current": [
       false,
@@ -1030,26 +1390,26 @@
   },
   "weekly_digest": {
     "labels": [
-      "Mar 23",
-      "Mar 30",
-      "Apr 06",
-      "Apr 13",
-      "Apr 20",
-      "Apr 27",
-      "May 04",
-      "May 11",
-      "May 18"
+      "Jun 01",
+      "Jun 08",
+      "Jun 15",
+      "Jun 22",
+      "Jun 29",
+      "Jul 06",
+      "Jul 13",
+      "Jul 20",
+      "Jul 27"
     ],
     "week_starts": [
-      "2026-03-23",
-      "2026-03-30",
-      "2026-04-06",
-      "2026-04-13",
-      "2026-04-20",
-      "2026-04-27",
-      "2026-05-04",
-      "2026-05-11",
-      "2026-05-18"
+      "2026-06-01",
+      "2026-06-08",
+      "2026-06-15",
+      "2026-06-22",
+      "2026-06-29",
+      "2026-07-06",
+      "2026-07-13",
+      "2026-07-20",
+      "2026-07-27"
     ],
     "is_current": [
       false,
@@ -1063,26 +1423,26 @@
       true
     ],
     "new_subs": [
-      6877,
-      5780,
-      10629,
-      11047,
-      12890,
-      6985,
-      5786,
-      10199,
-      1377
+      2619,
+      2929,
+      2705,
+      4693,
+      3176,
+      1633,
+      1405,
+      1446,
+      495
     ],
     "unsubs": [
-      5905,
-      5135,
-      6502,
-      6509,
-      6460,
-      5491,
-      5889,
-      5186,
-      3036
+      4376,
+      4750,
+      4345,
+      4446,
+      4186,
+      4293,
+      4841,
+      3758,
+      1319
     ],
     "campaigns_sent": [
       3,
@@ -1091,109 +1451,959 @@
       3,
       3,
       3,
+      4,
       3,
-      3,
-      2
+      1
     ],
     "total_sent": [
-      2151304,
-      2144798,
-      2234307,
-      2304906,
-      2537912,
-      2278901,
-      2165900,
-      2149600,
-      1478588
+      2083576,
+      2061473,
+      2055946,
+      2046755,
+      2038533,
+      2025345,
+      2625112,
+      1991373,
+      769446
     ],
     "avg_open_rate": [
-      56.07,
-      54.89,
-      52.09,
-      49.21,
-      44.23,
-      48.44,
-      51.64,
-      46.33,
-      46.33
+      52.34,
+      55.35,
+      55.98,
+      56.72,
+      55.47,
+      56.09,
+      56.66,
+      55.15,
+      48.97
     ],
     "avg_click_rate": [
-      2.92,
-      1.7,
-      1.46,
-      2.54,
+      2.44,
+      2.05,
       2.31,
-      2.53,
-      1.53,
-      2.06,
-      2.61
+      2.05,
+      2.36,
+      1.65,
+      1.83,
+      3.91,
+      4.73
     ],
     "churn_pct_of_sends": [
-      0.2745,
-      0.2394,
-      0.291,
-      0.2824,
-      0.2545,
-      0.2409,
-      0.2719,
-      0.2413,
-      0.2053
+      0.21,
+      0.2304,
+      0.2113,
+      0.2172,
+      0.2053,
+      0.212,
+      0.1844,
+      0.1887,
+      0.1714
     ],
     "active_eow": [
-      1097606,
-      1097185,
-      1101093,
-      1104409,
-      1109875,
-      1110566,
-      1110496,
-      1114651,
-      1113304
+      1108483,
+      784177,
+      781642,
+      781414,
+      780251,
+      777868,
+      774836,
+      770960,
+      768400
     ],
     "top_sources_by_week": [
       {
+        "week_start": "2026-07-20",
+        "bucket": "Meta",
+        "subs": 992
+      },
+      {
+        "week_start": "2026-07-20",
+        "bucket": "Website",
+        "subs": 299
+      },
+      {
+        "week_start": "2026-07-20",
+        "bucket": "mentalfitness.network",
+        "subs": 75
+      },
+      {
+        "week_start": "2026-07-20",
+        "bucket": "SuperAge",
+        "subs": 24
+      },
+      {
+        "week_start": "2026-07-20",
+        "bucket": "Organic",
+        "subs": 16
+      },
+      {
+        "week_start": "2026-07-20",
+        "bucket": "HealthBrief",
+        "subs": 8
+      },
+      {
+        "week_start": "2026-07-20",
+        "bucket": "Campaign Monitor",
+        "subs": 7
+      },
+      {
+        "week_start": "2026-07-20",
+        "bucket": "AllHealthy",
+        "subs": 6
+      },
+      {
+        "week_start": "2026-07-20",
+        "bucket": "optimism",
+        "subs": 4
+      },
+      {
+        "week_start": "2026-07-20",
+        "bucket": "Refind",
+        "subs": 3
+      },
+      {
+        "week_start": "2026-07-20",
+        "bucket": "SuperAge Quiz",
+        "subs": 3
+      },
+      {
+        "week_start": "2026-07-20",
+        "bucket": "TDCPL",
+        "subs": 2
+      },
+      {
+        "week_start": "2026-07-20",
+        "bucket": "Taboola",
+        "subs": 2
+      },
+      {
+        "week_start": "2026-07-20",
+        "bucket": "LSCPL",
+        "subs": 2
+      },
+      {
+        "week_start": "2026-07-20",
+        "bucket": "TheAgeist",
+        "subs": 1
+      },
+      {
+        "week_start": "2026-07-20",
+        "bucket": "HFCPL1",
+        "subs": 1
+      },
+      {
+        "week_start": "2026-07-20",
+        "bucket": "RRCPL",
+        "subs": 1
+      },
+      {
+        "week_start": "2026-07-13",
+        "bucket": "Meta",
+        "subs": 1005
+      },
+      {
+        "week_start": "2026-07-13",
+        "bucket": "Website",
+        "subs": 301
+      },
+      {
+        "week_start": "2026-07-13",
+        "bucket": "SuperAge",
+        "subs": 18
+      },
+      {
+        "week_start": "2026-07-13",
+        "bucket": "mentalfitness.network",
+        "subs": 16
+      },
+      {
+        "week_start": "2026-07-13",
+        "bucket": "SuperAge Quiz",
+        "subs": 16
+      },
+      {
+        "week_start": "2026-07-13",
+        "bucket": "HealthBrief",
+        "subs": 10
+      },
+      {
+        "week_start": "2026-07-13",
+        "bucket": "AllHealthy",
+        "subs": 9
+      },
+      {
+        "week_start": "2026-07-13",
+        "bucket": "optimism",
+        "subs": 8
+      },
+      {
+        "week_start": "2026-07-13",
+        "bucket": "LSCPL",
+        "subs": 6
+      },
+      {
+        "week_start": "2026-07-13",
+        "bucket": "Campaign Monitor",
+        "subs": 4
+      },
+      {
+        "week_start": "2026-07-13",
+        "bucket": "Refind",
+        "subs": 4
+      },
+      {
+        "week_start": "2026-07-13",
+        "bucket": "Organic",
+        "subs": 3
+      },
+      {
+        "week_start": "2026-07-13",
+        "bucket": "ISCPL",
+        "subs": 1
+      },
+      {
+        "week_start": "2026-07-13",
+        "bucket": "AI",
+        "subs": 1
+      },
+      {
+        "week_start": "2026-07-13",
+        "bucket": "FCCPL1",
+        "subs": 1
+      },
+      {
+        "week_start": "2026-07-13",
+        "bucket": "DPCPL1",
+        "subs": 1
+      },
+      {
+        "week_start": "2026-07-13",
+        "bucket": "NNCPL",
+        "subs": 1
+      },
+      {
+        "week_start": "2026-07-06",
+        "bucket": "Meta",
+        "subs": 1278
+      },
+      {
+        "week_start": "2026-07-06",
+        "bucket": "Website",
+        "subs": 253
+      },
+      {
+        "week_start": "2026-07-06",
+        "bucket": "HealthBrief",
+        "subs": 20
+      },
+      {
+        "week_start": "2026-07-06",
+        "bucket": "SuperAge",
+        "subs": 19
+      },
+      {
+        "week_start": "2026-07-06",
+        "bucket": "optimism",
+        "subs": 15
+      },
+      {
+        "week_start": "2026-07-06",
+        "bucket": "mentalfitness.network",
+        "subs": 15
+      },
+      {
+        "week_start": "2026-07-06",
+        "bucket": "Organic",
+        "subs": 8
+      },
+      {
+        "week_start": "2026-07-06",
+        "bucket": "SuperAge Quiz",
+        "subs": 7
+      },
+      {
+        "week_start": "2026-07-06",
+        "bucket": "AllHealthy",
+        "subs": 4
+      },
+      {
+        "week_start": "2026-07-06",
+        "bucket": "LSCPL",
+        "subs": 3
+      },
+      {
+        "week_start": "2026-07-06",
+        "bucket": "TDCPL",
+        "subs": 3
+      },
+      {
+        "week_start": "2026-07-06",
+        "bucket": "cpl1",
+        "subs": 2
+      },
+      {
+        "week_start": "2026-07-06",
+        "bucket": "Campaign Monitor",
+        "subs": 2
+      },
+      {
+        "week_start": "2026-07-06",
+        "bucket": "RRCPL",
+        "subs": 1
+      },
+      {
+        "week_start": "2026-07-06",
+        "bucket": "Taboola",
+        "subs": 1
+      },
+      {
+        "week_start": "2026-07-06",
+        "bucket": "HFCPL1",
+        "subs": 1
+      },
+      {
+        "week_start": "2026-07-06",
+        "bucket": "DPCPL1",
+        "subs": 1
+      },
+      {
+        "week_start": "2026-06-29",
+        "bucket": "Meta",
+        "subs": 2745
+      },
+      {
+        "week_start": "2026-06-29",
+        "bucket": "Website",
+        "subs": 282
+      },
+      {
+        "week_start": "2026-06-29",
+        "bucket": "HealthBrief",
+        "subs": 83
+      },
+      {
+        "week_start": "2026-06-29",
+        "bucket": "SuperAge",
+        "subs": 15
+      },
+      {
+        "week_start": "2026-06-29",
+        "bucket": "SuperAge Quiz",
+        "subs": 12
+      },
+      {
+        "week_start": "2026-06-29",
+        "bucket": "Campaign Monitor",
+        "subs": 11
+      },
+      {
+        "week_start": "2026-06-29",
+        "bucket": "optimism",
+        "subs": 6
+      },
+      {
+        "week_start": "2026-06-29",
+        "bucket": "Organic",
+        "subs": 5
+      },
+      {
+        "week_start": "2026-06-29",
+        "bucket": "Refind",
+        "subs": 3
+      },
+      {
+        "week_start": "2026-06-29",
+        "bucket": "Taboola",
+        "subs": 3
+      },
+      {
+        "week_start": "2026-06-29",
+        "bucket": "LSCPL",
+        "subs": 3
+      },
+      {
+        "week_start": "2026-06-29",
+        "bucket": "AllHealthy",
+        "subs": 2
+      },
+      {
+        "week_start": "2026-06-29",
+        "bucket": "DPCPL1",
+        "subs": 2
+      },
+      {
+        "week_start": "2026-06-29",
+        "bucket": "IFCPL",
+        "subs": 1
+      },
+      {
+        "week_start": "2026-06-29",
+        "bucket": "FCCPL1",
+        "subs": 1
+      },
+      {
+        "week_start": "2026-06-29",
+        "bucket": "TheAgeist",
+        "subs": 1
+      },
+      {
+        "week_start": "2026-06-29",
+        "bucket": "RRCPL",
+        "subs": 1
+      },
+      {
+        "week_start": "2026-06-22",
+        "bucket": "Meta",
+        "subs": 2379
+      },
+      {
+        "week_start": "2026-06-22",
+        "bucket": "HealthBrief",
+        "subs": 1684
+      },
+      {
+        "week_start": "2026-06-22",
+        "bucket": "Website",
+        "subs": 528
+      },
+      {
+        "week_start": "2026-06-22",
+        "bucket": "SuperAge",
+        "subs": 33
+      },
+      {
+        "week_start": "2026-06-22",
+        "bucket": "Campaign Monitor",
+        "subs": 18
+      },
+      {
+        "week_start": "2026-06-22",
+        "bucket": "SuperAge Quiz",
+        "subs": 13
+      },
+      {
+        "week_start": "2026-06-22",
+        "bucket": "optimism",
+        "subs": 7
+      },
+      {
+        "week_start": "2026-06-22",
+        "bucket": "AllHealthy",
+        "subs": 6
+      },
+      {
+        "week_start": "2026-06-22",
+        "bucket": "Organic",
+        "subs": 6
+      },
+      {
+        "week_start": "2026-06-22",
+        "bucket": "Taboola",
+        "subs": 6
+      },
+      {
+        "week_start": "2026-06-22",
+        "bucket": "TheAgeist",
+        "subs": 5
+      },
+      {
+        "week_start": "2026-06-22",
+        "bucket": "Klaviyo",
+        "subs": 3
+      },
+      {
+        "week_start": "2026-06-22",
+        "bucket": "LSCPL",
+        "subs": 2
+      },
+      {
+        "week_start": "2026-06-22",
+        "bucket": "TDCPL",
+        "subs": 1
+      },
+      {
+        "week_start": "2026-06-22",
+        "bucket": "HFCPL1",
+        "subs": 1
+      },
+      {
+        "week_start": "2026-06-22",
+        "bucket": "NNCPL",
+        "subs": 1
+      },
+      {
+        "week_start": "2026-06-15",
+        "bucket": "Meta",
+        "subs": 2350
+      },
+      {
+        "week_start": "2026-06-15",
+        "bucket": "Website",
+        "subs": 297
+      },
+      {
+        "week_start": "2026-06-15",
+        "bucket": "SuperAge",
+        "subs": 15
+      },
+      {
+        "week_start": "2026-06-15",
+        "bucket": "SuperAge Quiz",
+        "subs": 7
+      },
+      {
+        "week_start": "2026-06-15",
+        "bucket": "Organic",
+        "subs": 6
+      },
+      {
+        "week_start": "2026-06-15",
+        "bucket": "optimism",
+        "subs": 6
+      },
+      {
+        "week_start": "2026-06-15",
+        "bucket": "AllHealthy",
+        "subs": 4
+      },
+      {
+        "week_start": "2026-06-15",
+        "bucket": "HealthBrief",
+        "subs": 4
+      },
+      {
+        "week_start": "2026-06-15",
+        "bucket": "Campaign Monitor",
+        "subs": 4
+      },
+      {
+        "week_start": "2026-06-15",
+        "bucket": "Taboola",
+        "subs": 3
+      },
+      {
+        "week_start": "2026-06-15",
+        "bucket": "LSCPL",
+        "subs": 2
+      },
+      {
+        "week_start": "2026-06-15",
+        "bucket": "HFCPL1",
+        "subs": 2
+      },
+      {
+        "week_start": "2026-06-15",
+        "bucket": "TDCPL",
+        "subs": 1
+      },
+      {
+        "week_start": "2026-06-15",
+        "bucket": "NNCPL",
+        "subs": 1
+      },
+      {
+        "week_start": "2026-06-15",
+        "bucket": "FCCPL1",
+        "subs": 1
+      },
+      {
+        "week_start": "2026-06-15",
+        "bucket": "Refind",
+        "subs": 1
+      },
+      {
+        "week_start": "2026-06-15",
+        "bucket": "RRCPL",
+        "subs": 1
+      },
+      {
+        "week_start": "2026-06-08",
+        "bucket": "Meta",
+        "subs": 2492
+      },
+      {
+        "week_start": "2026-06-08",
+        "bucket": "Website",
+        "subs": 356
+      },
+      {
+        "week_start": "2026-06-08",
+        "bucket": "SuperAge",
+        "subs": 32
+      },
+      {
+        "week_start": "2026-06-08",
+        "bucket": "Organic",
+        "subs": 8
+      },
+      {
+        "week_start": "2026-06-08",
+        "bucket": "optimism",
+        "subs": 7
+      },
+      {
+        "week_start": "2026-06-08",
+        "bucket": "HealthBrief",
+        "subs": 5
+      },
+      {
+        "week_start": "2026-06-08",
+        "bucket": "beehiiv",
+        "subs": 5
+      },
+      {
+        "week_start": "2026-06-08",
+        "bucket": "SuperAge Quiz",
+        "subs": 5
+      },
+      {
+        "week_start": "2026-06-08",
+        "bucket": "AllHealthy",
+        "subs": 4
+      },
+      {
+        "week_start": "2026-06-08",
+        "bucket": "hs_email",
+        "subs": 3
+      },
+      {
+        "week_start": "2026-06-08",
+        "bucket": "Campaign Monitor",
+        "subs": 3
+      },
+      {
+        "week_start": "2026-06-08",
+        "bucket": "AI",
+        "subs": 2
+      },
+      {
+        "week_start": "2026-06-08",
+        "bucket": "cpl1",
+        "subs": 2
+      },
+      {
+        "week_start": "2026-06-08",
+        "bucket": "HFCPL1",
+        "subs": 2
+      },
+      {
+        "week_start": "2026-06-08",
+        "bucket": "IFCPL",
+        "subs": 1
+      },
+      {
+        "week_start": "2026-06-08",
+        "bucket": "FCCPL1",
+        "subs": 1
+      },
+      {
+        "week_start": "2026-06-08",
+        "bucket": "LSCPL",
+        "subs": 1
+      },
+      {
+        "week_start": "2026-06-01",
+        "bucket": "Meta",
+        "subs": 2265
+      },
+      {
+        "week_start": "2026-06-01",
+        "bucket": "Website",
+        "subs": 258
+      },
+      {
+        "week_start": "2026-06-01",
+        "bucket": "SuperAge",
+        "subs": 41
+      },
+      {
+        "week_start": "2026-06-01",
+        "bucket": "AllHealthy",
+        "subs": 10
+      },
+      {
+        "week_start": "2026-06-01",
+        "bucket": "optimism",
+        "subs": 10
+      },
+      {
+        "week_start": "2026-06-01",
+        "bucket": "hs_email",
+        "subs": 8
+      },
+      {
+        "week_start": "2026-06-01",
+        "bucket": "Organic",
+        "subs": 7
+      },
+      {
+        "week_start": "2026-06-01",
+        "bucket": "Campaign Monitor",
+        "subs": 4
+      },
+      {
+        "week_start": "2026-06-01",
+        "bucket": "TDCPL",
+        "subs": 3
+      },
+      {
+        "week_start": "2026-06-01",
+        "bucket": "beehiiv",
+        "subs": 3
+      },
+      {
+        "week_start": "2026-06-01",
+        "bucket": "SuperAge Quiz",
+        "subs": 3
+      },
+      {
+        "week_start": "2026-06-01",
+        "bucket": "HealthBrief",
+        "subs": 3
+      },
+      {
+        "week_start": "2026-06-01",
+        "bucket": "Taboola",
+        "subs": 2
+      },
+      {
+        "week_start": "2026-06-01",
+        "bucket": "the_news",
+        "subs": 1
+      },
+      {
+        "week_start": "2026-06-01",
+        "bucket": "Refind",
+        "subs": 1
+      },
+      {
+        "week_start": "2026-05-25",
+        "bucket": "Meta",
+        "subs": 2680
+      },
+      {
+        "week_start": "2026-05-25",
+        "bucket": "Website",
+        "subs": 256
+      },
+      {
+        "week_start": "2026-05-25",
+        "bucket": "SuperAge",
+        "subs": 25
+      },
+      {
+        "week_start": "2026-05-25",
+        "bucket": "optimism",
+        "subs": 14
+      },
+      {
+        "week_start": "2026-05-25",
+        "bucket": "Campaign Monitor",
+        "subs": 9
+      },
+      {
+        "week_start": "2026-05-25",
+        "bucket": "AllHealthy",
+        "subs": 6
+      },
+      {
+        "week_start": "2026-05-25",
+        "bucket": "SuperAge Quiz",
+        "subs": 5
+      },
+      {
+        "week_start": "2026-05-25",
+        "bucket": "HealthBrief",
+        "subs": 4
+      },
+      {
+        "week_start": "2026-05-25",
+        "bucket": "Organic",
+        "subs": 3
+      },
+      {
+        "week_start": "2026-05-25",
+        "bucket": "copilot.com",
+        "subs": 2
+      },
+      {
+        "week_start": "2026-05-25",
+        "bucket": "CalTri",
+        "subs": 1
+      },
+      {
+        "week_start": "2026-05-25",
+        "bucket": "cpl1",
+        "subs": 1
+      },
+      {
+        "week_start": "2026-05-25",
+        "bucket": "Taboola",
+        "subs": 1
+      },
+      {
+        "week_start": "2026-05-18",
+        "bucket": "Meta",
+        "subs": 2516
+      },
+      {
+        "week_start": "2026-05-18",
+        "bucket": "Website",
+        "subs": 276
+      },
+      {
+        "week_start": "2026-05-18",
+        "bucket": "SuperAge",
+        "subs": 55
+      },
+      {
+        "week_start": "2026-05-18",
+        "bucket": "AllHealthy",
+        "subs": 13
+      },
+      {
+        "week_start": "2026-05-18",
+        "bucket": "HealthBrief",
+        "subs": 12
+      },
+      {
+        "week_start": "2026-05-18",
+        "bucket": "optimism",
+        "subs": 9
+      },
+      {
+        "week_start": "2026-05-18",
+        "bucket": "Campaign Monitor",
+        "subs": 7
+      },
+      {
+        "week_start": "2026-05-18",
+        "bucket": "SuperAge Quiz",
+        "subs": 4
+      },
+      {
+        "week_start": "2026-05-18",
+        "bucket": "klaviyo",
+        "subs": 2
+      },
+      {
+        "week_start": "2026-05-18",
+        "bucket": "Organic",
+        "subs": 2
+      },
+      {
+        "week_start": "2026-05-18",
+        "bucket": "TDCPL",
+        "subs": 1
+      },
+      {
+        "week_start": "2026-05-18",
+        "bucket": "TheAgeist",
+        "subs": 1
+      },
+      {
+        "week_start": "2026-05-18",
+        "bucket": "DPCPL1",
+        "subs": 1
+      },
+      {
+        "week_start": "2026-05-18",
+        "bucket": "HFCPL1",
+        "subs": 1
+      },
+      {
         "week_start": "2026-05-11",
         "bucket": "Meta",
-        "subs": 8234
+        "subs": 8736
       },
       {
         "week_start": "2026-05-11",
         "bucket": "Taboola",
-        "subs": 1319
+        "subs": 1355
       },
       {
         "week_start": "2026-05-11",
-        "bucket": "Organic",
-        "subs": 586
-      },
-      {
-        "week_start": "2026-05-11",
-        "bucket": "healthbrief",
-        "subs": 21
-      },
-      {
-        "week_start": "2026-05-11",
-        "bucket": "superage",
-        "subs": 21
-      },
-      {
-        "week_start": "2026-05-11",
-        "bucket": "Campaign_monitor",
-        "subs": 8
+        "bucket": "Website",
+        "subs": 468
       },
       {
         "week_start": "2026-05-11",
         "bucket": "AllHealthy",
+        "subs": 95
+      },
+      {
+        "week_start": "2026-05-11",
+        "bucket": "HealthBrief",
+        "subs": 35
+      },
+      {
+        "week_start": "2026-05-11",
+        "bucket": "SuperAge Quiz",
+        "subs": 23
+      },
+      {
+        "week_start": "2026-05-11",
+        "bucket": "SuperAge",
+        "subs": 22
+      },
+      {
+        "week_start": "2026-05-11",
+        "bucket": "Organic",
+        "subs": 12
+      },
+      {
+        "week_start": "2026-05-11",
+        "bucket": "Campaign Monitor",
+        "subs": 8
+      },
+      {
+        "week_start": "2026-05-11",
+        "bucket": "LSCPL",
         "subs": 6
       },
       {
         "week_start": "2026-05-11",
         "bucket": "optimism",
+        "subs": 4
+      },
+      {
+        "week_start": "2026-05-11",
+        "bucket": "RRCPL",
+        "subs": 3
+      },
+      {
+        "week_start": "2026-05-11",
+        "bucket": "NNCPL",
         "subs": 2
       },
       {
         "week_start": "2026-05-11",
+        "bucket": "FCCPL1",
+        "subs": 2
+      },
+      {
+        "week_start": "2026-05-11",
+        "bucket": "DPCPL1",
+        "subs": 2
+      },
+      {
+        "week_start": "2026-05-11",
+        "bucket": "Refind",
+        "subs": 1
+      },
+      {
+        "week_start": "2026-05-11",
         "bucket": "optimism_intelligence",
+        "subs": 1
+      },
+      {
+        "week_start": "2026-05-11",
+        "bucket": "TDCPL",
+        "subs": 1
+      },
+      {
+        "week_start": "2026-05-11",
+        "bucket": "TheAgeist",
         "subs": 1
       },
       {
@@ -1204,42 +2414,52 @@
       {
         "week_start": "2026-05-04",
         "bucket": "Taboola",
-        "subs": 3850
+        "subs": 3913
       },
       {
         "week_start": "2026-05-04",
         "bucket": "Meta",
-        "subs": 974
+        "subs": 1095
       },
       {
         "week_start": "2026-05-04",
-        "bucket": "Organic",
-        "subs": 568
+        "bucket": "Website",
+        "subs": 567
       },
       {
         "week_start": "2026-05-04",
-        "bucket": "healthbrief",
-        "subs": 333
+        "bucket": "HealthBrief",
+        "subs": 446
       },
       {
         "week_start": "2026-05-04",
-        "bucket": "superage",
-        "subs": 28
+        "bucket": "SuperAge",
+        "subs": 30
       },
       {
         "week_start": "2026-05-04",
         "bucket": "AllHealthy",
-        "subs": 11
+        "subs": 16
       },
       {
         "week_start": "2026-05-04",
         "bucket": "optimism",
-        "subs": 11
+        "subs": 13
       },
       {
         "week_start": "2026-05-04",
-        "bucket": "Campaign_monitor",
+        "bucket": "Campaign Monitor",
         "subs": 9
+      },
+      {
+        "week_start": "2026-05-04",
+        "bucket": "SuperAge Quiz",
+        "subs": 4
+      },
+      {
+        "week_start": "2026-05-04",
+        "bucket": "Organic",
+        "subs": 2
       },
       {
         "week_start": "2026-05-04",
@@ -1250,173 +2470,345 @@
         "week_start": "2026-05-04",
         "bucket": "games_athletes",
         "subs": 1
+      },
+      {
+        "week_start": "2026-05-04",
+        "bucket": "TDCPL",
+        "subs": 1
+      },
+      {
+        "week_start": "2026-05-04",
+        "bucket": "RRCPL",
+        "subs": 1
+      },
+      {
+        "week_start": "2026-04-27",
+        "bucket": "Taboola",
+        "subs": 4716
+      },
+      {
+        "week_start": "2026-04-27",
+        "bucket": "HealthBrief",
+        "subs": 1278
+      },
+      {
+        "week_start": "2026-04-27",
+        "bucket": "Website",
+        "subs": 844
+      },
+      {
+        "week_start": "2026-04-27",
+        "bucket": "Meta",
+        "subs": 549
+      },
+      {
+        "week_start": "2026-04-27",
+        "bucket": "SuperAge",
+        "subs": 47
+      },
+      {
+        "week_start": "2026-04-27",
+        "bucket": "optimism",
+        "subs": 17
+      },
+      {
+        "week_start": "2026-04-27",
+        "bucket": "Campaign Monitor",
+        "subs": 12
+      },
+      {
+        "week_start": "2026-04-27",
+        "bucket": "AllHealthy",
+        "subs": 12
+      },
+      {
+        "week_start": "2026-04-27",
+        "bucket": "Organic",
+        "subs": 9
+      },
+      {
+        "week_start": "2026-04-27",
+        "bucket": "SuperAge Quiz",
+        "subs": 4
+      },
+      {
+        "week_start": "2026-04-27",
+        "bucket": "beehiiv",
+        "subs": 3
+      },
+      {
+        "week_start": "2026-04-27",
+        "bucket": "readmettle.com",
+        "subs": 1
       }
     ],
     "top_editorial_this_week": [
       {
-        "title": "The Blood Pressure Reading Your Doctor Isnt Taking And The Exercise That Helps It",
-        "url": "https://superage.com/the-blood-pressure-reading-your-doctor-isnt-taking-and-the-exercise-that-helps-it",
-        "issue_name": "SA_PF_20260511 (Sponsor: Berkeley Life | Pvolve)",
-        "issue_date": "2026-05-11",
-        "unique_clicks": 11752,
-        "total_clicks": 12802
+        "title": "The Truth About Carbs Backed By A 30 Year Study",
+        "url": "https://superage.com/the-truth-about-carbs-backed-by-a-30-year-study",
+        "issue_name": "The Mindset: July 23, 2026 (Babbel)",
+        "issue_date": "2026-07-23",
+        "unique_clicks": 30046,
+        "total_clicks": 52648
       },
       {
-        "title": "3 Exercises That Quietly Rewire Your Brain For Deep Sleep",
-        "url": "https://superage.com/3-exercises-that-quietly-rewire-your-brain-for-deep-sleep",
-        "issue_name": "SA_PF_20260514 (Sponsor: Pendulum)",
-        "issue_date": "2026-05-14",
-        "unique_clicks": 8074,
-        "total_clicks": 9388
+        "title": "The Mind Diet Slows The Physical Aging Of The Brain Itself",
+        "url": "https://superage.com/the-mind-diet-slows-the-physical-aging-of-the-brain-itself",
+        "issue_name": "The Mindset: July 20, 2026 (Altra)",
+        "issue_date": "2026-07-20",
+        "unique_clicks": 28385,
+        "total_clicks": 52998
       },
       {
-        "title": "The Blood Pressure Reading Your Doctor Isnt Taking And The Exercise That Helps It",
-        "url": "https://superage.com/the-blood-pressure-reading-your-doctor-isnt-taking-and-the-exercise-that-helps-it",
-        "issue_name": "SA_PF_20260517 (Sponsor: ReadyRX)",
-        "issue_date": "2026-05-17",
-        "unique_clicks": 7442,
-        "total_clicks": 7978
+        "title": "3 Ways To Protect Your Working Memory As You Age",
+        "url": "https://superage.com/3-ways-to-protect-your-working-memory-as-you-age",
+        "issue_name": "Sunday Spotlight: July 26, 2026 (Aramore)",
+        "issue_date": "2026-07-26",
+        "unique_clicks": 9991,
+        "total_clicks": 2442
       },
       {
-        "title": "5 Sleep Friendly Nutrients To Add To Your Diet",
-        "url": "https://superage.com/5-sleep-friendly-nutrients-to-add-to-your-diet",
-        "issue_name": "SA_PF_20260514 (Sponsor: Pendulum)",
-        "issue_date": "2026-05-14",
-        "unique_clicks": 5315,
-        "total_clicks": 5932
+        "title": "The Intelligence Of Your Fascia Network",
+        "url": "https://superage.com/the-intelligence-of-your-fascia-network",
+        "issue_name": "The Mindset: July 20, 2026 (Altra)",
+        "issue_date": "2026-07-20",
+        "unique_clicks": 4432,
+        "total_clicks": 7998
       },
       {
-        "title": "The Best Vegetables For Your Health Have A Pfas Problem",
-        "url": "https://superage.com/the-best-vegetables-for-your-health-have-a-pfas-problem",
-        "issue_name": "SA_PF_20260511 (Sponsor: Berkeley Life | Pvolve)",
-        "issue_date": "2026-05-11",
-        "unique_clicks": 5076,
-        "total_clicks": 5633
+        "title": "6 Signs Your Cortisol Is Out Of Sync And What Do Do About It",
+        "url": "https://superage.com/6-signs-your-cortisol-is-out-of-sync-and-what-do-do-about-it",
+        "issue_name": "The Mindset: July 20, 2026 (Altra)",
+        "issue_date": "2026-07-20",
+        "unique_clicks": 4038,
+        "total_clicks": 7134
       },
       {
-        "title": "Life Expectancy Gains Are Slowing Your Choices Are More Important Than Ever",
-        "url": "https://superage.com/life-expectancy-gains-are-slowing-your-choices-are-more-important-than-ever",
-        "issue_name": "SA_PF_20260511 (Sponsor: Berkeley Life | Pvolve)",
-        "issue_date": "2026-05-11",
-        "unique_clicks": 2863,
-        "total_clicks": 3220
+        "title": "Awecourse",
+        "url": "https://superage.com/awecourse",
+        "issue_name": "Sunday Spotlight: July 26, 2026 (Aramore)",
+        "issue_date": "2026-07-26",
+        "unique_clicks": 3145,
+        "total_clicks": 676
       },
       {
-        "title": "Cant Sleep Get Out Of Bed Says Sleep Scientist",
-        "url": "https://superage.com/cant-sleep-get-out-of-bed-says-sleep-scientist",
-        "issue_name": "SA_PF_20260514 (Sponsor: Pendulum)",
-        "issue_date": "2026-05-14",
-        "unique_clicks": 2061,
-        "total_clicks": 2338
+        "title": "Awecourse",
+        "url": "https://superage.com/awecourse",
+        "issue_name": "The Mindset: July 20, 2026 (Altra)",
+        "issue_date": "2026-07-20",
+        "unique_clicks": 2481,
+        "total_clicks": 4384
       },
       {
-        "title": "The Longevity Sleep Routine For Deeper Stronger Rest",
-        "url": "https://superage.com/the-longevity-sleep-routine-for-deeper-stronger-rest",
-        "issue_name": "SA_PF_20260514 (Sponsor: Pendulum)",
-        "issue_date": "2026-05-14",
-        "unique_clicks": 1237,
-        "total_clicks": 1386
+        "title": "How Much Water Do You Really Need To Stay Hydrated",
+        "url": "https://superage.com/how-much-water-do-you-really-need-to-stay-hydrated",
+        "issue_name": "The Mindset: July 20, 2026 (Altra)",
+        "issue_date": "2026-07-20",
+        "unique_clicks": 1680,
+        "total_clicks": 2988
       },
       {
-        "title": "Savoy Cabbage Caesar Salad With Homemade Greek Yogurt Dressing",
-        "url": "https://superage.com/savoy-cabbage-caesar-salad-with-homemade-greek-yogurt-dressing",
-        "issue_name": "SA_PF_20260511 (Sponsor: Berkeley Life | Pvolve)",
-        "issue_date": "2026-05-11",
-        "unique_clicks": 1101,
-        "total_clicks": 1240
+        "title": "A New Light Therapy Could Help Target Dormant Cancer Cells",
+        "url": "https://superage.com/a-new-light-therapy-could-help-target-dormant-cancer-cells",
+        "issue_name": "The Mindset: July 23, 2026 (Babbel)",
+        "issue_date": "2026-07-23",
+        "unique_clicks": 1275,
+        "total_clicks": 2118
       },
       {
-        "title": "8 Trainable Longevity Markers That Extend Your Life",
-        "url": "https://superage.com/8-trainable-longevity-markers-that-extend-your-life",
-        "issue_name": "SA_PF_20260511 (Sponsor: Berkeley Life | Pvolve)",
-        "issue_date": "2026-05-11",
-        "unique_clicks": 300,
-        "total_clicks": 327
+        "title": "This Doctor Became A Better Mom By Putting Her Own Health First",
+        "url": "https://superage.com/this-doctor-became-a-better-mom-by-putting-her-own-health-first",
+        "issue_name": "The Mindset: July 23, 2026 (Babbel)",
+        "issue_date": "2026-07-23",
+        "unique_clicks": 926,
+        "total_clicks": 1576
       },
       {
-        "title": "Exercising Before Therapy Could Boost Your Results",
-        "url": "https://superage.com/exercising-before-therapy-could-boost-your-results",
-        "issue_name": "SA_PF_20260511 (Sponsor: Berkeley Life | Pvolve)",
-        "issue_date": "2026-05-11",
-        "unique_clicks": 269,
-        "total_clicks": 289
+        "title": "How The 3 S Model Optimizes Lifelong Brain Health",
+        "url": "https://superage.com/how-the-3-s-model-optimizes-lifelong-brain-health",
+        "issue_name": "The Mindset: July 23, 2026 (Babbel)",
+        "issue_date": "2026-07-23",
+        "unique_clicks": 919,
+        "total_clicks": 1570
       },
       {
-        "title": "The Unsung Molecule That Powers Your Brain",
-        "url": "https://superage.com/the-unsung-molecule-that-powers-your-brain",
-        "issue_name": "SA_PF_20260511 (Sponsor: Berkeley Life | Pvolve)",
-        "issue_date": "2026-05-11",
-        "unique_clicks": 56,
-        "total_clicks": 60
+        "title": "Superfood Rainbow Salad Recipe",
+        "url": "https://superage.com/superfood-rainbow-salad-recipe",
+        "issue_name": "The Mindset: July 20, 2026 (Altra)",
+        "issue_date": "2026-07-20",
+        "unique_clicks": 894,
+        "total_clicks": 1584
+      },
+      {
+        "title": "Awecourse",
+        "url": "https://superage.com/awecourse",
+        "issue_name": "The Mindset: July 23, 2026 (Babbel)",
+        "issue_date": "2026-07-23",
+        "unique_clicks": 386,
+        "total_clicks": 638
+      },
+      {
+        "title": "Theres A Gap In Longevity Research For Women This Founding Athlete Is Filling It",
+        "url": "https://superage.com/theres-a-gap-in-longevity-research-for-women-this-founding-athlete-is-filling-it",
+        "issue_name": "Extended Hyatt Dates",
+        "issue_date": "2026-07-21",
+        "unique_clicks": 29,
+        "total_clicks": 22
+      },
+      {
+        "title": "She Trained For Strength Now Shes Training What Scares Her",
+        "url": "https://superage.com/she-trained-for-strength-now-shes-training-what-scares-her",
+        "issue_name": "Extended Hyatt Dates",
+        "issue_date": "2026-07-21",
+        "unique_clicks": 28,
+        "total_clicks": 24
+      },
+      {
+        "title": "Helping Men Build An Action Plan For A Better Midlife Starting With Fun",
+        "url": "https://superage.com/helping-men-build-an-action-plan-for-a-better-midlife-starting-with-fun",
+        "issue_name": "Extended Hyatt Dates",
+        "issue_date": "2026-07-21",
+        "unique_clicks": 18,
+        "total_clicks": 12
       }
     ],
     "top_sponsors_this_week": [
       {
-        "title": "Berkeley Life | Pvolve",
-        "url": "https://berkeleylife.com/pages/superage_freesamplepack?utm_source=May%201&utm_medium=Newsletter&utm_campaign=Super%20Age",
-        "issue_name": "SA_PF_20260511 (Sponsor: Berkeley Life | Pvolve)",
-        "issue_date": "2026-05-11",
-        "unique_clicks": 1004,
-        "total_clicks": 1158
+        "title": "Aramore",
+        "url": "https://aramoreskincare.com/discount/SUPERAGE25?redirect=/collections/full-collection&utm_source=newsletter&utm_medium=link&utm_campaign=superage",
+        "issue_name": "Sunday Spotlight: July 26, 2026 (Aramore)",
+        "issue_date": "2026-07-26",
+        "unique_clicks": 943,
+        "total_clicks": 160
       },
       {
-        "title": "BetterHelp - Atwave",
-        "url": "https://rewardcellar.com/?a=1471&c=21981&s1=",
-        "issue_name": "SA_PF_20260517 (Sponsor: ReadyRX)",
-        "issue_date": "2026-05-17",
-        "unique_clicks": 893,
-        "total_clicks": 953
-      },
-      {
-        "title": "Pendulum",
-        "url": "https://pendulumlife.com/products/pendulum-metabolic-daily?utm_source=newsletter&utm_medium=paid.superage&utm_campaign=PMD&utm_content=cravingsB&utm_medium=email&oid=[oid]&utm_source=superage&utm_campaign=SA_PF_20260514",
-        "issue_name": "SA_PF_20260514 (Sponsor: Pendulum)",
-        "issue_date": "2026-05-14",
-        "unique_clicks": 526,
-        "total_clicks": 577
-      },
-      {
-        "title": "Pendulum",
-        "url": "https://pendulumlife.com/products/pendulum-metabolic-daily?utm_source=newsletter&utm_medium=paid.superage&utm_campaign=PMD&utm_content=boostglp1A&utm_medium=email&utm_source=superage",
-        "issue_name": "SA_PF_20260514 (Sponsor: Pendulum)",
-        "issue_date": "2026-05-14",
-        "unique_clicks": 351,
-        "total_clicks": 391
-      },
-      {
-        "title": "Berkeley Life | Pvolve",
-        "url": "https://www.pvolve.com/pages/superage-offer?discount=SUPERAGE",
-        "issue_name": "SA_PF_20260511 (Sponsor: Berkeley Life | Pvolve)",
-        "issue_date": "2026-05-11",
-        "unique_clicks": 342,
-        "total_clicks": 375
+        "title": "OneSkin affiliate",
+        "url": "https://oneskin.pxf.io/Jkjake",
+        "issue_name": "The Mindset: July 23, 2026 (Babbel)",
+        "issue_date": "2026-07-23",
+        "unique_clicks": 49,
+        "total_clicks": 96
       }
     ],
-    "top_immersions_this_week": [
-      {
-        "title": "Four Days Your Healthspan Extended",
-        "url": "https://superage.com/immersions/four-days-your-healthspan-extended",
-        "issue_name": "SA_PF_20260511 (Sponsor: Berkeley Life | Pvolve)",
-        "issue_date": "2026-05-11",
-        "unique_clicks": 574,
-        "total_clicks": 606
-      },
-      {
-        "title": "Immersions",
-        "url": "https://superage.com/immersions",
-        "issue_name": "SA_PF_20260511 (Sponsor: Berkeley Life | Pvolve)",
-        "issue_date": "2026-05-11",
-        "unique_clicks": 56,
-        "total_clicks": 59
-      },
-      {
-        "title": "Immersions",
-        "url": "https://superage.com/immersions",
-        "issue_name": "SA_PF_20260514 (Sponsor: Pendulum)",
-        "issue_date": "2026-05-14",
-        "unique_clicks": 28,
-        "total_clicks": 31
-      }
-    ]
+    "top_immersions_this_week": [],
+    "organic_subs_weekly": {
+      "labels": [
+        "27\u20133 May",
+        "4\u201310 May",
+        "11\u201317 May",
+        "18\u201324 May",
+        "25\u201331 May",
+        "1\u20137 Jun",
+        "8\u201314 Jun",
+        "15\u201321 Jun",
+        "22\u201328 Jun",
+        "29\u20135 Jul",
+        "6\u201312 Jul",
+        "13\u201319 Jul",
+        "20\u201326 Jul"
+      ],
+      "week_starts": [
+        "2026-04-27",
+        "2026-05-04",
+        "2026-05-11",
+        "2026-05-18",
+        "2026-05-25",
+        "2026-06-01",
+        "2026-06-08",
+        "2026-06-15",
+        "2026-06-22",
+        "2026-06-29",
+        "2026-07-06",
+        "2026-07-13",
+        "2026-07-20"
+      ],
+      "organic_subs": [
+        9,
+        2,
+        12,
+        2,
+        3,
+        7,
+        8,
+        6,
+        6,
+        5,
+        8,
+        3,
+        16
+      ]
+    },
+    "max_article_weekly": {
+      "labels": [
+        "04\u201310 May",
+        "11\u201317 May",
+        "18\u201324 May",
+        "25\u201331 May",
+        "01\u201307 Jun",
+        "08\u201314 Jun",
+        "15\u201321 Jun",
+        "22\u201328 Jun",
+        "29\u201305 Jul",
+        "06\u201312 Jul",
+        "13\u201319 Jul",
+        "20\u201326 Jul"
+      ],
+      "week_starts": [
+        "2026-05-04",
+        "2026-05-11",
+        "2026-05-18",
+        "2026-05-25",
+        "2026-06-01",
+        "2026-06-08",
+        "2026-06-15",
+        "2026-06-22",
+        "2026-06-29",
+        "2026-07-06",
+        "2026-07-13",
+        "2026-07-20"
+      ],
+      "max_unique_clicks": [
+        11572,
+        19559,
+        36140,
+        12226,
+        18541,
+        16729,
+        18423,
+        21113,
+        17950,
+        9836,
+        22541,
+        30046
+      ],
+      "article_titles": [
+        "The Science Of Psyching Yourself Up",
+        "The Blood Pressure Reading Your Doctor Isnt Taking And The Exercise That Helps It",
+        "The Trainable System We Overlook When We Talk About Balance",
+        "These Clean 15 Fruits And Vegetables Have The Lowest Levels Of Contamination",
+        "The 10 Minute Window That Steadies Your Blood Sugar",
+        "What Actually Increases Your Energy The Buck Institute Just Figured It Out",
+        "6 Ways To Strengthen Your Feet And Ankles",
+        "The 5 Microhabits That Rewire Your Brain For Longevity",
+        "Your Dna Doesnt Change Its Instructions Do 3 Habits To Edit Your Genetic Risks",
+        "The Truth About Longevity Tests Whats Worth Your Time",
+        "The Protein Threshold Where Longevity Benefits Stop Climbing",
+        "The Truth About Carbs Backed By A 30 Year Study"
+      ],
+      "urls": [
+        "https://superage.com/the-science-of-psyching-yourself-up",
+        "https://superage.com/the-blood-pressure-reading-your-doctor-isnt-taking-and-the-exercise-that-helps-it",
+        "https://superage.com/the-trainable-system-we-overlook-when-we-talk-about-balance",
+        "https://superage.com/these-clean-15-fruits-and-vegetables-have-the-lowest-levels-of-contamination",
+        "https://superage.com/the-10-minute-window-that-steadies-your-blood-sugar",
+        "https://superage.com/what-actually-increases-your-energy-the-buck-institute-just-figured-it-out",
+        "https://superage.com/6-ways-to-strengthen-your-feet-and-ankles",
+        "https://superage.com/the-5-microhabits-that-rewire-your-brain-for-longevity",
+        "https://superage.com/your-dna-doesnt-change-its-instructions-do-3-habits-to-edit-your-genetic-risks",
+        "https://superage.com/the-truth-about-longevity-tests-whats-worth-your-time",
+        "https://superage.com/the-protein-threshold-where-longevity-benefits-stop-climbing",
+        "https://superage.com/the-truth-about-carbs-backed-by-a-30-year-study"
+      ]
+    }
   }
 }

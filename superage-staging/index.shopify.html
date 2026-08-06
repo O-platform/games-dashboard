@@ -225,6 +225,7 @@
   <button class="tab active" onclick="showPage('overview',this)">Overview</button>
   <button class="tab" onclick="showPage('digest',this)">Weekly Digest</button>
   <button class="tab" onclick="showPage('ads',this)">Ads Performance</button>
+  <button class="tab" onclick="showPage('shopify',this)">Shopify Sales</button>
   <button class="tab" onclick="showPage('campaigns',this)">Campaigns</button>
   <button class="tab" onclick="showPage('content',this)">Engagement</button>
   <button class="tab" onclick="showPage('content-ref',this)">Content Reference</button>
@@ -238,6 +239,7 @@
 <div id="overview" class="page active"></div>
 <div id="digest" class="page"></div>
 <div id="ads" class="page"></div>
+<div id="shopify" class="page"></div>
 <div id="campaigns" class="page"></div>
 <div id="content" class="page"></div>
 <div id="content-ref" class="page"></div>
@@ -351,15 +353,17 @@ const _OPTS   = _LOCAL ? {} : { headers: { 'X-Auth-Token': 'dashboardkiwilytics1
 Promise.all([
   fetch(`${_BASE}/superage-metrics.json`,   _OPTS).then(r => r.json()),
   fetch(`${_BASE}/superage-comparison.json`, _OPTS).then(r => r.ok ? r.json() : {}).catch(() => ({})),
-  fetch(`${_BASE}/superage-ads.json`,        _OPTS).then(r => r.ok ? r.json() : {}).catch(() => ({}))
+  fetch(`${_BASE}/superage-ads.json`,        _OPTS).then(r => r.ok ? r.json() : {}).catch(() => ({})),
+  fetch(`${_BASE}/superage-shopify.json`,    _OPTS).then(r => r.ok ? r.json() : {}).catch(() => ({}))
 ])
-  .then(([metrics, comparison, ads]) => {
-    const M = Object.assign({}, metrics, comparison, ads);
+  .then(([metrics, comparison, ads, shopify]) => {
+    const M = Object.assign({}, metrics, comparison, ads, shopify);
     const asOf = M.data_as_of || '—';
     document.getElementById('as-of-label').textContent = asOf;
     renderOverview(M);
     renderDigest(M);
     renderAds(M);
+    renderShopify(M);
     renderCampaigns(M);
     renderContent(M);
     renderContentRef(M);
@@ -1139,6 +1143,271 @@ function renderAds(M) {
       options: {
         indexAxis: 'y', responsive: true, maintainAspectRatio: false,
         plugins: { legend: { display: false }, tooltip: { callbacks: { label: c => ' ' + money0(c.parsed.x) } } },
+        scales: {
+          x: { ticks: { color: tickColor, callback: v => '$' + Number(v).toLocaleString() }, grid: { color: gridColor } },
+          y: { ticks: { color: tickColor, font: { size: 11 } }, grid: { display: false } },
+        }
+      }
+    }));
+  }
+}
+
+/* ─────────────────────────────────────────────────────────────
+ * Shopify Sales — preview section (reads superage-shopify.json).
+ * Mirrors renderAds(): KPI tiles + daily sales trend + monthly trend +
+ * sales-by-vendor bar + vendor / product-type / top-product / recent-order
+ * tables. Cancelled orders are already excluded upstream in the lambda.
+ * ───────────────────────────────────────────────────────────── */
+function renderShopify(M) {
+  const root = document.getElementById('shopify');
+  if (!root) return;
+  const shop = M.shopify || null;
+  const k = shop && shop.kpis ? shop.kpis : null;
+
+  if (!k) {
+    root.innerHTML = `
+      <div class="section-context-banner">
+        <strong>Shopify Sales</strong> — Not populated yet. Run the
+        <code>sa-dashboard-ads-shopify-metrics</code> lambda to ship the
+        <code>shopify</code> payload (<code>superage-shopify.json</code>).
+      </div>`;
+    return;
+  }
+
+  const money0 = n => '$' + Number(n || 0).toLocaleString(undefined, { maximumFractionDigits: 0 });
+  const money2 = n => '$' + Number(n || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  const num0   = n => Number(n || 0).toLocaleString(undefined, { maximumFractionDigits: 0 });
+
+  const win = shop.window || {};
+  const winLabel = (win.start && win.end)
+    ? `${win.start} → ${win.end}`
+    : `last ${win.days || 365} days`;
+
+  const tiles = [
+    { label: 'Net Sales',        value: money0(k.net_sales),        cls: 'accent', sub: winLabel },
+    { label: 'Revenue (paid)',   value: money0(k.revenue),          cls: 'green',  sub: 'incl. shipping &amp; tax' },
+    { label: 'Orders',           value: num0(k.orders),             cls: 'blue',   sub: `AOV ${money2(k.aov)}` },
+    { label: 'Units Sold',       value: num0(k.units),              cls: 'cyan',   sub: 'items across orders' },
+    { label: 'Avg Order Value',  value: money2(k.aov),              cls: 'purple', sub: 'net sales ÷ order' },
+    { label: 'Unique Customers', value: num0(k.unique_customers),   cls: 'orange', sub: `${num0(k.repeat_customers)} repeat (2+ orders)` },
+    { label: 'Gross Sales',      value: money0(k.gross_sales),      cls: 'green',  sub: 'pre-discount product revenue' },
+    { label: 'Discounts',        value: money0(k.total_discounts),  cls: 'cyan',   sub: `Shipping ${money0(k.total_shipping)} · Tax ${money0(k.total_tax)}` },
+    { label: 'Refunded / Canc.', value: `${num0(k.refunded_orders)} / ${num0(k.cancelled_orders)}`, cls: 'blue', sub: 'orders refunded / cancelled' },
+  ];
+
+  const daily   = shop.daily   || { dates: [], net_sales: [], gross_sales: [], orders: [] };
+  const monthly = shop.monthly || { months: [], net_sales: [], gross_sales: [], orders: [] };
+  const byVendor = shop.by_vendor || [];
+  const byType   = shop.by_product_type || [];
+  const topProd  = shop.top_products || [];
+  const recent   = shop.recent_orders || [];
+
+  const topVendors = byVendor.slice(0, 12);
+
+  const vendorRows = byVendor.map((v, i) => `
+    <tr>
+      <td>${i + 1}</td>
+      <td>${esc(v.vendor || '—')}</td>
+      <td>${money2(v.gross_sales)}</td>
+      <td>${num0(v.units)}</td>
+      <td>${num0(v.orders)}</td>
+      <td>${money2(v.aov)}</td>
+    </tr>`).join('');
+
+  const typeRows = byType.map(t => `
+    <tr>
+      <td>${esc(t.product_type || '—')}</td>
+      <td>${money2(t.gross_sales)}</td>
+      <td>${num0(t.units)}</td>
+      <td>${num0(t.orders)}</td>
+    </tr>`).join('');
+
+  const prodRows = topProd.map((p, i) => `
+    <tr>
+      <td>${i + 1}</td>
+      <td>${esc(p.title || '—')}</td>
+      <td>${esc(p.vendor || '—')}</td>
+      <td>${money2(p.gross_sales)}</td>
+      <td>${num0(p.units)}</td>
+      <td>${num0(p.orders)}</td>
+    </tr>`).join('');
+
+  const finPill = s => {
+    const up = (s || '').toUpperCase();
+    const on = up === 'PAID';
+    return `<span class="ads-status ads-status-${on ? 'on' : 'off'}">${esc(s || '—')}</span>`;
+  };
+  const recentRows = recent.map(o => `
+    <tr>
+      <td class="nowrap">${esc(o.name || '—')}</td>
+      <td class="nowrap">${esc(o.order_date || '—')}</td>
+      <td class="nowrap">${finPill(o.financial_status)}</td>
+      <td class="nowrap">${esc(o.fulfillment_status || '—')}</td>
+      <td>${money2(o.gross_sales)}</td>
+      <td>${money2(o.net_sales)}</td>
+      <td>${money2(o.revenue)}</td>
+    </tr>`).join('');
+
+  root.innerHTML = `
+    <div class="section-context-banner">
+      <strong>Shopify Sales</strong> for <strong>${esc(winLabel)}</strong> — from
+      <code>shopify_orders</code> + <code>shopify_order_line_items</code>.
+      <strong>Net Sales</strong> = product revenue after discounts;
+      <strong>Revenue (paid)</strong> = what customers actually paid (net + shipping + tax);
+      <strong>Gross Sales</strong> = product revenue before discounts.
+      Cancelled orders are excluded from every metric. <em>Preview section — not yet live.</em>
+    </div>
+
+    <div class="kpi-row" style="grid-template-columns:repeat(auto-fit,minmax(200px,1fr));">
+      ${tiles.map(t => `
+        <div class="kpi-card ${t.cls}">
+          <div class="label">${t.label}</div>
+          <div class="value" style="font-size:24px;">${t.value}</div>
+          <div class="sub">${t.sub}</div>
+        </div>`).join('')}
+    </div>
+
+    <div class="chart-card" style="margin-top:18px;">
+      <h3>Daily Net Sales &amp; Orders</h3>
+      <div class="chart-container" style="height:300px;position:relative;">
+        <canvas id="shop-daily"></canvas>
+      </div>
+    </div>
+
+    <div class="chart-card">
+      <h3>Monthly Net Sales</h3>
+      <div class="chart-container" style="height:260px;position:relative;">
+        <canvas id="shop-monthly"></canvas>
+      </div>
+    </div>
+
+    <div class="chart-card">
+      <h3>Gross Sales by Vendor (Top ${topVendors.length})</h3>
+      <div class="chart-container" style="height:${Math.max(220, topVendors.length * 34)}px;position:relative;">
+        <canvas id="shop-vendor-bar"></canvas>
+      </div>
+    </div>
+
+    <div class="chart-card">
+      <h3>Vendor Breakdown</h3>
+      <div class="tbl-wrap"><table class="dash-table">
+        <thead><tr>
+          <th>#</th><th>Vendor</th><th>Gross Sales</th><th>Units</th><th>Orders</th><th>AOV</th>
+        </tr></thead>
+        <tbody>${vendorRows || '<tr><td colspan="6">No sales in window.</td></tr>'}</tbody>
+      </table></div>
+    </div>
+
+    <div class="chart-card">
+      <h3>By Product Type</h3>
+      <div class="tbl-wrap"><table class="dash-table">
+        <thead><tr>
+          <th>Product Type</th><th>Gross Sales</th><th>Units</th><th>Orders</th>
+        </tr></thead>
+        <tbody>${typeRows || '<tr><td colspan="4">No data.</td></tr>'}</tbody>
+      </table></div>
+    </div>
+
+    <div class="chart-card">
+      <h3>Top Products</h3>
+      <div class="tbl-wrap"><table class="dash-table">
+        <thead><tr>
+          <th>#</th><th>Product</th><th>Vendor</th><th>Gross Sales</th><th>Units</th><th>Orders</th>
+        </tr></thead>
+        <tbody>${prodRows || '<tr><td colspan="6">No data.</td></tr>'}</tbody>
+      </table></div>
+    </div>
+
+    <div class="chart-card">
+      <h3>Recent Orders</h3>
+      <div class="tbl-wrap"><table class="dash-table">
+        <thead><tr>
+          <th>Order</th><th>Date</th><th>Financial</th><th>Fulfillment</th>
+          <th>Gross</th><th>Net</th><th>Revenue</th>
+        </tr></thead>
+        <tbody>${recentRows || '<tr><td colspan="7">No orders.</td></tr>'}</tbody>
+      </table></div>
+    </div>
+  `;
+
+  // Tear down any prior charts (re-render safety).
+  (window._shopCharts || []).forEach(c => { try { c.destroy(); } catch (e) {} });
+  window._shopCharts = [];
+
+  const dark = document.body.classList.contains('dark');
+  const gridColor = dark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.06)';
+  const tickColor = dark ? '#9aa4b2' : '#57606a';
+
+  // Daily net sales (bars) + orders (line, right axis).
+  const dEl = document.getElementById('shop-daily');
+  if (dEl) {
+    window._shopCharts.push(new Chart(dEl, {
+      data: {
+        labels: daily.dates,
+        datasets: [
+          {
+            type: 'bar', label: 'Net Sales ($)', data: daily.net_sales,
+            backgroundColor: '#34d39988', borderColor: '#059669', borderWidth: 1,
+            yAxisID: 'y', order: 2,
+          },
+          {
+            type: 'line', label: 'Orders', data: daily.orders,
+            borderColor: '#4f8cff', backgroundColor: '#4f8cff22',
+            tension: 0.3, pointRadius: 0, borderWidth: 2, yAxisID: 'y1', order: 1,
+          },
+        ]
+      },
+      options: {
+        responsive: true, maintainAspectRatio: false,
+        interaction: { mode: 'index', intersect: false },
+        plugins: { legend: { position: 'bottom', labels: { font: { size: 11 }, padding: 10 } } },
+        scales: {
+          x:  { ticks: { color: tickColor, maxRotation: 0, autoSkip: true, maxTicksLimit: 12 }, grid: { color: gridColor } },
+          y:  { position: 'left',  title: { display: true, text: 'Net Sales ($)' }, ticks: { color: tickColor, callback: v => '$' + Number(v).toLocaleString() }, grid: { color: gridColor } },
+          y1: { position: 'right', title: { display: true, text: 'Orders' }, ticks: { color: tickColor, precision: 0 }, grid: { drawOnChartArea: false } },
+        }
+      }
+    }));
+  }
+
+  // Monthly net sales — vertical bars.
+  const mEl = document.getElementById('shop-monthly');
+  if (mEl && monthly.months.length) {
+    window._shopCharts.push(new Chart(mEl, {
+      type: 'bar',
+      data: {
+        labels: monthly.months,
+        datasets: [{
+          label: 'Net Sales ($)', data: monthly.net_sales,
+          backgroundColor: '#a78bfa', borderColor: '#8250df', borderWidth: 1,
+        }]
+      },
+      options: {
+        responsive: true, maintainAspectRatio: false,
+        plugins: { legend: { display: false }, tooltip: { callbacks: { label: c => ' ' + money2(c.parsed.y) } } },
+        scales: {
+          x: { ticks: { color: tickColor }, grid: { display: false } },
+          y: { ticks: { color: tickColor, callback: v => '$' + Number(v).toLocaleString() }, grid: { color: gridColor } },
+        }
+      }
+    }));
+  }
+
+  // Gross sales by vendor — horizontal bar.
+  const vEl = document.getElementById('shop-vendor-bar');
+  if (vEl && topVendors.length) {
+    window._shopCharts.push(new Chart(vEl, {
+      type: 'bar',
+      data: {
+        labels: topVendors.map(v => (v.vendor || '—').length > 42 ? (v.vendor || '—').slice(0, 40) + '…' : (v.vendor || '—')),
+        datasets: [{
+          label: 'Gross Sales ($)', data: topVendors.map(v => v.gross_sales),
+          backgroundColor: '#38bdf8', borderColor: '#0284c7', borderWidth: 1,
+        }]
+      },
+      options: {
+        indexAxis: 'y', responsive: true, maintainAspectRatio: false,
+        plugins: { legend: { display: false }, tooltip: { callbacks: { label: c => ' ' + money2(c.parsed.x) } } },
         scales: {
           x: { ticks: { color: tickColor, callback: v => '$' + Number(v).toLocaleString() }, grid: { color: gridColor } },
           y: { ticks: { color: tickColor, font: { size: 11 } }, grid: { display: false } },

@@ -1,9 +1,10 @@
 """
-Local development runner for both SuperAge lambdas.
+Local development runner for the SuperAge lambdas.
 
-Runs superage_metrics_lambda_updated.py and superage_comparison_lambda.py
-using DB credentials from environment variables (no AWS Secrets Manager),
-then writes both JSON outputs to local files read by index.local.html.
+Runs superage_metrics_lambda_updated.py, superage_comparison_lambda.py, and
+superage_ads_shopify_lambda.py using DB credentials from environment variables
+(no AWS Secrets Manager), then writes the JSON outputs to local files read by
+index.html (auto-detects localhost) and index.shopify.html (preview).
 
 Usage:
     export DB_HOST=your-rds-host.rds.amazonaws.com
@@ -19,12 +20,14 @@ Usage:
 
     # Then serve the directory and open the local dashboard:
     python -m http.server 8080
-    # Visit: http://localhost:8080/index.local.html
+    # Visit: http://localhost:8080/index.html          (live sections)
+    #        http://localhost:8080/index.shopify.html  (preview: + Shopify Sales)
 
 Outputs written here:
     superage-staging/superage-metrics.json
     superage-staging/superage-comparison.json
     superage-staging/superage-ads.json
+    superage-staging/superage-shopify.json
 """
 
 import json
@@ -114,16 +117,21 @@ def run_comparison_lambda():
         log.info("Comparison done.")
 
 
-def run_ads_lambda():
-    import superage_ads_lambda as al
+def run_ads_shopify_lambda():
+    """One lambda builds BOTH the ads and shopify sections and writes two
+    files: superage-ads.json and superage-shopify.json. We route each R2 key
+    to the matching local file by inspecting the `key` argument."""
+    import superage_ads_shopify_lambda as al
 
-    def _fake_write(content: str):
-        _write_local(content, "superage-ads.json")
-        return {"written": True, "local": True}
+    def _fake_write(content: str, key: str = None):
+        key = key or al.R2_FILE_PATH
+        filename = "superage-shopify.json" if "shopify" in key else "superage-ads.json"
+        _write_local(content, filename)
+        return {"written": True, "local": True, "key": key}
 
     with patch.object(al, "_get_db_secret", side_effect=_local_db_secret), \
          patch.object(al, "write_to_r2", side_effect=_fake_write):
-        log.info("─── Running ads lambda ───")
+        log.info("─── Running ads + shopify lambda ───")
         result = al.lambda_handler({}, {})
         body = json.loads(result.get("body", "{}"))
         log.info(
@@ -132,14 +140,21 @@ def run_ads_lambda():
             body.get("conversions"),
             body.get("total_campaigns"),
         )
+        log.info(
+            "Shopify done — orders=%s  net_sales=%s  revenue=%s",
+            body.get("shopify_orders"),
+            body.get("shopify_net_sales"),
+            body.get("shopify_revenue"),
+        )
 
 
 if __name__ == "__main__":
     run_metrics_lambda()
     run_comparison_lambda()
-    run_ads_lambda()
+    run_ads_shopify_lambda()
 
     print("\n✓ All lambdas complete.")
     print("Start a local server and open the dashboard:")
     print("  python -m http.server 8080")
-    print("  http://localhost:8080/index.local.html")
+    print("  http://localhost:8080/index.html            (live sections)")
+    print("  http://localhost:8080/index.shopify.html    (preview: + Shopify Sales)")

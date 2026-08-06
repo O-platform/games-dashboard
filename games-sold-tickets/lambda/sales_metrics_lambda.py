@@ -279,12 +279,13 @@ def lambda_handler(event, context):
             "email_oversight_result NOT IN ('Bot','Undeliverable','Malformed','SpamTrap') "
             "AND is_suppressed = false"
         )
+        GT_EXCL = "is_test IS NOT TRUE"
 
         # ════════════════════════════════════════════════════
         # TICKET TOTALS
         # ════════════════════════════════════════════════════
 
-        cur.execute("SELECT COUNT(*) AS n FROM public.games_tickets")
+        cur.execute(f"SELECT COUNT(*) AS n FROM public.games_tickets WHERE {GT_EXCL}")
         total_tickets = safe_int(cur.fetchone()["n"])
 
         cur.execute(
@@ -298,7 +299,8 @@ def lambda_handler(event, context):
         if t_email:
             cur.execute(f"""
                 SELECT COUNT(*) AS n FROM public.games_tickets t
-                WHERE {t_email} IN (
+                WHERE {GT_EXCL}
+                  AND {t_email} IN (
                     SELECT DISTINCT ON (email) email
                     FROM public.waitlist_emails
                     WHERE {WAITLIST_FILTER}
@@ -320,13 +322,17 @@ def lambda_handler(event, context):
                                WHERE {WAITLIST_FILTER}
                                ORDER BY email, created_at ASC
                            )) AS on_waitlist
-                    FROM public.games_tickets GROUP BY 1 ORDER BY 2 DESC
+                    FROM public.games_tickets
+                    WHERE {GT_EXCL}
+                    GROUP BY 1 ORDER BY 2 DESC
                 """)
             else:
                 cur.execute(f"""
                     SELECT COALESCE({t_type},'Unknown') AS type,
                            COUNT(*) AS total, 0 AS on_waitlist
-                    FROM public.games_tickets GROUP BY 1 ORDER BY 2 DESC
+                    FROM public.games_tickets
+                    WHERE {GT_EXCL}
+                    GROUP BY 1 ORDER BY 2 DESC
                 """)
             for r in cur.fetchall():
                 tot = safe_int(r["total"])
@@ -337,6 +343,21 @@ def lambda_handler(event, context):
                     "on_waitlist": wl,
                     "direct":      tot - wl,
                 })
+
+        # Ticket sales by day
+        tickets_by_day = []
+        if t_date:
+            cur.execute(f"""
+                SELECT DATE({t_date})::text AS day, COUNT(*) AS count
+                FROM public.games_tickets
+                WHERE {GT_EXCL}
+                GROUP BY 1
+                ORDER BY 1
+            """)
+            tickets_by_day = [
+                {"day": r["day"], "count": safe_int(r["count"])}
+                for r in cur.fetchall()
+            ]
 
         # Age distribution
         age_distribution = []
@@ -353,7 +374,7 @@ def lambda_handler(event, context):
                   END AS range,
                   COUNT(*) AS count
                 FROM public.games_tickets
-                WHERE {t_dob} IS NOT NULL
+                WHERE {GT_EXCL} AND {t_dob} IS NOT NULL
                 GROUP BY 1
                 ORDER BY MIN(DATE_PART('year', AGE({t_dob})))
             """)
@@ -369,6 +390,7 @@ def lambda_handler(event, context):
                 SELECT COALESCE(INITCAP({t_gender}::text), 'Unknown') AS gender,
                        COUNT(*) AS count
                 FROM public.games_tickets
+                WHERE {GT_EXCL}
                 GROUP BY 1 ORDER BY 2 DESC
             """)
             gender_distribution = [
@@ -382,7 +404,7 @@ def lambda_handler(event, context):
             cur.execute(f"""
                 SELECT COALESCE({t_city}, 'Unknown') AS city, COUNT(*) AS count
                 FROM public.games_tickets
-                WHERE {t_city} IS NOT NULL AND TRIM({t_city}) != ''
+                WHERE {GT_EXCL} AND {t_city} IS NOT NULL AND TRIM({t_city}) != ''
                 GROUP BY 1 ORDER BY 2 DESC LIMIT 10
             """)
             city_distribution = [
@@ -396,7 +418,7 @@ def lambda_handler(event, context):
         if t_type:
             cur.execute(
                 f"SELECT LOWER(COALESCE({t_type},'')) AS type, COUNT(*) AS n "
-                f"FROM public.games_tickets GROUP BY 1"
+                f"FROM public.games_tickets WHERE {GT_EXCL} GROUP BY 1"
             )
             estimated_revenue = sum(
                 safe_int(r["n"]) * TICKET_PRICES[r["type"]]
@@ -406,13 +428,11 @@ def lambda_handler(event, context):
 
         # Recent tickets
         order_clause = f"ORDER BY {t_date} DESC" if t_date else ""
-        cur.execute(f"SELECT * FROM public.games_tickets {order_clause} LIMIT 20")
+        cur.execute(f"SELECT * FROM public.games_tickets WHERE {GT_EXCL} {order_clause} LIMIT 20")
         recent_rows = [dict(r) for r in cur.fetchall()]
 
         # ════════════════════════════════════════════════════
         # PERSONA — Subscriber Quiz Join
-        # Joins unique buyer emails against superage.subscriber_quiz,
-        # taking the latest quiz entry per email (DISTINCT ON).
         # ════════════════════════════════════════════════════
 
         persona: dict = {
@@ -436,13 +456,11 @@ def lambda_handler(event, context):
         }
 
         if t_oid:
-            # Join on oid — more reliable than email (stable system ID, survives email changes).
-            # oid join yields more matches than email join when buyers changed their email.
             _PERSONA_CTE = f"""
                 buyer_oids AS (
                   SELECT DISTINCT LOWER(TRIM({t_oid})) AS oid
                   FROM public.games_tickets
-                  WHERE {t_oid} IS NOT NULL AND TRIM({t_oid}) != ''
+                  WHERE {GT_EXCL} AND {t_oid} IS NOT NULL AND TRIM({t_oid}) != ''
                 ),
                 quiz_deduped AS (
                   SELECT DISTINCT ON (LOWER(TRIM(sq.oid)))
@@ -459,7 +477,6 @@ def lambda_handler(event, context):
                 )
             """
 
-            # Unique buyer oid count
             cur.execute(f"""
                 SELECT COUNT(DISTINCT LOWER(TRIM({t_oid}))) AS n
                 FROM public.games_tickets
@@ -468,7 +485,6 @@ def lambda_handler(event, context):
             unique_buyer_emails = safe_int(cur.fetchone()["n"])
             persona["unique_buyer_emails"] = unique_buyer_emails
 
-            # Match count + averages
             cur.execute(f"""
                 WITH {_PERSONA_CTE}
                 SELECT COUNT(*) AS matched,
@@ -486,7 +502,6 @@ def lambda_handler(event, context):
                     100.0 * persona["matched_buyers"] / unique_buyer_emails, 1
                 )
 
-            # Longevity score buckets
             cur.execute(f"""
                 WITH {_PERSONA_CTE}
                 SELECT
@@ -535,7 +550,6 @@ def lambda_handler(event, context):
             persona["alcohol_freq"]        = _persona_dist("alcohol_freq",       "alcohol_freq")
             persona["stress_impact"]       = _persona_dist("stress_impact",      "stress_impact")
 
-            # All quiz takers avg longevity (for comparison)
             cur.execute("""
                 SELECT ROUND(AVG(longevity_score)::numeric, 1) AS avg_ls
                 FROM superage.subscriber_quiz
@@ -544,7 +558,6 @@ def lambda_handler(event, context):
             r = cur.fetchone()
             persona["all_quiz_avg_longevity"] = float(r["avg_ls"]) if r["avg_ls"] is not None else None
 
-            # Per ticket type breakdown
             cur.execute(f"""
                 WITH {_PERSONA_CTE}
                 SELECT
@@ -555,6 +568,7 @@ def lambda_handler(event, context):
                 FROM public.games_tickets gt
                 INNER JOIN buyer_oids be ON LOWER(TRIM(gt.{t_oid})) = be.oid
                 INNER JOIN quiz_deduped qd ON be.oid = qd.oid
+                WHERE gt.{GT_EXCL}
                 GROUP BY 1 ORDER BY 2 DESC
             """)
             persona["by_ticket_type"] = [
@@ -567,9 +581,9 @@ def lambda_handler(event, context):
                 for r in cur.fetchall()
             ]
 
-            # Unmatched buyers — gender + age from games_tickets
             _unmatched_where = f"""
-                WHERE LOWER(TRIM({t_oid})) NOT IN (
+                WHERE {GT_EXCL}
+                  AND LOWER(TRIM({t_oid})) NOT IN (
                     SELECT DISTINCT LOWER(TRIM(oid)) FROM superage.subscriber_quiz
                     WHERE oid IS NOT NULL AND TRIM(oid) != ''
                 )
@@ -597,7 +611,8 @@ def lambda_handler(event, context):
                         END AS range,
                         COUNT(DISTINCT LOWER(TRIM({t_oid}))) AS count
                     FROM public.games_tickets
-                    WHERE {t_dob} IS NOT NULL
+                    WHERE {GT_EXCL}
+                      AND {t_dob} IS NOT NULL
                       AND LOWER(TRIM({t_oid})) NOT IN (
                         SELECT DISTINCT LOWER(TRIM(oid)) FROM superage.subscriber_quiz
                         WHERE oid IS NOT NULL AND TRIM(oid) != ''
@@ -610,8 +625,6 @@ def lambda_handler(event, context):
 
         # ════════════════════════════════════════════════════
         # TICKET FUNNEL — Transaction Source Analysis
-        # Joins games_tickets to superage.ticket_transactions on
-        # transaction_id; uses session_* columns (not UTM in tickets).
         # ════════════════════════════════════════════════════
 
         ticket_funnel: dict = {
@@ -625,7 +638,8 @@ def lambda_handler(event, context):
             FROM public.games_tickets gt
             INNER JOIN superage.ticket_transactions tt
               ON gt.transaction_id = tt.transaction_id
-            WHERE gt.transaction_id IS NOT NULL
+            WHERE gt.is_test IS NOT TRUE
+              AND gt.transaction_id IS NOT NULL
               AND TRIM(gt.transaction_id) != ''
         """)
         ticket_funnel["matched_tickets"] = safe_int(cur.fetchone()["matched"])
@@ -638,7 +652,8 @@ def lambda_handler(event, context):
             FROM public.games_tickets gt
             INNER JOIN superage.ticket_transactions tt
               ON gt.transaction_id = tt.transaction_id
-            WHERE gt.transaction_id IS NOT NULL AND TRIM(gt.transaction_id) != ''
+            WHERE gt.is_test IS NOT TRUE
+              AND gt.transaction_id IS NOT NULL AND TRIM(gt.transaction_id) != ''
             GROUP BY 1, 2 ORDER BY 1, 3 DESC
         """)
         _medium_rows = cur.fetchall()
@@ -654,7 +669,8 @@ def lambda_handler(event, context):
             FROM public.games_tickets gt
             INNER JOIN superage.ticket_transactions tt
               ON gt.transaction_id = tt.transaction_id
-            WHERE gt.transaction_id IS NOT NULL AND TRIM(gt.transaction_id) != ''
+            WHERE gt.is_test IS NOT TRUE
+              AND gt.transaction_id IS NOT NULL AND TRIM(gt.transaction_id) != ''
             GROUP BY 1, 2 ORDER BY 1, 3 DESC
         """)
         _source_rows = cur.fetchall()
@@ -676,7 +692,8 @@ def lambda_handler(event, context):
             FROM public.games_tickets gt
             INNER JOIN superage.ticket_transactions tt
               ON gt.transaction_id = tt.transaction_id
-            WHERE gt.transaction_id IS NOT NULL AND TRIM(gt.transaction_id) != ''
+            WHERE gt.is_test IS NOT TRUE
+              AND gt.transaction_id IS NOT NULL AND TRIM(gt.transaction_id) != ''
             GROUP BY 1, 2, 3 ORDER BY 1, 4 DESC
         """)
         _campaign_rows = cur.fetchall()
@@ -715,6 +732,47 @@ def lambda_handler(event, context):
             for t in _seen_types
         ]
 
+        # Daily time-series for period filtering in the UI
+        funnel_ts = []
+        if t_date:
+            cur.execute(f"""
+                SELECT
+                    DATE(gt.{t_date})::text AS day,
+                    COALESCE(gt.ticket_type, 'Unknown') AS ticket_type,
+                    COALESCE(NULLIF(TRIM(tt.session_medium), ''), '(none)') AS medium,
+                    CASE
+                        WHEN LOWER(TRIM(tt.session_source)) IN ('ig', 'l.instagram.com', 'instagram') THEN 'Instagram'
+                        ELSE COALESCE(NULLIF(TRIM(tt.session_source), ''), '(direct)')
+                    END AS source,
+                    CASE
+                        WHEN LOWER(TRIM(tt.session_campaign)) IN ('referral', '(referral)') THEN 'Referral'
+                        WHEN LOWER(TRIM(tt.session_campaign)) IN ('organic',  '(organic)')  THEN 'Organic'
+                        WHEN LOWER(TRIM(tt.session_campaign)) IN ('direct',   '(direct)')   THEN 'Direct'
+                        ELSE COALESCE(NULLIF(TRIM(tt.session_campaign), ''), '(not set)')
+                    END AS campaign,
+                    COUNT(*) AS count
+                FROM public.games_tickets gt
+                INNER JOIN superage.ticket_transactions tt
+                    ON gt.transaction_id = tt.transaction_id
+                WHERE gt.is_test IS NOT TRUE
+                    AND gt.transaction_id IS NOT NULL
+                    AND TRIM(gt.transaction_id) != ''
+                GROUP BY 1, 2, 3, 4, 5
+                ORDER BY 1
+            """)
+            funnel_ts = [
+                {
+                    "day":         r["day"],
+                    "ticket_type": r["ticket_type"],
+                    "medium":      r["medium"],
+                    "source":      r["source"],
+                    "campaign":    r["campaign"],
+                    "count":       safe_int(r["count"]),
+                }
+                for r in cur.fetchall()
+            ]
+        ticket_funnel["timeseries"] = funnel_ts
+
         # ════════════════════════════════════════════════════
         # FILTERED LANDING EVENTS
         #
@@ -723,7 +781,6 @@ def lambda_handler(event, context):
         #         (those are replaced by raw click table counts)
         # ════════════════════════════════════════════════════
 
-        # Total filtered landing events
         cur.execute("""
             SELECT COUNT(*) AS n
             FROM superage.games_landing_events
@@ -732,7 +789,6 @@ def lambda_handler(event, context):
         """, (KNOWN_SOURCES, RAW_EMAIL_SOURCES))
         filtered_landing_total = safe_int(cur.fetchone()["n"])
 
-        # Per-source counts from filtered landing events.
         cur.execute("""
             SELECT utm_source AS source, COUNT(*) AS count
             FROM superage.games_landing_events
@@ -746,7 +802,6 @@ def lambda_handler(event, context):
             for r in cur.fetchall()
         }
 
-        # Sponsor total (all rows, no exclusion needed -- sponsors are not email sources)
         cur.execute("""
             SELECT COUNT(*) AS n
             FROM superage.games_landing_events
@@ -754,7 +809,6 @@ def lambda_handler(event, context):
         """, (SPONSOR_SOURCES,))
         landing_sponsors = safe_int(cur.fetchone()["n"])
 
-        # Sponsor by source -- all configured sponsors, zero-filled
         cur.execute("""
             SELECT utm_source AS source, COUNT(*) AS count
             FROM superage.games_landing_events
@@ -767,7 +821,6 @@ def lambda_handler(event, context):
             key=lambda x: -x["count"],
         )
 
-        # Event total -- case-insensitive utm_source match
         cur.execute("""
             SELECT COUNT(*) AS n
             FROM superage.games_landing_events
@@ -775,7 +828,6 @@ def lambda_handler(event, context):
         """, (EVENT_SOURCES,))
         landing_events_partners = safe_int(cur.fetchone()["n"])
 
-        # Event by source -- all configured events, zero-filled
         cur.execute("""
             SELECT LOWER(TRIM(utm_source)) AS source, COUNT(*) AS count
             FROM superage.games_landing_events
@@ -788,7 +840,15 @@ def lambda_handler(event, context):
             key=lambda x: -x["count"],
         )
 
-        # Campaigns from filtered landing events
+        # Google Ads clicks (superage website with google_ads_games campaign)
+        cur.execute("""
+            SELECT COUNT(*) AS n
+            FROM superage.games_landing_events
+            WHERE utm_source = 'superage'
+              AND utm_campaign = 'google_ads_games'
+        """)
+        landing_google_ads = safe_int(cur.fetchone()["n"])
+
         cur.execute("""
             SELECT utm_campaign AS campaign, COUNT(*) AS count
             FROM superage.games_landing_events
@@ -801,7 +861,6 @@ def lambda_handler(event, context):
             (r["campaign"], safe_int(r["count"])) for r in cur.fetchall()
         ]
 
-        # Daily counts from filtered landing events
         cur.execute("""
             SELECT date::date AS day, COUNT(*) AS count
             FROM superage.games_landing_events
@@ -814,7 +873,6 @@ def lambda_handler(event, context):
             (str(r["day"]), safe_int(r["count"])) for r in cur.fetchall()
         ]
 
-        # Medium counts from filtered landing events
         cur.execute("""
             SELECT utm_medium AS medium, COUNT(*) AS count
             FROM superage.games_landing_events
@@ -1010,8 +1068,9 @@ def lambda_handler(event, context):
     for src, cnt in landing_source_from_events.items():
         if src in OUR_BRAND_SOURCES and src != "superage":
             brand_source_dict[src] += cnt
-    brand_source_dict["superage (campaigns)"] += sa_total
-    brand_source_dict["superage (website)"]   += sa_website_from_landing
+    brand_source_dict["superage (campaigns)"]  += sa_total
+    brand_source_dict["superage (google ads)"] += landing_google_ads
+    brand_source_dict["superage (website)"]    += max(0, sa_website_from_landing - landing_google_ads)
     brand_source_dict["allhealthy"]  += ah_total
     brand_source_dict["ageist"]      += ag_total
     brand_source_dict["healthbrief"] += hb_total
@@ -1087,6 +1146,7 @@ def lambda_handler(event, context):
 
         "landing_events":           total_landing,
         "landing_our_brands":       landing_our_brands,
+        "landing_google_ads":       landing_google_ads,
         "landing_sponsors":         landing_sponsors,
         "landing_events_partners":  landing_events_partners,
         "estimated_revenue":        estimated_revenue,
@@ -1097,7 +1157,8 @@ def lambda_handler(event, context):
             {"label": "Ticket Purchases", "count": total_tickets,  "sub": "Confirmed purchases"},
         ],
 
-        "ticket_types": ticket_types,
+        "ticket_types":   ticket_types,
+        "tickets_by_day": tickets_by_day,
 
         "ticket_waitlist_overlap": {
             "on_waitlist":     waitlist_buyers,
@@ -1137,7 +1198,8 @@ def lambda_handler(event, context):
             "sa_raw_email":              sa_total,
             "sa_website_from_landing":   sa_website_from_landing,
             "superage_campaigns_bucket": sa_total,
-            "superage_website_bucket":   sa_website_from_landing,
+            "superage_google_ads_bucket": landing_google_ads,
+            "superage_website_bucket":   max(0, sa_website_from_landing - landing_google_ads),
             "ah_raw_email":              ah_total,
             "ag_raw_email":              ag_total,
             "hb_raw_email":              hb_total,
@@ -1153,9 +1215,9 @@ def lambda_handler(event, context):
 
     logger.info(
         "Done -- tickets=%d waitlist=%d "
-        "landing=%d (sa_raw=%d sa_web=%d ah=%d ag=%d hb=%d filtered=%d sponsors=%d events=%d) r2_key=%s",
+        "landing=%d (sa_raw=%d sa_web=%d google_ads=%d ah=%d ag=%d hb=%d filtered=%d sponsors=%d events=%d) r2_key=%s",
         total_tickets, total_waitlist,
-        total_landing, sa_total, sa_website_from_landing,
+        total_landing, sa_total, sa_website_from_landing, landing_google_ads,
         ah_total, ag_total, hb_total, filtered_landing_total, landing_sponsors,
         landing_events_partners, R2_FILE_PATH,
     )
@@ -1169,6 +1231,7 @@ def lambda_handler(event, context):
             "total_waitlist":           total_waitlist,
             "landing_events":           total_landing,
             "landing_our_brands":       landing_our_brands,
+            "landing_google_ads":       landing_google_ads,
             "landing_sponsors":         landing_sponsors,
             "landing_events_partners":  landing_events_partners,
             "r2":                       r2_result,

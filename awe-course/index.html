@@ -1,0 +1,622 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AWE Course — Analytics</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js"></script>
+<style>
+:root {
+  --bg:#f6f8fa; --card:#ffffff; --card-2:#f0f2f5; --card-border:#d0d7de;
+  --text:#1f2328; --text-muted:#57606a; --text-dim:#8c959f;
+  --accent:#0969da; --green:#1a7f37; --red:#cf222e; --orange:#9a6700;
+  --purple:#8250df; --pink:#bf3989; --cyan:#1b7c83; --gold:#7d4e00;
+  --header-bg:linear-gradient(160deg,#dce8f5 0%,#f6f8fa 60%);
+  --row-hover:#f0f2f5; --row-border:#d0d7de;
+}
+body.dark {
+  --bg:#0d1117; --card:#161b22; --card-2:#1c2128; --card-border:#30363d;
+  --text:#e6edf3; --text-muted:#8b949e; --text-dim:#484f58;
+  --accent:#58a6ff; --green:#3fb950; --red:#f85149; --orange:#d29922;
+  --purple:#bc8cff; --pink:#f778ba; --cyan:#39c5cf; --gold:#e3b341;
+  --header-bg:linear-gradient(160deg,#0d1b2e 0%,#0d1117 60%);
+  --row-hover:#1c2128; --row-border:#30363d;
+}
+*{margin:0;padding:0;box-sizing:border-box;}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:var(--bg);color:var(--text);font-size:14px;}
+.header{background:var(--header-bg);border-bottom:1px solid var(--card-border);padding:14px 32px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:100;}
+.header-left{display:flex;align-items:center;gap:14px;}
+.header-badge{background:linear-gradient(135deg,#1f4e79,#1a6cad);border:1px solid #2a7fc5;color:#7ec8f0;font-size:10px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;padding:4px 10px;border-radius:20px;white-space:nowrap;}
+.header h1{font-size:17px;font-weight:600;color:var(--text);}.header h1 span{color:var(--accent);}
+.header-right{display:flex;align-items:center;gap:16px;}
+.theme-toggle{display:flex;align-items:center;gap:7px;cursor:pointer;background:var(--card);border:1px solid var(--card-border);border-radius:20px;padding:5px 12px 5px 8px;transition:all 0.2s;}
+.theme-toggle:hover{border-color:var(--accent);}.toggle-track{width:34px;height:18px;background:var(--accent);border-radius:9px;position:relative;flex-shrink:0;}
+.toggle-thumb{width:13px;height:13px;background:#fff;border-radius:50%;position:absolute;top:2.5px;left:2.5px;transition:transform 0.25s;box-shadow:0 1px 3px rgba(0,0,0,0.3);}body.dark .toggle-thumb{transform:translateX(16px);}.toggle-label{font-size:11px;font-weight:600;color:var(--text-muted);letter-spacing:0.3px;}
+.tabs{display:flex;gap:2px;padding:0 32px;background:var(--bg);border-bottom:1px solid var(--card-border);overflow-x:auto;scrollbar-width:none;}.tabs::-webkit-scrollbar{display:none;}
+.tab{padding:11px 16px;font-size:13px;font-weight:500;color:var(--text-muted);border:none;background:none;cursor:pointer;border-bottom:2px solid transparent;transition:all 0.2s;white-space:nowrap;}.tab:hover{color:var(--text);}.tab.active{color:var(--accent);border-bottom-color:var(--accent);}
+.page{display:none;padding:26px 32px;width:100%;max-width:1800px;margin:0 auto;}.page.active{display:block;}
+.section-header{display:flex;align-items:center;gap:10px;margin-bottom:18px;padding-bottom:12px;border-bottom:1px solid var(--card-border);}.section-header h2{font-size:15px;font-weight:600;}.section-header .sub{font-size:11px;color:var(--text-dim);margin-left:auto;font-weight:400;}
+.dot{width:7px;height:7px;border-radius:50%;background:var(--accent);flex-shrink:0;}.dot.green{background:var(--green);}.dot.orange{background:var(--orange);}.dot.purple{background:var(--purple);}.dot.pink{background:var(--pink);}.dot.cyan{background:var(--cyan);}.dot.gold{background:var(--gold);}
+.grid-2{display:grid;grid-template-columns:1fr 1fr;gap:18px;margin-bottom:18px;}.grid-3{display:grid;grid-template-columns:repeat(3,1fr);gap:18px;margin-bottom:18px;}@media(max-width:1100px){.grid-3{grid-template-columns:1fr 1fr;}}@media(max-width:900px){.grid-2,.grid-3{grid-template-columns:1fr;}.header{padding:14px 18px;}.page{padding:20px 18px;}.tabs{padding:0 18px;}}
+.kpi-row{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px;margin-bottom:24px;}@media(max-width:560px){.kpi-row{grid-template-columns:1fr;}}.kpi-card{background:var(--card);border:1px solid var(--card-border);border-radius:10px;padding:16px 18px;min-height:112px;}.kpi-card .label{font-size:11px;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.6px;margin-bottom:8px;}.kpi-card .value{font-size:28px;font-weight:700;line-height:1;}.kpi-card .sub{font-size:11px;color:var(--text-muted);margin-top:6px;}.kpi-card.accent .value{color:var(--accent);}.kpi-card.green .value{color:var(--green);}.kpi-card.orange .value{color:var(--orange);}.kpi-card.purple .value{color:var(--purple);}.kpi-card.cyan .value{color:var(--cyan);}.kpi-card.gold .value{color:var(--gold);}.kpi-card.pending{border-style:dashed;}.kpi-card.pending .value{color:var(--text-dim);}
+.card{background:var(--card);border:1px solid var(--card-border);border-radius:10px;padding:18px 20px;margin-bottom:0;}.card h3{font-size:12px;font-weight:600;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.6px;margin-bottom:14px;display:flex;align-items:center;gap:8px;}.card h3 span.note{color:var(--text-dim);font-weight:400;text-transform:none;letter-spacing:0;font-size:11px;margin-left:auto;}.chart-wrap{position:relative;height:220px;}.chart-wrap.tall{height:300px;}.chart-wrap.short{height:170px;}
+.funnel-wrap{display:flex;flex-direction:column;align-items:center;padding:8px 0 4px;gap:0;}
+.funnel-split{display:flex;gap:24px;width:100%;justify-content:center;}.funnel-branch{display:flex;flex-direction:column;align-items:center;flex:1;max-width:300px;}.funnel-branch .funnel-step{width:100%;}@media(max-width:640px){.funnel-split{flex-direction:column;align-items:center;}}.funnel-step{border:1.5px solid;border-radius:8px;padding:14px 24px;text-align:center;box-sizing:border-box;transition:width 0.5s ease;}.funnel-step-label{font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:0.6px;color:var(--text-muted);margin-bottom:4px;}.funnel-step-count{font-size:26px;font-weight:700;line-height:1.1;margin-bottom:3px;}.funnel-step-sub{font-size:11px;color:var(--text-muted);}.funnel-arrow{display:flex;flex-direction:column;align-items:center;padding:4px 0;gap:2px;}.funnel-rate{font-size:11px;color:var(--accent);font-weight:500;}.funnel-arrow-line{width:1.5px;height:14px;background:var(--card-border);}.funnel-arrow-head{width:0;height:0;border-left:5px solid transparent;border-right:5px solid transparent;border-top:6px solid var(--card-border);}
+.funnel-organic{position:absolute;left:calc(100% + 12px);top:50%;transform:translateY(-50%);display:flex;align-items:center;gap:6px;}
+.funnel-organic-arrow{width:0;height:0;border-top:6px solid transparent;border-bottom:6px solid transparent;border-right:8px solid #64748b;flex-shrink:0;}
+.funnel-organic-box{border:1.5px dashed #64748b;border-radius:8px;padding:8px 12px;text-align:center;white-space:nowrap;background:var(--card);}
+.funnel-organic-count{font-size:18px;font-weight:700;color:#94a3b8;line-height:1.1;margin:2px 0;}
+@media(max-width:1024px){.funnel-organic{position:static;transform:none;justify-content:center;margin-top:10px;}.funnel-organic-arrow{transform:rotate(90deg);}}
+.stat-row{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:16px;}.stat-chip{background:var(--card-2);border:1px solid var(--card-border);border-radius:8px;padding:10px 14px;min-width:110px;}.stat-chip .sc-label{font-size:10px;color:var(--text-dim);text-transform:uppercase;letter-spacing:0.04em;margin-bottom:3px;}.stat-chip .sc-val{font-size:17px;font-weight:700;color:var(--text);}.sc-accent{color:var(--accent)!important;}.sc-green{color:var(--green)!important;}.sc-orange{color:var(--orange)!important;}.sc-purple{color:var(--purple)!important;}.sc-cyan{color:var(--cyan)!important;}.sc-gold{color:var(--gold)!important;}.sc-red{color:var(--red)!important;}
+.seg-toggle,.per-toggle{display:flex;gap:0;border:1px solid var(--card-border);border-radius:8px;overflow:hidden;width:fit-content;}.seg-toggle button,.per-toggle button{padding:8px 18px;font-size:12px;font-weight:600;border:none;background:var(--card-2);color:var(--text-muted);cursor:pointer;transition:all 0.15s;white-space:nowrap;}.seg-toggle button.active{background:var(--accent);color:#fff;}.per-toggle button.active{background:var(--accent);color:#fff;}
+.toolbar{display:flex;gap:14px;align-items:center;flex-wrap:wrap;margin-bottom:18px;}
+table{width:100%;border-collapse:collapse;font-size:13px;}th{text-align:left;font-size:11px;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.5px;padding:7px 10px;border-bottom:1px solid var(--card-border);}td{padding:8px 10px;border-bottom:1px solid var(--row-border);color:var(--text);vertical-align:middle;}tr:last-child td{border-bottom:none;}tr:hover td{background:var(--row-hover);}.td-r{text-align:right;}
+.src-badge{display:inline-block;font-size:9px;font-weight:700;letter-spacing:1px;text-transform:uppercase;padding:2px 7px;border-radius:10px;vertical-align:middle;margin-left:4px;}.src-badge.sa{background:rgba(9,105,218,0.12);color:var(--accent);border:1px solid rgba(9,105,218,0.25);}.src-badge.ah{background:rgba(26,127,55,0.12);color:var(--green);border:1px solid rgba(26,127,55,0.25);}.src-badge.hb{background:rgba(27,124,131,0.12);color:var(--cyan);border:1px solid rgba(27,124,131,0.25);}
+.empty{font-size:13px;color:var(--text-muted);padding:22px;text-align:center;border:1px dashed var(--card-border);border-radius:8px;background:var(--card-2);}
+.freshness-badge{display:inline-flex;align-items:center;border:1px solid var(--card-border);background:var(--card-2);color:var(--accent);border-radius:999px;padding:2px 8px;font-size:10px;font-weight:700;letter-spacing:.6px;text-transform:uppercase;line-height:1.4;}
+.pill{display:inline-flex;align-items:center;background:var(--card-2);border:1px solid var(--card-border);border-radius:999px;padding:3px 10px;font-size:11px;color:var(--text-muted);gap:6px;}
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div class="header-left">
+    <div class="header-badge">Course Intel</div>
+    <h1>AWE Course — <span>Analytics</span></h1>
+  </div>
+  <div class="header-right">
+    <div style="text-align:right;line-height:1.5;">
+      <div style="display:flex;align-items:center;justify-content:flex-end;gap:8px;">
+        <span class="freshness-badge">Last update</span>
+        <span id="header-clock" style="font-size:13px;font-weight:600;color:var(--text);">—</span>
+      </div>
+      <div style="font-size:11px;color:var(--text-dim);">Clicks &middot; Waitlist &middot; Persona (times in EST)</div>
+    </div>
+    <div style="width:1px;height:28px;background:var(--card-border);"></div>
+    <button class="theme-toggle" onclick="toggleTheme()">
+      <div class="toggle-track"><div class="toggle-thumb"></div></div>
+      <span class="toggle-label" id="toggle-label">DARK</span>
+    </button>
+  </div>
+</div>
+
+<div class="tabs">
+  <button class="tab active" onclick="showTab('overview',this)">Overview</button>
+  <button class="tab" onclick="showTab('persona',this)">Audience Persona</button>
+  <button class="tab" onclick="showTab('acquisition',this)">Acquisition</button>
+</div>
+
+<!-- ═══════════════ OVERVIEW ═══════════════ -->
+<div class="page active" id="tab-overview">
+  <div class="toolbar">
+    <div class="seg-toggle" id="brand-toggle"></div>
+    <span class="pill" id="brand-note">unique people who landed on the course main page through campaigns</span>
+  </div>
+
+  <div class="kpi-row" id="ov-kpis"></div>
+
+  <div class="section-header"><div class="dot orange"></div><h2>Conversion Funnel</h2>
+    <span class="sub">clicks → waitlist &nbsp;·&nbsp; → checkout events → members</span></div>
+  <div class="card" style="margin-bottom:18px;">
+    <div class="funnel-wrap" id="ov-funnel"></div>
+    <div id="funnel-cross" style="margin-top:12px;text-align:center;"></div>
+  </div>
+
+  <div class="grid-2">
+    <div class="card"><h3>Clicks by Brand <span class="note">campaign activity · unique vs non-unique</span></h3><div class="chart-wrap tall"><canvas id="chart-brand"></canvas></div></div>
+    <div class="card"><h3>Checkout Events by Acquisition <span class="note">static + tracked</span></h3><div class="chart-wrap tall"><canvas id="chart-checkout-bucket"></canvas></div></div>
+  </div>
+
+  <div class="section-header"><div class="dot gold"></div><h2>Community Members</h2>
+    <span class="sub" id="members-sub">Community members synced from Circle</span></div>
+  <div class="stat-row" id="members-stats"></div>
+  <div class="grid-2">
+    <div class="card"><h3>Members Growth <span class="note">by join date</span></h3><div class="chart-wrap"><canvas id="mem-growth"></canvas></div></div>
+    <div class="card"><h3>Waitlist Growth <span class="note">active · by subscribe date</span></h3><div class="chart-wrap"><canvas id="mem-wl-growth"></canvas></div></div>
+  </div>
+
+  <div class="section-header"><div class="dot cyan"></div><h2>Trends</h2>
+    <span class="sub">clicks &amp; checkout events over time</span></div>
+  <div class="toolbar">
+    <div class="per-toggle" id="trend-gran">
+      <button class="active" onclick="setGran('daily',this)">Daily</button>
+      <button onclick="setGran('weekly',this)">Weekly</button>
+      <button onclick="setGran('monthly',this)">Monthly</button>
+    </div>
+    <div class="per-toggle" id="trend-range">
+      <button class="active" onclick="setRange('all',this)">All time</button>
+      <button onclick="setRange('90',this)">90d</button>
+      <button onclick="setRange('30',this)">30d</button>
+      <button onclick="setRange('7',this)">7d</button>
+    </div>
+  </div>
+  <div class="grid-2">
+    <div class="card"><h3>Click Trend <span class="note">non-unique clicks</span></h3><div class="chart-wrap tall"><canvas id="chart-clicks-trend"></canvas></div></div>
+    <div class="card"><h3>Checkout Events Trend <span class="note">static + tracked</span></h3><div class="chart-wrap tall"><canvas id="chart-checkout-trend"></canvas></div></div>
+  </div>
+</div>
+
+<!-- ═══════════════ AUDIENCE PERSONA ═══════════════ -->
+<div class="page" id="tab-persona">
+  <div class="section-header"><div class="dot purple"></div><h2>Who are they?</h2>
+    <span class="sub">Joined to the longevity quiz by email</span></div>
+
+  <div class="toolbar">
+    <div class="seg-toggle" id="seg-toggle">
+      <button class="active" onclick="setSegment('all',this)">All</button>
+      <button onclick="setSegment('clickers',this)">Clickers</button>
+      <button onclick="setSegment('waitlisters',this)">Waitlisters</button>
+      <button onclick="setSegment('buyers',this)">Members</button>
+    </div>
+    <span class="pill" id="seg-summary">—</span>
+  </div>
+
+  <div class="stat-row" id="persona-stats"></div>
+
+  <div class="card" style="margin-bottom:18px;"><h3>Quiz Uptake by Segment</h3><div class="chart-wrap"><canvas id="chart-uptake"></canvas></div></div>
+
+  <div class="section-header"><div class="dot"></div><h2 id="persona-seg-title">Persona</h2>
+    <span class="sub" id="persona-seg-sub"></span></div>
+  <div class="grid-3">
+    <div class="card"><h3>Age</h3><div class="chart-wrap"><canvas id="p-age"></canvas></div></div>
+    <div class="card"><h3>Gender</h3><div class="chart-wrap"><canvas id="p-gender"></canvas></div></div>
+    <div class="card"><h3>Financial Situation</h3><div class="chart-wrap"><canvas id="p-financial_situation"></canvas></div></div>
+    <div class="card"><h3>Education Level</h3><div class="chart-wrap"><canvas id="p-education_level"></canvas></div></div>
+    <div class="card"><h3>Sleep Hours</h3><div class="chart-wrap"><canvas id="p-sleep_hours"></canvas></div></div>
+    <div class="card"><h3>Exercise Frequency</h3><div class="chart-wrap"><canvas id="p-exercise_freq"></canvas></div></div>
+    <div class="card"><h3>Smoking Status</h3><div class="chart-wrap"><canvas id="p-smoking_status"></canvas></div></div>
+    <div class="card"><h3>Alcohol Frequency</h3><div class="chart-wrap"><canvas id="p-alcohol_freq"></canvas></div></div>
+    <div class="card"><h3>Stress Impact</h3><div class="chart-wrap"><canvas id="p-stress_impact"></canvas></div></div>
+  </div>
+</div>
+
+<!-- ═══════════════ ACQUISITION ═══════════════ -->
+<div class="page" id="tab-acquisition">
+  <div class="section-header"><div class="dot green"></div><h2>Acquisition (UTM)</h2>
+    <span class="sub">Waitlist &amp; buyers are different entities &mdash; pick which one to view</span></div>
+  <div class="toolbar">
+    <div class="seg-toggle" id="acq-toggle">
+      <button class="active" onclick="setAcqEntity('all',this)">All</button>
+      <button onclick="setAcqEntity('waitlist',this)">Waitlist</button>
+      <button onclick="setAcqEntity('buyers',this)">Members</button>
+    </div>
+    <span class="pill" id="acq-summary">—</span>
+  </div>
+  <div class="grid-3" id="acq-utm-grid">
+    <div class="card"><h3 id="acq-t-source">By UTM Source</h3><div class="chart-wrap tall"><canvas id="acq-utm_source"></canvas></div></div>
+    <div class="card"><h3 id="acq-t-medium">By UTM Medium</h3><div class="chart-wrap tall"><canvas id="acq-utm_medium"></canvas></div></div>
+    <div class="card"><h3 id="acq-t-campaign">By UTM Campaign</h3><div class="chart-wrap tall"><canvas id="acq-utm_campaign"></canvas></div></div>
+  </div>
+  <div id="acq-utm-empty" style="margin-bottom:18px;"></div>
+
+  <div class="section-header"><div class="dot"></div><h2>Clicks by Brand &amp; Campaign</h2></div>
+  <div class="card" style="margin-bottom:18px;">
+    <h3>Unique Clickers vs Non-unique Clicks by Brand</h3>
+    <div class="chart-wrap"><canvas id="acq-brand"></canvas></div>
+  </div>
+  <div class="card">
+    <h3>Top Campaigns Driving AWE Clicks <span class="note" id="camp-count"></span></h3>
+    <div style="overflow-x:auto;">
+      <table>
+        <thead><tr><th>Campaign</th><th>Brand</th><th class="td-r">Clicks (non-unique)</th></tr></thead>
+        <tbody id="camp-tbody"></tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<script>
+// ── config ──
+const DASHBOARD_API = 'https://dashboard.pardon-ventures-06b.workers.dev';
+const API_TOKEN     = 'dashboardkiwilytics123';
+const authHeaders   = { headers: { 'X-Auth-Token': API_TOKEN } };
+const R2_KEY        = 'awe-course/awe_course.json';
+
+const charts = {};
+let DATA = null;
+let brand = 'All';          // Overview page-level brand filter
+let segment = 'all';
+let acqEntity = 'all';
+let gran = 'daily';
+let range = 'all';
+const ACQ_LABEL = {all:'All (waitlist + members)', waitlist:'Waitlist', buyers:'Members'};
+
+const BRAND_CLASS = {SuperAge:'sa', AllHealthy:'ah', HealthBrief:'hb'};
+const BRAND_VAR   = {SuperAge:'--accent', AllHealthy:'--green', HealthBrief:'--cyan'};
+const SEG_LABEL   = {all:'All', clickers:'Clickers', waitlisters:'Waitlisters', buyers:'Members'};
+const SEG_VAR     = {all:'--purple', clickers:'--accent', waitlisters:'--green', buyers:'--gold'};
+const CAT_VARS    = ['--accent','--green','--orange','--purple','--cyan','--pink','--red','--gold'];
+
+// ── theme + chart helpers ──
+// All chart colors are pulled from the live CSS variables so they match the
+// design system exactly in BOTH light and dark (charts rebuild on theme toggle).
+function cssv(n){return getComputedStyle(document.body).getPropertyValue(n).trim()||'#888888';}
+function hexToRgba(hex,a){hex=hex.replace('#','');if(hex.length===3)hex=hex.split('').map(c=>c+c).join('');const n=parseInt(hex,16);return `rgba(${(n>>16)&255},${(n>>8)&255},${n&255},${a==null?1:a})`;}
+function tcol(v,a){return hexToRgba(cssv(v),a);}          // theme color from a CSS var
+function brandCol(b,a){return tcol(BRAND_VAR[b]||'--accent',a);}
+function segCol(s,a){return tcol(SEG_VAR[s]||'--accent',a);}
+function catCol(i,a){return tcol(CAT_VARS[i%CAT_VARS.length],a);}
+function muted(a){return `rgba(148,163,184,${a==null?1:a})`;} // slate — used for "did not" / non-unique
+function gc(){return cssv('--card-border');}
+function tc(){return cssv('--text-muted');}
+function toggleTheme(){
+  const dark=document.body.classList.toggle('dark');
+  document.getElementById('toggle-label').textContent=dark?'DARK':'LIGHT';
+  localStorage.setItem('theme',dark?'dark':'light');
+  if(DATA) renderAll();
+}
+(function(){
+  const s=localStorage.getItem('theme')||(window.matchMedia('(prefers-color-scheme:dark)').matches?'dark':'light');
+  if(s==='dark'){document.body.classList.add('dark');document.getElementById('toggle-label').textContent='DARK';}
+  else{document.getElementById('toggle-label').textContent='LIGHT';}
+})();
+function setHeaderClock(ts){document.getElementById('header-clock').textContent=ts||'—';}
+function showTab(id,btn){
+  document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
+  document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
+  document.getElementById('tab-'+id).classList.add('active');
+  btn.classList.add('active');
+}
+function mkChart(id,cfg){if(charts[id])charts[id].destroy();const el=document.getElementById(id);if(!el)return;charts[id]=new Chart(el,cfg);}
+function fmtNum(v){const n=Number(v||0);return Number.isFinite(n)?n.toLocaleString():'0';}
+function pct(v){return v==null?'—':(Number(v).toFixed(1)+'%');}
+function escHtml(v){return String(v??'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
+function baseOpts(extra){return Object.assign({responsive:true,maintainAspectRatio:false,
+  interaction:{mode:'index',intersect:false},   // hover anywhere on the x-axis, not only on points
+  scales:{x:{grid:{color:gc()},ticks:{color:tc(),font:{size:10}}},y:{grid:{color:gc()},ticks:{color:tc()},beginAtZero:true}},
+  plugins:{legend:{labels:{color:tc(),font:{size:11}}},tooltip:{mode:'index',intersect:false}}},extra||{});}
+
+// ── data load ──
+async function loadData(){
+  const isLocal = location.hostname==='localhost'||location.hostname==='127.0.0.1';
+  const url  = isLocal ? 'awe_course.json' : `${DASHBOARD_API}/${R2_KEY}`;
+  const opts = isLocal ? {} : authHeaders;
+  try{
+    const r=await fetch(url,opts);
+    if(!r.ok) throw new Error('HTTP '+r.status);
+    DATA=await r.json();
+    setHeaderClock(DATA.last_updated);
+    renderAll();
+  }catch(e){
+    console.error('loadData',e);
+    document.getElementById('ov-kpis').innerHTML=
+      '<div class="empty" style="grid-column:1/-1">Could not load awe_course.json. '+
+      (isLocal?'Run run_local.py first to generate it.':'Check the Worker URL, token, and R2 key.')+'</div>';
+  }
+}
+
+function renderAll(){
+  renderBrandToggle();
+  renderOverview();
+  renderPersona();
+  renderAcquisition();
+}
+function renderOverview(){
+  renderKpis();
+  renderFunnel();
+  renderBrandChart();
+  renderCheckoutBucket();
+  renderTrends();
+  renderBuyers();
+}
+
+// ── OVERVIEW ──
+// page-level brand filter
+function curBrand(){ return (DATA.by_brand||{})[brand] || (DATA.by_brand||{})['All'] || {}; }
+function renderBrandToggle(){
+  const brands = DATA.brands || ['All'];
+  document.getElementById('brand-toggle').innerHTML = brands.map(b=>
+    `<button class="${b===brand?'active':''}" onclick="setBrand('${b}',this)">${escHtml(b)}</button>`).join('');
+}
+function setBrand(b,btn){
+  brand=b;
+  document.querySelectorAll('#brand-toggle button').forEach(x=>x.classList.remove('active'));
+  btn.classList.add('active');
+  renderOverview();
+}
+function renderKpis(){
+  const cb=curBrand();
+  const uc=+cb.unique_clickers||0;
+  const c2w = uc? cb.waitlist_total*100/uc : null;
+  const tiles=[
+    {cls:'accent', label:'Clicks',                     val:fmtNum(cb.total_clicks),   sub:fmtNum(cb.unique_clickers)+' unique · landed on the course main page through campaigns'},
+    {cls:'purple', label:'Landed via Google Ads',      val:fmtNum(cb.google_ads_landings), sub:'landed on the course main page through ads'},
+    {cls:'green',  label:'Waitlist · Nervous System',  val:fmtNum(cb.waitlist_total),    sub:'Click → Waitlist '+pct(c2w)},
+    {cls:'cyan',   label:'Checkout Events',            val:fmtNum(cb.checkout_total),    sub:fmtNum(cb.checkout_distinct)+' distinct emails · reached checkout events'},
+    {cls:'gold',   label:'Community Members',          val:fmtNum(cb.members_total),      sub:'joined the AWE community'},
+  ];
+  document.getElementById('ov-kpis').innerHTML=tiles.map(t=>
+    `<div class="kpi-card ${t.cls}"><div class="label">${t.label}</div><div class="value">${t.val}</div><div class="sub">${t.sub}</div></div>`).join('');
+}
+// funnel building blocks
+function fStep(label,count,colorVar,sub,widthPct){
+  return `<div class="funnel-step" style="width:${widthPct||'100%'};border-color:var(${colorVar})">
+    <div class="funnel-step-label">${escHtml(label||'')}</div>
+    <div class="funnel-step-count" style="color:var(${colorVar})">${count}</div>
+    ${sub?`<div class="funnel-step-sub">${escHtml(sub)}</div>`:''}</div>`;
+}
+function fArrow(rate){
+  return `<div class="funnel-arrow"><span class="funnel-rate">${rate||''}</span><div class="funnel-arrow-line"></div><div class="funnel-arrow-head"></div></div>`;
+}
+// Checkout node subtitle: distinct emails (organic/direct is shown as a separate
+// side box that feeds into checkout, so it's not mixed into this line).
+function checkoutSub(l){
+  return (l.distinct!=null?fmtNum(l.distinct)+' distinct emails · ':'')+'reached checkout events';
+}
+// Connected funnel: shared top (AWE link clicks) -> [waitlist] and [checkout landing -> buyers]
+function renderFunnel(){
+  const f=curBrand().funnel||{};const el=document.getElementById('ov-funnel');
+  const top=f.top||{}, w=f.waitlist||{}, l=f.landing||{}, b=f.buyers||{}, g=f.google_ads||{};
+  const left = `<div class="funnel-branch">`
+    + fArrow(w.pct_of_top!=null?pct(w.pct_of_top):'')
+    + fStep(w.label, fmtNum(w.count), '--green', 'joined the waitlist')
+    + `</div>`;
+  let right;
+  if(l.available===false){
+    right = `<div class="funnel-branch">`
+      + fArrow('')
+      + fStep(l.label, '—', '--text-dim', l.note||'not tracked yet')
+      + `</div>`;
+  } else {
+    const buyerSub = 'joined the community';
+    const org=+l.organic||0;
+    // Checkout node + an "Organic / Direct" side box that feeds INTO it (those events
+    // did not come from Clicks or Google Ads — they entered at checkout).
+    const checkoutNode = `<div class="funnel-step" style="width:100%;border-color:var(--cyan);position:relative;">
+        <div class="funnel-step-label">${escHtml(l.label||'')}</div>
+        <div class="funnel-step-count" style="color:var(--cyan)">${fmtNum(l.count)}</div>
+        <div class="funnel-step-sub">${escHtml(checkoutSub(l))}</div>
+        ${org>0?`<div class="funnel-organic">
+          <div class="funnel-organic-arrow"></div>
+          <div class="funnel-organic-box">
+            <div class="funnel-step-label">Organic / Direct</div>
+            <div class="funnel-organic-count">${fmtNum(org)}</div>
+            <div class="funnel-step-sub">of ${fmtNum(l.count)} checkout events<br>entered directly (no campaign / ad)</div>
+          </div></div>`:''}
+      </div>`;
+    right = `<div class="funnel-branch">`
+      + fArrow(l.pct_of_top!=null?pct(l.pct_of_top):'')
+      + checkoutNode
+      + fArrow(b.pct_of_landing!=null?pct(b.pct_of_landing):'')
+      + fStep('Community Members', fmtNum(b.count), '--gold', buyerSub)
+      + `</div>`;
+  }
+  // Top row: Clicks (total big, unique small) + Google Ads landings beside it.
+  const clicksBox = `<div class="funnel-step" style="flex:2;border-color:var(--accent)">
+      <div class="funnel-step-label">Clicks</div>
+      <div class="funnel-step-count" style="color:var(--accent)">${fmtNum(top.count)}</div>
+      <div class="funnel-step-sub">${fmtNum(top.unique)} unique · landed on the course main page through campaigns</div>
+    </div>`;
+  const gadsBox = (g.count) ? `<div class="funnel-step" style="flex:1;border-color:var(--purple)">
+      <div class="funnel-step-label">Google Ads</div>
+      <div class="funnel-step-count" style="color:var(--purple)">${fmtNum(g.count)}</div>
+      <div class="funnel-step-sub">landed on the course main page through ads</div>
+    </div>` : '';
+  const topRow = `<div style="display:flex;gap:12px;width:64%;margin:0 auto;">${clicksBox}${gadsBox}</div>`;
+  el.innerHTML = topRow + `<div class="funnel-split">${left}${right}</div>`;
+  const x=f.waitlist_also_bought||{};
+  const cross=document.getElementById('funnel-cross');
+  if(cross){
+    cross.innerHTML = w.count
+      ? `<span class="pill">${fmtNum(x.count)} of ${fmtNum(w.count)} waitlisters also became members${x.pct!=null?' · '+pct(x.pct):''}</span>`
+      : '';
+  }
+}
+function renderBrandChart(){
+  let bb=(DATA.clicks||{}).by_brand||[];
+  if(brand!=='All') bb=bb.filter(x=>x.brand===brand);
+  bb=bb.slice();
+  // SuperAge · Google Ads — total (landings) only, no unique (no oid)
+  const gads=+curBrand().google_ads_landings||0;
+  if(gads>0) bb.push({brand:'SuperAge · Google Ads',clicks:gads,unique_clickers:null,gads:true});
+  mkChart('chart-brand',{type:'bar',
+    data:{labels:bb.map(x=>x.brand),datasets:[
+      {label:'Total clicks',data:bb.map(x=>x.clicks),backgroundColor:bb.map(x=>x.gads?tcol('--purple',0.85):brandCol(x.brand,0.85)),borderRadius:5},
+      {label:'Unique clickers',data:bb.map(x=>x.unique_clickers),backgroundColor:muted(0.45),borderRadius:5}
+    ]},options:baseOpts({indexAxis:'y',
+      scales:{x:{grid:{color:gc()},ticks:{color:tc(),font:{size:10}},beginAtZero:true},y:{grid:{color:gc()},ticks:{color:tc()}}}})});
+}
+// checkout landing events by acquisition bucket (respects the brand filter)
+function renderCheckoutBucket(){
+  let rows=((DATA.checkout||{}).by_bucket||[]).slice();
+  if(brand!=='All') rows=rows.filter(r=>r.brand===brand);
+  rows.sort((a,b)=>b.count-a.count);
+  mkChart('chart-checkout-bucket',{type:'bar',
+    data:{labels:rows.map(r=>r.bucket),datasets:[
+      {label:'Checkout events',data:rows.map(r=>r.count),
+       backgroundColor:rows.map(r=>/google ads/i.test(r.bucket)?tcol('--purple',0.8):(r.brand?brandCol(r.brand,0.8):tcol('--cyan',0.8))),borderRadius:5}
+    ]},options:baseOpts({indexAxis:'y',plugins:{legend:{display:false}},
+      scales:{x:{grid:{color:gc()},ticks:{color:tc(),font:{size:10}},beginAtZero:true},y:{grid:{color:gc()},ticks:{color:tc(),font:{size:10}}}}})});
+}
+
+// trend rebucketing
+function bucketDay(day){ // 'YYYY-MM-DD'
+  if(gran==='monthly') return day.slice(0,7);
+  if(gran==='weekly'){const d=new Date(day+'T00:00:00Z');const dow=(d.getUTCDay()+6)%7;d.setUTCDate(d.getUTCDate()-dow);return d.toISOString().slice(0,10);}
+  return day;
+}
+function withinRange(day){
+  if(range==='all') return true;
+  const cutoff=new Date();cutoff.setDate(cutoff.getDate()-Number(range));
+  return new Date(day+'T00:00:00Z')>=cutoff;
+}
+function aggSeries(rows,valKey){
+  const m={};
+  rows.filter(r=>withinRange(r.day)).forEach(r=>{const b=bucketDay(r.day);m[b]=(m[b]||0)+Number(r[valKey]||0);});
+  const labels=Object.keys(m).sort();
+  return {labels,values:labels.map(l=>m[l])};
+}
+function aggMap(rows,valKey){
+  const m={};
+  (rows||[]).filter(r=>withinRange(r.day)).forEach(r=>{const b=bucketDay(r.day);m[b]=(m[b]||0)+Number(r[valKey||'count']||0);});
+  return m;
+}
+function setGran(g,btn){gran=g;segActive('trend-gran',btn);renderTrends();}
+function setRange(r,btn){range=r;segActive('trend-range',btn);renderTrends();}
+function segActive(groupId,btn){document.querySelectorAll('#'+groupId+' button').forEach(b=>b.classList.remove('active'));btn.classList.add('active');}
+function renderTrends(){
+  const c=curBrand();
+  // Click Trend: email clicks (non-unique) + Google Ads landings stacked on top.
+  const clickMap=aggMap(c.clicks_by_day||(DATA.clicks||{}).by_day||[]);
+  const gadsMap =aggMap(c.google_ads_by_day||[]);
+  const clLabels=Array.from(new Set([...Object.keys(clickMap),...Object.keys(gadsMap)])).sort();
+  const gadsVals=clLabels.map(l=>gadsMap[l]||0);
+  const hasGads =gadsVals.some(v=>v>0);
+  const clDatasets=[{label:'Clicks (non-unique)',data:clLabels.map(l=>clickMap[l]||0),backgroundColor:tcol('--accent',0.8),borderRadius:4,stack:'clicks'}];
+  if(hasGads) clDatasets.push({label:'Google Ads landings',data:gadsVals,backgroundColor:tcol('--orange',0.8),borderRadius:4,stack:'clicks'});
+  mkChart('chart-clicks-trend',{type:'bar',
+    data:{labels:clLabels,datasets:clDatasets},
+    options:baseOpts({plugins:{legend:{display:hasGads}},
+      scales:{x:{stacked:true,grid:{color:gc()},ticks:{color:tc(),font:{size:10}}},
+              y:{stacked:true,grid:{color:gc()},ticks:{color:tc()},beginAtZero:true}}})});
+  const kd=c.checkout_by_day||(DATA.checkout||{}).by_day||[];
+  const ks=aggSeries(kd,'count');
+  mkChart('chart-checkout-trend',{type:'bar',
+    data:{labels:ks.labels,datasets:[{label:'Checkout events',data:ks.values,backgroundColor:tcol('--cyan',0.8),borderRadius:4}]},
+    options:baseOpts({plugins:{legend:{display:false}}})});
+}
+// simple cumulative growth line (all-time, not tied to the trend toggles)
+function growthLine(id, rows, colorVar){
+  rows = rows||[];
+  let cum=0; const cumVals=rows.map(x=>cum+=Number(x.count||0));
+  mkChart(id,{type:'line',
+    data:{labels:rows.map(x=>x.day),datasets:[
+      {label:'Cumulative',data:cumVals,borderColor:tcol(colorVar,1),backgroundColor:tcol(colorVar,0.15),fill:true,tension:0.3,pointRadius:0,pointHoverRadius:5,pointHitRadius:20}
+    ]},options:baseOpts({plugins:{legend:{display:false}}})});
+}
+
+// ── COURSE MEMBERS (buyers) ──
+function renderBuyers(){
+  const b=DATA.buyers||{};
+  const sub=document.getElementById('members-sub');
+  if(b.placeholder){
+    if(sub) sub.textContent='Members table not found';
+    document.getElementById('members-stats').innerHTML='<div class="empty">No members data</div>';
+    if(charts['mem-growth'])charts['mem-growth'].destroy();
+  } else {
+    const cb=curBrand();
+    if(sub) sub.textContent='Community members synced from Circle';
+    document.getElementById('members-stats').innerHTML=[
+      {lbl:'Community Members',val:fmtNum(cb.members_total),cls:'sc-gold'},
+      {lbl:'From Waitlist',val:fmtNum(cb.members_from_waitlist),cls:'sc-accent'},
+    ].map(c=>`<div class="stat-chip"><div class="sc-label">${c.lbl}</div><div class="sc-val ${c.cls}">${c.val}</div></div>`).join('');
+    growthLine('mem-growth', cb.members_growth||b.growth, '--gold');   // members by join date
+  }
+  // waitlist growth — by subscribe date (per the rule); independent of members table
+  growthLine('mem-wl-growth', curBrand().waitlist_growth||(DATA.waitlist||{}).growth, '--green');
+}
+
+// ── PERSONA ──
+function setSegment(seg,btn){segment=seg;document.querySelectorAll('#seg-toggle button').forEach(b=>b.classList.remove('active'));btn.classList.add('active');renderPersonaSegment();}
+function renderPersona(){
+  // cross-segment charts (each segment is restricted to quiz-takers)
+  const segs=['all','clickers','waitlisters','buyers'];
+  const up=DATA.quiz_uptake||{};
+  mkChart('chart-uptake',{type:'bar',
+    data:{labels:segs.map(s=>SEG_LABEL[s]),datasets:[
+      {label:'Took quiz',data:segs.map(s=>up[s]?.took_quiz||0),backgroundColor:tcol('--purple',0.85),borderRadius:5},
+      {label:'Did not',data:segs.map(s=>(up[s]?.total||0)-(up[s]?.took_quiz||0)),backgroundColor:muted(0.6),borderRadius:5}
+    ]},options:baseOpts({scales:{x:{stacked:true,grid:{color:gc()},ticks:{color:tc()}},y:{stacked:true,grid:{color:gc()},ticks:{color:tc()},beginAtZero:true}}})});
+  renderPersonaSegment();
+}
+function renderPersonaSegment(){
+  const p=(DATA.persona||{})[segment]||{};
+  document.getElementById('persona-seg-title').textContent=SEG_LABEL[segment]+' — Persona';
+  document.getElementById('persona-seg-sub').textContent=
+    `${fmtNum(p.matched_quiz)} of ${fmtNum(p.audience_total)} matched to quiz (${pct(p.match_rate_pct)})`;
+  document.getElementById('seg-summary').textContent=
+    `${SEG_LABEL[segment]}: ${fmtNum(p.audience_total)} people · ${fmtNum(p.matched_quiz)} took quiz`;
+  document.getElementById('persona-stats').innerHTML=[
+    {lbl:'Audience',val:fmtNum(p.audience_total),cls:'sc-accent'},
+    {lbl:'Matched to Quiz',val:fmtNum(p.matched_quiz),cls:'sc-purple'},
+    {lbl:'Match Rate',val:pct(p.match_rate_pct),cls:'sc-cyan'},
+  ].map(c=>`<div class="stat-chip"><div class="sc-label">${c.lbl}</div><div class="sc-val ${c.cls}">${c.val}</div></div>`).join('');
+
+  const col=SEG_VAR[segment]||'--accent';
+  distChart('p-age', normalize(p.age_buckets,'range'), col, 'bar');
+  const attrs=p.attributes||{};
+  distChart('p-gender', normalize(attrs.gender), col, 'doughnut');
+  distChart('p-financial_situation', normalize(attrs.financial_situation), col, 'bar');
+  distChart('p-education_level', normalize(attrs.education_level), col, 'bar');
+  distChart('p-sleep_hours', normalize(attrs.sleep_hours), col, 'bar');
+  distChart('p-exercise_freq', normalize(attrs.exercise_freq), col, 'bar');
+  distChart('p-smoking_status', normalize(attrs.smoking_status), col, 'doughnut');
+  distChart('p-alcohol_freq', normalize(attrs.alcohol_freq), col, 'bar');
+  distChart('p-stress_impact', normalize(attrs.stress_impact), col, 'bar');
+}
+function normalize(arr,key){
+  if(!arr||!arr.length) return {labels:[],values:[]};
+  const k = key || (('val' in arr[0])?'val':Object.keys(arr[0])[0]);
+  return {labels:arr.map(r=>String(r[k])),values:arr.map(r=>Number(r.count||0))};
+}
+function distChart(id,d,varName,type){
+  const el=document.getElementById(id);if(!el)return;
+  if(!d.labels.length){if(charts[id])charts[id].destroy();return;}
+  if(type==='doughnut'){
+    mkChart(id,{type:'doughnut',data:{labels:d.labels,datasets:[{data:d.values,
+      backgroundColor:d.labels.map((_,i)=>catCol(i,0.85)),borderWidth:0}]},
+      options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'right',labels:{color:tc(),font:{size:10},boxWidth:12}}}}});
+  }else{
+    mkChart(id,{type:'bar',data:{labels:d.labels,datasets:[{data:d.values,
+      backgroundColor:tcol(varName,0.8),borderRadius:4}]},
+      options:baseOpts({plugins:{legend:{display:false}},scales:{x:{grid:{color:gc()},ticks:{color:tc(),font:{size:10},maxRotation:45}},y:{grid:{color:gc()},ticks:{color:tc()},beginAtZero:true}}})});
+  }
+}
+
+// ── ACQUISITION ──
+function setAcqEntity(e,btn){
+  acqEntity=e;
+  document.querySelectorAll('#acq-toggle button').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
+  renderAcqEntity();
+}
+function renderAcqEntity(){
+  const acq=(DATA.acquisition||{})[acqEntity]||{};
+  const label=ACQ_LABEL[acqEntity]||acqEntity;
+  const grid=document.getElementById('acq-utm-grid');
+  const empty=document.getElementById('acq-utm-empty');
+  document.getElementById('acq-summary').textContent =
+    acq.available ? `${label}: ${fmtNum(acq.total)} people` : `${label}: UTM data not available yet`;
+  if(!acq.available){
+    grid.style.display='none';
+    empty.innerHTML=`<div class="empty">UTM breakdown for <b>${escHtml(label)}</b> isn't available yet.`+
+      (acq.note?` ${escHtml(acq.note)}`:'')+`</div>`;
+    return;
+  }
+  grid.style.display='';
+  empty.innerHTML='';
+  document.getElementById('acq-t-source').textContent   = `${label} by UTM Source`;
+  document.getElementById('acq-t-medium').textContent   = `${label} by UTM Medium`;
+  document.getElementById('acq-t-campaign').textContent = `${label} by UTM Campaign`;
+  utmChart('acq-utm_source',   acq.by_utm_source);
+  utmChart('acq-utm_medium',   acq.by_utm_medium);
+  utmChart('acq-utm_campaign', acq.by_utm_campaign);
+}
+function renderAcquisition(){
+  renderAcqEntity();
+
+  const bb=(DATA.clicks||{}).by_brand||[];
+  mkChart('acq-brand',{type:'bar',
+    data:{labels:bb.map(x=>x.brand),datasets:[
+      {label:'Unique clickers',data:bb.map(x=>x.unique_clickers),backgroundColor:bb.map(x=>brandCol(x.brand,0.85)),borderRadius:5},
+      {label:'Non-unique clicks',data:bb.map(x=>x.clicks),backgroundColor:muted(0.45),borderRadius:5}
+    ]},options:baseOpts()});
+
+  const camps=(DATA.clicks||{}).by_campaign||[];
+  document.getElementById('camp-count').textContent=camps.length?`· ${camps.length} campaigns`:'';
+  document.getElementById('camp-tbody').innerHTML = camps.length
+    ? camps.slice(0,25).map(c=>`<tr><td>${escHtml(String(c.campaign||'').slice(0,70))}</td><td><span class="src-badge ${BRAND_CLASS[c.brand]||''}">${escHtml(c.brand||'')}</span></td><td class="td-r">${fmtNum(c.count)}</td></tr>`).join('')
+    : '<tr><td colspan="3"><div class="empty">No AWE clicks yet — AllHealthy / HealthBrief promos start soon.</div></td></tr>';
+}
+function utmChart(id,arr){
+  const d=normalize(arr);
+  const el=document.getElementById(id);if(!el)return;
+  if(!d.labels.length){if(charts[id])charts[id].destroy();return;}
+  mkChart(id,{type:'bar',data:{labels:d.labels,datasets:[{data:d.values,backgroundColor:tcol('--green',0.8),borderRadius:4}]},
+    options:baseOpts({indexAxis:'y',plugins:{legend:{display:false}},scales:{x:{grid:{color:gc()},ticks:{color:tc()},beginAtZero:true},y:{grid:{display:false},ticks:{color:tc(),font:{size:10}}}}})});
+}
+
+loadData();
+</script>
+</body>
+</html>

@@ -1,0 +1,2128 @@
+{
+  "clicks": {
+    "distinct_clickers": 12768,
+    "total_clicks": 15594,
+    "by_brand": [
+      {
+        "brand": "SuperAge",
+        "clicks": 12740,
+        "unique_clickers": 10658
+      },
+      {
+        "brand": "AllHealthy",
+        "clicks": 2473,
+        "unique_clickers": 1965
+      },
+      {
+        "brand": "Ageist",
+        "clicks": 381,
+        "unique_clickers": 297
+      }
+    ],
+    "by_campaign": [
+      {
+        "brand": "SuperAge",
+        "campaign": "The Power of Awe Launch (July 18, 2026)",
+        "count": 5521
+      },
+      {
+        "brand": "SuperAge",
+        "campaign": "Sunday Spotlight: July 26, 2026 (Aramore)",
+        "count": 3606
+      },
+      {
+        "brand": "SuperAge",
+        "campaign": "The Mindset: July 20, 2026 (Altra)",
+        "count": 2681
+      },
+      {
+        "brand": "AllHealthy",
+        "campaign": "AH_PF_20260728",
+        "count": 1176
+      },
+      {
+        "brand": "AllHealthy",
+        "campaign": "AH_PF_20260729",
+        "count": 1004
+      },
+      {
+        "brand": "SuperAge",
+        "campaign": "Sunday Spotlight: July 19, 2026 (Braun)",
+        "count": 519
+      },
+      {
+        "brand": "SuperAge",
+        "campaign": "The Mindset: July 23, 2026 (Babbel)",
+        "count": 413
+      },
+      {
+        "brand": "Ageist",
+        "campaign": "503 Kim Alexis",
+        "count": 381
+      },
+      {
+        "brand": "AllHealthy",
+        "campaign": "AH_PF_20260730",
+        "count": 293
+      }
+    ],
+    "by_day": [
+      {
+        "day": "2026-07-19",
+        "count": 5059
+      },
+      {
+        "day": "2026-07-20",
+        "count": 2801
+      },
+      {
+        "day": "2026-07-21",
+        "count": 356
+      },
+      {
+        "day": "2026-07-22",
+        "count": 149
+      },
+      {
+        "day": "2026-07-23",
+        "count": 639
+      },
+      {
+        "day": "2026-07-24",
+        "count": 211
+      },
+      {
+        "day": "2026-07-25",
+        "count": 92
+      },
+      {
+        "day": "2026-07-26",
+        "count": 3107
+      },
+      {
+        "day": "2026-07-27",
+        "count": 377
+      },
+      {
+        "day": "2026-07-28",
+        "count": 1153
+      },
+      {
+        "day": "2026-07-29",
+        "count": 1036
+      },
+      {
+        "day": "2026-07-30",
+        "count": 406
+      },
+      {
+        "day": "2026-07-31",
+        "count": 93
+      },
+      {
+        "day": "2026-08-01",
+        "count": 47
+      },
+      {
+        "day": "2026-08-02",
+        "count": 44
+      },
+      {
+        "day": "2026-08-03",
+        "count": 21
+      },
+      {
+        "day": "2026-08-04",
+        "count": 3
+      }
+    ],
+    "sources_active": [
+      "SuperAge",
+      "AllHealthy",
+      "Ageist"
+    ],
+    "source": "matview"
+  },
+  "waitlist": {
+    "total": 57,
+    "by_utm_source": [
+      {
+        "utm_source": "superage",
+        "count": 57
+      }
+    ],
+    "by_utm_medium": [
+      {
+        "utm_medium": "email",
+        "count": 56
+      },
+      {
+        "utm_medium": "website",
+        "count": 1
+      }
+    ],
+    "by_utm_campaign": [
+      {
+        "utm_campaign": "Unknown",
+        "count": 52
+      },
+      {
+        "utm_campaign": "SA_CR_20260726",
+        "count": 3
+      },
+      {
+        "utm_campaign": "SA_PF_20260718",
+        "count": 2
+      }
+    ],
+    "by_sub_level": [
+      {
+        "sub_level": "L2",
+        "count": 57
+      }
+    ],
+    "growth": [
+      {
+        "day": "2026-07-22",
+        "count": 49,
+        "cumulative": 49
+      },
+      {
+        "day": "2026-07-23",
+        "count": 3,
+        "cumulative": 52
+      },
+      {
+        "day": "2026-07-24",
+        "count": 1,
+        "cumulative": 53
+      },
+      {
+        "day": "2026-07-25",
+        "count": 1,
+        "cumulative": 54
+      },
+      {
+        "day": "2026-07-26",
+        "count": 2,
+        "cumulative": 56
+      },
+      {
+        "day": "2026-08-03",
+        "count": 1,
+        "cumulative": 57
+      }
+    ]
+  },
+  "buyers": {
+    "total": 43,
+    "placeholder": false,
+    "price_usd": 99,
+    "by_access_type": [
+      {
+        "access_type": "registry",
+        "count": 43
+      }
+    ],
+    "by_status": [
+      {
+        "status": "active",
+        "count": 42
+      },
+      {
+        "status": "inactive",
+        "count": 1
+      }
+    ],
+    "growth": [
+      {
+        "day": "2026-07-19",
+        "count": 14,
+        "cumulative": 14
+      },
+      {
+        "day": "2026-07-20",
+        "count": 5,
+        "cumulative": 19
+      },
+      {
+        "day": "2026-07-21",
+        "count": 1,
+        "cumulative": 20
+      },
+      {
+        "day": "2026-07-22",
+        "count": 1,
+        "cumulative": 21
+      },
+      {
+        "day": "2026-07-23",
+        "count": 4,
+        "cumulative": 25
+      },
+      {
+        "day": "2026-07-24",
+        "count": 2,
+        "cumulative": 27
+      },
+      {
+        "day": "2026-07-25",
+        "count": 2,
+        "cumulative": 29
+      },
+      {
+        "day": "2026-07-26",
+        "count": 7,
+        "cumulative": 36
+      },
+      {
+        "day": "2026-07-28",
+        "count": 4,
+        "cumulative": 40
+      },
+      {
+        "day": "2026-07-30",
+        "count": 1,
+        "cumulative": 41
+      },
+      {
+        "day": "2026-07-31",
+        "count": 2,
+        "cumulative": 43
+      }
+    ],
+    "waitlist_buyers": 6,
+    "clicker_buyers": 35,
+    "estimated_revenue_usd": 4257,
+    "note": null
+  },
+  "persona": {
+    "segments": [
+      "all",
+      "clickers",
+      "waitlisters",
+      "buyers"
+    ],
+    "buyers_pending": false,
+    "all": {
+      "audience_total": 12780,
+      "matched_quiz": 5467,
+      "match_rate_pct": 42.8,
+      "avg_age": 68.9,
+      "age_buckets": [
+        {
+          "range": "Under 45",
+          "count": 157
+        },
+        {
+          "range": "45-54",
+          "count": 312
+        },
+        {
+          "range": "55-64",
+          "count": 1037
+        },
+        {
+          "range": "65-74",
+          "count": 2275
+        },
+        {
+          "range": "75+",
+          "count": 1584
+        }
+      ],
+      "attributes": {
+        "gender": [
+          {
+            "val": "Female",
+            "count": 3919
+          },
+          {
+            "val": "Male",
+            "count": 1539
+          },
+          {
+            "val": "Other/Prefer not to answer",
+            "count": 9
+          }
+        ],
+        "financial_situation": [
+          {
+            "val": "Comfortable",
+            "count": 1726
+          },
+          {
+            "val": "Very comfortable",
+            "count": 1692
+          },
+          {
+            "val": "Stable",
+            "count": 1245
+          },
+          {
+            "val": "Somewhat stable",
+            "count": 562
+          },
+          {
+            "val": "Unstable",
+            "count": 130
+          },
+          {
+            "val": "Not specified",
+            "count": 112
+          }
+        ],
+        "education_level": [
+          {
+            "val": "College degree +",
+            "count": 3764
+          },
+          {
+            "val": "Some college or trade school",
+            "count": 984
+          },
+          {
+            "val": "Not specified",
+            "count": 406
+          },
+          {
+            "val": "High school",
+            "count": 296
+          },
+          {
+            "val": "Less than High school",
+            "count": 17
+          }
+        ],
+        "sleep_hours": [
+          {
+            "val": "6-8",
+            "count": 3643
+          },
+          {
+            "val": "8+",
+            "count": 1150
+          },
+          {
+            "val": "4-6",
+            "count": 633
+          },
+          {
+            "val": "0-4",
+            "count": 26
+          },
+          {
+            "val": "Not specified",
+            "count": 15
+          }
+        ],
+        "exercise_freq": [
+          {
+            "val": "Almost every day or more",
+            "count": 2654
+          },
+          {
+            "val": "A few times a week",
+            "count": 2062
+          },
+          {
+            "val": "Rarely",
+            "count": 641
+          },
+          {
+            "val": "Never",
+            "count": 64
+          },
+          {
+            "val": "Not specified",
+            "count": 46
+          }
+        ],
+        "smoking_status": [
+          {
+            "val": "I have never smoked",
+            "count": 3595
+          },
+          {
+            "val": "I have quit and seem to have minimal lung problems",
+            "count": 1594
+          },
+          {
+            "val": "Not specified",
+            "count": 126
+          },
+          {
+            "val": "I still smoke and seem to have minimal lung problems",
+            "count": 80
+          },
+          {
+            "val": "I have quit and have chronic lung disease",
+            "count": 68
+          },
+          {
+            "val": "I still smoke and have chronic lung disease",
+            "count": 4
+          }
+        ],
+        "alcohol_freq": [
+          {
+            "val": "Never",
+            "count": 2267
+          },
+          {
+            "val": "1-3 drinks per week",
+            "count": 1789
+          },
+          {
+            "val": "6+ drinks per week",
+            "count": 714
+          },
+          {
+            "val": "4-5 drinks per week",
+            "count": 683
+          },
+          {
+            "val": "Not specified",
+            "count": 14
+          }
+        ],
+        "stress_impact": [
+          {
+            "val": "Somewhat",
+            "count": 2570
+          },
+          {
+            "val": "Not at all, or a little",
+            "count": 1458
+          },
+          {
+            "val": "Moderately",
+            "count": 1140
+          },
+          {
+            "val": "Extremely",
+            "count": 265
+          },
+          {
+            "val": "Not specified",
+            "count": 34
+          }
+        ]
+      }
+    },
+    "clickers": {
+      "audience_total": 12768,
+      "matched_quiz": 5465,
+      "match_rate_pct": 42.8,
+      "avg_age": 68.9,
+      "age_buckets": [
+        {
+          "range": "Under 45",
+          "count": 156
+        },
+        {
+          "range": "45-54",
+          "count": 312
+        },
+        {
+          "range": "55-64",
+          "count": 1037
+        },
+        {
+          "range": "65-74",
+          "count": 2274
+        },
+        {
+          "range": "75+",
+          "count": 1584
+        }
+      ],
+      "attributes": {
+        "gender": [
+          {
+            "val": "Female",
+            "count": 3918
+          },
+          {
+            "val": "Male",
+            "count": 1538
+          },
+          {
+            "val": "Other/Prefer not to answer",
+            "count": 9
+          }
+        ],
+        "financial_situation": [
+          {
+            "val": "Comfortable",
+            "count": 1726
+          },
+          {
+            "val": "Very comfortable",
+            "count": 1692
+          },
+          {
+            "val": "Stable",
+            "count": 1244
+          },
+          {
+            "val": "Somewhat stable",
+            "count": 561
+          },
+          {
+            "val": "Unstable",
+            "count": 130
+          },
+          {
+            "val": "Not specified",
+            "count": 112
+          }
+        ],
+        "education_level": [
+          {
+            "val": "College degree +",
+            "count": 3763
+          },
+          {
+            "val": "Some college or trade school",
+            "count": 983
+          },
+          {
+            "val": "Not specified",
+            "count": 406
+          },
+          {
+            "val": "High school",
+            "count": 296
+          },
+          {
+            "val": "Less than High school",
+            "count": 17
+          }
+        ],
+        "sleep_hours": [
+          {
+            "val": "6-8",
+            "count": 3641
+          },
+          {
+            "val": "8+",
+            "count": 1150
+          },
+          {
+            "val": "4-6",
+            "count": 633
+          },
+          {
+            "val": "0-4",
+            "count": 26
+          },
+          {
+            "val": "Not specified",
+            "count": 15
+          }
+        ],
+        "exercise_freq": [
+          {
+            "val": "Almost every day or more",
+            "count": 2653
+          },
+          {
+            "val": "A few times a week",
+            "count": 2061
+          },
+          {
+            "val": "Rarely",
+            "count": 641
+          },
+          {
+            "val": "Never",
+            "count": 64
+          },
+          {
+            "val": "Not specified",
+            "count": 46
+          }
+        ],
+        "smoking_status": [
+          {
+            "val": "I have never smoked",
+            "count": 3595
+          },
+          {
+            "val": "I have quit and seem to have minimal lung problems",
+            "count": 1593
+          },
+          {
+            "val": "Not specified",
+            "count": 126
+          },
+          {
+            "val": "I still smoke and seem to have minimal lung problems",
+            "count": 80
+          },
+          {
+            "val": "I have quit and have chronic lung disease",
+            "count": 67
+          },
+          {
+            "val": "I still smoke and have chronic lung disease",
+            "count": 4
+          }
+        ],
+        "alcohol_freq": [
+          {
+            "val": "Never",
+            "count": 2267
+          },
+          {
+            "val": "1-3 drinks per week",
+            "count": 1788
+          },
+          {
+            "val": "6+ drinks per week",
+            "count": 713
+          },
+          {
+            "val": "4-5 drinks per week",
+            "count": 683
+          },
+          {
+            "val": "Not specified",
+            "count": 14
+          }
+        ],
+        "stress_impact": [
+          {
+            "val": "Somewhat",
+            "count": 2569
+          },
+          {
+            "val": "Not at all, or a little",
+            "count": 1458
+          },
+          {
+            "val": "Moderately",
+            "count": 1139
+          },
+          {
+            "val": "Extremely",
+            "count": 265
+          },
+          {
+            "val": "Not specified",
+            "count": 34
+          }
+        ]
+      }
+    },
+    "waitlisters": {
+      "audience_total": 57,
+      "matched_quiz": 24,
+      "match_rate_pct": 42.1,
+      "avg_age": 60.5,
+      "age_buckets": [
+        {
+          "range": "Under 45",
+          "count": 4
+        },
+        {
+          "range": "45-54",
+          "count": 3
+        },
+        {
+          "range": "55-64",
+          "count": 5
+        },
+        {
+          "range": "65-74",
+          "count": 10
+        },
+        {
+          "range": "75+",
+          "count": 2
+        }
+      ],
+      "attributes": {
+        "gender": [
+          {
+            "val": "Female",
+            "count": 17
+          },
+          {
+            "val": "Male",
+            "count": 7
+          }
+        ],
+        "financial_situation": [
+          {
+            "val": "Very comfortable",
+            "count": 9
+          },
+          {
+            "val": "Comfortable",
+            "count": 6
+          },
+          {
+            "val": "Stable",
+            "count": 6
+          },
+          {
+            "val": "Somewhat stable",
+            "count": 2
+          },
+          {
+            "val": "Unstable",
+            "count": 1
+          }
+        ],
+        "education_level": [
+          {
+            "val": "College degree +",
+            "count": 19
+          },
+          {
+            "val": "High school",
+            "count": 2
+          },
+          {
+            "val": "Not specified",
+            "count": 2
+          },
+          {
+            "val": "Some college or trade school",
+            "count": 1
+          }
+        ],
+        "sleep_hours": [
+          {
+            "val": "6-8",
+            "count": 20
+          },
+          {
+            "val": "8+",
+            "count": 2
+          },
+          {
+            "val": "4-6",
+            "count": 2
+          }
+        ],
+        "exercise_freq": [
+          {
+            "val": "Almost every day or more",
+            "count": 16
+          },
+          {
+            "val": "A few times a week",
+            "count": 7
+          },
+          {
+            "val": "Rarely",
+            "count": 1
+          }
+        ],
+        "smoking_status": [
+          {
+            "val": "I have never smoked",
+            "count": 17
+          },
+          {
+            "val": "I have quit and seem to have minimal lung problems",
+            "count": 6
+          },
+          {
+            "val": "I have quit and have chronic lung disease",
+            "count": 1
+          }
+        ],
+        "alcohol_freq": [
+          {
+            "val": "Never",
+            "count": 12
+          },
+          {
+            "val": "1-3 drinks per week",
+            "count": 9
+          },
+          {
+            "val": "4-5 drinks per week",
+            "count": 2
+          },
+          {
+            "val": "6+ drinks per week",
+            "count": 1
+          }
+        ],
+        "stress_impact": [
+          {
+            "val": "Somewhat",
+            "count": 10
+          },
+          {
+            "val": "Moderately",
+            "count": 9
+          },
+          {
+            "val": "Not at all, or a little",
+            "count": 4
+          },
+          {
+            "val": "Extremely",
+            "count": 1
+          }
+        ]
+      }
+    },
+    "buyers": {
+      "audience_total": 43,
+      "matched_quiz": 18,
+      "match_rate_pct": 41.9,
+      "avg_age": 68.9,
+      "age_buckets": [
+        {
+          "range": "45-54",
+          "count": 1
+        },
+        {
+          "range": "55-64",
+          "count": 4
+        },
+        {
+          "range": "65-74",
+          "count": 8
+        },
+        {
+          "range": "75+",
+          "count": 4
+        }
+      ],
+      "attributes": {
+        "gender": [
+          {
+            "val": "Female",
+            "count": 16
+          },
+          {
+            "val": "Male",
+            "count": 2
+          }
+        ],
+        "financial_situation": [
+          {
+            "val": "Very comfortable",
+            "count": 8
+          },
+          {
+            "val": "Comfortable",
+            "count": 4
+          },
+          {
+            "val": "Stable",
+            "count": 3
+          },
+          {
+            "val": "Unstable",
+            "count": 2
+          },
+          {
+            "val": "Somewhat stable",
+            "count": 1
+          }
+        ],
+        "education_level": [
+          {
+            "val": "College degree +",
+            "count": 17
+          },
+          {
+            "val": "Not specified",
+            "count": 1
+          }
+        ],
+        "sleep_hours": [
+          {
+            "val": "6-8",
+            "count": 11
+          },
+          {
+            "val": "8+",
+            "count": 4
+          },
+          {
+            "val": "4-6",
+            "count": 3
+          }
+        ],
+        "exercise_freq": [
+          {
+            "val": "Almost every day or more",
+            "count": 11
+          },
+          {
+            "val": "A few times a week",
+            "count": 7
+          }
+        ],
+        "smoking_status": [
+          {
+            "val": "I have never smoked",
+            "count": 13
+          },
+          {
+            "val": "I have quit and seem to have minimal lung problems",
+            "count": 4
+          },
+          {
+            "val": "Not specified",
+            "count": 1
+          }
+        ],
+        "alcohol_freq": [
+          {
+            "val": "1-3 drinks per week",
+            "count": 7
+          },
+          {
+            "val": "Never",
+            "count": 6
+          },
+          {
+            "val": "6+ drinks per week",
+            "count": 3
+          },
+          {
+            "val": "4-5 drinks per week",
+            "count": 2
+          }
+        ],
+        "stress_impact": [
+          {
+            "val": "Somewhat",
+            "count": 9
+          },
+          {
+            "val": "Not at all, or a little",
+            "count": 5
+          },
+          {
+            "val": "Moderately",
+            "count": 3
+          },
+          {
+            "val": "Extremely",
+            "count": 1
+          }
+        ]
+      }
+    }
+  },
+  "acquisition": {
+    "entities": [
+      "all",
+      "waitlist",
+      "buyers"
+    ],
+    "all": {
+      "available": true,
+      "total": 100,
+      "note": null,
+      "by_utm_source": [
+        {
+          "utm_source": "superage",
+          "count": 97
+        },
+        {
+          "utm_source": "allhealthy",
+          "count": 3
+        }
+      ],
+      "by_utm_medium": [
+        {
+          "utm_medium": "email",
+          "count": 99
+        },
+        {
+          "utm_medium": "website",
+          "count": 1
+        }
+      ],
+      "by_utm_campaign": [
+        {
+          "utm_campaign": "Unknown",
+          "count": 91
+        },
+        {
+          "utm_campaign": "SA_CR_20260726",
+          "count": 4
+        },
+        {
+          "utm_campaign": "3447565332",
+          "count": 3
+        },
+        {
+          "utm_campaign": "SA_PF_20260718",
+          "count": 2
+        }
+      ]
+    },
+    "waitlist": {
+      "available": true,
+      "total": 57,
+      "attributed": 0,
+      "note": null,
+      "by_utm_source": [
+        {
+          "utm_source": "superage",
+          "count": 57
+        }
+      ],
+      "by_utm_medium": [
+        {
+          "utm_medium": "email",
+          "count": 56
+        },
+        {
+          "utm_medium": "website",
+          "count": 1
+        }
+      ],
+      "by_utm_campaign": [
+        {
+          "utm_campaign": "Unknown",
+          "count": 52
+        },
+        {
+          "utm_campaign": "SA_CR_20260726",
+          "count": 3
+        },
+        {
+          "utm_campaign": "SA_PF_20260718",
+          "count": 2
+        }
+      ]
+    },
+    "buyers": {
+      "available": true,
+      "total": 43,
+      "attributed": 4,
+      "note": "From superage.mv_awe_purchaser_acquisition (last click at/before purchase).",
+      "by_utm_source": [
+        {
+          "utm_source": "superage",
+          "count": 40
+        },
+        {
+          "utm_source": "allhealthy",
+          "count": 3
+        }
+      ],
+      "by_utm_medium": [
+        {
+          "utm_medium": "email",
+          "count": 43
+        }
+      ],
+      "by_utm_campaign": [
+        {
+          "utm_campaign": "Unknown",
+          "count": 39
+        },
+        {
+          "utm_campaign": "3447565332",
+          "count": 3
+        },
+        {
+          "utm_campaign": "SA_CR_20260726",
+          "count": 1
+        }
+      ]
+    }
+  },
+  "quiz_uptake": {
+    "all": {
+      "total": 12780,
+      "took_quiz": 5467,
+      "pct": 42.8
+    },
+    "clickers": {
+      "total": 12768,
+      "took_quiz": 5465,
+      "pct": 42.8
+    },
+    "waitlisters": {
+      "total": 57,
+      "took_quiz": 24,
+      "pct": 42.1
+    },
+    "buyers": {
+      "total": 43,
+      "took_quiz": 18,
+      "pct": 41.9
+    }
+  },
+  "checkout": {
+    "total": 492,
+    "distinct": 17,
+    "organic": 56,
+    "by_bucket": [
+      {
+        "bucket": "SuperAge Campaigns",
+        "brand": "SuperAge",
+        "count": 419
+      },
+      {
+        "bucket": "SuperAge Website / Organic",
+        "brand": "SuperAge",
+        "count": 56
+      },
+      {
+        "bucket": "AllHealthy Campaigns",
+        "brand": "AllHealthy",
+        "count": 10
+      },
+      {
+        "bucket": "Ageist Campaigns",
+        "brand": "Ageist",
+        "count": 7
+      }
+    ],
+    "by_day": [
+      {
+        "day": "2026-07-19",
+        "count": 173
+      },
+      {
+        "day": "2026-07-20",
+        "count": 85
+      },
+      {
+        "day": "2026-07-21",
+        "count": 14
+      },
+      {
+        "day": "2026-07-22",
+        "count": 2
+      },
+      {
+        "day": "2026-07-23",
+        "count": 23
+      },
+      {
+        "day": "2026-07-24",
+        "count": 7
+      },
+      {
+        "day": "2026-07-25",
+        "count": 2
+      },
+      {
+        "day": "2026-07-26",
+        "count": 97
+      },
+      {
+        "day": "2026-07-27",
+        "count": 20
+      },
+      {
+        "day": "2026-07-28",
+        "count": 15
+      },
+      {
+        "day": "2026-07-29",
+        "count": 8
+      },
+      {
+        "day": "2026-07-30",
+        "count": 9
+      },
+      {
+        "day": "2026-07-31",
+        "count": 15
+      },
+      {
+        "day": "2026-08-01",
+        "count": 1
+      },
+      {
+        "day": "2026-08-02",
+        "count": 7
+      },
+      {
+        "day": "2026-08-03",
+        "count": 7
+      },
+      {
+        "day": "2026-08-04",
+        "count": 7
+      }
+    ]
+  },
+  "by_brand": {
+    "SuperAge": {
+      "unique_clickers": 10658,
+      "total_clicks": 12740,
+      "waitlist_total": 57,
+      "checkout_total": 475,
+      "checkout_distinct": 9,
+      "converted_buyers": 1,
+      "members_total": 40,
+      "members_from_waitlist": 6,
+      "google_ads_landings": 1,
+      "clicks_by_day": [
+        {
+          "day": "2026-07-19",
+          "count": 5059
+        },
+        {
+          "day": "2026-07-20",
+          "count": 2801
+        },
+        {
+          "day": "2026-07-21",
+          "count": 356
+        },
+        {
+          "day": "2026-07-22",
+          "count": 149
+        },
+        {
+          "day": "2026-07-23",
+          "count": 439
+        },
+        {
+          "day": "2026-07-24",
+          "count": 108
+        },
+        {
+          "day": "2026-07-25",
+          "count": 54
+        },
+        {
+          "day": "2026-07-26",
+          "count": 3090
+        },
+        {
+          "day": "2026-07-27",
+          "count": 371
+        },
+        {
+          "day": "2026-07-28",
+          "count": 108
+        },
+        {
+          "day": "2026-07-29",
+          "count": 71
+        },
+        {
+          "day": "2026-07-30",
+          "count": 33
+        },
+        {
+          "day": "2026-07-31",
+          "count": 29
+        },
+        {
+          "day": "2026-08-01",
+          "count": 24
+        },
+        {
+          "day": "2026-08-02",
+          "count": 29
+        },
+        {
+          "day": "2026-08-03",
+          "count": 16
+        },
+        {
+          "day": "2026-08-04",
+          "count": 3
+        }
+      ],
+      "checkout_by_day": [
+        {
+          "day": "2026-07-19",
+          "count": 173
+        },
+        {
+          "day": "2026-07-20",
+          "count": 85
+        },
+        {
+          "day": "2026-07-21",
+          "count": 14
+        },
+        {
+          "day": "2026-07-22",
+          "count": 2
+        },
+        {
+          "day": "2026-07-23",
+          "count": 16
+        },
+        {
+          "day": "2026-07-24",
+          "count": 7
+        },
+        {
+          "day": "2026-07-25",
+          "count": 2
+        },
+        {
+          "day": "2026-07-26",
+          "count": 97
+        },
+        {
+          "day": "2026-07-27",
+          "count": 20
+        },
+        {
+          "day": "2026-07-28",
+          "count": 9
+        },
+        {
+          "day": "2026-07-29",
+          "count": 7
+        },
+        {
+          "day": "2026-07-30",
+          "count": 7
+        },
+        {
+          "day": "2026-07-31",
+          "count": 14
+        },
+        {
+          "day": "2026-08-01",
+          "count": 1
+        },
+        {
+          "day": "2026-08-02",
+          "count": 7
+        },
+        {
+          "day": "2026-08-03",
+          "count": 7
+        },
+        {
+          "day": "2026-08-04",
+          "count": 7
+        }
+      ],
+      "google_ads_by_day": [
+        {
+          "day": "2026-08-04",
+          "count": 1
+        }
+      ],
+      "members_growth": [
+        {
+          "day": "2026-07-19",
+          "count": 14
+        },
+        {
+          "day": "2026-07-20",
+          "count": 5
+        },
+        {
+          "day": "2026-07-21",
+          "count": 1
+        },
+        {
+          "day": "2026-07-22",
+          "count": 1
+        },
+        {
+          "day": "2026-07-23",
+          "count": 4
+        },
+        {
+          "day": "2026-07-24",
+          "count": 2
+        },
+        {
+          "day": "2026-07-25",
+          "count": 2
+        },
+        {
+          "day": "2026-07-26",
+          "count": 7
+        },
+        {
+          "day": "2026-07-28",
+          "count": 2
+        },
+        {
+          "day": "2026-07-30",
+          "count": 1
+        },
+        {
+          "day": "2026-07-31",
+          "count": 1
+        }
+      ],
+      "waitlist_growth": [
+        {
+          "day": "2026-07-22",
+          "count": 49
+        },
+        {
+          "day": "2026-07-23",
+          "count": 3
+        },
+        {
+          "day": "2026-07-24",
+          "count": 1
+        },
+        {
+          "day": "2026-07-25",
+          "count": 1
+        },
+        {
+          "day": "2026-07-26",
+          "count": 2
+        },
+        {
+          "day": "2026-08-03",
+          "count": 1
+        }
+      ],
+      "funnel": {
+        "top": {
+          "label": "Clicks",
+          "count": 12740,
+          "unique": 10658
+        },
+        "google_ads": {
+          "label": "Google Ads",
+          "count": 1
+        },
+        "waitlist": {
+          "label": "Waitlist \u00b7 Nervous System course",
+          "count": 57,
+          "pct_of_top": 0.5
+        },
+        "landing": {
+          "available": true,
+          "label": "Checkout Events",
+          "count": 475,
+          "distinct": 9,
+          "organic": 56,
+          "pct_of_top": 4.5
+        },
+        "buyers": {
+          "label": "Community Members",
+          "count": 40,
+          "attributed": 1,
+          "pct_of_landing": 8.4,
+          "total_buyers": 40
+        },
+        "waitlist_also_bought": {
+          "count": 6,
+          "pct": 10.5
+        }
+      }
+    },
+    "AllHealthy": {
+      "unique_clickers": 1965,
+      "total_clicks": 2473,
+      "waitlist_total": 0,
+      "checkout_total": 10,
+      "checkout_distinct": 8,
+      "converted_buyers": 3,
+      "members_total": 3,
+      "members_from_waitlist": 0,
+      "google_ads_landings": 0,
+      "clicks_by_day": [
+        {
+          "day": "2026-07-28",
+          "count": 1041
+        },
+        {
+          "day": "2026-07-29",
+          "count": 956
+        },
+        {
+          "day": "2026-07-30",
+          "count": 372
+        },
+        {
+          "day": "2026-07-31",
+          "count": 64
+        },
+        {
+          "day": "2026-08-01",
+          "count": 22
+        },
+        {
+          "day": "2026-08-02",
+          "count": 14
+        },
+        {
+          "day": "2026-08-03",
+          "count": 4
+        }
+      ],
+      "checkout_by_day": [
+        {
+          "day": "2026-07-28",
+          "count": 6
+        },
+        {
+          "day": "2026-07-29",
+          "count": 1
+        },
+        {
+          "day": "2026-07-30",
+          "count": 2
+        },
+        {
+          "day": "2026-07-31",
+          "count": 1
+        }
+      ],
+      "google_ads_by_day": [],
+      "members_growth": [
+        {
+          "day": "2026-07-28",
+          "count": 2
+        },
+        {
+          "day": "2026-07-31",
+          "count": 1
+        }
+      ],
+      "waitlist_growth": [],
+      "funnel": {
+        "top": {
+          "label": "Clicks",
+          "count": 2473,
+          "unique": 1965
+        },
+        "google_ads": {
+          "label": "Google Ads",
+          "count": 0
+        },
+        "waitlist": {
+          "label": "Waitlist \u00b7 Nervous System course",
+          "count": 0,
+          "pct_of_top": 0.0
+        },
+        "landing": {
+          "available": true,
+          "label": "Checkout Events",
+          "count": 10,
+          "distinct": 8,
+          "organic": 0,
+          "pct_of_top": 0.5
+        },
+        "buyers": {
+          "label": "Community Members",
+          "count": 3,
+          "attributed": 3,
+          "pct_of_landing": 30.0,
+          "total_buyers": 3
+        },
+        "waitlist_also_bought": {
+          "count": 6,
+          "pct": 10.5
+        }
+      }
+    },
+    "HealthBrief": {
+      "unique_clickers": 0,
+      "total_clicks": 0,
+      "waitlist_total": 0,
+      "checkout_total": 0,
+      "checkout_distinct": 0,
+      "converted_buyers": 0,
+      "members_total": 0,
+      "members_from_waitlist": 0,
+      "google_ads_landings": 0,
+      "clicks_by_day": [],
+      "checkout_by_day": [],
+      "google_ads_by_day": [],
+      "members_growth": [],
+      "waitlist_growth": [],
+      "funnel": {
+        "top": {
+          "label": "Clicks",
+          "count": 0,
+          "unique": 0
+        },
+        "google_ads": {
+          "label": "Google Ads",
+          "count": 0
+        },
+        "waitlist": {
+          "label": "Waitlist \u00b7 Nervous System course",
+          "count": 0,
+          "pct_of_top": null
+        },
+        "landing": {
+          "available": true,
+          "label": "Checkout Events",
+          "count": 0,
+          "distinct": 0,
+          "organic": 0,
+          "pct_of_top": null
+        },
+        "buyers": {
+          "label": "Community Members",
+          "count": 0,
+          "attributed": 0,
+          "pct_of_landing": null,
+          "total_buyers": 0
+        },
+        "waitlist_also_bought": {
+          "count": 6,
+          "pct": 10.5
+        }
+      }
+    },
+    "Ageist": {
+      "unique_clickers": 297,
+      "total_clicks": 381,
+      "waitlist_total": 0,
+      "checkout_total": 7,
+      "checkout_distinct": 0,
+      "converted_buyers": 0,
+      "members_total": 0,
+      "members_from_waitlist": 0,
+      "google_ads_landings": 0,
+      "clicks_by_day": [
+        {
+          "day": "2026-07-23",
+          "count": 200
+        },
+        {
+          "day": "2026-07-24",
+          "count": 103
+        },
+        {
+          "day": "2026-07-25",
+          "count": 38
+        },
+        {
+          "day": "2026-07-26",
+          "count": 17
+        },
+        {
+          "day": "2026-07-27",
+          "count": 6
+        },
+        {
+          "day": "2026-07-28",
+          "count": 4
+        },
+        {
+          "day": "2026-07-29",
+          "count": 9
+        },
+        {
+          "day": "2026-07-30",
+          "count": 1
+        },
+        {
+          "day": "2026-08-01",
+          "count": 1
+        },
+        {
+          "day": "2026-08-02",
+          "count": 1
+        },
+        {
+          "day": "2026-08-03",
+          "count": 1
+        }
+      ],
+      "checkout_by_day": [
+        {
+          "day": "2026-07-23",
+          "count": 7
+        }
+      ],
+      "google_ads_by_day": [],
+      "members_growth": [],
+      "waitlist_growth": [],
+      "funnel": {
+        "top": {
+          "label": "Clicks",
+          "count": 381,
+          "unique": 297
+        },
+        "google_ads": {
+          "label": "Google Ads",
+          "count": 0
+        },
+        "waitlist": {
+          "label": "Waitlist \u00b7 Nervous System course",
+          "count": 0,
+          "pct_of_top": 0.0
+        },
+        "landing": {
+          "available": true,
+          "label": "Checkout Events",
+          "count": 7,
+          "distinct": 0,
+          "organic": 0,
+          "pct_of_top": 2.4
+        },
+        "buyers": {
+          "label": "Community Members",
+          "count": 0,
+          "attributed": 0,
+          "pct_of_landing": 0.0,
+          "total_buyers": 0
+        },
+        "waitlist_also_bought": {
+          "count": 6,
+          "pct": 10.5
+        }
+      }
+    },
+    "All": {
+      "unique_clickers": 12768,
+      "total_clicks": 15594,
+      "waitlist_total": 57,
+      "checkout_total": 492,
+      "checkout_distinct": 17,
+      "converted_buyers": 4,
+      "members_total": 43,
+      "members_from_waitlist": 6,
+      "google_ads_landings": 1,
+      "clicks_by_day": [
+        {
+          "day": "2026-07-19",
+          "count": 5059
+        },
+        {
+          "day": "2026-07-20",
+          "count": 2801
+        },
+        {
+          "day": "2026-07-21",
+          "count": 356
+        },
+        {
+          "day": "2026-07-22",
+          "count": 149
+        },
+        {
+          "day": "2026-07-23",
+          "count": 639
+        },
+        {
+          "day": "2026-07-24",
+          "count": 211
+        },
+        {
+          "day": "2026-07-25",
+          "count": 92
+        },
+        {
+          "day": "2026-07-26",
+          "count": 3107
+        },
+        {
+          "day": "2026-07-27",
+          "count": 377
+        },
+        {
+          "day": "2026-07-28",
+          "count": 1153
+        },
+        {
+          "day": "2026-07-29",
+          "count": 1036
+        },
+        {
+          "day": "2026-07-30",
+          "count": 406
+        },
+        {
+          "day": "2026-07-31",
+          "count": 93
+        },
+        {
+          "day": "2026-08-01",
+          "count": 47
+        },
+        {
+          "day": "2026-08-02",
+          "count": 44
+        },
+        {
+          "day": "2026-08-03",
+          "count": 21
+        },
+        {
+          "day": "2026-08-04",
+          "count": 3
+        }
+      ],
+      "checkout_by_day": [
+        {
+          "day": "2026-07-19",
+          "count": 173
+        },
+        {
+          "day": "2026-07-20",
+          "count": 85
+        },
+        {
+          "day": "2026-07-21",
+          "count": 14
+        },
+        {
+          "day": "2026-07-22",
+          "count": 2
+        },
+        {
+          "day": "2026-07-23",
+          "count": 23
+        },
+        {
+          "day": "2026-07-24",
+          "count": 7
+        },
+        {
+          "day": "2026-07-25",
+          "count": 2
+        },
+        {
+          "day": "2026-07-26",
+          "count": 97
+        },
+        {
+          "day": "2026-07-27",
+          "count": 20
+        },
+        {
+          "day": "2026-07-28",
+          "count": 15
+        },
+        {
+          "day": "2026-07-29",
+          "count": 8
+        },
+        {
+          "day": "2026-07-30",
+          "count": 9
+        },
+        {
+          "day": "2026-07-31",
+          "count": 15
+        },
+        {
+          "day": "2026-08-01",
+          "count": 1
+        },
+        {
+          "day": "2026-08-02",
+          "count": 7
+        },
+        {
+          "day": "2026-08-03",
+          "count": 7
+        },
+        {
+          "day": "2026-08-04",
+          "count": 7
+        }
+      ],
+      "google_ads_by_day": [
+        {
+          "day": "2026-08-04",
+          "count": 1
+        }
+      ],
+      "members_growth": [
+        {
+          "day": "2026-07-19",
+          "count": 14,
+          "cumulative": 14
+        },
+        {
+          "day": "2026-07-20",
+          "count": 5,
+          "cumulative": 19
+        },
+        {
+          "day": "2026-07-21",
+          "count": 1,
+          "cumulative": 20
+        },
+        {
+          "day": "2026-07-22",
+          "count": 1,
+          "cumulative": 21
+        },
+        {
+          "day": "2026-07-23",
+          "count": 4,
+          "cumulative": 25
+        },
+        {
+          "day": "2026-07-24",
+          "count": 2,
+          "cumulative": 27
+        },
+        {
+          "day": "2026-07-25",
+          "count": 2,
+          "cumulative": 29
+        },
+        {
+          "day": "2026-07-26",
+          "count": 7,
+          "cumulative": 36
+        },
+        {
+          "day": "2026-07-28",
+          "count": 4,
+          "cumulative": 40
+        },
+        {
+          "day": "2026-07-30",
+          "count": 1,
+          "cumulative": 41
+        },
+        {
+          "day": "2026-07-31",
+          "count": 2,
+          "cumulative": 43
+        }
+      ],
+      "waitlist_growth": [
+        {
+          "day": "2026-07-22",
+          "count": 49,
+          "cumulative": 49
+        },
+        {
+          "day": "2026-07-23",
+          "count": 3,
+          "cumulative": 52
+        },
+        {
+          "day": "2026-07-24",
+          "count": 1,
+          "cumulative": 53
+        },
+        {
+          "day": "2026-07-25",
+          "count": 1,
+          "cumulative": 54
+        },
+        {
+          "day": "2026-07-26",
+          "count": 2,
+          "cumulative": 56
+        },
+        {
+          "day": "2026-08-03",
+          "count": 1,
+          "cumulative": 57
+        }
+      ],
+      "funnel": {
+        "top": {
+          "label": "Clicks",
+          "count": 15594,
+          "unique": 12768
+        },
+        "google_ads": {
+          "label": "Google Ads",
+          "count": 1
+        },
+        "waitlist": {
+          "label": "Waitlist \u00b7 Nervous System course",
+          "count": 57,
+          "pct_of_top": 0.4
+        },
+        "landing": {
+          "available": true,
+          "label": "Checkout Events",
+          "count": 492,
+          "distinct": 17,
+          "organic": 56,
+          "pct_of_top": 3.9
+        },
+        "buyers": {
+          "label": "Community Members",
+          "count": 43,
+          "attributed": 4,
+          "pct_of_landing": 8.7,
+          "total_buyers": 43
+        },
+        "waitlist_also_bought": {
+          "count": 6,
+          "pct": 10.5
+        }
+      }
+    }
+  },
+  "brands": [
+    "All",
+    "SuperAge",
+    "AllHealthy",
+    "HealthBrief",
+    "Ageist"
+  ],
+  "kpis": {
+    "distinct_clickers": 12768,
+    "total_clicks": 15594,
+    "waitlist_total": 57,
+    "landing_events": 492,
+    "checkout_distinct": 17,
+    "google_ads_landings": 1,
+    "converted_buyers": 4,
+    "landing_to_buyer_pct": 0.8,
+    "click_to_checkout_pct": 3.9,
+    "buyers_total": 43,
+    "revenue_usd": 4257,
+    "click_to_waitlist_pct": 0.4,
+    "quiz_takers_audience": 5467
+  },
+  "funnel": {
+    "top": {
+      "label": "Clicks",
+      "count": 15594,
+      "unique": 12768
+    },
+    "google_ads": {
+      "label": "Google Ads",
+      "count": 1
+    },
+    "waitlist": {
+      "label": "Waitlist \u00b7 Nervous System course",
+      "count": 57,
+      "pct_of_top": 0.4
+    },
+    "landing": {
+      "available": true,
+      "label": "Checkout Events",
+      "count": 492,
+      "distinct": 17,
+      "organic": 56,
+      "pct_of_top": 3.9
+    },
+    "buyers": {
+      "label": "Community Members",
+      "count": 43,
+      "attributed": 4,
+      "pct_of_landing": 8.7,
+      "total_buyers": 43
+    },
+    "waitlist_also_bought": {
+      "count": 6,
+      "pct": 10.5
+    }
+  },
+  "last_updated": "Aug 5, 2026 07:45 AM EST",
+  "generated_at": "2026-08-05T07:45:26.652442-04:00",
+  "awe_url_patterns": [
+    "%superage.com/awecourse%"
+  ]
+}

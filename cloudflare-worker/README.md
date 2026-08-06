@@ -17,6 +17,7 @@ Lambda (refresh job)  ──put_object──►  R2 bucket  ──get──►  
 | `campaigns_life` (games dashboard)           | `game-campaigns/campaigns_life.json`             |
 | `superage_metrics_lambda_updated.py`         | `superage-dashboard/superage-metrics.json`       |
 | `superage_comparison_lambda.py`              | `superage-dashboard/superage-comparison.json`    |
+| `awe_metrics_lambda.py` (AWE course)         | `awe-course/awe_course.json`                     |
 
 Each Lambda reads its R2 credentials from a single Secrets Manager secret
 referenced by `R2_SECRET_ARN` (keys: `account_id`, `access_key_id`,

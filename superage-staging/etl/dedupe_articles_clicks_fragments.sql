@@ -66,6 +66,15 @@ FROM grouped;
 --    (the lowest id, arbitrary but stable), deletes the rest. Only touches
 --    groups where every fragment already agrees on unique_clicks AND
 --    non_unique_clicks (the "groups_safe_to_dedupe" from query 2 above).
+--
+--    NOTE: Postgres does not support DISTINCT inside a window-function
+--    aggregate (COUNT(DISTINCT x) OVER (...) errors with "DISTINCT is not
+--    implemented for window functions"), even though the identical
+--    COUNT(DISTINCT x) works fine as a plain GROUP BY aggregate (queries
+--    1 and 2 above are unaffected). This DELETE only needs to know
+--    whether every value in the partition is IDENTICAL, so
+--    MIN(x) OVER (...) = MAX(x) OVER (...) is used instead — it answers
+--    exactly that question without needing DISTINCT in a window function.
 WITH grouped AS (
     SELECT
         id,
@@ -73,22 +82,22 @@ WITH grouped AS (
         RTRIM(SPLIT_PART(TRIM(url), '?', 1), '/') AS url_key,
         unique_clicks,
         non_unique_clicks,
-        COUNT(*) OVER (PARTITION BY issue_name, RTRIM(SPLIT_PART(TRIM(url), '?', 1), '/'))
-            AS fragment_rows,
-        COUNT(DISTINCT unique_clicks) OVER (PARTITION BY issue_name, RTRIM(SPLIT_PART(TRIM(url), '?', 1), '/'))
-            AS distinct_unique_values,
-        COUNT(DISTINCT non_unique_clicks) OVER (PARTITION BY issue_name, RTRIM(SPLIT_PART(TRIM(url), '?', 1), '/'))
-            AS distinct_non_unique_values,
+        COUNT(*) OVER w AS fragment_rows,
+        (MIN(unique_clicks) OVER w = MAX(unique_clicks) OVER w)
+            AS unique_values_consistent,
+        (MIN(non_unique_clicks) OVER w = MAX(non_unique_clicks) OVER w)
+            AS non_unique_values_consistent,
         ROW_NUMBER() OVER (
             PARTITION BY issue_name, RTRIM(SPLIT_PART(TRIM(url), '?', 1), '/')
             ORDER BY id ASC
         ) AS rn
     FROM superage.articles_clicks
+    WINDOW w AS (PARTITION BY issue_name, RTRIM(SPLIT_PART(TRIM(url), '?', 1), '/'))
 )
 DELETE FROM superage.articles_clicks ac
 USING grouped g
 WHERE ac.id = g.id
   AND g.fragment_rows > 1
-  AND g.distinct_unique_values = 1
-  AND g.distinct_non_unique_values = 1
+  AND g.unique_values_consistent
+  AND g.non_unique_values_consistent
   AND g.rn > 1;

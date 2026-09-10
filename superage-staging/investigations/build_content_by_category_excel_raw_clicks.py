@@ -273,7 +273,7 @@ BORDER_THIN = Border(*([Side(style="thin", color="D9D9D9")] * 4))
 LINK_FONT   = Font(color="1155CC", underline="single")
 
 # Column-name substrings that get a thousands-separator number format.
-COUNT_COL_HINTS = ("clicks", "times_inserted", "story_position")
+COUNT_COL_HINTS = ("clicks", "times_inserted", "story_position", "placements")
 
 
 def _format_sheet(ws, df: pd.DataFrame):
@@ -368,38 +368,60 @@ def _category_sheet_names(category: str, taken: set) -> tuple:
 
 
 def _add_low_position_columns(df_top: pd.DataFrame, df_all_placements: pd.DataFrame) -> pd.DataFrame:
-    """For each Top-N (category, norm_url) article, counts how many of its
-    placements landed in the 'low' position_category (buried further down
-    the newsletter) vs. how many placements have a KNOWN position at all,
-    AND lists which specific campaign(s) (issue_name) those low placements
-    happened in — the same article can be 'low' in one campaign and 'high'
-    in another; this column names the campaign(s) where it was buried.
-    An article can rank in the Top N by clicks while having been placed
-    low at least once — that's the "sleeper hit" signal the summary sheet
-    and the Sleeper Hits sheet both use."""
+    """Adds, per Top-N (category, norm_url) article, everything needed to
+    answer "was this a sleeper hit, and where":
+
+      total_campaign_placements     — every time this article ran, period
+                                       (= times_inserted_in_campaigns, just
+                                       restated here for a name that reads
+                                       clearly next to the columns below).
+      placements_with_known_position — of those, how many have a
+                                       position_category recorded at all
+                                       (some placements have none — no
+                                       Airtable match for that run).
+      placements_with_low_position   — of the KNOWN ones, how many were
+                                       'low' (buried further down the send).
+      low_position_details           — the actual evidence: one entry per
+                                       low placement, "<campaign> (position <N>)",
+                                       joined with "; " when it happened more
+                                       than once. This is what lets you go
+                                       straight to Campaign Monitor and check
+                                       a specific send — campaign name and its
+                                       exact story_position are paired
+                                       together, never two separate lists you
+                                       have to match up by eye.
+
+    An article can rank in the Top N by clicks while having been placed low
+    at least once — that's the "sleeper hit" signal the summary sheet and
+    the Sleeper Hits sheet both use."""
     pos = df_all_placements.dropna(subset=["position_category"])
     counts = (
         pos.groupby(["category", "norm_url"])["position_category"]
         .agg(
-            low_position_placements=lambda s: int((s == "low").sum()),
-            known_position_placements="count",
+            placements_with_low_position=lambda s: int((s == "low").sum()),
+            placements_with_known_position="count",
         )
         .reset_index()
     )
 
-    low_only = pos[pos["position_category"] == "low"]
-    low_campaigns = (
-        low_only.groupby(["category", "norm_url"])["issue_name"]
-        .agg(lambda s: "; ".join(sorted(set(s.dropna().astype(str)))))
+    low_only = pos[pos["position_category"] == "low"].copy()
+    low_only["detail"] = (
+        low_only["issue_name"].astype(str)
+        + " (position " + low_only["story_position"].astype("Int64").astype(str) + ")"
+    )
+    low_details = (
+        low_only.groupby(["category", "norm_url"])["detail"]
+        .agg(lambda s: "; ".join(sorted(set(s.dropna()))))
         .reset_index()
-        .rename(columns={"issue_name": "low_position_campaigns"})
+        .rename(columns={"detail": "low_position_details"})
     )
 
-    merged = df_top.merge(counts, on=["category", "norm_url"], how="left")
-    merged = merged.merge(low_campaigns, on=["category", "norm_url"], how="left")
-    merged["low_position_placements"] = merged["low_position_placements"].fillna(0).astype(int)
-    merged["known_position_placements"] = merged["known_position_placements"].fillna(0).astype(int)
-    merged["low_position_campaigns"] = merged["low_position_campaigns"].fillna("")
+    merged = df_top.rename(columns={"times_inserted_in_campaigns": "total_campaign_placements"})
+    merged = merged.merge(counts, on=["category", "norm_url"], how="left")
+    merged = merged.merge(low_details, on=["category", "norm_url"], how="left")
+    merged["placements_with_low_position"] = merged["placements_with_low_position"].fillna(0).astype(int)
+    merged["placements_with_known_position"] = merged["placements_with_known_position"].fillna(0).astype(int)
+    merged["low_position_details"] = merged["low_position_details"].fillna("")
     return merged
 
 
@@ -407,7 +429,7 @@ def _build_sleeper_hits(df_top: pd.DataFrame) -> pd.DataFrame:
     """Articles that made a category's Top N by clicks despite having been
     placed 'low' at least once — i.e. they overperformed their placement.
     Sorted by total_unique_clicks so the most striking sleepers lead."""
-    sleepers = df_top[df_top["low_position_placements"] > 0].copy()
+    sleepers = df_top[df_top["placements_with_low_position"] > 0].copy()
     sleepers = sleepers.sort_values("total_unique_clicks", ascending=False)
     return sleepers.drop(columns=["norm_url"]).reset_index(drop=True)
 
@@ -437,11 +459,12 @@ def main():
         for category, group in df_top.groupby("category", sort=True):
             summary_name, detail_name = _category_sheet_names(category, taken_names)
 
-            # Summary sheet — drop the join-only column plus the campaign-name
-            # list (that's Sleeper Hits-only detail, kept out of the plain
-            # category view to avoid cluttering it with a mostly-empty column).
+            # Summary sheet — drop the join-only column plus the campaign/
+            # position detail list (that's Sleeper Hits-only detail, kept
+            # out of the plain category view to avoid cluttering it with a
+            # mostly-empty column).
             summary_df = group.drop(
-                columns=["category", "norm_url", "low_position_campaigns"]
+                columns=["category", "norm_url", "low_position_details"]
             ).reset_index(drop=True)
             summary_df.to_excel(writer, sheet_name=summary_name, index=False)
             _format_sheet(writer.sheets[summary_name], summary_df)

@@ -129,15 +129,24 @@ TOP_BY_CATEGORY_SQL = f"""
         INNER JOIN wa ON p.norm_url = wa.norm_url
     ),
     agg AS (
+        -- GROUP BY norm_url + categories ONLY. `url` is picked via MAX() as
+        -- a representative display value, NOT part of the grouping key —
+        -- per_placement's `url` is per-placement (it carries that specific
+        -- campaign's utm params), so the same article can show a different
+        -- literal url across placements even though norm_url is identical.
+        -- Grouping by url too would fragment one article's totals across
+        -- multiple rows instead of summing them into one.
         SELECT
-            norm_url, url, categories,
+            norm_url,
+            MAX(url)                   AS url,
+            categories,
             COUNT(DISTINCT issue_name) AS times_inserted_in_campaigns,
             SUM(unique_clicks)         AS total_unique_clicks,
             SUM(non_unique_clicks)     AS total_non_unique_clicks,
             MAX(unique_clicks)         AS max_unique_clicks,
             MAX(non_unique_clicks)     AS max_non_unique_clicks
         FROM joined
-        GROUP BY norm_url, url, categories
+        GROUP BY norm_url, categories
     ),
     with_avg AS (
         SELECT

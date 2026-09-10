@@ -202,7 +202,9 @@ def _format_sheet(ws, df: pd.DataFrame):
     for col_idx, col_name in enumerate(df.columns, start=1):
         letter = get_column_letter(col_idx)
         series = df[col_name]
-        max_content_len = series.astype(str).map(len).max() if n_rows else 0
+        max_content_len = (
+            series.map(lambda v: len(str(v)) if pd.notna(v) else 0).max() if n_rows else 0
+        )
         width = min(max(len(str(col_name)), int(max_content_len)) + 2, 60)
         ws.column_dimensions[letter].width = width
 

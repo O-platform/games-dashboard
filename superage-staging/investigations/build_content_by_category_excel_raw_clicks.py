@@ -370,7 +370,10 @@ def _category_sheet_names(category: str, taken: set) -> tuple:
 def _add_low_position_columns(df_top: pd.DataFrame, df_all_placements: pd.DataFrame) -> pd.DataFrame:
     """For each Top-N (category, norm_url) article, counts how many of its
     placements landed in the 'low' position_category (buried further down
-    the newsletter) vs. how many placements have a KNOWN position at all.
+    the newsletter) vs. how many placements have a KNOWN position at all,
+    AND lists which specific campaign(s) (issue_name) those low placements
+    happened in — the same article can be 'low' in one campaign and 'high'
+    in another; this column names the campaign(s) where it was buried.
     An article can rank in the Top N by clicks while having been placed
     low at least once — that's the "sleeper hit" signal the summary sheet
     and the Sleeper Hits sheet both use."""
@@ -383,9 +386,20 @@ def _add_low_position_columns(df_top: pd.DataFrame, df_all_placements: pd.DataFr
         )
         .reset_index()
     )
+
+    low_only = pos[pos["position_category"] == "low"]
+    low_campaigns = (
+        low_only.groupby(["category", "norm_url"])["issue_name"]
+        .agg(lambda s: "; ".join(sorted(set(s.dropna().astype(str)))))
+        .reset_index()
+        .rename(columns={"issue_name": "low_position_campaigns"})
+    )
+
     merged = df_top.merge(counts, on=["category", "norm_url"], how="left")
+    merged = merged.merge(low_campaigns, on=["category", "norm_url"], how="left")
     merged["low_position_placements"] = merged["low_position_placements"].fillna(0).astype(int)
     merged["known_position_placements"] = merged["known_position_placements"].fillna(0).astype(int)
+    merged["low_position_campaigns"] = merged["low_position_campaigns"].fillna("")
     return merged
 
 
@@ -423,8 +437,12 @@ def main():
         for category, group in df_top.groupby("category", sort=True):
             summary_name, detail_name = _category_sheet_names(category, taken_names)
 
-            # Summary sheet — drop the join-only column before writing.
-            summary_df = group.drop(columns=["category", "norm_url"]).reset_index(drop=True)
+            # Summary sheet — drop the join-only column plus the campaign-name
+            # list (that's Sleeper Hits-only detail, kept out of the plain
+            # category view to avoid cluttering it with a mostly-empty column).
+            summary_df = group.drop(
+                columns=["category", "norm_url", "low_position_campaigns"]
+            ).reset_index(drop=True)
             summary_df.to_excel(writer, sheet_name=summary_name, index=False)
             _format_sheet(writer.sheets[summary_name], summary_df)
 

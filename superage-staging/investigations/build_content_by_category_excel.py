@@ -39,6 +39,9 @@ from pathlib import Path
 
 import pandas as pd
 import psycopg2
+from openpyxl.styles import Alignment, Border, Font, PatternFill, Side
+from openpyxl.utils import get_column_letter
+from openpyxl.worksheet.table import Table, TableStyleInfo
 
 HERE = Path(__file__).parent
 OUT_FILE = HERE / "content_by_category.xlsx"
@@ -166,6 +169,78 @@ def get_connection():
     )
 
 
+# ─────────────────────────────────────────────────────────────
+# Formatting helpers
+# ─────────────────────────────────────────────────────────────
+
+HEADER_FILL = PatternFill("solid", fgColor="1F2937")   # dark slate
+HEADER_FONT = Font(bold=True, color="FFFFFF", size=11)
+BORDER_THIN = Border(*([Side(style="thin", color="D9D9D9")] * 4))
+LINK_FONT   = Font(color="1155CC", underline="single")
+
+# Column-name substrings that get a thousands-separator integer format.
+COUNT_COL_HINTS = ("clicks", "times_inserted", "story_position")
+
+
+def _format_sheet(ws, df: pd.DataFrame):
+    """Applies header styling, column widths, number/date formats, a
+    frozen header row, banded-row table styling, and turns any `url`
+    column into a clickable hyperlink."""
+    n_rows, n_cols = df.shape
+    if n_rows == 0 or n_cols == 0:
+        return
+
+    # Header row styling
+    for col_idx, col_name in enumerate(df.columns, start=1):
+        cell = ws.cell(row=1, column=col_idx)
+        cell.fill = HEADER_FILL
+        cell.font = HEADER_FONT
+        cell.alignment = Alignment(horizontal="center", vertical="center", wrap_text=True)
+        cell.border = BORDER_THIN
+
+    # Per-column width, number format, borders, and (for `url`) hyperlinks.
+    for col_idx, col_name in enumerate(df.columns, start=1):
+        letter = get_column_letter(col_idx)
+        series = df[col_name]
+        max_content_len = series.astype(str).map(len).max() if n_rows else 0
+        width = min(max(len(str(col_name)), int(max_content_len)) + 2, 60)
+        ws.column_dimensions[letter].width = width
+
+        is_count_col = any(hint in col_name.lower() for hint in COUNT_COL_HINTS)
+        is_date_col  = "date" in col_name.lower()
+        is_url_col   = col_name.lower() == "url"
+
+        for row_idx in range(2, n_rows + 2):
+            cell = ws.cell(row=row_idx, column=col_idx)
+            cell.border = BORDER_THIN
+            if is_count_col:
+                cell.number_format = "#,##0"
+                cell.alignment = Alignment(horizontal="right")
+            elif is_date_col:
+                cell.number_format = "yyyy-mm-dd"
+            elif is_url_col and cell.value:
+                cell.hyperlink = cell.value
+                cell.font = LINK_FONT
+
+    # Freeze header row (and Category/Title column where present) so it stays
+    # visible while scrolling long sheets.
+    freeze_col = 2 if df.columns[0].lower() in ("category",) else 1
+    ws.freeze_panes = ws.cell(row=2, column=freeze_col + 1) if freeze_col == 2 else "A2"
+
+    # Banded-row table styling over the full data range.
+    last_col_letter = get_column_letter(n_cols)
+    table_ref = f"A1:{last_col_letter}{n_rows + 1}"
+    safe_name = "tbl_" + "".join(c if c.isalnum() else "_" for c in ws.title)
+    table = Table(displayName=safe_name, ref=table_ref)
+    table.tableStyleInfo = TableStyleInfo(
+        name="TableStyleMedium9", showFirstColumn=False,
+        showLastColumn=False, showRowStripes=True, showColumnStripes=False,
+    )
+    ws.add_table(table)
+
+    ws.sheet_view.showGridLines = False
+
+
 def main():
     conn = get_connection()
     try:
@@ -184,6 +259,13 @@ def main():
         df1.to_excel(writer, sheet_name="Top Articles by Category", index=False)
         df2.to_excel(writer, sheet_name="Campaign Insertions", index=False)
         df3.to_excel(writer, sheet_name="Article Placements", index=False)
+
+        for sheet_name, df in (
+            ("Top Articles by Category", df1),
+            ("Campaign Insertions", df2),
+            ("Article Placements", df3),
+        ):
+            _format_sheet(writer.sheets[sheet_name], df)
 
     print(f"\n✓ Wrote {OUT_FILE}")
     print(f"  Sheet 1 — Top Articles by Category : {len(df1):,} rows")

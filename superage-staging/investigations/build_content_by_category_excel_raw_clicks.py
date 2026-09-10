@@ -185,12 +185,36 @@ TOP_BY_CATEGORY_SQL = f"""
     ORDER BY category, rn;
 """
 
+# Position metadata (story_position / position_category) only exists in
+# superage.articles_clicks (it's Airtable-enrichment data, not something
+# the raw click log carries). Pulled in here PURELY for position — the
+# click counts still come from per_placement above, never from this join.
+# DISTINCT ON + ORDER BY updated_at picks the freshest row when the same
+# (norm_url, issue_name) has multiple articles_clicks rows (the exact
+# fragmentation issue documented in etl/lambda_clicks_incremental.py —
+# position_category should be identical across fragments in practice, but
+# this guards against relying on an arbitrary/stale one).
+AC_POS_CTE = f"""
+    ac_pos AS (
+        SELECT DISTINCT ON ({NORM_URL.format(col='url')}, LOWER(TRIM(issue_name)))
+            {NORM_URL.format(col='url')}    AS norm_url,
+            LOWER(TRIM(issue_name))          AS issue_name_norm,
+            story_position,
+            position_category
+        FROM {S}.articles_clicks
+        ORDER BY {NORM_URL.format(col='url')}, LOWER(TRIM(issue_name)), updated_at DESC NULLS LAST
+    )
+"""
+
 # Every placement, with categories split the same way, so Python can filter
 # down to just the Top-N articles per category for each "<Category>_detailed"
-# sheet.
+# sheet. Now includes story_position/position_category per placement (see
+# AC_POS_CTE above) — the SAME article can carry a different position each
+# time it ran (e.g. story_position 4/medium in one issue, 2/high in another).
 ALL_PLACEMENTS_BY_CATEGORY_SQL = f"""
     WITH {PER_PLACEMENT_CTE},
     {WA_CTE},
+    {AC_POS_CTE},
     joined AS (
         SELECT
             p.norm_url,
@@ -199,14 +223,20 @@ ALL_PLACEMENTS_BY_CATEGORY_SQL = f"""
             p.issue_name,
             p.issue_date,
             p.unique_clicks,
-            p.non_unique_clicks
+            p.non_unique_clicks,
+            ap.story_position,
+            ap.position_category
         FROM per_placement p
         INNER JOIN wa ON p.norm_url = wa.norm_url
+        LEFT JOIN ac_pos ap
+               ON ap.norm_url = p.norm_url
+              AND ap.issue_name_norm = LOWER(TRIM(p.issue_name))
     )
     SELECT
         TRIM(cat) AS category,
         url, norm_url,
         issue_name, issue_date,
+        story_position, position_category,
         unique_clicks, non_unique_clicks
     FROM joined
     CROSS JOIN LATERAL unnest(string_to_array(categories, ',')) AS cat
@@ -337,6 +367,37 @@ def _category_sheet_names(category: str, taken: set) -> tuple:
     return summary_name, detail_name
 
 
+def _add_low_position_columns(df_top: pd.DataFrame, df_all_placements: pd.DataFrame) -> pd.DataFrame:
+    """For each Top-N (category, norm_url) article, counts how many of its
+    placements landed in the 'low' position_category (buried further down
+    the newsletter) vs. how many placements have a KNOWN position at all.
+    An article can rank in the Top N by clicks while having been placed
+    low at least once — that's the "sleeper hit" signal the summary sheet
+    and the Sleeper Hits sheet both use."""
+    pos = df_all_placements.dropna(subset=["position_category"])
+    counts = (
+        pos.groupby(["category", "norm_url"])["position_category"]
+        .agg(
+            low_position_placements=lambda s: int((s == "low").sum()),
+            known_position_placements="count",
+        )
+        .reset_index()
+    )
+    merged = df_top.merge(counts, on=["category", "norm_url"], how="left")
+    merged["low_position_placements"] = merged["low_position_placements"].fillna(0).astype(int)
+    merged["known_position_placements"] = merged["known_position_placements"].fillna(0).astype(int)
+    return merged
+
+
+def _build_sleeper_hits(df_top: pd.DataFrame) -> pd.DataFrame:
+    """Articles that made a category's Top N by clicks despite having been
+    placed 'low' at least once — i.e. they overperformed their placement.
+    Sorted by total_unique_clicks so the most striking sleepers lead."""
+    sleepers = df_top[df_top["low_position_placements"] > 0].copy()
+    sleepers = sleepers.sort_values("total_unique_clicks", ascending=False)
+    return sleepers.drop(columns=["norm_url"]).reset_index(drop=True)
+
+
 def main():
     conn = get_connection()
     try:
@@ -348,8 +409,15 @@ def main():
     finally:
         conn.close()
 
+    df_top = _add_low_position_columns(df_top, df_all_placements)
+    sleeper_hits_df = _build_sleeper_hits(df_top)
+
     with pd.ExcelWriter(OUT_FILE, engine="openpyxl") as writer:
-        taken_names = set()
+        # Sleeper Hits FIRST — before every category sheet.
+        sleeper_hits_df.to_excel(writer, sheet_name="Sleeper Hits", index=False)
+        _format_sheet(writer.sheets["Sleeper Hits"], sleeper_hits_df)
+
+        taken_names = {"sleeper hits"}
         category_count = 0
 
         for category, group in df_top.groupby("category", sort=True):
@@ -362,6 +430,7 @@ def main():
 
             # Detail sheet — every campaign placement, but ONLY for the
             # URLs that made this category's Top N (matched on norm_url).
+            # Includes story_position/position_category per placement.
             top_urls_this_cat = set(group["norm_url"])
             detail_df = (
                 df_all_placements[
@@ -377,6 +446,7 @@ def main():
             category_count += 1
 
     print(f"\n✓ Wrote {OUT_FILE}")
+    print(f"  Sleeper Hits sheet   : {len(sleeper_hits_df):,} rows")
     print(f"  {category_count} categories -> {category_count * 2} sheets "
           f"(summary + _detailed pairs)")
     print(f"  Top-by-category rows : {len(df_top):,}")

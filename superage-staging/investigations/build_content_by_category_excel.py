@@ -1,17 +1,22 @@
 """
-Builds a 3-sheet Excel workbook answering:
+Builds a 2-sheet-type Excel workbook answering:
 
-  Sheet 1 "Top Articles by Category" — Top 20 articles per category, ranked
-      by unique clicks. Multi-category articles (e.g. "Fitness, Longevity")
-      are split so the article appears once under EACH category it's
-      tagged with.
+  One sheet PER CATEGORY — "Top 20 by Category" — Top 20 articles in that
+      category, ranked by total unique clicks (summed across every campaign
+      it was ever placed in). Multi-category articles (e.g. "Fitness,
+      Longevity") are split so the article appears once under EACH category
+      it's tagged with. Per article:
+        - max_unique_clicks / max_non_unique_clicks — its BEST single-campaign
+          performance (the most clicks it ever got in one placement)
+        - times_inserted_in_campaigns — how many distinct campaigns it ran in
+        - total_unique_clicks / total_non_unique_clicks — summed across all
+          those campaigns
+        - avg_unique_clicks_per_insertion / avg_non_unique_clicks_per_insertion
+          — total / times inserted, i.e. average performance per placement
 
-  Sheet 2 "Campaign Insertions" — how many distinct campaigns (issue_name)
-      each article was inserted into, all-time.
-
-  Sheet 3 "Article Placements"  — one row per (article x campaign)
-      occurrence, showing where in that campaign it ran
-      (story_position / position_category) and its per-send clicks.
+  "Placements" (single sheet) — one row per (article x campaign) occurrence,
+      showing where in that campaign it ran (story_position /
+      position_category) and its per-send clicks.
 
 Scope: editorial content only — excludes type IN ('games','waitlist'),
 same filter the dashboard's Content Reference tab already uses. All-time
@@ -84,7 +89,9 @@ WA_CTE = f"""
     )
 """
 
-SHEET1_SQL = f"""
+# Top N per category — peak single-campaign performance, times inserted,
+# lifetime totals, and average clicks per insertion.
+TOP_BY_CATEGORY_SQL = f"""
     WITH {AC_CTE},
     {WA_CTE},
     joined AS (
@@ -92,46 +99,61 @@ SHEET1_SQL = f"""
             ac.article_title AS title,
             ac.url,
             wa.categories,
-            SUM(ac.unique_clicks)     AS unique_clicks,
-            SUM(ac.non_unique_clicks) AS non_unique_clicks
+            ac.issue_name,
+            ac.unique_clicks,
+            ac.non_unique_clicks
         FROM ac
         INNER JOIN wa ON ac.norm_url = wa.norm_url
-        GROUP BY ac.article_title, ac.url, wa.categories
+    ),
+    agg AS (
+        SELECT
+            title, url, categories,
+            COUNT(DISTINCT issue_name) AS times_inserted_in_campaigns,
+            SUM(unique_clicks)         AS total_unique_clicks,
+            SUM(non_unique_clicks)     AS total_non_unique_clicks,
+            MAX(unique_clicks)         AS max_unique_clicks,
+            MAX(non_unique_clicks)     AS max_non_unique_clicks
+        FROM joined
+        GROUP BY title, url, categories
+    ),
+    with_avg AS (
+        SELECT
+            *,
+            ROUND(total_unique_clicks::numeric
+                  / NULLIF(times_inserted_in_campaigns, 0), 2) AS avg_unique_clicks_per_insertion,
+            ROUND(total_non_unique_clicks::numeric
+                  / NULLIF(times_inserted_in_campaigns, 0), 2) AS avg_non_unique_clicks_per_insertion
+        FROM agg
     ),
     split_cat AS (
-        SELECT title, url, unique_clicks, non_unique_clicks, TRIM(cat) AS category
-        FROM joined
+        SELECT
+            title, url,
+            max_unique_clicks, max_non_unique_clicks,
+            times_inserted_in_campaigns,
+            total_unique_clicks, total_non_unique_clicks,
+            avg_unique_clicks_per_insertion, avg_non_unique_clicks_per_insertion,
+            TRIM(cat) AS category
+        FROM with_avg
         CROSS JOIN LATERAL unnest(string_to_array(categories, ',')) AS cat
     ),
     ranked AS (
         SELECT
-            category, title, url, unique_clicks, non_unique_clicks,
-            ROW_NUMBER() OVER (PARTITION BY category ORDER BY unique_clicks DESC NULLS LAST) AS rn
+            *,
+            ROW_NUMBER() OVER (PARTITION BY category ORDER BY total_unique_clicks DESC NULLS LAST) AS rn
         FROM split_cat
     )
-    SELECT category, title, url, unique_clicks, non_unique_clicks
+    SELECT
+        category, title, url,
+        max_unique_clicks, max_non_unique_clicks,
+        times_inserted_in_campaigns,
+        total_unique_clicks, total_non_unique_clicks,
+        avg_unique_clicks_per_insertion, avg_non_unique_clicks_per_insertion
     FROM ranked
     WHERE rn <= {TOP_N}
     ORDER BY category, rn;
 """
 
-SHEET2_SQL = f"""
-    WITH {AC_CTE},
-    {WA_CTE}
-    SELECT
-        ac.article_title AS title,
-        ac.url,
-        wa.categories,
-        COUNT(DISTINCT ac.issue_name) AS times_inserted_in_campaigns,
-        SUM(ac.unique_clicks)         AS total_unique_clicks,
-        SUM(ac.non_unique_clicks)     AS total_non_unique_clicks
-    FROM ac
-    INNER JOIN wa ON ac.norm_url = wa.norm_url
-    GROUP BY ac.article_title, ac.url, wa.categories
-    ORDER BY times_inserted_in_campaigns DESC, total_unique_clicks DESC;
-"""
-
-SHEET3_SQL = f"""
+PLACEMENTS_SQL = f"""
     WITH {AC_CTE},
     {WA_CTE}
     SELECT
@@ -216,7 +238,7 @@ def _format_sheet(ws, df: pd.DataFrame):
             cell = ws.cell(row=row_idx, column=col_idx)
             cell.border = BORDER_THIN
             if is_count_col:
-                cell.number_format = "#,##0"
+                cell.number_format = "#,##0.##"
                 cell.alignment = Alignment(horizontal="right")
             elif is_date_col:
                 cell.number_format = "yyyy-mm-dd"
@@ -265,44 +287,33 @@ def _safe_sheet_name(name: str, taken: set) -> str:
 def main():
     conn = get_connection()
     try:
-        print(f"Running Sheet 1 query (top {TOP_N} per category)...")
-        df1 = pd.read_sql(SHEET1_SQL, conn)
+        print(f"Running Top-{TOP_N}-by-category query...")
+        df_top = pd.read_sql(TOP_BY_CATEGORY_SQL, conn)
 
-        print("Running Sheet 2 query (campaign insertion counts)...")
-        df2 = pd.read_sql(SHEET2_SQL, conn)
-
-        print("Running Sheet 3 query (per-campaign placements)...")
-        df3 = pd.read_sql(SHEET3_SQL, conn)
+        print("Running Placements query...")
+        df_placements = pd.read_sql(PLACEMENTS_SQL, conn)
     finally:
         conn.close()
 
     with pd.ExcelWriter(OUT_FILE, engine="openpyxl") as writer:
-        # Sheet 1 — one sheet PER category instead of one combined sheet.
-        # `category` column is dropped from the sheet body since it's now
-        # implied by the sheet name itself. Groups keep the SQL's existing
-        # rn ordering (rank within category by unique_clicks).
+        # One sheet PER category. `category` column is dropped from the sheet
+        # body since it's now implied by the sheet name itself. Groups keep
+        # the SQL's existing rn ordering (rank by total_unique_clicks).
         taken_names = set()
         category_sheet_count = 0
-        for category, group in df1.groupby("category", sort=True):
+        for category, group in df_top.groupby("category", sort=True):
             sheet_df = group.drop(columns=["category"]).reset_index(drop=True)
             sheet_name = _safe_sheet_name(category, taken_names)
             sheet_df.to_excel(writer, sheet_name=sheet_name, index=False)
             _format_sheet(writer.sheets[sheet_name], sheet_df)
             category_sheet_count += 1
 
-        df2.to_excel(writer, sheet_name="Campaign Insertions", index=False)
-        df3.to_excel(writer, sheet_name="Article Placements", index=False)
-
-        for sheet_name, df in (
-            ("Campaign Insertions", df2),
-            ("Article Placements", df3),
-        ):
-            _format_sheet(writer.sheets[sheet_name], df)
+        df_placements.to_excel(writer, sheet_name="Placements", index=False)
+        _format_sheet(writer.sheets["Placements"], df_placements)
 
     print(f"\n✓ Wrote {OUT_FILE}")
-    print(f"  Sheet(s) — one per category ({category_sheet_count} total) : {len(df1):,} rows")
-    print(f"  Sheet — Campaign Insertions                        : {len(df2):,} rows")
-    print(f"  Sheet — Article Placements                         : {len(df3):,} rows")
+    print(f"  Category sheets ({category_sheet_count} total) : {len(df_top):,} rows")
+    print(f"  Placements sheet                    : {len(df_placements):,} rows")
 
 
 if __name__ == "__main__":

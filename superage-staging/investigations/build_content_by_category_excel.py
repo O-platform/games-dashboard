@@ -243,6 +243,25 @@ def _format_sheet(ws, df: pd.DataFrame):
     ws.sheet_view.showGridLines = False
 
 
+# Excel sheet names: max 31 chars, and none of : \ / ? * [ ]
+_INVALID_SHEET_CHARS = set(':\\/?*[]')
+
+
+def _safe_sheet_name(name: str, taken: set) -> str:
+    """Sanitizes a category name into a valid, unique Excel sheet name."""
+    cleaned = "".join(c if c not in _INVALID_SHEET_CHARS else "-" for c in str(name)).strip()
+    cleaned = cleaned or "Uncategorized"
+    base = cleaned[:31]
+    candidate = base
+    suffix = 2
+    while candidate.lower() in taken:
+        tail = f" ({suffix})"
+        candidate = base[: 31 - len(tail)] + tail
+        suffix += 1
+    taken.add(candidate.lower())
+    return candidate
+
+
 def main():
     conn = get_connection()
     try:
@@ -258,21 +277,32 @@ def main():
         conn.close()
 
     with pd.ExcelWriter(OUT_FILE, engine="openpyxl") as writer:
-        df1.to_excel(writer, sheet_name="Top Articles by Category", index=False)
+        # Sheet 1 — one sheet PER category instead of one combined sheet.
+        # `category` column is dropped from the sheet body since it's now
+        # implied by the sheet name itself. Groups keep the SQL's existing
+        # rn ordering (rank within category by unique_clicks).
+        taken_names = set()
+        category_sheet_count = 0
+        for category, group in df1.groupby("category", sort=True):
+            sheet_df = group.drop(columns=["category"]).reset_index(drop=True)
+            sheet_name = _safe_sheet_name(category, taken_names)
+            sheet_df.to_excel(writer, sheet_name=sheet_name, index=False)
+            _format_sheet(writer.sheets[sheet_name], sheet_df)
+            category_sheet_count += 1
+
         df2.to_excel(writer, sheet_name="Campaign Insertions", index=False)
         df3.to_excel(writer, sheet_name="Article Placements", index=False)
 
         for sheet_name, df in (
-            ("Top Articles by Category", df1),
             ("Campaign Insertions", df2),
             ("Article Placements", df3),
         ):
             _format_sheet(writer.sheets[sheet_name], df)
 
     print(f"\n✓ Wrote {OUT_FILE}")
-    print(f"  Sheet 1 — Top Articles by Category : {len(df1):,} rows")
-    print(f"  Sheet 2 — Campaign Insertions       : {len(df2):,} rows")
-    print(f"  Sheet 3 — Article Placements        : {len(df3):,} rows")
+    print(f"  Sheet(s) — one per category ({category_sheet_count} total) : {len(df1):,} rows")
+    print(f"  Sheet — Campaign Insertions                        : {len(df2):,} rows")
+    print(f"  Sheet — Article Placements                         : {len(df3):,} rows")
 
 
 if __name__ == "__main__":

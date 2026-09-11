@@ -407,7 +407,10 @@ def _add_low_position_columns(df_top: pd.DataFrame, df_all_placements: pd.DataFr
     low_only = pos[pos["position_category"] == "low"].copy()
     low_only["detail"] = (
         low_only["issue_name"].astype(str)
-        + " (position " + low_only["story_position"].astype("Int64").astype(str) + ")"
+        + " (position " + low_only["story_position"].astype("Int64").astype(str)
+        + ", unique: " + low_only["unique_clicks"].astype("Int64").astype(str)
+        + ", non-unique: " + low_only["non_unique_clicks"].astype("Int64").astype(str)
+        + ")"
     )
     low_details = (
         low_only.groupby(["category", "norm_url"])["detail"]

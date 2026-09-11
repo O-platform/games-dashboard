@@ -206,6 +206,26 @@ AC_POS_CTE = f"""
     )
 """
 
+# Whole-campaign context (not this one article — the ENTIRE send's numbers)
+# from superage."Campaigns", the dashboard's per-send Campaign Monitor
+# summary table. Lets you see whether a weak article-level click count was
+# actually a weak SEND (low recipients/open rate that day) rather than a
+# weak article. DISTINCT ON + ORDER BY "Sent Date " DESC guards against two
+# campaigns sharing an identical name (picks the most recent).
+CAMP_SUMMARY_CTE = f"""
+    camp_summary AS (
+        SELECT DISTINCT ON (LOWER(TRIM("Campaign Name")))
+            LOWER(TRIM("Campaign Name")) AS issue_name_norm,
+            "Recipients"                 AS campaign_recipients,
+            "UniqueOpened"               AS campaign_unique_opens,
+            "UOpenRate"                  AS campaign_open_rate_pct,
+            "Clicks"                     AS campaign_clicks,
+            "UClickRate"                 AS campaign_click_rate_pct
+        FROM {S}."Campaigns"
+        ORDER BY LOWER(TRIM("Campaign Name")), "Sent Date " DESC NULLS LAST
+    )
+"""
+
 # Every placement, with categories split the same way, so Python can filter
 # down to just the Top-N articles per category for each "<Category>_detailed"
 # sheet. Now includes story_position/position_category per placement (see
@@ -215,6 +235,7 @@ ALL_PLACEMENTS_BY_CATEGORY_SQL = f"""
     WITH {PER_PLACEMENT_CTE},
     {WA_CTE},
     {AC_POS_CTE},
+    {CAMP_SUMMARY_CTE},
     joined AS (
         SELECT
             p.norm_url,
@@ -225,19 +246,28 @@ ALL_PLACEMENTS_BY_CATEGORY_SQL = f"""
             p.unique_clicks,
             p.non_unique_clicks,
             ap.story_position,
-            ap.position_category
+            ap.position_category,
+            cs.campaign_recipients,
+            cs.campaign_unique_opens,
+            cs.campaign_open_rate_pct,
+            cs.campaign_clicks,
+            cs.campaign_click_rate_pct
         FROM per_placement p
         INNER JOIN wa ON p.norm_url = wa.norm_url
         LEFT JOIN ac_pos ap
                ON ap.norm_url = p.norm_url
               AND ap.issue_name_norm = LOWER(TRIM(p.issue_name))
+        LEFT JOIN camp_summary cs
+               ON cs.issue_name_norm = LOWER(TRIM(p.issue_name))
     )
     SELECT
         TRIM(cat) AS category,
         url, norm_url,
         issue_name, issue_date,
         story_position, position_category,
-        unique_clicks, non_unique_clicks
+        unique_clicks, non_unique_clicks,
+        campaign_recipients, campaign_unique_opens, campaign_open_rate_pct,
+        campaign_clicks, campaign_click_rate_pct
     FROM joined
     CROSS JOIN LATERAL unnest(string_to_array(categories, ',')) AS cat
     ORDER BY category, url, issue_date;
@@ -273,7 +303,11 @@ BORDER_THIN = Border(*([Side(style="thin", color="D9D9D9")] * 4))
 LINK_FONT   = Font(color="1155CC", underline="single")
 
 # Column-name substrings that get a thousands-separator number format.
-COUNT_COL_HINTS = ("clicks", "times_inserted", "story_position", "placements")
+COUNT_COL_HINTS = ("clicks", "times_inserted", "story_position", "placements",
+                    "recipients", "opens")
+# Checked BEFORE count hints — "rate_pct" columns also contain "click"/"open"
+# substrings that would otherwise match COUNT_COL_HINTS and get the wrong format.
+RATE_COL_HINTS = ("rate_pct",)
 
 
 def _format_sheet(ws, df: pd.DataFrame):
@@ -302,14 +336,22 @@ def _format_sheet(ws, df: pd.DataFrame):
         width = min(max(len(str(col_name)), int(max_content_len)) + 2, 60)
         ws.column_dimensions[letter].width = width
 
-        is_count_col = any(hint in col_name.lower() for hint in COUNT_COL_HINTS)
+        is_rate_col  = any(hint in col_name.lower() for hint in RATE_COL_HINTS)
+        is_count_col = (not is_rate_col) and any(hint in col_name.lower() for hint in COUNT_COL_HINTS)
         is_date_col  = "date" in col_name.lower()
         is_url_col   = col_name.lower() == "url"
 
         for row_idx in range(2, n_rows + 2):
             cell = ws.cell(row=row_idx, column=col_idx)
             cell.border = BORDER_THIN
-            if is_count_col:
+            if is_rate_col:
+                # Stored as a plain number already meaning percent (e.g. 45.67
+                # means 45.67%, not 0.4567) — same convention the dashboard
+                # lambdas use elsewhere. Format displays it with a % suffix
+                # without dividing by 100.
+                cell.number_format = '0.00"%"'
+                cell.alignment = Alignment(horizontal="right")
+            elif is_count_col:
                 cell.number_format = "#,##0.##"
                 cell.alignment = Alignment(horizontal="right")
             elif is_date_col:
